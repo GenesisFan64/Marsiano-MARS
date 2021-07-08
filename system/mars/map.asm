@@ -78,7 +78,7 @@ PWMIRQ_ON	equ	$01
 ; _vdpreg
 tvmode		equ	$00		; TV mode register
 bitmapmd	equ	$01		; Bitmap mode register
-shift		equ	$03		; Shift Control register
+shift		equ	$02		; Shift Control register
 filllength	equ	$05		; Auto Fill Length register
 fillstart	equ	$06		; Auto Fill Start Address register
 filldata	equ	$08		; Auto Fill Data register

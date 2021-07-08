@@ -32,72 +32,38 @@ m_irq_custom:
 		mov	r3,@-r15
 		mov	r4,@-r15
 		mov	r5,@-r15
-		mov	r6,@-r15
 
 ; 		mov	#_vdpreg,r1
 ; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
 ; 		tst     #2,r0
 ; 		bf      .wait_fb
+;
+; 	Linescroll
+		mov	#RAM_Mars_Bg_X,r2
+		mov.w	@r2,r3
+		shlr	r3
 
-		mov	@(marsGbl_Backdata,gbr),r0
-		mov	r0,r4
-		mov	#tempcntr,r2
-		mov	@r2,r0
-		add	r0,r4
-
-		mov	@(marsGbl_BackFb,gbr),r0
-		mov	r0,r2
-		mov	#320/2,r6
-.wvm2:
-		mov.b	@r4+,r0
+		mov	#RAM_Mars_Bg_Y,r0
+		mov.w	@r0,r0
 		and	#$FF,r0
 		shll8	r0
-		mov	r0,r5
-		mov.b	@r4+,r0
-		and	#$FF,r0
-		or	r5,r0
+		mov	r0,r2
 
-		mov.w	r0,@r2
-		add	#2,r2
 
-; 		mov.w	r0,@r2
-; 		add	r3,r2
-; 		mov.w	r0,@r2
-; 		sub	r3,r2
-; 		add	#2,r2
+		mov	#224,r5
+		mov	#_framebuffer,r4
 
-; 		mov.b	@r4+,r0
-; 		and	#$FF,r0
-; 		shll16	r0
-; 		shll8	r0
-; 		mov	r0,r5
-; 		mov.b	@r4+,r0
-; 		and	#$FF,r0
-; 		shll16	r0
-; 		or	r0,r5
-; 		mov.b	@r4+,r0
-; 		and	#$FF,r0
-; 		shll8	r0
-; 		or	r0,r5
-; 		mov.b	@r4+,r0
-; 		and	#$FF,r0
-; 		or	r5,r0
-; 		mov	r0,@r2
-; 		add	#4,r2
-; 		mov	r0,@r3
-; 		add	#4,r3
+		mov	#$100,r1
+.copyx:
+		mov	r2,r0
+		add	r1,r0
+		add	r3,r0
+		mov.w	r0,@r4
 
-		dt	r6
-		bf	.wvm2
-
-		mov	#320,r2
-		mov	@(marsGbl_Backdata,gbr),r0
-		add	r2,r0
-		mov	r0,@(marsGbl_Backdata,gbr)
-		mov	#$200,r2
-		mov	@(marsGbl_BackFb,gbr),r0
-		add	r2,r0
-		mov	r0,@(marsGbl_BackFb,gbr)
+		add	r1,r2
+		dt	r5
+		bf/s	.copyx
+		add	#2,r4
 
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
@@ -106,16 +72,15 @@ m_irq_custom:
 		mov.w   r0,@r1
 		mov.w   #$5A10,r0		; Timer before next watchdog
 		mov.w   r0,@r1
-		mov	#Cach_ClrLines,r1	; Decrement a line to progress
-		mov	@r1,r0
-		dt	r0
-		bf/s	.on_clr
-		mov	r0,@r1
+; 		mov	#Cach_ClrLines,r1	; Decrement a line to progress
+; 		mov	@r1,r0
+; 		dt	r0
+; 		bf/s	.on_clr
+; 		mov	r0,@r1
 		mov	#1,r0			; If finished: set task $01
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 
 .on_clr:
-		mov	@r15+,r6
 		mov	@r15+,r5
 		mov	@r15+,r4
 		mov	@r15+,r3
@@ -125,7 +90,7 @@ m_irq_custom:
 		ltorg
 		align 4
 
-tempcntr:	dc.l 0
+.drwadd:
 
 ; --------------------------------
 ; Main drawing routine
@@ -1141,6 +1106,7 @@ put_piece:
 
 		align 4
 Cach_ClrLines	ds.l 1			; Current lines to clear
+Cach_ScrlBase	ds.l 1
 Cach_LnDrw_L	ds.l 14			;
 Cach_LnDrw_S	ds.l 0			; <-- Reads backwards
 Cach_DDA_Top	ds.l 2*2		; First 2 points

@@ -427,11 +427,6 @@ m_irq_v:
 		mov	#_sysreg+vintclr,r1
 		mov.w	r0,@r1
 
-		mov	#tempcntr,r1
-		mov	@r1,r0
-		add	#1,r0
-		mov	r0,@r1
-
 	; Hardware BUG:
 	; Using DMA to transfer palette
 	; to _palette works on the first pass
@@ -447,6 +442,32 @@ m_irq_v:
 		mov	r3,@-r15
 		mov	#$F0,r0			; Disable interrupts
 		ldc	r0,sr
+
+
+	; TEMPORAL
+		mov	#1,r1
+		mov	#1,r2
+
+		mov	#RAM_Mars_Bg_X,r3
+		mov.w	@r3,r0
+		add	r1,r0
+		mov	#$1FF,r1
+		and	r1,r0
+		mov.w	r0,@r3
+
+; 		mov	#RAM_Mars_Bg_Y,r3
+; 		mov.w	@r3,r0
+; 		add	r2,r0
+; 		mov	#$FF,r2
+; 		and	r2,r0
+; 		mov.w	r0,@r3
+
+	; Single X bit.
+		mov	#RAM_Mars_Bg_X,r3
+		mov.w	@r3,r0
+		mov	#_vdpreg+shift,r2
+		and	#1,r0
+		mov.w	r0,@r2
 
 	; Copy palette manually to
 	; SVDP
@@ -489,6 +510,11 @@ m_irq_v:
 ; 		mov	@r15+,r6
 ; 		mov	@r15+,r5
 ; 		mov	@r15+,r4
+
+; 		mov	#1,r1
+; 		mov	#MarsVideo_MoveBgX,r0
+; 		jsr	@r0
+
 		mov	@r15+,r3
 		mov	@r15+,r2
 		ldc	@r15+,sr
@@ -897,17 +923,31 @@ SH2_M_HotStart:
 		mov	#MarsVideo_LoadPal,r0
 		jsr	@r0
 		nop
+		mov	#MarsVideo_RefillBg,r0
+		jsr	@r0
+		nop
 
-; 		mov	#0,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	r2,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%11|%10000000,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
+		mov	#0,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%11|%10000000,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+
+		mov	#1,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%11|%10000000,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
 
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
@@ -1070,6 +1110,9 @@ master_loop:
 ; 		mov.b	@r1,r0
 ; 		and	#$80,r0
 ; 		mov.b	r0,@r1
+
+
+
 		bra	master_loop
 		nop
 		align 4
@@ -1771,6 +1814,8 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
+RAM_Mars_Background	ds.b 336*256			; Third background
+RAM_Mars_Palette	ds.w 256			; Indexed palette
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
 RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
@@ -1782,9 +1827,11 @@ RAM_Mars_Plgn_ZList_0	ds.l MAX_FACES*2		; Z value / foward faces
 RAM_Mars_Plgn_ZList_1	ds.l MAX_FACES*2		; Z value / foward faces
 RAM_Mars_MdTasksFifo_M	ds.l MAX_MDTSKARG*MAX_MDTASKS	; Request list for Master: SVDP and PWM interaction exclusive
 RAM_Mars_MdTasksFifo_S	ds.l MAX_MDTSKARG*MAX_MDTASKS	; Request list for Slave: Controlling objects and camera
-RAM_Mars_Palette	ds.w 256			; Indexed palette
 RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
 RAM_Mars_PlgnNum_1	ds.w 1				;
+RAM_Mars_Xbg_Frac	ds.w 1
+RAM_Mars_Bg_X		ds.w 1
+RAM_Mars_Bg_Y		ds.w 1
 sizeof_marsvid		ds.l 0
 			finish
 

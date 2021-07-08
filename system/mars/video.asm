@@ -7,8 +7,8 @@
 ; Settings
 ; ----------------------------------------
 
-MAX_FACES	equ	950		; Maximum polygon faces (models,sprites) to store on buffer
-MAX_SVDP_PZ	equ	950+128		; Pieces list: both read and write, increase the value if needed
+MAX_FACES	equ	200		; Maximum polygon faces (models,sprites) to store on buffer
+MAX_SVDP_PZ	equ	200+128		; Pieces list: both read and write, increase the value if needed
 MAX_MODELS	equ	24		; Note: First 9 models are reserved for layout map
 MAX_ZDIST	equ	-$2400		; Max drawing distance (-Z max)
 LAY_WIDTH	equ	$20*2		; Layout data width * 2
@@ -218,6 +218,81 @@ MarsVideo_ClearFrame:
 
 ; ------------------------------------
 ; MarsVdp_LoadPal
+;
+; Load palette to RAM
+; then the Palette will be transfered
+; on VBlank
+;
+; Input:
+; r1 - Palette data
+; r2 - Start index
+; r3 - Number of colors
+; r4 - OR value ($0000 or $8000)
+;
+; Uses:
+; r0,r4-r6
+; ------------------------------------
+
+MarsVideo_RefillBg:
+		sts	pr,@-r15
+		bsr	.this
+		nop
+		lds	@r15+,pr
+
+.this:
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
+		tst     #2,r0
+		bf      .wait_fb
+		mov	#-2,r4
+		mov	#TESTMARS_BG,r0
+		mov	r0,r1		; r1 - read
+		mov	r0,r2		; r2 - start
+		mov	r0,r3		; r3 - end
+
+		mov	#_framebuffer+$200,r0
+		mov	r0,r4
+		mov	#224,r7
+.wvm3:
+		mov	#336/4,r6
+.wvm2:
+; 		cmp/ge	r3,r1
+; 		bf	.nolm
+; 		mov	r2,r1
+; .nolm:
+		mov.l	@r1+,r0
+		mov.l	r0,@r4
+		add	#4,r4
+		dt	r6
+		bf	.wvm2
+
+		mov	#$B0,r0
+		add	r0,r4
+		dt	r7
+		bf	.wvm3
+
+		mov	#_vdpreg,r4
+.fb_wait1:	mov.w   @($A,r4),r0	; Swap for next table
+		tst     #2,r0
+		bf      .fb_wait1
+		mov.w   @($A,r4), r0
+		xor     #1,r0
+		mov.w   r0,@($A,r4)
+		and     #1,r0
+		mov     r0,r1
+.wait_result:
+		mov.w   @($A,r4),r0
+		and     #1,r0
+		cmp/eq  r0,r1
+		bf      .wait_result
+
+		rts
+		nop
+		align 4
+		ltorg
+
+; ------------------------------------
+; MarsVdp_LoadPal
 ; 
 ; Load palette to RAM
 ; then the Palette will be transfered
@@ -282,15 +357,8 @@ MarsVideo_SetWatchdog:
 		mov	#0,r0				; Reset polygon pieces counter
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
 
-		mov	#Cach_ClrLines,r1		; Line counter for the framebuffer-clear routine
-		mov	#224,r0
-		mov	r0,@r1
 		mov	#8,r0				; Set starting watchdog task to $08 (Clear framebuffer)
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
-		mov	#TESTMARS_BG,r0			; BG data pointer
-		mov	r0,@(marsGbl_Backdata,gbr)
-		mov	#_framebuffer+$200,r0		; BG data pointer
-		mov	r0,@(marsGbl_BackFb,gbr)
 
 	; CRITICAL PART
 		mov	#_vdpreg,r1
@@ -304,9 +372,7 @@ MarsVideo_SetWatchdog:
 		bf	.wait_frmswp
 .wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
 		tst	#2,r0
-		bf	.wait_fb
-		mov.w	#$100,r0			; ClearOnly: Pre-start at $A1
-		mov.w	r0,@(6,r1)			;
+		bf	.wait_fb		;
 		ldc	@r15+,sr			; Restore interrupts
 
 		mov	#$FFFFFE80,r1
