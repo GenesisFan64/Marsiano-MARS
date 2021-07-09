@@ -440,6 +440,8 @@ m_irq_v:
 		stc	sr,@-r15
 		mov	r2,@-r15
 		mov	r3,@-r15
+		mov	r4,@-r15
+; 		mov	r5,@-r15
 		mov	#$F0,r0			; Disable interrupts
 		ldc	r0,sr
 
@@ -448,18 +450,62 @@ m_irq_v:
 		mov	#1,r1
 		mov	#1,r2
 
-		mov	#RAM_Mars_Bg_X,r3
-		mov.w	@r3,r0
-		add	r1,r0
-		mov	#$1FF,r1
-		and	r1,r0
-		mov.w	r0,@r3
+	; Y move
 
-; 		mov	#RAM_Mars_Bg_Y,r3
+
+
+	; X move
+		mov	#RAM_Mars_Bg_X,r4
+		mov.w	@r4,r0
+		add	r1,r0
+		tst	#$40,r0
+		bt	.dontrgr
+		mov	#2,r2
+		mov	#RAM_Mars_Bg_X_ReDraw,r1
+		mov.w	r2,@r1
+		mov	#RAM_Mars_Bg_XHead_L,r3
+		mov	#384,r2
+		mov.w	@r3,r0
+		add	#$40,r0
+		cmp/ge	r2,r0
+		bf	.xhgh
+		xor	r0,r0
+.xhgh:
+		mov.w	r0,@r3
+.dontrgr:
+		mov	#$3F,r3
+		and	r3,r0
+		mov.w	r0,@r4
+
+	; RAM-Buffer pointers
+; 		mov	#384,r4
+; 		mov	#RAM_Mars_Bg_XHead_L,r3		; Left X head
 ; 		mov.w	@r3,r0
-; 		add	r2,r0
-; 		mov	#$FF,r2
-; 		and	r2,r0
+; 		add	r1,r0
+; 		cmp/gt	r4,r0
+; 		bf	.lfok
+; 		xor	r0,r0
+; .lfok:
+; 		cmp/pz	r1
+; 		bt	.lfchk
+; 		cmp/pl	r0
+; 		bt	.lfchk
+; 		mov	r4,r0
+; .lfchk:
+; 		mov.w	r0,@r3
+; 		mov	#RAM_Mars_Bg_XHead_R,r3		; Right X head
+; 		mov.w	@r3,r0
+; 		add	r1,r0
+; 		cmp/gt	r4,r0
+; 		bf	.lfok_r
+; 		xor	r0,r0
+; .lfok_r:
+; 		cmp/pz	r1
+; 		bt	.lfchk_r
+; 		cmp/pl	r0
+; 		bt	.lfchk_r
+; 		mov	r4,r0
+; .lfchk_r:
 ; 		mov.w	r0,@r3
 
 	; Single X bit.
@@ -468,6 +514,12 @@ m_irq_v:
 		mov	#_vdpreg+shift,r2
 		and	#1,r0
 		mov.w	r0,@r2
+; 		mov	#RAM_Mars_Bg_Y,r3
+; 		mov.w	@r3,r0
+; 		add	r2,r0
+; 		mov	#$FF,r2
+; 		and	r2,r0
+; 		mov.w	r0,@r3
 
 	; Copy palette manually to
 	; SVDP
@@ -515,6 +567,8 @@ m_irq_v:
 ; 		mov	#MarsVideo_MoveBgX,r0
 ; 		jsr	@r0
 
+; 		mov	@r15+,r5
+		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
 		ldc	@r15+,sr
@@ -525,7 +579,8 @@ m_irq_v:
 		rts
 		nop
 		align 4
-		
+		ltorg
+
 ; =================================================================
 ; ------------------------------------------------
 ; Master | VRES Interrupt (RESET on Genesis)
@@ -905,17 +960,12 @@ SH2_M_HotStart:
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
-		bsr	MarsSound_Init			; Init Sound
-		nop
 
 
 	; TEMPORAL SETUP
-		mov 	#_vdpreg,r1
-.wait_fb:	mov.w   @($A,r1),r0
-		tst     #2,r0
-		bf      .wait_fb
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
+; 		mov	#2,r0
+; 		mov	#RAM_Mars_Bg_X_ReDraw,r1
+; 		mov.w	r0,@r1
 		mov	#TESTMARS_BG_PAL,r1			; Load palette
 		mov	#0,r2
 		mov	#256,r3
@@ -923,31 +973,19 @@ SH2_M_HotStart:
 		mov	#MarsVideo_LoadPal,r0
 		jsr	@r0
 		nop
-		mov	#MarsVideo_RefillBg,r0
+		mov	#TESTMARS_BG,r1
+		mov	#MarsVideo_TempDraw,r0
 		jsr	@r0
 		nop
-
-		mov	#0,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%11|%10000000,r7
-		mov	#MarsSound_SetPwm,r0
+		mov	#MarsVideo_DrawAllBg,r0
 		jsr	@r0
 		nop
-
-		mov	#1,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%11|%10000000,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
+		mov 	#_vdpreg,r1
+.wait_fb:	mov.w   @($A,r1),r0
+		tst     #2,r0
+		bf      .wait_fb
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
 
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
@@ -1096,8 +1134,6 @@ master_loop:
 		mov.b	r0,@(framectl,r1)		; Save new bit
 		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
 
-
-
 ; 	; --------------------
 ; 	; DEBUG counter
 ; 		mov	#tempcntr,r2
@@ -1190,9 +1226,31 @@ SH2_S_HotStart:
 		add 	#4,r2
 		dt	r3
 		bf	.copy
+		bsr	MarsSound_Init			; Init Sound
+		nop
 ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
 ; 		jsr	@r0
 ; 		nop
+		mov	#0,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%11|%10000000,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+		mov	#1,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%11|%10000000,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
@@ -1202,6 +1260,12 @@ SH2_S_HotStart:
 
 		mov	#-1,r0
 slave_loop:
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
 		add	#1,r1
 		bra	slave_loop
 		nop
@@ -1814,7 +1878,7 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_Background	ds.b 336*256			; Third background
+RAM_Mars_Background	ds.b 384*256			; Third background
 RAM_Mars_Palette	ds.w 256			; Indexed palette
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
 RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
@@ -1831,7 +1895,14 @@ RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
 RAM_Mars_PlgnNum_1	ds.w 1				;
 RAM_Mars_Xbg_Frac	ds.w 1
 RAM_Mars_Bg_X		ds.w 1
+RAM_Mars_Bg_X_ReDraw	ds.w 1
+; RAM_Mars_Bg_XDraw_L	ds.w 1
+; RAM_Mars_Bg_XDraw_R	ds.w 1
+RAM_Mars_Bg_XHead_L	ds.w 1
+; RAM_Mars_Bg_XHead_R	ds.w 1
+; RAM_Mars_Bg_Xcopy	ds.w 1
 RAM_Mars_Bg_Y		ds.w 1
+; RAM_Mars_Bg_Ycopy	ds.w 1
 sizeof_marsvid		ds.l 0
 			finish
 

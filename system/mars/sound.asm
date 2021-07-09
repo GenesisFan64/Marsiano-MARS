@@ -212,11 +212,11 @@ MarsSound_ReadPwm:
 		sts	macl,r4
 		shlr8	r4
 		sub	r4,r2
-		tst	#%00000001,r0		; TODO: temporal way to check L/R
+		tst	#%00000010,r0		; TODO: temporal way to check L/R
 		bf	.no_l
 		mov	#$7F,r1
 .no_l:
-		tst	#%00000010,r0
+		tst	#%00000001,r0
 		bf	.skip
 		mov	#$7F,r2
 .skip:

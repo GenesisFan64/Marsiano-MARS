@@ -7,8 +7,8 @@
 ; Settings
 ; ----------------------------------------
 
-MAX_FACES	equ	200		; Maximum polygon faces (models,sprites) to store on buffer
-MAX_SVDP_PZ	equ	200+128		; Pieces list: both read and write, increase the value if needed
+MAX_FACES	equ	300		; Maximum polygon faces (models,sprites) to store on buffer
+MAX_SVDP_PZ	equ	300+128		; Pieces list: both read and write, increase the value if needed
 MAX_MODELS	equ	24		; Note: First 9 models are reserved for layout map
 MAX_ZDIST	equ	-$2400		; Max drawing distance (-Z max)
 LAY_WIDTH	equ	$20*2		; Layout data width * 2
@@ -119,6 +119,7 @@ MarsVideo_Init:
 		nop
 		mov	#0,r0			; Start at blank
 		mov.b	r0,@(bitmapmd,r4)
+
 		lds	@r15+,pr
 		rts
 		nop
@@ -233,28 +234,43 @@ MarsVideo_ClearFrame:
 ; r0,r4-r6
 ; ------------------------------------
 
-MarsVideo_RefillBg:
+MarsVideo_TempDraw:
+		mov	#RAM_Mars_Background,r2
+		mov	#(384*224)/4,r3
+.wvm2:
+		mov.l	@r1+,r0
+		mov.l	r0,@r2
+		add	#4,r2
+		dt	r3
+		bf	.wvm2
+		rts
+		nop
+		align 4
+
+MarsVideo_DrawAllBg:
+; 		rts
+; 		nop
+; 		align 4
+
 		sts	pr,@-r15
 		bsr	.this
 		nop
 		lds	@r15+,pr
-
 .this:
 		mov	#_vdpreg,r1
 .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
 		tst     #2,r0
 		bf      .wait_fb
 		mov	#-2,r4
-		mov	#TESTMARS_BG,r0
-		mov	r0,r1		; r1 - read
-		mov	r0,r2		; r2 - start
-		mov	r0,r3		; r3 - end
-
+		mov	#RAM_Mars_Background,r0
+		mov	r0,r1			; r1 - read
+		mov	r0,r2			; r2 - start
+		mov	r0,r3			; r3 - end
 		mov	#_framebuffer+$200,r0
 		mov	r0,r4
 		mov	#224,r7
 .wvm3:
-		mov	#336/4,r6
+		mov	#384/4,r6
 .wvm2:
 ; 		cmp/ge	r3,r1
 ; 		bf	.nolm
@@ -266,7 +282,7 @@ MarsVideo_RefillBg:
 		dt	r6
 		bf	.wvm2
 
-		mov	#$B0,r0
+		mov	#$80,r0
 		add	r0,r4
 		dt	r7
 		bf	.wvm3
@@ -351,14 +367,26 @@ MarsVideo_LoadPal:
 ; ------------------------------------------------
 
 MarsVideo_SetWatchdog:
+
+	; Watchdog pre-settings
 		mov	#RAM_Mars_VdpDrwList,r0		; Reset the piece-drawing pointer
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; on both READ and WRITE pointers
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
 		mov	#0,r0				; Reset polygon pieces counter
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
-
 		mov	#8,r0				; Set starting watchdog task to $08 (Clear framebuffer)
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov	#Cach_ClrLines,r1		; Prepare scroll-draw args
+		mov	#224,r0
+		mov	r0,@r1
+		mov	#RAM_Mars_Bg_XHead_L,r0
+		mov.w	@r0,r0
+		mov	#Cach_XHead,r1
+		mov	r0,@r1
+		mov	#RAM_Mars_Background,r0
+		mov	r0,@(marsGbl_Backdata,gbr)
+		mov	#_framebuffer+$200,r0
+		mov	r0,@(marsGbl_BackFb,gbr)
 
 	; CRITICAL PART
 		mov	#_vdpreg,r1
@@ -372,9 +400,31 @@ MarsVideo_SetWatchdog:
 		bf	.wait_frmswp
 .wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
 		tst	#2,r0
-		bf	.wait_fb		;
-		ldc	@r15+,sr			; Restore interrupts
+		bf	.wait_fb
 
+	; Do the linescroll here first.
+		mov	#RAM_Mars_Bg_X,r2
+		mov.w	@r2,r3
+		shlr	r3
+		mov	#RAM_Mars_Bg_Y,r0
+		mov.w	@r0,r0
+		and	#$FF,r0
+		shll8	r0
+		mov	r0,r2
+		mov	#224,r5
+		mov	#_framebuffer,r4
+		mov	#$100,r1
+.copyx:
+		mov	r2,r0
+		add	r1,r0
+		add	r3,r0
+		mov.w	r0,@r4
+		add	r1,r2
+		dt	r5
+		bf/s	.copyx
+		add	#2,r4
+
+		ldc	@r15+,sr			; Restore interrupts
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A7F,r0			; Watchdog timer
 		mov.w	r0,@r1
