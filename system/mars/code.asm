@@ -448,41 +448,53 @@ m_irq_v:
 
 	; TEMPORAL
 		mov	#1,r1
-		mov	#1,r2
+		mov	#0,r2
 
 	; Y move
-
+		mov	#RAM_Mars_Bg_Y,r3
+		mov.w	@r3,r0
+		add	r2,r0
+		mov	#$FF,r2
+		and	r2,r0
+		mov.w	r0,@r3
 
 
 	; X move
 		mov	#RAM_Mars_Bg_X,r4
 		mov.w	@r4,r0
 		add	r1,r0
-		tst	#$40,r0
+		mov	r0,r4
+		tst	#$08,r0
 		bt	.dontrgr
-		mov	#2,r2
-		mov	#RAM_Mars_Bg_X_ReDraw,r1
-		mov.w	r2,@r1
+
 		mov	#RAM_Mars_Bg_XHead_L,r3
 		mov	#384,r2
 		mov.w	@r3,r0
-		add	#$40,r0
+		cmp/pl	r1
+		bf	.negtv
+		add	#$08,r0
 		cmp/ge	r2,r0
 		bf	.xhgh
 		xor	r0,r0
 .xhgh:
 		mov.w	r0,@r3
-.dontrgr:
-		mov	#$3F,r3
-		and	r3,r0
-		mov.w	r0,@r4
+.negtv:
+		cmp/pl	r1
+		bt	.postv
+		add	#-$08,r0
+		cmp/pl	r0
+		bt	.xhghd
+		mov	r2,r0
+.xhghd:
+		mov.w	r0,@r3
+.postv:
 
-	; RAM-Buffer pointers
-; 		mov	#384,r4
+; 		mov	#8,r1
+; 		mov	#384-1,r2
 ; 		mov	#RAM_Mars_Bg_XHead_L,r3		; Left X head
 ; 		mov.w	@r3,r0
 ; 		add	r1,r0
-; 		cmp/gt	r4,r0
+; 		cmp/gt	r2,r0
 ; 		bf	.lfok
 ; 		xor	r0,r0
 ; .lfok:
@@ -490,36 +502,23 @@ m_irq_v:
 ; 		bt	.lfchk
 ; 		cmp/pl	r0
 ; 		bt	.lfchk
-; 		mov	r4,r0
+; 		mov	r2,r0
 ; .lfchk:
-; 		mov.w	r0,@r3
-; 		mov	#RAM_Mars_Bg_XHead_R,r3		; Right X head
-; 		mov.w	@r3,r0
-; 		add	r1,r0
-; 		cmp/gt	r4,r0
-; 		bf	.lfok_r
-; 		xor	r0,r0
-; .lfok_r:
-; 		cmp/pz	r1
-; 		bt	.lfchk_r
-; 		cmp/pl	r0
-; 		bt	.lfchk_r
-; 		mov	r4,r0
-; .lfchk_r:
-; 		mov.w	r0,@r3
+		mov.w	r0,@r3
 
-	; Single X bit.
+		mov	#1,r2
+		mov	#RAM_Mars_Bg_X_ReDraw,r1
+		mov.w	r2,@r1
+.dontrgr:
+
 		mov	#RAM_Mars_Bg_X,r3
-		mov.w	@r3,r0
+		mov	r4,r0
+		mov	#%111,r2
+		and	r2,r4
 		mov	#_vdpreg+shift,r2
 		and	#1,r0
 		mov.w	r0,@r2
-; 		mov	#RAM_Mars_Bg_Y,r3
-; 		mov.w	@r3,r0
-; 		add	r2,r0
-; 		mov	#$FF,r2
-; 		and	r2,r0
-; 		mov.w	r0,@r3
+		mov.w	r4,@r3
 
 	; Copy palette manually to
 	; SVDP
@@ -963,9 +962,6 @@ SH2_M_HotStart:
 
 
 	; TEMPORAL SETUP
-; 		mov	#2,r0
-; 		mov	#RAM_Mars_Bg_X_ReDraw,r1
-; 		mov.w	r0,@r1
 		mov	#TESTMARS_BG_PAL,r1			; Load palette
 		mov	#0,r2
 		mov	#256,r3
@@ -975,9 +971,6 @@ SH2_M_HotStart:
 		nop
 		mov	#TESTMARS_BG,r1
 		mov	#MarsVideo_TempDraw,r0
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawAllBg,r0
 		jsr	@r0
 		nop
 		mov 	#_vdpreg,r1
@@ -1114,7 +1107,12 @@ master_loop:
 ; 		bf/s	.loop
 ; 		add	#8,r14				; Move to next entry
 ; .skip:
-;
+
+		mov	#1256,r0
+.hastewey:
+		dt	r0
+		bf	.hastewey
+
 	; --------------------------------------
 ; .wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
 ; 		cmp/eq	#0,r0
@@ -1231,26 +1229,26 @@ SH2_S_HotStart:
 ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
 ; 		jsr	@r0
 ; 		nop
-		mov	#0,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%11|%10000000,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
-		mov	#1,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%11|%10000000,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
+; 		mov	#0,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%11|%10000000,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#1,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%11|%10000000,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 

@@ -83,7 +83,7 @@ thisCode_Top:
 		bsr	System_VSync
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
-		lsr.w	#1,d0
+; 		lsr.w	#1,d0
 		move.w	#0,(vdp_data).l
 		move.w	d0,(vdp_data).l
 ; 		lea	str_Status(pc),a0

@@ -376,13 +376,24 @@ MarsVideo_SetWatchdog:
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
 		mov	#8,r0				; Set starting watchdog task to $08 (Clear framebuffer)
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+
 		mov	#Cach_ClrLines,r1		; Prepare scroll-draw args
-		mov	#224,r0
+		mov	#224+16,r0
 		mov	r0,@r1
 		mov	#RAM_Mars_Bg_XHead_L,r0
 		mov.w	@r0,r0
 		mov	#Cach_XHead,r1
 		mov	r0,@r1
+		mov	#RAM_Mars_Bg_X_ReDraw,r1
+		mov.w	@r1,r0
+		cmp/eq	#0,r0
+		bt	.nochg
+		xor	r0,r0
+		mov.w	r0,@r1
+		mov	#2,r0
+		mov	#Cach_Redraw,r1
+		mov	r0,@r1
+.nochg:
 		mov	#RAM_Mars_Background,r0
 		mov	r0,@(marsGbl_Backdata,gbr)
 		mov	#_framebuffer+$200,r0
@@ -414,12 +425,17 @@ MarsVideo_SetWatchdog:
 		mov	#224,r5
 		mov	#_framebuffer,r4
 		mov	#$100,r1
+		mov	#$F800,r7
 .copyx:
 		mov	r2,r0
 		add	r1,r0
 		add	r3,r0
 		mov.w	r0,@r4
 		add	r1,r2
+		cmp/gt	r7,r2
+		bf	.donty
+		mov	r1,r2
+.donty:
 		dt	r5
 		bf/s	.copyx
 		add	#2,r4
@@ -434,6 +450,104 @@ MarsVideo_SetWatchdog:
 		nop
 		align 4
 		ltorg
+
+
+; ------------------------------------------------
+; Refill screen.
+; ------------------------------------------------
+
+MarsVideo_Refill:
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+; 		mov	r6,@-r15
+; 		mov	#_vdpreg,r1
+; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
+; 		tst     #2,r0
+; 		bf      .wait_fb
+;
+; 		mov	#Cach_Redraw,r4
+; 		mov	@r4,r0
+; 		cmp/eq	#0,r0
+; 		bt	.exitthis
+		mov	@(marsGbl_Backdata,gbr),r0
+		mov	r0,r5
+		mov	r0,r4
+		mov	r0,r3
+		mov	#384,r0
+		add	r0,r3
+		mov	#-4,r1
+		mov	#Cach_XHead,r0
+		mov	@r0,r0
+		and	r1,r0
+		add	r0,r5
+		mov	@(marsGbl_BackFb,gbr),r0
+		mov	r0,r2
+
+	; blast the pixels...
+		mov	#5,r1		; main 320 pixels
+.wvm2:
+	rept 16
+		cmp/ge	r3,r5
+		bf	.lel2
+		mov	r4,r5
+.lel2:
+		mov	@r5+,r0
+		mov	r0,@r2
+		add	#4,r2
+	endm
+		dt	r1
+		bf	.wvm2
+
+	rept 2
+		mov	@r5+,r0
+		mov	r0,@r2
+		add	#4,r2
+	endm
+
+		mov	@(marsGbl_BackFb,gbr),r0
+		mov	#$200,r5
+		add	r5,r0
+		mov	r0,@(marsGbl_BackFb,gbr)
+		mov	@(marsGbl_Backdata,gbr),r0
+		mov	#384,r6
+		add	r6,r0
+		mov	r0,@(marsGbl_Backdata,gbr)
+
+.exitthis:
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0		; OFF
+		mov.w   r0,@r1
+		or      #$20,r0			; ON
+		mov.w   r0,@r1
+		mov.w   #$5A10,r0		; Timer before next watchdog
+		mov.w   r0,@r1
+		mov	#Cach_ClrLines,r1	; Decrement a line to progress
+		mov	@r1,r0
+		dt	r0
+		bf/s	.on_clr
+		mov	r0,@r1
+
+		mov	#1,r0			; If finished: set task $01
+		mov.w	r0,@(marsGbl_DrwTask,gbr)
+
+		mov	#Cach_Redraw,r1		; Decrement a line to progress
+		mov	@r1,r0
+		cmp/eq	#0,r0
+		bt	.on_clr
+		dt	r0
+		mov	r0,@r1
+.on_clr:
+; 		mov	@r15+,r6
+		mov	@r15+,r5
+		mov	@r15+,r4
+		mov	@r15+,r3
+		mov	@r15+,r2
+		rts
+		nop
+		ltorg
+		align 4
 
 ; ====================================================================
 ; ----------------------------------------------------------------
