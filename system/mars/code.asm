@@ -291,48 +291,48 @@ m_irq_cmd:
 		mov	#$F0,r0
 		ldc	r0,sr
 
-; ----------------------------------------
-
-; 		mov	#_sysreg+comm4,r1	; Check if Z80
-; 		mov.b	@(0,r1),r0		; called first
+; ; ----------------------------------------
+;
+; ; 		mov	#_sysreg+comm4,r1	; Check if Z80
+; ; 		mov.b	@(0,r1),r0		; called first
+; ; 		cmp/eq	#0,r0
+; ; 		bf	.pwm_play
+;
+; ; ----------------------------------------
+; ; Transfer from 68K
+; ; ----------------------------------------
+;
+; 		mov	#_sysreg+comm8,r1
+; 		mov	#RAM_Mars_MdTasksFifo_M,r2
+; 		mov	#_sysreg+comm14,r3	; Also process tasks
+; 		mov.b	@r3,r0			; after this
+; 		or	#$80,r0
+; 		mov.b	r0,@r3
+; .next_comm:
+; 		mov	#2,r0		; SH is ready
+; 		mov.b	r0,@(1,r1)
+; .wait_md_b:
+; 		mov.b	@(0,r1),r0	; get MD status
 ; 		cmp/eq	#0,r0
-; 		bf	.pwm_play
-
-; ----------------------------------------
-; Transfer from 68K
-; ----------------------------------------
-
-		mov	#_sysreg+comm8,r1
-		mov	#RAM_Mars_MdTasksFifo_M,r2
-		mov	#_sysreg+comm14,r3	; Also process tasks
-		mov.b	@r3,r0			; after this
-		or	#$80,r0
-		mov.b	r0,@r3
-.next_comm:
-		mov	#2,r0		; SH is ready
-		mov.b	r0,@(1,r1)
-.wait_md_b:
-		mov.b	@(0,r1),r0	; get MD status
-		cmp/eq	#0,r0
-		bt	.finish
-		and	#$80,r0
-		cmp/eq	#0,r0		; is MD busy?
-		bt	.wait_md_b
-		mov	#1,r0		; SH is busy
-		mov.b	r0,@(1,r1)
-.wait_md_c:
-		mov.b	@(0,r1),r0
-		cmp/eq	#0,r0
-		bt	.finish
-		and	#$40,r0
-		cmp/eq	#$40,r0		; MD ready?
-		bf	.wait_md_c
-		mov.w	@(2,r1),r0	; comm10
-		mov.w	r0,@r2
-		mov.w	@(4,r1),r0	; comm12
-		mov.w	r0,@(2,r2)
-		bra	.next_comm
-		add	#4,r2
+; 		bt	.finish
+; 		and	#$80,r0
+; 		cmp/eq	#0,r0		; is MD busy?
+; 		bt	.wait_md_b
+; 		mov	#1,r0		; SH is busy
+; 		mov.b	r0,@(1,r1)
+; .wait_md_c:
+; 		mov.b	@(0,r1),r0
+; 		cmp/eq	#0,r0
+; 		bt	.finish
+; 		and	#$40,r0
+; 		cmp/eq	#$40,r0		; MD ready?
+; 		bf	.wait_md_c
+; 		mov.w	@(2,r1),r0	; comm10
+; 		mov.w	r0,@r2
+; 		mov.w	@(4,r1),r0	; comm12
+; 		mov.w	r0,@(2,r2)
+; 		bra	.next_comm
+; 		add	#4,r2
 
 ; ; ----------------------------------------
 ; ; Transfer from Z80
@@ -445,34 +445,37 @@ m_irq_v:
 		mov	#$F0,r0			; Disable interrupts
 		ldc	r0,sr
 
-
-	; TEMPORAL
-		mov	#1,r1
-		mov	#0,r2
-
-	; Y move
-		mov	#RAM_Mars_Bg_Y,r3
-		mov.w	@r3,r0
+	; X/Y scroll position
+		mov	#1,r1			; X increment
+		mov	#1,r2			; Y increment
+		mov	#RAM_Mars_Bg_Y,r4	; Y move
+		mov.w	@r4,r0
 		add	r2,r0
-		mov	#$FF,r2
-		and	r2,r0
-		mov.w	r0,@r3
-
-
-	; X move
-		mov	#RAM_Mars_Bg_X,r4
+		mov	#$E8,r3
+		cmp/ge	r3,r0
+		bf	.ymuch
+		xor	r0,r0
+.ymuch:
+		cmp/pl	r2
+		bt	.ygup
+.ydown:
+		cmp/pl	r0
+		bt	.ygup
+		mov	r3,r0
+.ygup:
+		mov.w	r0,@r4
+		mov	#RAM_Mars_Bg_X,r4	; X move
 		mov.w	@r4,r0
 		add	r1,r0
 		mov	r0,r4
-		tst	#$08,r0
+		tst	#$10,r0
 		bt	.dontrgr
-
 		mov	#RAM_Mars_Bg_XHead_L,r3
-		mov	#384,r2
+		mov	#336,r2
 		mov.w	@r3,r0
 		cmp/pl	r1
 		bf	.negtv
-		add	#$08,r0
+		add	#$10,r0
 		cmp/ge	r2,r0
 		bf	.xhgh
 		xor	r0,r0
@@ -481,39 +484,21 @@ m_irq_v:
 .negtv:
 		cmp/pl	r1
 		bt	.postv
-		add	#-$08,r0
+		add	#-$10,r0
 		cmp/pl	r0
 		bt	.xhghd
 		mov	r2,r0
 .xhghd:
 		mov.w	r0,@r3
 .postv:
-
-; 		mov	#8,r1
-; 		mov	#384-1,r2
-; 		mov	#RAM_Mars_Bg_XHead_L,r3		; Left X head
-; 		mov.w	@r3,r0
-; 		add	r1,r0
-; 		cmp/gt	r2,r0
-; 		bf	.lfok
-; 		xor	r0,r0
-; .lfok:
-; 		cmp/pz	r1
-; 		bt	.lfchk
-; 		cmp/pl	r0
-; 		bt	.lfchk
-; 		mov	r2,r0
-; .lfchk:
 		mov.w	r0,@r3
-
-		mov	#1,r2
+		mov	#1,r2				; request full draw
 		mov	#RAM_Mars_Bg_X_ReDraw,r1
 		mov.w	r2,@r1
 .dontrgr:
-
 		mov	#RAM_Mars_Bg_X,r3
 		mov	r4,r0
-		mov	#%111,r2
+		mov	#$0F,r2
 		and	r2,r4
 		mov	#_vdpreg+shift,r2
 		and	#1,r0
@@ -728,38 +713,38 @@ s_irq_cmd:
 ; Transfer from 68K
 ; ----------------------------------------
 
-		mov	#_sysreg+comm8,r1
-		mov	#RAM_Mars_MdTasksFifo_S,r2
-		mov	#_sysreg+comm15,r3	; Also process tasks
-		mov.b	@r3,r0			; after this
-		or	#$80,r0
-		mov.b	r0,@r3
-.next_comm:
-		mov	#2,r0		; SH is ready
-		mov.b	r0,@(1,r1)
-.wait_md_b:
-		mov.b	@(0,r1),r0	; get MD status
-		cmp/eq	#0,r0
-		bt	.finish
-		and	#$80,r0
-		cmp/eq	#0,r0		; is MD busy?
-		bt	.wait_md_b
-		mov	#1,r0		; SH is busy
-		mov.b	r0,@(1,r1)
-.wait_md_c:
-		mov.b	@(0,r1),r0
-		cmp/eq	#0,r0
-		bt	.finish
-		and	#$40,r0
-		cmp/eq	#$40,r0		; MD ready?
-		bf	.wait_md_c
-		mov.w	@(2,r1),r0	; comm10
-		mov.w	r0,@r2
-		mov.w	@(4,r1),r0	; comm12
-		mov.w	r0,@(2,r2)
-		bra	.next_comm
-		add	#4,r2
-.finish:
+; 		mov	#_sysreg+comm8,r1
+; 		mov	#RAM_Mars_MdTasksFifo_S,r2
+; 		mov	#_sysreg+comm15,r3	; Also process tasks
+; 		mov.b	@r3,r0			; after this
+; 		or	#$80,r0
+; 		mov.b	r0,@r3
+; .next_comm:
+; 		mov	#2,r0		; SH is ready
+; 		mov.b	r0,@(1,r1)
+; .wait_md_b:
+; 		mov.b	@(0,r1),r0	; get MD status
+; 		cmp/eq	#0,r0
+; 		bt	.finish
+; 		and	#$80,r0
+; 		cmp/eq	#0,r0		; is MD busy?
+; 		bt	.wait_md_b
+; 		mov	#1,r0		; SH is busy
+; 		mov.b	r0,@(1,r1)
+; .wait_md_c:
+; 		mov.b	@(0,r1),r0
+; 		cmp/eq	#0,r0
+; 		bt	.finish
+; 		and	#$40,r0
+; 		cmp/eq	#$40,r0		; MD ready?
+; 		bf	.wait_md_c
+; 		mov.w	@(2,r1),r0	; comm10
+; 		mov.w	r0,@r2
+; 		mov.w	@(4,r1),r0	; comm12
+; 		mov.w	r0,@(2,r2)
+; 		bra	.next_comm
+; 		add	#4,r2
+; .finish:
 		ldc 	@r15+,sr
 		mov 	@r15+,r4
 		mov 	@r15+,r3
@@ -973,6 +958,9 @@ SH2_M_HotStart:
 		mov	#MarsVideo_TempDraw,r0
 		jsr	@r0
 		nop
+; 		mov	#MarsVideo_DrawAllBg,r0
+; 		jsr	@r0
+; 		nop
 		mov 	#_vdpreg,r1
 .wait_fb:	mov.w   @($A,r1),r0
 		tst     #2,r0
@@ -988,6 +976,96 @@ SH2_M_HotStart:
 ; --------------------------------------------------------
 
 master_loop:
+		mov	#_CCR,r1			; <-- Required for Watchdog
+		mov	#%00001000,r0			; Two-way mode
+		mov.w	r0,@r1
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r1
+		mov	#MarsVideo_SetWatchdog,r0
+		jsr	@r0
+		nop
+		
+; 	; While we are doing this, the watchdog is
+; 	; working on the background drawing the polygons
+; 	; using the "pieces" list
+; 	;
+; 	; r14 - Polygon pointers list
+; 	; r13 - Number of polygons to build
+; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
+; 		tst     #1,r0				; Check for which buffer to use
+; 		bt	.page_2
+; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
+; 		mov	#RAM_Mars_PlgnNum_0,r13
+; 		bra	.cont_plgn
+; 		nop
+; .page_2:
+; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
+; 		mov	#RAM_Mars_PlgnNum_1,r13
+; 		nop
+; 		nop
+; .cont_plgn:
+; 		mov.w	@r13,r13			; read from memory to register
+; 		cmp/pl	r13				; zero?
+; 		bf	.skip
+; .loop:
+; 		mov	r14,@-r15
+; 		mov	r13,@-r15
+; 		mov	@(4,r14),r14			; Get location of the polygon
+; 		cmp/pl	r14				; Zero?
+; 		bf	.invalid			; if yes, skip
+; 		mov 	#MarsVideo_SlicePlgn,r0
+; 		jsr	@r0
+; 		nop
+; .invalid:
+; 		mov	@r15+,r13
+; 		mov	@r15+,r14
+; 		dt	r13				; Decrement numof_polygons
+; 		bf/s	.loop
+; 		add	#8,r14				; Move to next entry
+; .skip:
+
+; 		mov	#3000,r0
+; .hastewey:
+; 		dt	r0
+; 		bf	.hastewey
+
+	; --------------------------------------
+; .wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
+; 		cmp/eq	#0,r0
+; 		bf	.wait_pz
+.wait_task:	mov.w	@(marsGbl_DrwTask,gbr),r0	; Any drawing task active?
+		cmp/eq	#0,r0
+		bf	.wait_task
+		mov.l   #$FFFFFE80,r1			; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
+		mov	#_vdpreg,r1
+.waitfb:	mov.w	@(vdpsts,r1),r0			; Wait until any line-fill finishes.
+		tst	#%10,r0
+		bf	.waitfb
+		mov.b	@(framectl,r1),r0		; Frameswap request, Next Watchdog will
+		xor	#1,r0				; check for it later.
+		mov.b	r0,@(framectl,r1)		; Save new bit
+		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
+
+; 	; --------------------
+; 	; DEBUG counter
+; 		mov	#tempcntr,r2
+; 		mov	@r2,r0
+; 		add	#1,r0
+; 		mov	r0,@r2
+; 	; --------------------
+;
+; 		mov	#_sysreg+comm14,r1		; Clear task number
+; 		mov.b	@r1,r0
+; 		and	#$80,r0
+; 		mov.b	r0,@r1
+
+		bra	master_loop
+		nop
+		align 4
+		ltorg
+
 ; 	; --------------------
 ; 	; DEBUG counter
 ; ; 		mov	#_sysreg+comm2,r4		; DEBUG COUNTER
@@ -1059,98 +1137,7 @@ master_loop:
 ; ; Polygons mode
 ; ; --------------------------------------------------------
 
-.draw_objects:
-		mov	#_CCR,r1			; <-- Required for Watchdog
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#MarsVideo_SetWatchdog,r0
-		jsr	@r0
-		nop
-		
-; 	; While we are doing this, the watchdog is
-; 	; working on the background drawing the polygons
-; 	; using the "pieces" list
-; 	;
-; 	; r14 - Polygon pointers list
-; 	; r13 - Number of polygons to build
-; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-; 		tst     #1,r0				; Check for which buffer to use
-; 		bt	.page_2
-; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
-; 		mov	#RAM_Mars_PlgnNum_0,r13
-; 		bra	.cont_plgn
-; 		nop
-; .page_2:
-; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
-; 		mov	#RAM_Mars_PlgnNum_1,r13
-; 		nop
-; 		nop
-; .cont_plgn:
-; 		mov.w	@r13,r13			; read from memory to register
-; 		cmp/pl	r13				; zero?
-; 		bf	.skip
-; .loop:
-; 		mov	r14,@-r15
-; 		mov	r13,@-r15
-; 		mov	@(4,r14),r14			; Get location of the polygon
-; 		cmp/pl	r14				; Zero?
-; 		bf	.invalid			; if yes, skip
-; 		mov 	#MarsVideo_SlicePlgn,r0
-; 		jsr	@r0
-; 		nop
-; .invalid:
-; 		mov	@r15+,r13
-; 		mov	@r15+,r14
-; 		dt	r13				; Decrement numof_polygons
-; 		bf/s	.loop
-; 		add	#8,r14				; Move to next entry
-; .skip:
-
-		mov	#1256,r0
-.hastewey:
-		dt	r0
-		bf	.hastewey
-
-	; --------------------------------------
-; .wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
-; 		cmp/eq	#0,r0
-; 		bf	.wait_pz
-.wait_task:	mov.w	@(marsGbl_DrwTask,gbr),r0	; Any drawing task active?
-		cmp/eq	#0,r0
-		bf	.wait_task
-		mov.l   #$FFFFFE80,r1			; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		mov	#_vdpreg,r1
-.waitfb:	mov.w	@(vdpsts,r1),r0			; Wait until any line-fill finishes.
-		tst	#%10,r0
-		bf	.waitfb
-		mov.b	@(framectl,r1),r0		; Frameswap request, Next Watchdog will
-		xor	#1,r0				; check for it later.
-		mov.b	r0,@(framectl,r1)		; Save new bit
-		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
-
-; 	; --------------------
-; 	; DEBUG counter
-; 		mov	#tempcntr,r2
-; 		mov	@r2,r0
-; 		add	#1,r0
-; 		mov	r0,@r2
-; 	; --------------------
-;
-; 		mov	#_sysreg+comm14,r1		; Clear task number
-; 		mov.b	@r1,r0
-; 		and	#$80,r0
-; 		mov.b	r0,@r1
-
-
-
-		bra	master_loop
-		nop
-		align 4
-		ltorg
+; .draw_objects:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1876,7 +1863,7 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_Background	ds.b 384*256			; Third background
+RAM_Mars_Background	ds.b 336*232			; Third background
 RAM_Mars_Palette	ds.w 256			; Indexed palette
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
 RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
@@ -1887,20 +1874,13 @@ RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Pieces list
 RAM_Mars_VdpDrwList_e	ds.l 0				; (end-of-list label)
 RAM_Mars_Plgn_ZList_0	ds.l MAX_FACES*2		; Z value / foward faces
 RAM_Mars_Plgn_ZList_1	ds.l MAX_FACES*2		; Z value / foward faces
-RAM_Mars_MdTasksFifo_M	ds.l MAX_MDTSKARG*MAX_MDTASKS	; Request list for Master: SVDP and PWM interaction exclusive
-RAM_Mars_MdTasksFifo_S	ds.l MAX_MDTSKARG*MAX_MDTASKS	; Request list for Slave: Controlling objects and camera
 RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
 RAM_Mars_PlgnNum_1	ds.w 1				;
 RAM_Mars_Xbg_Frac	ds.w 1
 RAM_Mars_Bg_X		ds.w 1
 RAM_Mars_Bg_X_ReDraw	ds.w 1
-; RAM_Mars_Bg_XDraw_L	ds.w 1
-; RAM_Mars_Bg_XDraw_R	ds.w 1
 RAM_Mars_Bg_XHead_L	ds.w 1
-; RAM_Mars_Bg_XHead_R	ds.w 1
-; RAM_Mars_Bg_Xcopy	ds.w 1
 RAM_Mars_Bg_Y		ds.w 1
-; RAM_Mars_Bg_Ycopy	ds.w 1
 sizeof_marsvid		ds.l 0
 			finish
 

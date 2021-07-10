@@ -25,42 +25,10 @@ m_irq_custom:
 		mov	#MarsVideo_Refill,r0
 		jmp	@r0
 		nop
-
-
+		align 4
 
 Cach_XHead:	dc.l 0
 Cach_Redraw:	dc.l 0
-
-	; OLD
-; 		mov	#RAM_Mars_Bg_X,r2
-; 		mov.w	@r2,r0
-; 		mov	r0,r2
-; 		and	#1,r0
-; ; 		cmp/eq	#0,r0
-; ; 		bf	.middl
-; 		shlr	r2
-; 		shll	r2
-; 		mov	@(marsGbl_Backdata,gbr),r0
-; 		mov	r0,r4
-; 		add	r2,r4
-; 		mov	@(marsGbl_BackFb,gbr),r0
-; 		mov	r0,r2
-; 		mov	#320/2,r5
-; .wvm2:
-; 		mov.w	@r4+,r0
-; 		mov.w	r0,@r2
-; 		add	#2,r2
-; 		dt	r5
-; 		bf	.wvm2
-; 		mov	#336,r2
-; 		mov	@(marsGbl_Backdata,gbr),r0
-; 		add	r2,r0
-; 		mov	r0,@(marsGbl_Backdata,gbr)
-; 		mov	#$200,r2
-; 		mov	@(marsGbl_BackFb,gbr),r0
-; 		add	r2,r0
-; 		mov	r0,@(marsGbl_BackFb,gbr)
-	; OLD
 
 ; --------------------------------
 ; Main drawing routine

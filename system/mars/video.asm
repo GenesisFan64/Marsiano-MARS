@@ -236,7 +236,7 @@ MarsVideo_ClearFrame:
 
 MarsVideo_TempDraw:
 		mov	#RAM_Mars_Background,r2
-		mov	#(384*224)/4,r3
+		mov	#(336*232)/4,r3
 .wvm2:
 		mov.l	@r1+,r0
 		mov.l	r0,@r2
@@ -248,10 +248,6 @@ MarsVideo_TempDraw:
 		align 4
 
 MarsVideo_DrawAllBg:
-; 		rts
-; 		nop
-; 		align 4
-
 		sts	pr,@-r15
 		bsr	.this
 		nop
@@ -270,15 +266,16 @@ MarsVideo_DrawAllBg:
 		mov	r0,r4
 		mov	#224,r7
 .wvm3:
-		mov	#384/4,r6
+		mov	#336,r6
+		shlr2	r6
 .wvm2:
-; 		cmp/ge	r3,r1
-; 		bf	.nolm
-; 		mov	r2,r1
-; .nolm:
-		mov.l	@r1+,r0
-		mov.l	r0,@r4
-		add	#4,r4
+		cmp/ge	r3,r1
+		bf	.nolm
+		mov	r2,r1
+.nolm:
+		mov.w	@r1+,r0
+		mov.w	r0,@r4
+		add	#2,r4
 		dt	r6
 		bf	.wvm2
 
@@ -378,7 +375,7 @@ MarsVideo_SetWatchdog:
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 
 		mov	#Cach_ClrLines,r1		; Prepare scroll-draw args
-		mov	#224+16,r0
+		mov	#232,r0
 		mov	r0,@r1
 		mov	#RAM_Mars_Bg_XHead_L,r0
 		mov.w	@r0,r0
@@ -422,13 +419,14 @@ MarsVideo_SetWatchdog:
 		and	#$FF,r0
 		shll8	r0
 		mov	r0,r2
-		mov	#224,r5
+		mov	#$100,r0
+		add	r0,r2
+		mov	#240,r5
 		mov	#_framebuffer,r4
 		mov	#$100,r1
-		mov	#$F800,r7
+		mov	#$E800,r7
 .copyx:
 		mov	r2,r0
-		add	r1,r0
 		add	r3,r0
 		mov.w	r0,@r4
 		add	r1,r2
@@ -475,7 +473,7 @@ MarsVideo_Refill:
 		mov	r0,r5
 		mov	r0,r4
 		mov	r0,r3
-		mov	#384,r0
+		mov	#336,r0
 		add	r0,r3
 		mov	#-4,r1
 		mov	#Cach_XHead,r0
@@ -500,7 +498,11 @@ MarsVideo_Refill:
 		dt	r1
 		bf	.wvm2
 
-	rept 2
+	rept 4
+		cmp/ge	r3,r5
+		bf	.lel2
+		mov	r4,r5
+.lel2:
 		mov	@r5+,r0
 		mov	r0,@r2
 		add	#4,r2
@@ -511,7 +513,7 @@ MarsVideo_Refill:
 		add	r5,r0
 		mov	r0,@(marsGbl_BackFb,gbr)
 		mov	@(marsGbl_Backdata,gbr),r0
-		mov	#384,r6
+		mov	#336,r6
 		add	r6,r0
 		mov	r0,@(marsGbl_Backdata,gbr)
 
