@@ -235,6 +235,9 @@ MarsVideo_ClearFrame:
 ; ------------------------------------
 
 MarsVideo_TempDraw:
+		mov	#RAM_Mars_Background,r0
+		mov	r0,@(marsGbl_BgData,gbr)
+
 		mov	#RAM_Mars_Background,r2
 		mov	#(336*232)/4,r3
 .wvm2:
@@ -365,36 +368,36 @@ MarsVideo_LoadPal:
 
 MarsVideo_SetWatchdog:
 
-	; Watchdog pre-settings
+	; Polygon start-values
 		mov	#RAM_Mars_VdpDrwList,r0		; Reset the piece-drawing pointer
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; on both READ and WRITE pointers
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
 		mov	#0,r0				; Reset polygon pieces counter
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
-		mov	#8,r0				; Set starting watchdog task to $08 (Clear framebuffer)
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
 
-		mov	#Cach_ClrLines,r1		; Prepare scroll-draw args
+	; Background drawing start-values
+		mov	#8,r0				; Set starting watchdog task to $08
+		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov	@(marsGbl_BgData,gbr),r0
+		mov	r0,@(marsGbl_BgData_R,gbr)
+		mov	#_framebuffer+$200,r0
+		mov	r0,@(marsGbl_BgFbPos_R,gbr)
+		mov	#Cach_ClrLines,r1
 		mov	#232,r0
 		mov	r0,@r1
-		mov	#RAM_Mars_Bg_XHead_L,r0
-		mov.w	@r0,r0
 		mov	#Cach_XHead,r1
+		mov.w	@(marsGbl_Bg_Xincr,gbr),r0
 		mov	r0,@r1
-		mov	#RAM_Mars_Bg_X_ReDraw,r1
-		mov.w	@r1,r0
-		cmp/eq	#0,r0
-		bt	.nochg
-		xor	r0,r0
-		mov.w	r0,@r1
-		mov	#2,r0
-		mov	#Cach_Redraw,r1
-		mov	r0,@r1
-.nochg:
-		mov	#RAM_Mars_Background,r0
-		mov	r0,@(marsGbl_Backdata,gbr)
-		mov	#_framebuffer+$200,r0
-		mov	r0,@(marsGbl_BackFb,gbr)
+; 		mov	#RAM_Mars_Bg_X_ReDraw,r1
+; 		mov.w	@r1,r0
+; 		cmp/eq	#0,r0
+; 		bt	.nochg
+; 		xor	r0,r0
+; 		mov.w	r0,@r1
+; 		mov	#2,r0
+; 		mov	#Cach_Redraw,r1
+; 		mov	r0,@r1
+; .nochg:
 
 	; CRITICAL PART
 		mov	#_vdpreg,r1
@@ -411,16 +414,15 @@ MarsVideo_SetWatchdog:
 		bf	.wait_fb
 
 	; Do the linescroll here first.
-		mov	#RAM_Mars_Bg_X,r2
-		mov.w	@r2,r3
-		shlr	r3
-		mov	#RAM_Mars_Bg_Y,r0
-		mov.w	@r0,r0
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		shlr	r0
+		mov	r0,r3
+		mov	#$100,r2
+		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		and	#$FF,r0
 		shll8	r0
-		mov	r0,r2
-		mov	#$100,r0
 		add	r0,r2
+
 		mov	#240,r5
 		mov	#_framebuffer,r4
 		mov	#$100,r1
@@ -440,7 +442,7 @@ MarsVideo_SetWatchdog:
 
 		ldc	@r15+,sr			; Restore interrupts
 		mov	#$FFFFFE80,r1
-		mov.w	#$5A7F,r0			; Watchdog timer
+		mov.w	#$5A20,r0			; Watchdog timer
 		mov.w	r0,@r1
 		mov.w	#$A538,r0			; Enable this watchdog
 		mov.w	r0,@r1
@@ -469,7 +471,7 @@ MarsVideo_Refill:
 ; 		mov	@r4,r0
 ; 		cmp/eq	#0,r0
 ; 		bt	.exitthis
-		mov	@(marsGbl_Backdata,gbr),r0
+		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	r0,r5
 		mov	r0,r4
 		mov	r0,r3
@@ -480,7 +482,7 @@ MarsVideo_Refill:
 		mov	@r0,r0
 		and	r1,r0
 		add	r0,r5
-		mov	@(marsGbl_BackFb,gbr),r0
+		mov	@(marsGbl_BgFbPos_R,gbr),r0
 		mov	r0,r2
 
 	; blast the pixels...
@@ -508,14 +510,14 @@ MarsVideo_Refill:
 		add	#4,r2
 	endm
 
-		mov	@(marsGbl_BackFb,gbr),r0
+		mov	@(marsGbl_BgFbPos_R,gbr),r0
 		mov	#$200,r5
 		add	r5,r0
-		mov	r0,@(marsGbl_BackFb,gbr)
-		mov	@(marsGbl_Backdata,gbr),r0
+		mov	r0,@(marsGbl_BgFbPos_R,gbr)
+		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	#336,r6
 		add	r6,r0
-		mov	r0,@(marsGbl_Backdata,gbr)
+		mov	r0,@(marsGbl_BgData_R,gbr)
 
 .exitthis:
 		mov.l   #$FFFFFE80,r1

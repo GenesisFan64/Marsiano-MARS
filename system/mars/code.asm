@@ -15,12 +15,19 @@
 ; ----------------------------------------------------------------
 
 			struct 0
+marsGbl_BgData		ds.l 1		; Background pixel data location (ROM or RAM)
+marsGbl_BgData_R	ds.l 1		; Background data pointer
+marsGbl_BgFbPos_R	ds.l 1		; Framebuffer (output) BASE position
 marsGbl_PlyPzList_R	ds.l 1		; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1		; Current graphic piece to write
 marsGbl_CurrZList	ds.l 1		; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1		; Current top face of the list while reading model data
-marsGbl_Backdata	ds.l 1		; Background data pointer
-marsGbl_BackFb		ds.l 1		; Background framebuffer pointer
+marsGbl_Bg_Width	ds.w 1
+marsGbl_Bg_Height	ds.w 1
+marsGbl_Bg_Xpos		ds.w 1
+marsGbl_Bg_Ypos		ds.w 1
+marsGbl_Bg_Xincr	ds.w 1
+marsGbl_Bg_Yincr	ds.w 1
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PolyBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_PzListCntr	ds.w 1		; Number of graphic pieces to draw
@@ -446,67 +453,72 @@ m_irq_v:
 		ldc	r0,sr
 
 	; X/Y scroll position
-		mov	#1,r1			; X increment
-		mov	#1,r2			; Y increment
-		mov	#RAM_Mars_Bg_Y,r4	; Y move
-		mov.w	@r4,r0
+		mov	#1,r1				; X increment
+		mov	#1,r2				; Y increment
+
+	; Y scroll
+		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r2,r0
 		mov	#$E8,r3
+		mov	r3,r4
 		cmp/ge	r3,r0
 		bf	.ymuch
-		xor	r0,r0
+		sub	r3,r4
+		mov	r4,r0
 .ymuch:
-		cmp/pl	r2
+		cmp/pz	r2
 		bt	.ygup
 .ydown:
 		cmp/pl	r0
 		bt	.ygup
 		mov	r3,r0
 .ygup:
-		mov.w	r0,@r4
-		mov	#RAM_Mars_Bg_X,r4	; X move
-		mov.w	@r4,r0
+		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
+
+	; X move
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov	r0,r4
 		tst	#$10,r0
 		bt	.dontrgr
-		mov	#RAM_Mars_Bg_XHead_L,r3
 		mov	#336,r2
-		mov.w	@r3,r0
+		mov	r2,r3
+		mov.w	@(marsGbl_Bg_Xincr,gbr),r0
 		cmp/pl	r1
 		bf	.negtv
 		add	#$10,r0
 		cmp/ge	r2,r0
 		bf	.xhgh
-		xor	r0,r0
+		sub	r2,r3
+		mov	r3,r0
+; 		xor	r0,r0
 .xhgh:
-		mov.w	r0,@r3
+		mov.w	r0,@(marsGbl_Bg_Xincr,gbr)
 .negtv:
 		cmp/pl	r1
 		bt	.postv
 		add	#-$10,r0
 		cmp/pl	r0
-		bt	.xhghd
+		bt	.postv
 		mov	r2,r0
-.xhghd:
-		mov.w	r0,@r3
 .postv:
-		mov.w	r0,@r3
-		mov	#1,r2				; request full draw
-		mov	#RAM_Mars_Bg_X_ReDraw,r1
-		mov.w	r2,@r1
+		mov.w	r0,@(marsGbl_Bg_Xincr,gbr)
+	; Full-draw request
+	; goes here... if needed
+; 		mov	#1,r2				; request full draw
+; 		mov	#RAM_Mars_Bg_X_ReDraw,r1
+; 		mov.w	r2,@r1
 .dontrgr:
-		mov	#RAM_Mars_Bg_X,r3
 		mov	r4,r0
 		mov	#$0F,r2
 		and	r2,r4
 		mov	#_vdpreg+shift,r2
 		and	#1,r0
 		mov.w	r0,@r2
-		mov.w	r4,@r3
+		mov	r4,r0
+		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
 
-	; Copy palette manually to
-	; SVDP
+	; Copy palette manually to SuperVDP
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_PalDmaMidWr,gbr)
 		mov	#RAM_Mars_Palette,r1
@@ -1876,11 +1888,9 @@ RAM_Mars_Plgn_ZList_0	ds.l MAX_FACES*2		; Z value / foward faces
 RAM_Mars_Plgn_ZList_1	ds.l MAX_FACES*2		; Z value / foward faces
 RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
 RAM_Mars_PlgnNum_1	ds.w 1				;
-RAM_Mars_Xbg_Frac	ds.w 1
-RAM_Mars_Bg_X		ds.w 1
-RAM_Mars_Bg_X_ReDraw	ds.w 1
-RAM_Mars_Bg_XHead_L	ds.w 1
-RAM_Mars_Bg_Y		ds.w 1
+; RAM_Mars_Bg_X		ds.w 1
+; RAM_Mars_Bg_XHead	ds.w 1
+; RAM_Mars_Bg_Y		ds.w 1
 sizeof_marsvid		ds.l 0
 			finish
 
