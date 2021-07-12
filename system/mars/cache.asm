@@ -28,6 +28,9 @@ m_irq_custom:
 		align 4
 
 Cach_XHead:	dc.l 0
+Cach_YHead:	dc.l 0
+Cach_CurrY:	dc.l 0
+; Cach_LastY:	dc.l 0
 Cach_Redraw:	dc.l 0
 
 ; --------------------------------

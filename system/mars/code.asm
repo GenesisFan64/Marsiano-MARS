@@ -22,12 +22,13 @@ marsGbl_PlyPzList_R	ds.l 1		; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1		; Current graphic piece to write
 marsGbl_CurrZList	ds.l 1		; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1		; Current top face of the list while reading model data
-marsGbl_Bg_Width	ds.w 1
-marsGbl_Bg_Height	ds.w 1
+marsGbl_Bg_Yincr	ds.l 1
+marsGbl_BgWidth		ds.w 1
+marsGbl_BgHeight	ds.w 1
 marsGbl_Bg_Xpos		ds.w 1
 marsGbl_Bg_Ypos		ds.w 1
 marsGbl_Bg_Xincr	ds.w 1
-marsGbl_Bg_Yincr	ds.w 1
+marsGbl_Bg_Update	ds.w 1
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PolyBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_PzListCntr	ds.w 1		; Number of graphic pieces to draw
@@ -449,6 +450,7 @@ m_irq_v:
 		mov	r3,@-r15
 		mov	r4,@-r15
 ; 		mov	r5,@-r15
+		sts	macl,@-r15
 		mov	#$F0,r0			; Disable interrupts
 		ldc	r0,sr
 
@@ -456,61 +458,58 @@ m_irq_v:
 		mov	#1,r1				; X increment
 		mov	#1,r2				; Y increment
 
-	; Y scroll
+; 	; Y scroll
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r4
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r3
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r2,r0
-		mov	#$E8,r3
-		mov	r3,r4
-		cmp/ge	r3,r0
-		bf	.ymuch
-		sub	r3,r4
-		mov	r4,r0
-.ymuch:
 		cmp/pz	r2
-		bt	.ygup
-.ydown:
+		bf	.yneg
+		cmp/ge	r3,r0
+		bf	.ydwn
+		sub	r3,r0
+.ydwn:
+		cmp/pz	r2
+		bt	.yposc
+.yneg:
 		cmp/pl	r0
-		bt	.ygup
-		mov	r3,r0
-.ygup:
+		bt	.yposc
+		add	r3,r0
+.yposc:
 		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
+		mulu	r4,r0
+		sts	macl,r0
+		mov	r0,@(marsGbl_Bg_Yincr,gbr)
 
 	; X move
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r2
 		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov	r0,r4
-		tst	#$10,r0
+		tst	#%11111000,r0				; X Halfway?
 		bt	.dontrgr
-		mov	#336,r2
-		mov	r2,r3
 		mov.w	@(marsGbl_Bg_Xincr,gbr),r0
-		cmp/pl	r1
+		cmp/pz	r1
 		bf	.negtv
-		add	#$10,r0
-		cmp/ge	r2,r0
-		bf	.xhgh
-		sub	r2,r3
-		mov	r3,r0
-; 		xor	r0,r0
-.xhgh:
-		mov.w	r0,@(marsGbl_Bg_Xincr,gbr)
+		add	#$08,r0
+		cmp/gt	r2,r0
+		bf	.negtv
+		sub	r2,r0
 .negtv:
-		cmp/pl	r1
+		cmp/pz	r1
 		bt	.postv
-		add	#-$10,r0
-		cmp/pl	r0
+		add	#-$08,r0
+		cmp/pz	r0
 		bt	.postv
-		mov	r2,r0
+		add	r2,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_Xincr,gbr)
-	; Full-draw request
-	; goes here... if needed
-; 		mov	#1,r2				; request full draw
-; 		mov	#RAM_Mars_Bg_X_ReDraw,r1
-; 		mov.w	r2,@r1
 .dontrgr:
 		mov	r4,r0
-		mov	#$0F,r2
+		mov	#$07,r2
 		and	r2,r4
 		mov	#_vdpreg+shift,r2
 		and	#1,r0
@@ -564,6 +563,7 @@ m_irq_v:
 ; 		jsr	@r0
 
 ; 		mov	@r15+,r5
+		lds	@r15+,macl
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -966,10 +966,22 @@ SH2_M_HotStart:
 		mov	#MarsVideo_LoadPal,r0
 		jsr	@r0
 		nop
+
 		mov	#TESTMARS_BG,r1
-		mov	#MarsVideo_TempDraw,r0
-		jsr	@r0
-		nop
+		mov	#500,r2
+		mov	#375,r3
+
+		mov	r1,r0
+		mov	r0,@(marsGbl_BgData,gbr)
+		mov	r2,r0
+		mov.w	r0,@(marsGbl_BgWidth,gbr)
+		mov	r3,r0
+		mov.w	r0,@(marsGbl_BgHeight,gbr)
+
+; 		mov	#TESTMARS_BG,r1
+; 		mov	#MarsVideo_TempDraw,r0
+; 		jsr	@r0
+; 		nop
 ; 		mov	#MarsVideo_DrawAllBg,r0
 ; 		jsr	@r0
 ; 		nop
@@ -1875,7 +1887,7 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_Background	ds.b 336*232			; Third background
+; RAM_Mars_Background	ds.b 336*232			; Third background
 RAM_Mars_Palette	ds.w 256			; Indexed palette
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
 RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
