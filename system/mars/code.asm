@@ -435,9 +435,6 @@ m_irq_v:
 		mov	#_sysreg+vintclr,r1
 		mov.w	r0,@r1
 
-	; Hardware BUG:
-	; Using DMA to transfer palette
-	; to _palette works on the first pass
 		mov	#_vdpreg,r1		; Wait for palette access
 .wait_fb:	mov.w	@(vdpsts,r1),r0		; Read status as WORD
 		tst	#2,r0			; Framebuffer busy? (wait for FEN=1)
@@ -449,73 +446,10 @@ m_irq_v:
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
-; 		mov	r5,@-r15
+		mov	r5,@-r15
 		sts	macl,@-r15
 		mov	#$F0,r0			; Disable interrupts
 		ldc	r0,sr
-
-	; X/Y scroll position
-		mov	#1,r1				; X increment
-		mov	#1,r2				; Y increment
-
-; 	; Y scroll
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r4
-		mov.w	@(marsGbl_BgHeight,gbr),r0
-		mov	r0,r3
-		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
-		add	r2,r0
-		cmp/pz	r2
-		bf	.yneg
-		cmp/ge	r3,r0
-		bf	.ydwn
-		sub	r3,r0
-.ydwn:
-		cmp/pz	r2
-		bt	.yposc
-.yneg:
-		cmp/pl	r0
-		bt	.yposc
-		add	r3,r0
-.yposc:
-		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
-		mulu	r4,r0
-		sts	macl,r0
-		mov	r0,@(marsGbl_Bg_Yincr,gbr)
-
-	; X move
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r2
-		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
-		add	r1,r0
-		mov	r0,r4
-		tst	#%11111000,r0				; X Halfway?
-		bt	.dontrgr
-		mov.w	@(marsGbl_Bg_Xincr,gbr),r0
-		cmp/pz	r1
-		bf	.negtv
-		add	#$08,r0
-		cmp/gt	r2,r0
-		bf	.negtv
-		sub	r2,r0
-.negtv:
-		cmp/pz	r1
-		bt	.postv
-		add	#-$08,r0
-		cmp/pz	r0
-		bt	.postv
-		add	r2,r0
-.postv:
-		mov.w	r0,@(marsGbl_Bg_Xincr,gbr)
-.dontrgr:
-		mov	r4,r0
-		mov	#$07,r2
-		and	r2,r4
-		mov	#_vdpreg+shift,r2
-		and	#1,r0
-		mov.w	r0,@r2
-		mov	r4,r0
-		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
 
 	; Copy palette manually to SuperVDP
 		mov	#1,r0
@@ -562,8 +496,8 @@ m_irq_v:
 ; 		mov	#MarsVideo_MoveBgX,r0
 ; 		jsr	@r0
 
-; 		mov	@r15+,r5
 		lds	@r15+,macl
+		mov	@r15+,r5
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -968,8 +902,8 @@ SH2_M_HotStart:
 		nop
 
 		mov	#TESTMARS_BG,r1
-		mov	#500,r2
-		mov	#375,r3
+		mov	#1260,r2
+		mov	#658,r3
 
 		mov	r1,r0
 		mov	r0,@(marsGbl_BgData,gbr)
@@ -992,6 +926,12 @@ SH2_M_HotStart:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 
+		mov	#"GO",r2
+		mov	#_sysreg+comm14,r1
+.lel:		mov.w	@r1,r0
+		cmp/eq	r2,r0
+		bf	.lel
+
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
@@ -1008,7 +948,7 @@ master_loop:
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
-		
+
 ; 	; While we are doing this, the watchdog is
 ; 	; working on the background drawing the polygons
 ; 	; using the "pieces" list

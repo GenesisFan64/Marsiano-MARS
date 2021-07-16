@@ -13,7 +13,7 @@ import os.path
 # -------------------------------------------------
 
 # REAL Image width (in framebuffer)
-REAL_WIDTH  = 500
+REAL_WIDTH  = 360
 
 #======================================================================
 
@@ -226,13 +226,10 @@ if has_img == True:
 	e = 0
 	while b:
 		c = img_width
-		d = REAL_WIDTH
 		while c:
 			a = ord(input_file.read(1))
 			art_file.write( bytes([a]) )
 			c -= 1
-			d -= 1
-		art_file.write( bytes(d) )
 		b -= 1
 		e += 1
 

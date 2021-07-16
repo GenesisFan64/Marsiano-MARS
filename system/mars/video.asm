@@ -368,6 +368,143 @@ MarsVideo_LoadPal:
 
 MarsVideo_SetWatchdog:
 
+	; CRITICAL PART
+		mov	#_vdpreg,r1
+		mov.b	@(marsGbl_CurrFb,gbr),r0
+		mov	r0,r2
+		stc	sr,@-r15			; Save interrupts
+		mov	#$F0,r0
+		ldc	r0,sr
+.wait_frmswp:	mov.b	@(framectl,r1),r0
+		cmp/eq	r0,r2
+		bf	.wait_frmswp
+
+.wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
+		tst	#2,r0
+		bf	.wait_fb
+
+	; HINT: dumb way to deal with
+	; x-shift register but it works nicely.
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		mov	#_vdpreg+shift,r7
+		and	#1,r0
+		mov.w	r0,@r7
+		mov	#0,r1				; X increment
+		mov	#0,r2				; Y increment
+		mov 	#_sysreg+comm0,r8
+		mov.w	@r8,r3
+		mov.w	@(4,r8),r0
+		cmp/eq	r0,r3
+		bt	.xequ
+		mov	r3,r1
+		sub	r0,r1
+		and	#1,r0
+		mov.w	r0,@r7
+.xequ:
+		mov	r3,r0
+		mov.w	r0,@(4,r8)
+
+		mov.w	@(2,r8),r0
+		mov	r0,r3
+		mov.w	@(6,r8),r0
+		cmp/eq	r0,r3
+		bt	.yequ
+		mov	r3,r2
+		sub	r0,r2
+.yequ:
+		mov	r3,r0
+		mov.w	r0,@(6,r8)
+
+	; X/Y scroll position
+
+
+; 	; Y scroll
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r4
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		add	r2,r0
+		cmp/pz	r2
+		bf	.yneg
+		cmp/ge	r3,r0
+		bf	.ydwn
+		sub	r3,r0
+.ydwn:
+		cmp/pz	r2
+		bt	.yposc
+.yneg:
+		cmp/pl	r0
+		bt	.yposc
+		add	r3,r0
+.yposc:
+		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
+		mulu	r4,r0
+		sts	macl,r0
+		mov	r0,@(marsGbl_Bg_Yincr,gbr)
+
+	; X move
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r2
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		add	r1,r0
+		mov	r0,r4
+		tst	#%11111000,r0				; X Halfway?
+		bt	.dontrgr
+		mov.w	@(marsGbl_Bg_Xincr,gbr),r0
+		cmp/pz	r1
+		bf	.negtv
+		add	#$08,r0
+		cmp/gt	r2,r0
+		bf	.negtv
+		sub	r2,r0
+.negtv:
+		cmp/pz	r1
+		bt	.postv
+		add	#-$08,r0
+		cmp/pz	r0
+		bt	.postv
+		add	r2,r0
+.postv:
+		mov.w	r0,@(marsGbl_Bg_Xincr,gbr)
+.dontrgr:
+		mov	r4,r0
+		mov	#$07,r2
+		and	r2,r4
+		mov	r4,r0
+		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
+
+	; Linescroll + shiftbit
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0	; X shift
+; 		mov	#_vdpreg+shift,r1
+; 		and	#1,r0
+; 		mov.w	r0,@r1
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		shlr	r0
+		mov	r0,r3
+		mov	#$100,r2
+; 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+; 		and	#$FF,r0
+; 		shll8	r0
+; 		add	r0,r2
+
+		mov	#240,r5
+		mov	#_framebuffer,r4
+		mov	#$100,r1
+		mov	#$E800,r7
+.copyx:
+		mov	r2,r0
+		add	r3,r0
+		mov.w	r0,@r4
+		add	r1,r2
+		cmp/gt	r7,r2
+		bf	.donty
+		mov	r1,r2
+.donty:
+		dt	r5
+		bf/s	.copyx
+		add	#2,r4
+
 	; Polygon start-values
 		mov	#RAM_Mars_VdpDrwList,r0		; Reset the piece-drawing pointer
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; on both READ and WRITE pointers
@@ -407,47 +544,6 @@ MarsVideo_SetWatchdog:
 ; 		mov	#Cach_Redraw,r1
 ; 		mov	r0,@r1
 ; .nochg:
-
-	; CRITICAL PART
-		mov	#_vdpreg,r1
-		mov.b	@(marsGbl_CurrFb,gbr),r0
-		mov	r0,r2
-		stc	sr,@-r15			; Save interrupts
-		mov	#$F0,r0
-		ldc	r0,sr
-.wait_frmswp:	mov.b	@(framectl,r1),r0
-		cmp/eq	r0,r2
-		bf	.wait_frmswp
-.wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
-		tst	#2,r0
-		bf	.wait_fb
-
-	; Do the linescroll here first.
-		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
-		shlr	r0
-		mov	r0,r3
-		mov	#$100,r2
-; 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
-; 		and	#$FF,r0
-; 		shll8	r0
-; 		add	r0,r2
-
-		mov	#240,r5
-		mov	#_framebuffer,r4
-		mov	#$100,r1
-		mov	#$E800,r7
-.copyx:
-		mov	r2,r0
-		add	r3,r0
-		mov.w	r0,@r4
-		add	r1,r2
-		cmp/gt	r7,r2
-		bf	.donty
-		mov	r1,r2
-.donty:
-		dt	r5
-		bf/s	.copyx
-		add	#2,r4
 
 		ldc	@r15+,sr			; Restore interrupts
 		mov	#$FFFFFE80,r1

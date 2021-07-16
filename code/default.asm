@@ -80,14 +80,25 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		bsr	System_VSync
+		move.w	(vdp_ctrl),d4
+		btst	#bitVint,d4
+		beq.s	.loop
+		bsr	System_Input
+.inside:	move.w	(vdp_ctrl),d4
+		btst	#bitVint,d4
+		bne.s	.inside
+; 		rts
+
+; 		bsr	System_VSync
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
+		move.w	d0,(sysmars_reg+comm0).l
+		neg.w	d0
 ; 		lsr.w	#1,d0
 		move.w	#0,(vdp_data).l
 		move.w	d0,(vdp_data).l
 ; 		lea	str_Status(pc),a0
-; 		move.l	#locate(0,1,26),d0
+; 		move.l	#locate(0,0,0),d0
 ; 		bsr	Video_Print
 		move.w	(RAM_MdlCurrMd).w,d0
 		and.w	#%11111,d0
@@ -146,9 +157,43 @@ thisCode_Top:
 ; 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable MD display
 ; 		bsr	Video_Update
 
+		move.w	#"GO",(sysmars_reg+comm14)
+
 ; Mode 0 mainloop
 .mode0_loop:
-		add.w	#-1,(RAM_BgCamCurr).l
+
+		move.w	(Controller_1+on_press),d7
+		move.w	d7,d6
+		and.w	#JoyY,d6
+		beq.s	.no_x
+		sub.w	#1,(RAM_BgCamCurr).l
+.no_x:
+		move.w	d7,d6
+		and.w	#JoyZ,d6
+		beq.s	.no_y
+		add.w	#1,(RAM_BgCamCurr).l
+.no_y:
+
+
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyUp,d7
+		beq.s	.no_up
+		sub.w	#3,(sysmars_reg+comm2).l
+.no_up:
+		btst	#bitJoyDown,d7
+		beq.s	.no_dw
+		add.w	#3,(sysmars_reg+comm2).l
+.no_dw:
+		btst	#bitJoyLeft,d7
+		beq.s	.no_lf
+		sub.w	#3,(RAM_BgCamCurr).l
+.no_lf:
+		btst	#bitJoyRight,d7
+		beq.s	.no_rf
+		add.w	#3,(RAM_BgCamCurr).l
+.no_rf:
+
+
 ; 		move.l	#CmdTaskMd_UpdModels,d0
 ; 		bsr	System_MdMars_SlvTask
 		rts
@@ -408,8 +453,9 @@ MdMdl1_Usercontrol:
 ; ------------------------------------------------------
 
 str_Status:
-		dc.b "\\l",0
-		dc.l RAM_FrameCount
+		dc.b "\\w \\w",0
+		dc.l RAM_BgCamCurr
+		dc.l sysmars_reg+comm0
 		align 2
 MdPal_BgTest:
 		binclude "data/md/bg/bg_pal.bin"
