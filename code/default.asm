@@ -157,6 +157,10 @@ thisCode_Top:
 ; 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable MD display
 ; 		bsr	Video_Update
 
+		move.w	#$0000,(sysmars_reg+comm0)
+		move.w	#$0000,(sysmars_reg+comm2)
+		move.w	#$0100,(sysmars_reg+comm4)
+		move.w	#$0100,(sysmars_reg+comm6)
 		move.w	#"GO",(sysmars_reg+comm14)
 
 ; Mode 0 mainloop
@@ -178,20 +182,38 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		sub.w	#3,(sysmars_reg+comm2).l
+		sub.w	#2,(sysmars_reg+comm2).l
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		add.w	#3,(sysmars_reg+comm2).l
+		add.w	#2,(sysmars_reg+comm2).l
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		sub.w	#3,(RAM_BgCamCurr).l
+		sub.w	#2,(RAM_BgCamCurr).l
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		add.w	#3,(RAM_BgCamCurr).l
+		add.w	#2,(RAM_BgCamCurr).l
 .no_rf:
+
+		move.w	(Controller_2+on_hold),d7
+		btst	#bitJoyUp,d7
+		beq.s	.no2_up
+		sub.w	#2,(sysmars_reg+comm6).l
+.no2_up:
+		btst	#bitJoyDown,d7
+		beq.s	.no2_dw
+		add.w	#2,(sysmars_reg+comm6).l
+.no2_dw:
+		btst	#bitJoyLeft,d7
+		beq.s	.no2_lf
+		sub.w	#2,(sysmars_reg+comm4).l
+.no2_lf:
+		btst	#bitJoyRight,d7
+		beq.s	.no2_rf
+		add.w	#2,(sysmars_reg+comm4).l
+.no2_rf:
 
 
 ; 		move.l	#CmdTaskMd_UpdModels,d0

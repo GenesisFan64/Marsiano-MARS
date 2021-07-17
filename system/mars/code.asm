@@ -22,13 +22,18 @@ marsGbl_PlyPzList_R	ds.l 1		; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1		; Current graphic piece to write
 marsGbl_CurrZList	ds.l 1		; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1		; Current top face of the list while reading model data
-marsGbl_Bg_Yincr	ds.l 1
+marsGbl_Bg_Xinc		ds.l 1
+marsGbl_Bg_Yinc		ds.l 1
+marsGbl_GraphMode	ds.w 1
 marsGbl_BgWidth		ds.w 1
 marsGbl_BgHeight	ds.w 1
 marsGbl_Bg_Xpos		ds.w 1
 marsGbl_Bg_Ypos		ds.w 1
-marsGbl_Bg_Xincr	ds.w 1
-marsGbl_Bg_Update	ds.w 1
+marsGbl_Bg_Xpos_old	ds.w 1
+marsGbl_Bg_Ypos_old	ds.w 1
+marsGbl_Bg_Xset		ds.w 1		; 0-7
+marsGbl_Bg_Yset		ds.w 1		;
+marsGbl_Bg_Xbg_inc	ds.w 1
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PolyBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_PzListCntr	ds.w 1		; Number of graphic pieces to draw
@@ -891,8 +896,7 @@ SH2_M_HotStart:
 		jsr	@r0
 		nop
 
-
-	; TEMPORAL SETUP
+	; *** TEMPORAL SETUP ***
 		mov	#TESTMARS_BG_PAL,r1			; Load palette
 		mov	#0,r2
 		mov	#256,r3
@@ -901,9 +905,12 @@ SH2_M_HotStart:
 		jsr	@r0
 		nop
 
+	; Set image
 		mov	#TESTMARS_BG,r1
-		mov	#1260,r2
-		mov	#658,r3
+		mov	#800,r2
+		mov	#640,r3
+		mov	#$00010000,r4
+		mov	#$00010000,r5
 
 		mov	r1,r0
 		mov	r0,@(marsGbl_BgData,gbr)
@@ -911,6 +918,10 @@ SH2_M_HotStart:
 		mov.w	r0,@(marsGbl_BgWidth,gbr)
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_BgHeight,gbr)
+		mov	r4,r0
+		mov	r0,@(marsGbl_Bg_Xinc,gbr)
+		mov	r5,r0
+		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
 ; 		mov	#TESTMARS_BG,r1
 ; 		mov	#MarsVideo_TempDraw,r0
@@ -934,17 +945,162 @@ SH2_M_HotStart:
 
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
+		bra	master_loop
+		nop
+		align 4
+		ltorg
 
 ; --------------------------------------------------------
 ; Loop
 ; --------------------------------------------------------
 
 master_loop:
+
+	; temporal communication
+		mov 	#_sysreg+comm0,r8
+		mov.w	@r8,r0
+		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
+		mov.w	@(2,r8),r0
+		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
+		mov.w	@(4,r8),r0
+		mov	r0,@(marsGbl_Bg_Xinc,gbr)
+		mov.w	@(6,r8),r0
+		mov	r0,@(marsGbl_Bg_Yinc,gbr)
+
 		mov	#_CCR,r1			; <-- Required for Watchdog
 		mov	#%00001000,r0			; Two-way mode
 		mov.w	r0,@r1
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
+		mov	#_vdpreg,r1			; Wait if frameswap is done
+		mov.b	@(marsGbl_CurrFb,gbr),r0
+		mov	r0,r2
+.wait_frmswp:	mov.b	@(framectl,r1),r0
+		cmp/eq	r0,r2
+		bf	.wait_frmswp
+
+	; HINT: dumb way to deal with
+	; x-shift register but it works nicely.
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+		mov	#_vdpreg+shift,r7
+		and	#1,r0
+		mov.w	r0,@r7
+		mov	#0,r1				; X increment
+		mov	#0,r2				; Y increment
+		mov 	#_sysreg+comm0,r8
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_Xpos_old,gbr),r0
+		cmp/eq	r0,r3
+		bt	.xequ
+		mov	r3,r1
+		sub	r0,r1
+		and	#1,r0
+		mov.w	r0,@r7
+.xequ:
+		mov	r3,r0
+		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
+		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_Ypos_old,gbr),r0
+		cmp/eq	r0,r3
+		bt	.yequ
+		mov	r3,r2
+		sub	r0,r2
+.yequ:
+		mov	r3,r0
+		mov.w	r0,@(marsGbl_Bg_Ypos_old,gbr)
+
+	; X/Y scroll position
+		mov.w	@(marsGbl_BgWidth,gbr),r0 	; Y scroll
+		mov	r0,r4
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_Yset,gbr),r0
+		add	r2,r0
+		cmp/pz	r2
+		bf	.yneg
+		cmp/ge	r3,r0
+		bf	.ydwn
+		sub	r3,r0
+.ydwn:
+		cmp/pz	r2
+		bt	.yposc
+.yneg:
+		cmp/pl	r0
+		bt	.yposc
+		add	r3,r0
+.yposc:
+		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
+; 		mulu	r4,r0
+; 		sts	macl,r0
+; 		mov	r0,@(marsGbl_Bg_Ybg_inc,gbr)
+		mov.w	@(marsGbl_BgWidth,gbr),r0	; X move
+		mov	r0,r2
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+		add	r1,r0
+		mov	r0,r4
+		tst	#%11111100,r0			; X Halfway?
+		bt	.dontrgr
+		mov.w	@(marsGbl_Bg_Xbg_inc,gbr),r0
+		cmp/pz	r1
+		bf	.negtv
+		add	#$04,r0
+		cmp/gt	r2,r0
+		bf	.negtv
+		sub	r2,r0
+.negtv:
+		cmp/pz	r1
+		bt	.postv
+		add	#-$04,r0
+		cmp/pz	r0
+		bt	.postv
+		add	r2,r0
+.postv:
+		mov.w	r0,@(marsGbl_Bg_Xbg_inc,gbr)
+.dontrgr:
+		mov	r4,r0
+		mov	#$03,r2
+		and	r2,r4
+		mov	r4,r0
+		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
+
+	; Linescroll + shiftbit
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0	; X shift
+; 		mov	#_vdpreg+shift,r1
+; 		and	#1,r0
+; 		mov.w	r0,@r1
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+		shlr	r0
+		mov	r0,r3
+		mov	#$100,r2
+; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
+; 		and	#$FF,r0
+; 		shll8	r0
+; 		add	r0,r2
+
+	; linescroll
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w	@($A,r1),r0
+		tst	#2,r0
+		bf	.wait_fb
+		mov	#224,r5
+		mov	#_framebuffer,r4
+		mov	#$100,r1
+		mov	#$E800,r7
+.copyx:
+		mov	r2,r0
+		add	r3,r0
+		mov.w	r0,@r4
+		add	r1,r2
+		cmp/gt	r7,r2
+		bf	.donty
+		mov	r1,r2
+.donty:
+		dt	r5
+		bf/s	.copyx
+		add	#2,r4
+
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
