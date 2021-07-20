@@ -19,9 +19,13 @@
 ; MdMap_Bg:
 ; 		binclude "data/md/bg/bg_map.bin"
 ; 		align 2
-MdMap_BgTest:
-		binclude "data/md/bg/bg_map.bin"
+MdMap_BgTestB:
+		binclude "data/md/bg/bg_b_map.bin"
 		align 2
+MdMap_BgTestT:
+		binclude "data/md/bg/bg_t_map.bin"
+		align 2
+
 
 Sampl_Magic1:	binclude "data/sound/instr/smpl/magic_1.wav",$2C
 Sampl_Magic1_End:

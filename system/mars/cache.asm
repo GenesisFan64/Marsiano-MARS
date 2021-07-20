@@ -19,25 +19,8 @@ m_irq_custom:
 		mov.b	@(7,r1), r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov.w	@(marsGbl_DrwTask,gbr),r0	; Framebuffer clear request ($08)?
-		cmp/eq	#8,r0
-		bf	maindrw_tasks
-		mov	#MarsVideo_Refill,r0
-		jmp	@r0
-		nop
-		align 4
-
-Cach_XHead:	dc.l 0
-Cach_CurrX:	dc.l 0
-Cach_CurrY:	dc.l 0
-; Cach_LastY:	dc.l 0
-Cach_Redraw:	dc.l 0
-
-; --------------------------------
-; Main drawing routine
-; --------------------------------
-
-maindrw_tasks:
+		mov.w	@(marsGbl_DrwTask,gbr),r0
+		and	#$FF,r0
 		shll2	r0
 		mov	#.list,r1
 		mov	@(r1,r0),r0
@@ -45,18 +28,19 @@ maindrw_tasks:
 		nop
 		align 4
 .list:
-		dc.l drwtsk_01		; (null entry)
-		dc.l drwtsk_01		; Main drawing routine
-		dc.l drwtsk_02		; Resume from solid color
+		dc.l drwtsk_00			; (null entry)
+		dc.l MarsVideo_Refill		; Draw background
+		dc.l drwtsk_02			; Main polygons jump
+		dc.l drwtsk_03			; Resume from solid-color
 
 ; --------------------------------
-; Task $02
+; Task $03
 ; --------------------------------
 
 ; TODO: currently it only resumes
 ; from solid_color
 
-drwtsk_02:
+drwtsk_03:
 		mov	r2,@-r15
 		mov.w	@(marsGbl_DrwPause,gbr),r0
 		cmp/eq	#1,r0
@@ -99,17 +83,17 @@ drwtsk_02:
 		align 4
 
 ; --------------------------------
-; Task $01
+; Task $02
 ; --------------------------------
 
-drwtsk_01:
+drwtsk_02:
 		mov	r2,@-r15
 		mov.w	@(marsGbl_DrwPause,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
-		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
-		cmp/pl	r0
-		bt	.has_pz
+; 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
+; 		cmp/pl	r0
+; 		bt	.has_pz
 		mov	#0,r0				; If none, just end quickly.
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .exit:		bra	drwtask_exit
@@ -460,7 +444,7 @@ drwsld_nxtline:
 		mov	#$28,r0
 		cmp/gt	r0,r12
 		bf	drwsld_updline
-		mov	#2,r0
+		mov	#3,r0
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 		mov	#Cach_LnDrw_S,r0
 		mov	r1,@-r0
@@ -1046,6 +1030,11 @@ put_piece:
 ; ------------------------------------------------
 
 		align 4
+Cach_XHead	ds.l 1
+Cach_CurrX	ds.l 1
+Cach_CurrY	ds.l 1
+; Cach_LastY	dc.l 0
+Cach_Redraw	ds.l 1
 Cach_ClrLines	ds.l 1			; Current lines to clear
 Cach_ScrlBase	ds.l 1
 Cach_LnDrw_L	ds.l 14			;

@@ -94,8 +94,9 @@ thisCode_Top:
 		move.w	(RAM_BgCamCurr).l,d0
 		move.w	d0,(sysmars_reg+comm0).l
 		neg.w	d0
-; 		lsr.w	#1,d0
-		move.w	#0,(vdp_data).l
+		asr.w	#2,d0
+		move.w	d0,(vdp_data).l
+		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
 ; 		lea	str_Status(pc),a0
 ; 		move.l	#locate(0,0,0),d0
@@ -126,18 +127,28 @@ thisCode_Top:
 		bmi	.mode0_loop
 		or.w	#$8000,(RAM_MdlCurrMd).w
 
-		lea	MdPal_BgTest(pc),a0
+		lea	MdPal_BgTestB(pc),a0
 		move.w	#0,d0
-		move.w	#16-1,d1
+		move.w	#32-1,d1
 		bsr	Video_LoadPal
-		lea	(MdMap_BgTest),a0
+		lea	(MdMap_BgTestB),a0
 		move.l	#locate(1,0,0),d0
 		move.l	#mapsize(512,224),d1
 		move.w	#1,d2
 		bsr	Video_LoadMap
-		move.l	#MdGfx_BgTest,d0
-		move.w	#(MdGfx_BgTest_e-MdGfx_BgTest),d1
+		move.l	#MdGfx_BgTestB,d0
+		move.w	#(MdGfx_BgTestB_e-MdGfx_BgTestB),d1
 		move.w	#1,d2
+		bsr	Video_LoadArt
+
+		lea	(MdMap_BgTestT),a0
+		move.l	#locate(0,0,0),d0
+		move.l	#mapsize(512,224),d1
+		move.w	#$180,d2
+		bsr	Video_LoadMap
+		move.l	#MdGfx_BgTestT,d0
+		move.w	#(MdGfx_BgTestT_e-MdGfx_BgTestT),d1
+		move.w	#$180,d2
 		bsr	Video_LoadArt
 
 ; 		move.l	#CmdTaskMd_SetBitmap,d0		; 32X display OFF
@@ -182,37 +193,37 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		sub.w	#2,(sysmars_reg+comm2).l
+		sub.w	#4,(sysmars_reg+comm2).l
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		add.w	#2,(sysmars_reg+comm2).l
+		add.w	#4,(sysmars_reg+comm2).l
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		sub.w	#2,(RAM_BgCamCurr).l
+		sub.w	#4,(RAM_BgCamCurr).l
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		add.w	#2,(RAM_BgCamCurr).l
+		add.w	#4,(RAM_BgCamCurr).l
 .no_rf:
 
 		move.w	(Controller_2+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no2_up
-		sub.w	#2,(sysmars_reg+comm6).l
+		sub.w	#1,(sysmars_reg+comm6).l
 .no2_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no2_dw
-		add.w	#2,(sysmars_reg+comm6).l
+		add.w	#1,(sysmars_reg+comm6).l
 .no2_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no2_lf
-		sub.w	#2,(sysmars_reg+comm4).l
+		sub.w	#1,(sysmars_reg+comm4).l
 .no2_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no2_rf
-		add.w	#2,(sysmars_reg+comm4).l
+		add.w	#1,(sysmars_reg+comm4).l
 .no2_rf:
 
 
@@ -479,8 +490,9 @@ str_Status:
 		dc.l RAM_BgCamCurr
 		dc.l sysmars_reg+comm0
 		align 2
-MdPal_BgTest:
-		binclude "data/md/bg/bg_pal.bin"
+MdPal_BgTestB:
+		binclude "data/md/bg/bg_b_pal.bin"
+		binclude "data/md/bg/bg_t_pal.bin"
 		align 2
 
 ; ====================================================================

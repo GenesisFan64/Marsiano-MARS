@@ -907,8 +907,8 @@ SH2_M_HotStart:
 
 	; Set image
 		mov	#TESTMARS_BG,r1
-		mov	#800,r2
-		mov	#640,r3
+		mov	#2112,r2
+		mov	#1536,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 
@@ -1065,12 +1065,7 @@ master_loop:
 		mov	r4,r0
 		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
 
-	; Linescroll + shiftbit
-		mov.w	@(marsGbl_Bg_Xset,gbr),r0	; X shift
-; 		mov	#_vdpreg+shift,r1
-; 		and	#1,r0
-; 		mov.w	r0,@r1
-		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0	; Linescroll
 		shlr	r0
 		mov	r0,r3
 		mov	#$100,r2
@@ -1078,8 +1073,6 @@ master_loop:
 ; 		and	#$FF,r0
 ; 		shll8	r0
 ; 		add	r0,r2
-
-	; linescroll
 		mov	#_vdpreg,r1
 .wait_fb:	mov.w	@($A,r1),r0
 		tst	#2,r0
@@ -1105,49 +1098,44 @@ master_loop:
 		jsr	@r0
 		nop
 
-; 	; While we are doing this, the watchdog is
-; 	; working on the background drawing the polygons
-; 	; using the "pieces" list
-; 	;
-; 	; r14 - Polygon pointers list
-; 	; r13 - Number of polygons to build
-; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-; 		tst     #1,r0				; Check for which buffer to use
-; 		bt	.page_2
-; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
-; 		mov	#RAM_Mars_PlgnNum_0,r13
-; 		bra	.cont_plgn
-; 		nop
-; .page_2:
-; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
-; 		mov	#RAM_Mars_PlgnNum_1,r13
-; 		nop
-; 		nop
-; .cont_plgn:
-; 		mov.w	@r13,r13			; read from memory to register
-; 		cmp/pl	r13				; zero?
-; 		bf	.skip
-; .loop:
-; 		mov	r14,@-r15
-; 		mov	r13,@-r15
-; 		mov	@(4,r14),r14			; Get location of the polygon
-; 		cmp/pl	r14				; Zero?
-; 		bf	.invalid			; if yes, skip
-; 		mov 	#MarsVideo_SlicePlgn,r0
-; 		jsr	@r0
-; 		nop
-; .invalid:
-; 		mov	@r15+,r13
-; 		mov	@r15+,r14
-; 		dt	r13				; Decrement numof_polygons
-; 		bf/s	.loop
-; 		add	#8,r14				; Move to next entry
-; .skip:
-
-; 		mov	#3000,r0
-; .hastewey:
-; 		dt	r0
-; 		bf	.hastewey
+	; While we are doing this, the watchdog is
+	; working on the background drawing the polygons
+	; using the "pieces" list
+	;
+	; r14 - Polygon pointers list
+	; r13 - Number of polygons to build
+		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
+		tst     #1,r0				; Check for which buffer to use
+		bt	.page_2
+		mov 	#RAM_Mars_Plgn_ZList_0,r14
+		mov	#RAM_Mars_PlgnNum_0,r13
+		bra	.cont_plgn
+		nop
+.page_2:
+		mov 	#RAM_Mars_Plgn_ZList_1,r14
+		mov	#RAM_Mars_PlgnNum_1,r13
+		nop
+		nop
+.cont_plgn:
+		mov.w	@r13,r13			; read from memory to register
+		cmp/pl	r13				; zero?
+		bf	.skip
+.loop:
+		mov	r14,@-r15
+		mov	r13,@-r15
+		mov	@(4,r14),r14			; Get location of the polygon
+		cmp/pl	r14				; Zero?
+		bf	.invalid			; if yes, skip
+		mov 	#MarsVideo_SlicePlgn,r0
+		jsr	@r0
+		nop
+.invalid:
+		mov	@r15+,r13
+		mov	@r15+,r14
+		dt	r13				; Decrement numof_polygons
+		bf/s	.loop
+		add	#8,r14				; Move to next entry
+.skip:
 
 	; --------------------------------------
 ; .wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?

@@ -398,9 +398,8 @@ MarsVideo_SetWatchdog:
 		shll8	r0
 		mov	r0,@r1
 
-		mov	#8,r0				; Set starting watchdog task to $08
+		mov	#1,r0				; Set first task $01
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
-
 		ldc	@r15+,sr			; Restore interrupts
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A20,r0			; Watchdog timer
@@ -457,10 +456,10 @@ MarsVideo_Refill:
 		and	r1,r5
 		and	r1,r4
 		and	r1,r3
-		shll8	r5
-		shll8	r4
-		shll8	r3
-		mov	.tag_CS1,r1
+; 		shll8	r5
+; 		shll8	r4
+; 		shll8	r3
+; 		mov	.tag_CS1,r1
 		mov	@(marsGbl_BgFbPos_R,gbr),r0
 		bra	.blast_me
 		mov	r0,r2
@@ -476,31 +475,49 @@ MarsVideo_Refill:
 ; Blast ALL the pixels.
 .blast_me:
 
-; .lel4:
+; 	NORMAL
 	rept 16*5
 		cmp/ge	r3,r5
 		bf	.lel2r
 		mov	r4,r5
 .lel2r:
-		mov	r5,r0
-		shlr8	r0
-		or	r1,r0
-		mov	@r0,r0
+		mov	@r5+,r0
 		mov	r0,@r2
 		add	#4,r2
-		add	r6,r5
 	endm
-		cmp/ge	r3,r5
-		bf	.lel3r
+		cmp/ge	r3,r5		; last 4 bytes
+		bf	.lel2r
 		mov	r4,r5
-.lel3r:
-		mov	r5,r0
-		shlr8	r0
-		or	r1,r0
-		mov	@r0,r0
+.lel2r:
+		mov	@r5+,r0
 		mov	r0,@r2
 		add	#4,r2
-		add	r6,r5
+
+; 	SCALED
+; 	rept 16*5
+; 		cmp/ge	r3,r5
+; 		bf	.lel2r
+; 		mov	r4,r5
+; .lel2r:
+; 		mov	r5,r0
+; 		shlr8	r0
+; 		or	r1,r0
+; 		mov	@r0,r0
+; 		mov	r0,@r2
+; 		add	#4,r2
+; 		add	r6,r5
+; 	endm
+; 		cmp/ge	r3,r5
+; 		bf	.lel3r
+; 		mov	r4,r5
+; .lel3r:
+; 		mov	r5,r0
+; 		shlr8	r0
+; 		or	r1,r0
+; 		mov	@r0,r0
+; 		mov	r0,@r2
+; 		add	#4,r2
+; 		add	r6,r5
 
 	; Next Y
 		mov	#Cach_CurrY,r1
@@ -541,7 +558,7 @@ MarsVideo_Refill:
 		bf/s	.on_clr
 		mov	r0,@r1
 
-		mov	#1,r0			; If finished: set task $01
+		mov	#2,r0			; If finished: Set task $02
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 
 		mov	#Cach_Redraw,r1		; Decrement a line to progress

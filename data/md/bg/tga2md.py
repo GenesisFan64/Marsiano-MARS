@@ -25,7 +25,7 @@ SYSTEM_MODE = 0
 START_MAP   = 0
 
 # Blank Tile 
-BLANK_TILE  = 0
+BLANK_TILE  = 0x7FF
 
 # Save VRAM
 TILE_SAVE   = True
