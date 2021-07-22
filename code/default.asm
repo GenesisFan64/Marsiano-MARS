@@ -92,7 +92,6 @@ thisCode_Top:
 ; 		bsr	System_VSync
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
-		move.w	d0,(sysmars_reg+comm0).l
 		neg.w	d0
 		asr.w	#2,d0
 		move.w	d0,(vdp_data).l
@@ -182,30 +181,34 @@ thisCode_Top:
 		and.w	#JoyY,d6
 		beq.s	.no_x
 		sub.w	#1,(RAM_BgCamCurr).l
+		sub.w	#1,(sysmars_reg+comm0).l
 .no_x:
 		move.w	d7,d6
 		and.w	#JoyZ,d6
 		beq.s	.no_y
 		add.w	#1,(RAM_BgCamCurr).l
+		add.w	#1,(sysmars_reg+comm0).l
 .no_y:
 
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		sub.w	#4,(sysmars_reg+comm2).l
+		sub.w	#1,(sysmars_reg+comm2).l
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		add.w	#4,(sysmars_reg+comm2).l
+		add.w	#1,(sysmars_reg+comm2).l
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		sub.w	#4,(RAM_BgCamCurr).l
+		sub.w	#1,(RAM_BgCamCurr).l
+		sub.w	#1,(sysmars_reg+comm0).l
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		add.w	#4,(RAM_BgCamCurr).l
+		add.w	#1,(RAM_BgCamCurr).l
+		add.w	#1,(sysmars_reg+comm0).l
 .no_rf:
 
 		move.w	(Controller_2+on_hold),d7

@@ -857,7 +857,7 @@ SH2_M_Entry:
 		mov.l	#0,r0				; clear "SLAV"
 		mov.l	r0,@(8,r2)
 		mov.l	r0,@r2
-		
+
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Master main code
@@ -904,24 +904,21 @@ SH2_M_HotStart:
 		mov	#MarsVideo_LoadPal,r0
 		jsr	@r0
 		nop
-
-	; Set image
-		mov	#TESTMARS_BG,r1
-		mov	#2112,r2
-		mov	#1536,r3
+		mov	#TESTMARS_BG,r1			; Set image
+		mov	#900,r2
+		mov	#675,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
+		bsr	MarsVideo_SetBg
+		nop
 
-		mov	r1,r0
-		mov	r0,@(marsGbl_BgData,gbr)
-		mov	r2,r0
-		mov.w	r0,@(marsGbl_BgWidth,gbr)
-		mov	r3,r0
-		mov.w	r0,@(marsGbl_BgHeight,gbr)
-		mov	r4,r0
-		mov	r0,@(marsGbl_Bg_Xinc,gbr)
-		mov	r5,r0
-		mov	r0,@(marsGbl_Bg_Yinc,gbr)
+	; TEMPORAL polygon
+		mov 	#RAM_Mars_Plgn_ZList_1+4,r14
+		mov	#RAM_Mars_PlgnNum_1,r13
+		mov	#this_polygon,r0
+		mov	r0,@r14
+		mov	#1,r0
+		mov.w	r0,@r13
 
 ; 		mov	#TESTMARS_BG,r1
 ; 		mov	#MarsVideo_TempDraw,r0
@@ -950,6 +947,19 @@ SH2_M_HotStart:
 		align 4
 		ltorg
 
+this_polygon:
+		dc.w $8000|900
+		dc.w 0
+		dc.l TESTMARS_BG
+tstply_pos:	dc.l  64,-64
+		dc.l -64,-64
+		dc.l -64, 64
+		dc.l  64, 64
+		dc.w 541,675
+		dc.w   0,675
+		dc.w   0,1274
+		dc.w 541,1274
+
 ; --------------------------------------------------------
 ; Loop
 ; --------------------------------------------------------
@@ -967,11 +977,6 @@ master_loop:
 		mov.w	@(6,r8),r0
 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
-		mov	#_CCR,r1			; <-- Required for Watchdog
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
 		mov	#_vdpreg,r1			; Wait if frameswap is done
 		mov.b	@(marsGbl_CurrFb,gbr),r0
 		mov	r0,r2
@@ -979,8 +984,8 @@ master_loop:
 		cmp/eq	r0,r2
 		bf	.wait_frmswp
 
-	; HINT: dumb way to deal with
-	; x-shift register but it works nicely.
+	; NOTE: dumb way to deal with
+	; x-shift register but it works.
 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
 		mov	#_vdpreg+shift,r7
 		and	#1,r0
@@ -997,6 +1002,8 @@ master_loop:
 		sub	r0,r1
 		and	#1,r0
 		mov.w	r0,@r7
+
+
 .xequ:
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
@@ -1032,35 +1039,35 @@ master_loop:
 		add	r3,r0
 .yposc:
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
-; 		mulu	r4,r0
-; 		sts	macl,r0
-; 		mov	r0,@(marsGbl_Bg_Ybg_inc,gbr)
 		mov.w	@(marsGbl_BgWidth,gbr),r0	; X move
 		mov	r0,r2
 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
 		add	r1,r0
 		mov	r0,r4
-		tst	#%11111100,r0			; X Halfway?
+		tst	#%11111000,r0			; X Halfway?
 		bt	.dontrgr
 		mov.w	@(marsGbl_Bg_Xbg_inc,gbr),r0
 		cmp/pz	r1
 		bf	.negtv
-		add	#$04,r0
+		add	#$08,r0
 		cmp/gt	r2,r0
 		bf	.negtv
 		sub	r2,r0
 .negtv:
 		cmp/pz	r1
 		bt	.postv
-		add	#-$04,r0
+		add	#-$08,r0
 		cmp/pz	r0
 		bt	.postv
 		add	r2,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_Xbg_inc,gbr)
+		mov	#Cach_Redraw,r3
+		mov	#2,r0
+		mov	r0,@r3
 .dontrgr:
 		mov	r4,r0
-		mov	#$03,r2
+		mov	#$07,r2
 		and	r2,r4
 		mov	r4,r0
 		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
@@ -1094,14 +1101,15 @@ master_loop:
 		bf/s	.copyx
 		add	#2,r4
 
+		mov	#_CCR,r1			; <-- Required for Watchdog
+		mov	#%00001000,r0			; Two-way mode
+		mov.w	r0,@r1
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r1
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
 
-	; While we are doing this, the watchdog is
-	; working on the background drawing the polygons
-	; using the "pieces" list
-	;
 	; r14 - Polygon pointers list
 	; r13 - Number of polygons to build
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
@@ -1138,9 +1146,9 @@ master_loop:
 .skip:
 
 	; --------------------------------------
-; .wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
-; 		cmp/eq	#0,r0
-; 		bf	.wait_pz
+.wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
+		cmp/eq	#0,r0
+		bf	.wait_pz
 .wait_task:	mov.w	@(marsGbl_DrwTask,gbr),r0	; Any drawing task active?
 		cmp/eq	#0,r0
 		bf	.wait_task

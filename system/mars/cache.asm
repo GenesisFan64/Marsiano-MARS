@@ -91,11 +91,11 @@ drwtsk_02:
 		mov.w	@(marsGbl_DrwPause,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
-; 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
-; 		cmp/pl	r0
-; 		bt	.has_pz
-		mov	#0,r0				; If none, just end quickly.
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
+		cmp/pl	r0
+		bt	.has_pz
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
@@ -277,6 +277,9 @@ drwsld_nxtline_tex:
 		mov 	#_overwrite+$200,r10		; Point to TOPLEFT in framebuffer
 		add 	r0,r10				; Add Y
 		add 	r11,r10				; Add X
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+		add	r0,r10
+
 		mov	#$1FFF,r2
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r11		; r11 - texture data
@@ -341,6 +344,10 @@ drwtex_gonxtpz:
 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
+
+		mov	#0,r0				; If none, just end quickly.
+		mov.w	r0,@(marsGbl_DrwTask,gbr)
+
 		bra	drwtask_return
 		mov	#$10,r2				; Timer for next watchdog
 		align 4
