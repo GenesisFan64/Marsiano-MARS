@@ -917,6 +917,11 @@ SH2_M_HotStart:
 		mov	#RAM_Mars_PlgnNum_1,r13
 		mov	#this_polygon,r0
 		mov	r0,@r14
+		mov	r0,@(8,r14)
+		mov	r0,@($10,r14)
+		mov	r0,@($18,r14)
+
+
 		mov	#1,r0
 		mov.w	r0,@r13
 
@@ -951,7 +956,7 @@ this_polygon:
 		dc.w $8000|900
 		dc.w 0
 		dc.l TESTMARS_BG
-tstply_pos:	dc.l  64,-64
+dest_data:	dc.l  64,-64
 		dc.l -64,-64
 		dc.l -64, 64
 		dc.l  64, 64
@@ -959,12 +964,71 @@ tstply_pos:	dc.l  64,-64
 		dc.w   0,675
 		dc.w   0,1274
 		dc.w 541,1274
+rot_angle	dc.l 0
 
 ; --------------------------------------------------------
 ; Loop
 ; --------------------------------------------------------
 
 master_loop:
+	mov	#60*65536,r5
+	mov	#-60*65536,r6
+	mov	#rot_angle,r7
+	bsr	Rotate_Point
+	mov	@r7,r7
+	mov	#dest_data,r2
+	shlr16	r0
+	exts.w	r0,r0
+	mov	r0,@r2
+	shlr16	r1
+	exts.w	r1,r1
+	mov	r1,@(4,r2)
+
+	mov	#-60*65536,r5
+	mov	#-60*65536,r6
+	mov	#rot_angle,r7
+	bsr	Rotate_Point
+	mov	@r7,r7
+	mov	#dest_data+8,r2
+	shlr16	r0
+	exts.w	r0,r0
+	mov	r0,@r2
+	shlr16	r1
+	exts.w	r1,r1
+	mov	r1,@(4,r2)
+
+	mov	#-60*65536,r5
+	mov	#60*65536,r6
+	mov	#rot_angle,r7
+	bsr	Rotate_Point
+	mov	@r7,r7
+	mov	#dest_data+$10,r2
+	shlr16	r0
+	exts.w	r0,r0
+	mov	r0,@r2
+	shlr16	r1
+	exts.w	r1,r1
+	mov	r1,@(4,r2)
+
+	mov	#60*65536,r5
+	mov	#60*65536,r6
+	mov	#rot_angle,r7
+	bsr	Rotate_Point
+	mov	@r7,r7
+	mov	#dest_data+$18,r2
+	shlr16	r0
+	exts.w	r0,r0
+	mov	r0,@r2
+	shlr16	r1
+	exts.w	r1,r1
+	mov	r1,@(4,r2)
+
+	mov	#rot_angle,r0
+	mov	@r0,r1
+	add	#4,r1
+	mov	#2047,r2
+	and	r2,r1
+	mov	r1,@r0
 
 	; temporal communication
 		mov 	#_sysreg+comm0,r8
@@ -1017,6 +1081,10 @@ master_loop:
 .yequ:
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_Bg_Ypos_old,gbr)
+
+		mov	#Cach_Redraw,r3
+		mov	#2,r0
+		mov	r0,@r3
 
 	; X/Y scroll position
 		mov.w	@(marsGbl_BgWidth,gbr),r0 	; Y scroll
@@ -1181,6 +1249,41 @@ master_loop:
 		nop
 		align 4
 		ltorg
+
+Rotate_Point
+
+	shll2	r7
+	mov	r7,r0
+	mov	#sin_table,r1
+	mov	#sin_table+$800,r2
+	mov	@(r0,r1),r3
+	mov	@(r0,r2),r4
+
+	dmuls.l	r5,r4		; x cos @
+	sts	macl,r0
+	sts	mach,r1
+	xtrct	r1,r0
+	dmuls.l	r6,r3		; y sin @
+	sts	macl,r1
+	sts	mach,r2
+	xtrct	r2,r1
+	add	r1,r0
+
+	neg	r3,r3
+	dmuls.l	r5,r3		; x -sin @
+	sts	macl,r1
+	sts	mach,r2
+	xtrct	r2,r1
+	dmuls.l	r6,r4		; y cos @
+	sts	macl,r2
+	sts	mach,r3
+	xtrct	r3,r2
+	add	r2,r1
+
+	rts
+	nop
+	align 4
+	ltorg
 
 ; 	; --------------------
 ; 	; DEBUG counter

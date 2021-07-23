@@ -94,8 +94,8 @@ drwtsk_02:
 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
@@ -235,7 +235,7 @@ drwsld_nxtline_tex:
 	; Calculate new DX values
 	; make sure DIV is available
 	; (marsGbl_DivStop_M == 0)
-		mov	#_JR,r0				; r6 / r2
+		mov	tag_JR,r0				; r6 / r2
 		mov	r2,@r0
 		mov	r6,@(4,r0)
 		nop
@@ -344,16 +344,18 @@ drwtex_gonxtpz:
 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
-
+		cmp/pl	r0
+		bt	.going
 		mov	#0,r0				; If none, just end quickly.
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
-
+		mov.w	r0,@(marsGbl_PzListCntr,gbr)
+.going:
 		bra	drwtask_return
 		mov	#$10,r2				; Timer for next watchdog
 		align 4
-tag_width:	dc.l	SCREEN_WIDTH
-tag_yhght:	dc.l	SCREEN_HEIGHT
-
+tag_width:	dc.l SCREEN_WIDTH
+tag_yhght:	dc.l SCREEN_HEIGHT
+tag_JR:		dc.l _JR
 ; ------------------------------------
 ; Solid Color
 ;
