@@ -911,6 +911,11 @@ SH2_M_HotStart:
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
 		nop
+		bsr	MarsVideo_DrawAllBg
+		nop
+; 		mov	#MarsVideo_DrawAllBg,r0
+; 		jsr	@r0
+; 		nop
 
 	; TEMPORAL polygon
 		mov 	#RAM_Mars_Plgn_ZList_1+4,r14
@@ -920,18 +925,8 @@ SH2_M_HotStart:
 		mov	r0,@(8,r14)
 		mov	r0,@($10,r14)
 		mov	r0,@($18,r14)
-
-
 		mov	#1,r0
 		mov.w	r0,@r13
-
-; 		mov	#TESTMARS_BG,r1
-; 		mov	#MarsVideo_TempDraw,r0
-; 		jsr	@r0
-; 		nop
-; 		mov	#MarsVideo_DrawAllBg,r0
-; 		jsr	@r0
-; 		nop
 		mov 	#_vdpreg,r1
 .wait_fb:	mov.w   @($A,r1),r0
 		tst     #2,r0
@@ -953,13 +948,13 @@ SH2_M_HotStart:
 		ltorg
 
 this_polygon:
-		dc.w $8000|900
-		dc.w 0
+		dc.w $8000
+		dc.w 900
 		dc.l TESTMARS_BG
-dest_data:	dc.l  64,-64
-		dc.l -64,-64
-		dc.l -64, 64
-		dc.l  64, 64
+dest_data:	dc.w  64,-64
+		dc.w -64,-64
+		dc.w -64, 64
+		dc.w  64, 64
 		dc.w 541,675
 		dc.w   0,675
 		dc.w   0,1274
@@ -979,49 +974,53 @@ master_loop:
 	mov	#dest_data,r2
 	shlr16	r0
 	exts.w	r0,r0
-	mov	r0,@r2
+	mov.w	r0,@r2
 	shlr16	r1
 	exts.w	r1,r1
-	mov	r1,@(4,r2)
+	mov	r1,r0
+	mov.w	r0,@(2,r2)
 
 	mov	#-60*65536,r5
 	mov	#-60*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
-	mov	#dest_data+8,r2
+	mov	#dest_data+4,r2
 	shlr16	r0
 	exts.w	r0,r0
-	mov	r0,@r2
+	mov.w	r0,@r2
 	shlr16	r1
 	exts.w	r1,r1
-	mov	r1,@(4,r2)
+	mov	r1,r0
+	mov.w	r0,@(2,r2)
 
 	mov	#-60*65536,r5
 	mov	#60*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
-	mov	#dest_data+$10,r2
+	mov	#dest_data+8,r2
 	shlr16	r0
 	exts.w	r0,r0
-	mov	r0,@r2
+	mov.w	r0,@r2
 	shlr16	r1
 	exts.w	r1,r1
-	mov	r1,@(4,r2)
+	mov	r1,r0
+	mov.w	r0,@(2,r2)
 
 	mov	#60*65536,r5
 	mov	#60*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
-	mov	#dest_data+$18,r2
+	mov	#dest_data+$C,r2
 	shlr16	r0
 	exts.w	r0,r0
-	mov	r0,@r2
+	mov.w	r0,@r2
 	shlr16	r1
 	exts.w	r1,r1
-	mov	r1,@(4,r2)
+	mov	r1,r0
+	mov.w	r0,@(2,r2)
 
 	mov	#rot_angle,r0
 	mov	@r0,r1
@@ -1029,6 +1028,13 @@ master_loop:
 	mov	#2047,r2
 	and	r2,r1
 	mov	r1,@r0
+
+		mov	#_vdpreg,r1			; Wait if frameswap is done
+		mov.b	@(marsGbl_CurrFb,gbr),r0
+		mov	r0,r2
+.wait_frmswp:	mov.b	@(framectl,r1),r0
+		cmp/eq	r0,r2
+		bf	.wait_frmswp
 
 	; temporal communication
 		mov 	#_sysreg+comm0,r8
@@ -1041,21 +1047,18 @@ master_loop:
 		mov.w	@(6,r8),r0
 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
-		mov	#_vdpreg,r1			; Wait if frameswap is done
-		mov.b	@(marsGbl_CurrFb,gbr),r0
-		mov	r0,r2
-.wait_frmswp:	mov.b	@(framectl,r1),r0
-		cmp/eq	r0,r2
-		bf	.wait_frmswp
+	; ---------------------------------------
+	; Get X/Y increment values (at r1 and r2)
+	; using CURR and OLD values
+	; and Set the X-shift bit
+	; ---------------------------------------
 
-	; NOTE: dumb way to deal with
-	; x-shift register but it works.
-		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+		mov.w	@(marsGbl_Bg_Xset,gbr),r0	; X-shift bit (for indexed)
 		mov	#_vdpreg+shift,r7
 		and	#1,r0
 		mov.w	r0,@r7
-		mov	#0,r1				; X increment
-		mov	#0,r2				; Y increment
+		mov	#0,r1				; X start
+		mov	#0,r2				; Y start
 		mov 	#_sysreg+comm0,r8
 		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
 		mov	r0,r3
@@ -1066,8 +1069,6 @@ master_loop:
 		sub	r0,r1
 		and	#1,r0
 		mov.w	r0,@r7
-
-
 .xequ:
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
@@ -1081,12 +1082,19 @@ master_loop:
 .yequ:
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_Bg_Ypos_old,gbr)
+		cmp/pz	r1
+		bt	.x_stend
+		exts	r1,r1
+.x_stend:
+		cmp/pz	r2
+		bt	.y_stend
+		exts	r2,r2
+.y_stend:
 
-		mov	#Cach_Redraw,r3
-		mov	#2,r0
-		mov	r0,@r3
+	; ---------------------------------------
+	; X/Y scroll and wrap checks
+	; ---------------------------------------
 
-	; X/Y scroll position
 		mov.w	@(marsGbl_BgWidth,gbr),r0 	; Y scroll
 		mov	r0,r4
 		mov.w	@(marsGbl_BgHeight,gbr),r0
@@ -1107,8 +1115,10 @@ master_loop:
 		add	r3,r0
 .yposc:
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
+
+; 		mov	#Cach_Redraw,r3
 		mov.w	@(marsGbl_BgWidth,gbr),r0	; X move
-		mov	r0,r2
+		mov	r0,r3
 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
 		add	r1,r0
 		mov	r0,r4
@@ -1118,9 +1128,9 @@ master_loop:
 		cmp/pz	r1
 		bf	.negtv
 		add	#$08,r0
-		cmp/gt	r2,r0
+		cmp/gt	r3,r0
 		bf	.negtv
-		sub	r2,r0
+		sub	r3,r0
 .negtv:
 		cmp/pz	r1
 		bt	.postv
@@ -1130,44 +1140,55 @@ master_loop:
 		add	r2,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_Xbg_inc,gbr)
-		mov	#Cach_Redraw,r3
-		mov	#2,r0
-		mov	r0,@r3
+; 		mov	#2,r0			; Redraw req
+; 		mov	r0,@r3
 .dontrgr:
-		mov	r4,r0
-		mov	#$07,r2
-		and	r2,r4
 		mov	r4,r0
 		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
 
-		mov.w	@(marsGbl_Bg_Xset,gbr),r0	; Linescroll
-		shlr	r0
-		mov	r0,r3
-		mov	#$100,r2
-; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
-; 		and	#$FF,r0
-; 		shll8	r0
-; 		add	r0,r2
-		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@($A,r1),r0
+	; ---------------------------------------
+	; Set linescroll
+	; ---------------------------------------
+
+		mov	#_vdpreg,r8
+.wait_fb:	mov.w	@($A,r8),r0
 		tst	#2,r0
 		bf	.wait_fb
-		mov	#224,r5
-		mov	#_framebuffer,r4
-		mov	#$100,r1
-		mov	#$E800,r7
-.copyx:
-		mov	r2,r0
-		add	r3,r0
-		mov.w	r0,@r4
-		add	r1,r2
-		cmp/gt	r7,r2
-		bf	.donty
-		mov	r1,r2
-.donty:
-		dt	r5
-		bf/s	.copyx
-		add	#2,r4
+		mov	#RAM_Mars_Linescroll,r9
+		mov	#_framebuffer,r10
+		mov	#$200,r8
+		mov	#$1E000,r7
+		mov	#224,r3
+		shll8	r2
+		shll	r2
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		muls	r0,r2
+; 		sts	macl,r2
+.ln_loop:
+		mov	@r9,r0
+		add	r1,r0
+		add	r2,r0
+		cmp/ge	r7,r0
+		bf	.xl_r
+		sub	r7,r0
+.xl_r:
+		cmp/pz	r0
+		bt	.xl_l
+		add	r7,r0
+.xl_l:
+		mov	r0,@r9
+		add	#4,r9
+
+		add	r8,r0
+		shlr	r0
+		mov.w	r0,@r10
+		add	#2,r10
+		dt	r3
+		bf	.ln_loop
+
+	; ---------------------------------------
+	; Draw to framebuffer
+	; ---------------------------------------
 
 		mov	#_CCR,r1			; <-- Required for Watchdog
 		mov	#%00001000,r0			; Two-way mode
@@ -1177,7 +1198,6 @@ master_loop:
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
-
 	; r14 - Polygon pointers list
 	; r13 - Number of polygons to build
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
@@ -2084,6 +2104,7 @@ sizeof_marssnd		ds.l 0
 			struct MarsRam_Video
 ; RAM_Mars_Background	ds.b 336*232			; Third background
 RAM_Mars_Palette	ds.w 256			; Indexed palette
+RAM_Mars_Linescroll	ds.l 240
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
 RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
