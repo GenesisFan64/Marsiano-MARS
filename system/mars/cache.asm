@@ -40,6 +40,11 @@ m_irq_custom:
 drwtsk_01:
 		mov	r2,@-r15
 		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov	r7,@-r15
+
 ; 		mov	#_vdpreg,r1
 ; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
 ; 		tst     #2,r0
@@ -52,7 +57,82 @@ drwtsk_01:
 ; 		mov.w	#$0000,r0		; SVDP-fill pixel data and start filling
 ; 		mov.w   r0,@(8,r1)		; After finishing, SVDP-address got updated
 
-		mov	#$FFFFFE80,r1
+		mov	#Cach_Redraw,r1
+		mov	@r1,r0
+		cmp/eq	#0,r0
+		bt	.no_redrw
+
+		mov	#Cach_DrawDir,r1	; Draw right
+		mov	@r1,r0
+		tst	#%0001,r0
+		bt	.no_redrw
+
+		mov	#Cach_CurrY,r1
+		mov	@r1,r0
+		mov	r0,r2
+		add	#1,r2
+		mov	r2,@r1
+		shll2	r0
+
+		mov	#0,r6
+		mov	#-$20,r2
+		mov	#RAM_Mars_Linescroll,r1
+		add	r0,r1
+		mov	@r1,r0
+		and	r2,r0
+		mov	r1,r4
+		mov	#320,r1
+		add	r1,r0
+		mov	#$1F000,r2
+		cmp/ge	r2,r0
+		bf	.lel2
+		mov	#1,r6
+		mov	#_framebuffer+$200,r4
+		add	r0,r4
+		sub	r2,r0
+; 		xor	r0,r0
+; 		bra	*
+; 		nop
+.lel2:
+		mov	#_framebuffer+$200,r2
+		add	r0,r2
+
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r3
+		mov	@(marsGbl_BgData_R,gbr),r0
+		mov	r0,r1
+		mov	#Cach_YHead,r0
+		mov	@r0,r0
+		add	r0,r1
+		mov	#Cach_XHead,r0
+		mov	@r0,r0
+		add	r0,r1
+		mov	#320,r0
+		add	r0,r1
+		mov	r1,r5
+	rept 8	; in longs
+		mov	@r1+,r0
+		mov	r0,@r2
+		add	#4,r2
+	endm
+
+	; *** Last line only ***
+		cmp/pl	r6
+		bf	.no_lastone
+	rept 8
+		mov	@r5+,r0
+		mov	r0,@r4
+		add	#4,r4
+	endm
+
+.no_lastone:
+		mov	@(marsGbl_BgData_R,gbr),r0
+		add	r3,r0
+		mov	r0,@(marsGbl_BgData_R,gbr)
+
+.no_redrw:
+
+		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
 		mov.w   r0,@r1
 		or      #$20,r0			; ON
@@ -64,9 +144,21 @@ drwtsk_01:
 		dt	r0
 		bf/s	.on_clr
 		mov	r0,@r1
-		mov	#2,r0			; If finished: set task $01
+
+		mov	#Cach_Redraw,r1
+		mov	@r1,r0
+		cmp/eq	#0,r0
+		bt	.iszero
+		add	#-1,r0
+		mov	r0,@r1
+.iszero:
+		mov	#2,r0			; If finished: Set task $02
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .on_clr:
+		mov	@r15+,r7
+		mov	@r15+,r6
+		mov	@r15+,r5
+		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
 		rts
@@ -631,8 +723,10 @@ Cach_DDA_Src	ds.l 4*2
 Cach_DDA_Src_L	ds.l 4			; X/DX/Y/DX result for textures
 Cach_DDA_Src_R	ds.l 4
 Cach_XHead	ds.l 1
+Cach_YHead	ds.l 1
 Cach_CurrX	ds.l 1
 Cach_CurrY	ds.l 1
+Cach_DrawDir	ds.l 1
 Cach_Redraw	ds.l 1
 Cach_ClrLines	ds.l 1			; Current lines to clear
 Cach_ScrlBase	ds.l 1

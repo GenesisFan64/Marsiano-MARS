@@ -181,13 +181,13 @@ thisCode_Top:
 		and.w	#JoyY,d6
 		beq.s	.no_x
 		sub.w	#1,(RAM_BgCamCurr).l
-		sub.w	#$200,(sysmars_reg+comm0).l
+		sub.w	#$10,(sysmars_reg+comm0).l
 .no_x:
 		move.w	d7,d6
 		and.w	#JoyZ,d6
 		beq.s	.no_y
 		add.w	#1,(RAM_BgCamCurr).l
-		add.w	#$200,(sysmars_reg+comm0).l
+		add.w	#$10,(sysmars_reg+comm0).l
 .no_y:
 
 
@@ -203,12 +203,12 @@ thisCode_Top:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
 		sub.w	#1,(RAM_BgCamCurr).l
-		sub.w	#1,(sysmars_reg+comm0).l
+		sub.w	#8,(sysmars_reg+comm0).l
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
 		add.w	#1,(RAM_BgCamCurr).l
-		add.w	#1,(sysmars_reg+comm0).l
+		add.w	#8,(sysmars_reg+comm0).l
 .no_rf:
 
 		move.w	(Controller_2+on_hold),d7

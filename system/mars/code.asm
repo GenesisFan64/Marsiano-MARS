@@ -34,6 +34,8 @@ marsGbl_Bg_Ypos_old	ds.w 1
 marsGbl_Bg_Xset		ds.w 1		; 0-7
 marsGbl_Bg_Yset		ds.w 1		;
 marsGbl_Bg_Xbg_inc	ds.w 1
+marsGbl_Bg_Ybg_inc	ds.w 1		; NOTE: multiply with BGWIDTH externally
+marsGbl_Bg_DrwReq	ds.w 1		; Scroll-Draw request
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PolyBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_PzListCntr	ds.w 1		; Number of graphic pieces to draw
@@ -905,8 +907,8 @@ SH2_M_HotStart:
 		jsr	@r0
 		nop
 		mov	#TESTMARS_BG,r1			; Set image
-		mov	#900,r2
-		mov	#675,r3
+		mov	#512,r2
+		mov	#384,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -925,8 +927,8 @@ SH2_M_HotStart:
 		mov	r0,@(8,r14)
 		mov	r0,@($10,r14)
 		mov	r0,@($18,r14)
-		mov	#1,r0
-		mov.w	r0,@r13
+; 		mov	#1,r0
+; 		mov.w	r0,@r13
 		mov 	#_vdpreg,r1
 .wait_fb:	mov.w   @($A,r1),r0
 		tst     #2,r0
@@ -949,16 +951,16 @@ SH2_M_HotStart:
 
 this_polygon:
 		dc.w $8000
-		dc.w 900
+		dc.w 512
 		dc.l TESTMARS_BG
 dest_data:	dc.w  64,-64
 		dc.w -64,-64
 		dc.w -64, 64
 		dc.w  64, 64
-		dc.w 541,675
-		dc.w   0,675
-		dc.w   0,1274
-		dc.w 541,1274
+		dc.w 357,384
+		dc.w   0,384
+		dc.w   0,784
+		dc.w 357,784
 rot_angle	dc.l 0
 
 ; --------------------------------------------------------
@@ -1036,8 +1038,13 @@ master_loop:
 		cmp/eq	r0,r2
 		bf	.wait_frmswp
 
-	; temporal communication
-		mov 	#_sysreg+comm0,r8
+
+		mov.w	@(marsGbl_Bg_Xpos,gbr),r0	; Get OLD X pos for shift reg
+		mov	#_vdpreg+shift,r7
+		and	#1,r0
+		mov.w	r0,@r7
+
+		mov 	#_sysreg+comm0,r8		; temporal communication
 		mov.w	@r8,r0
 		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov.w	@(2,r8),r0
@@ -1053,10 +1060,6 @@ master_loop:
 	; and Set the X-shift bit
 	; ---------------------------------------
 
-		mov.w	@(marsGbl_Bg_Xset,gbr),r0	; X-shift bit (for indexed)
-		mov	#_vdpreg+shift,r7
-		and	#1,r0
-		mov.w	r0,@r7
 		mov	#0,r1				; X start
 		mov	#0,r2				; Y start
 		mov 	#_sysreg+comm0,r8
@@ -1099,50 +1102,92 @@ master_loop:
 		mov	r0,r4
 		mov.w	@(marsGbl_BgHeight,gbr),r0
 		mov	r0,r3
+
 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
 		add	r2,r0
+		mov	r0,r5
+		tst	#%11111000,r0			; X Halfway?
+		bt	.y_dontrgr
+		mov.w	@(marsGbl_Bg_Ybg_inc,gbr),r0
 		cmp/pz	r2
-		bf	.yneg
-		cmp/ge	r3,r0
-		bf	.ydwn
+		bf	.y_negtv
+		mov	#%0100,r5
+		add	#$08,r0
+		cmp/gt	r3,r0
+		bf	.y_negtv
 		sub	r3,r0
-.ydwn:
-		cmp/pz	r2
-		bt	.yposc
-.yneg:
-		cmp/pl	r0
-		bt	.yposc
-		add	r3,r0
-.yposc:
+.y_negtv:
+		cmp/pl	r2
+		bt	.y_postv
+		mov	#%1000,r5
+		add	#-$08,r0
+		cmp/pz	r0
+		bt	.y_postv
+		mov	r3,r0
+.y_postv:
+		mov.w	r0,@(marsGbl_Bg_Ybg_inc,gbr)
+		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
+		or	r5,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+.y_dontrgr:
+		mov	#$07,r0
+		and	r0,r5
+		mov	r5,r0
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
 
-; 		mov	#Cach_Redraw,r3
-		mov.w	@(marsGbl_BgWidth,gbr),r0	; X move
+; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
+; 		add	r2,r0
+; 		cmp/pz	r2
+; 		bf	.yneg
+; 		cmp/ge	r3,r0
+; 		bf	.ydwn
+; 		sub	r3,r0
+; .ydwn:
+; 		cmp/pz	r2
+; 		bt	.yposc
+; .yneg:
+; 		cmp/pl	r0
+; 		bt	.yposc
+; 		add	r3,r0
+; .yposc:
+; 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
+; 		muls	r4,r0
+; 		sts	macl,r0
+; 		mov	r0,@(marsGbl_Bg_Ybg_inc,gbr)
+
+	; X move
+		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	r0,r3
 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
 		add	r1,r0
 		mov	r0,r4
-		tst	#%11111000,r0			; X Halfway?
+		tst	#%11100000,r0			; X Halfway?
 		bt	.dontrgr
 		mov.w	@(marsGbl_Bg_Xbg_inc,gbr),r0
 		cmp/pz	r1
 		bf	.negtv
-		add	#$08,r0
+		mov	#%01,r5
+		add	#$20,r0
 		cmp/gt	r3,r0
 		bf	.negtv
 		sub	r3,r0
 .negtv:
-		cmp/pz	r1
+		cmp/pl	r1
 		bt	.postv
-		add	#-$08,r0
+		mov	#%10,r5
+		add	#-$20,r0
 		cmp/pz	r0
 		bt	.postv
-		add	r2,r0
+		mov	r3,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_Xbg_inc,gbr)
-; 		mov	#2,r0			; Redraw req
-; 		mov	r0,@r3
+		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
+		or	r5,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+
 .dontrgr:
+		mov	#$1F,r0
+		and	r0,r4
 		mov	r4,r0
 		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
 
@@ -1157,8 +1202,8 @@ master_loop:
 		mov	#RAM_Mars_Linescroll,r9
 		mov	#_framebuffer,r10
 		mov	#$200,r8
-		mov	#$1E000,r7
-		mov	#224,r3
+		mov	#$1F000,r7
+		mov	#240,r3
 		shll8	r2
 		shll	r2
 ; 		mov.w	@(marsGbl_BgWidth,gbr),r0
