@@ -1105,23 +1105,25 @@ MarsVideo_SetWatchdog:
 	; Background drawing start-values
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-; 		mov	#_framebuffer+$200,r0
-; 		mov	r0,@(marsGbl_BgFbPos_R,gbr)
 		mov	#Cach_ClrLines,r1
 		mov	#240,r0
 		mov	r0,@r1
-		mov	#Cach_CurrY,r1
+		mov	#Cach_FbY,r1
 		mov	#0,r0
+		mov	r0,@r1
+
+		mov	#Cach_CurrY,r1
+		mov.w	@(marsGbl_Bg_Ybg_inc,gbr),r0
 		mov	r0,@r1
 		mov	#Cach_XHead,r1
 		mov.w	@(marsGbl_Bg_Xbg_inc,gbr),r0
 		mov	r0,@r1
-		mov	#Cach_YHead,r1
 		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r2
+		mov	r0,r1
 		mov.w	@(marsGbl_Bg_Ybg_inc,gbr),r0
-		muls	r2,r0
+		muls	r1,r0
 		sts	macl,r0
+		mov	#Cach_YHead,r1
 		mov	r0,@r1
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
 		cmp/eq	#0,r0
@@ -1134,11 +1136,6 @@ MarsVideo_SetWatchdog:
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 .drw_req:
-
-; 		mov	#Cach_CurrX,r1
-; 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
-; 		shll8	r0
-; 		mov	r0,@r1
 
 		mov	#1,r0				; Set first task $01
 		mov.w	r0,@(marsGbl_DrwTask,gbr)

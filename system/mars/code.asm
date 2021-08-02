@@ -16,8 +16,7 @@
 
 			struct 0
 marsGbl_BgData		ds.l 1		; Background pixel data location (ROM or RAM)
-marsGbl_BgData_R	ds.l 1		; Background data pointer
-marsGbl_BgFbPos_R	ds.l 1		; Framebuffer (output) BASE position
+marsGbl_BgData_R	ds.l 1		; Background data pointer (only updates vertically)
 marsGbl_PlyPzList_R	ds.l 1		; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1		; Current graphic piece to write
 marsGbl_CurrZList	ds.l 1		; Current Zsort entry
@@ -908,7 +907,7 @@ SH2_M_HotStart:
 		nop
 		mov	#TESTMARS_BG,r1			; Set image
 		mov	#512,r2
-		mov	#384,r3
+		mov	#383,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -1098,62 +1097,52 @@ master_loop:
 	; X/Y scroll and wrap checks
 	; ---------------------------------------
 
+		mov	#0,r5
 		mov.w	@(marsGbl_BgWidth,gbr),r0 	; Y scroll
 		mov	r0,r4
 		mov.w	@(marsGbl_BgHeight,gbr),r0
 		mov	r0,r3
-
-		mov.w	@(marsGbl_Bg_Yset,gbr),r0
-		add	r2,r0
-		mov	r0,r5
-		tst	#%11111000,r0			; X Halfway?
-		bt	.y_dontrgr
 		mov.w	@(marsGbl_Bg_Ybg_inc,gbr),r0
-		cmp/pz	r2
+		add	r2,r0
+		cmp/pl	r2
 		bf	.y_negtv
 		mov	#%0100,r5
-		add	#$08,r0
-		cmp/gt	r3,r0
+		cmp/ge	r3,r0
 		bf	.y_negtv
 		sub	r3,r0
 .y_negtv:
-		cmp/pl	r2
+		cmp/pz	r2
 		bt	.y_postv
 		mov	#%1000,r5
-		add	#-$08,r0
 		cmp/pz	r0
 		bt	.y_postv
-		mov	r3,r0
+		add	r3,r0
 .y_postv:
 		mov.w	r0,@(marsGbl_Bg_Ybg_inc,gbr)
+
+	; TODO: YDraw pos goes here
+		mov.w	@(marsGbl_Bg_Yset,gbr),r0	; Yset draw request
+		add	r2,r0
+		mov	r0,r5
+		tst	#%11111000,r0
+		bt	.y_dontset
+		mov	#%0000,r4
+		cmp/pl	r2
+		bf	.ys_neg
+		mov	#%0100,r4
+.ys_neg:
+		cmp/pz	r2
+		bt	.ys_set
+		mov	#%1000,r4
+.ys_set:
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
-		or	r5,r0
+		or	r4,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
-.y_dontrgr:
+.y_dontset:
 		mov	#$07,r0
 		and	r0,r5
 		mov	r5,r0
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
-
-; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
-; 		add	r2,r0
-; 		cmp/pz	r2
-; 		bf	.yneg
-; 		cmp/ge	r3,r0
-; 		bf	.ydwn
-; 		sub	r3,r0
-; .ydwn:
-; 		cmp/pz	r2
-; 		bt	.yposc
-; .yneg:
-; 		cmp/pl	r0
-; 		bt	.yposc
-; 		add	r3,r0
-; .yposc:
-; 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
-; 		muls	r4,r0
-; 		sts	macl,r0
-; 		mov	r0,@(marsGbl_Bg_Ybg_inc,gbr)
 
 	; X move
 		mov.w	@(marsGbl_BgWidth,gbr),r0
@@ -1163,22 +1152,23 @@ master_loop:
 		mov	r0,r4
 		tst	#%11100000,r0			; X Halfway?
 		bt	.dontrgr
+		mov	#0,r5
 		mov.w	@(marsGbl_Bg_Xbg_inc,gbr),r0
-		cmp/pz	r1
+		cmp/pl	r1
 		bf	.negtv
-		mov	#%01,r5
+		mov	#%0001,r5
 		add	#$20,r0
-		cmp/gt	r3,r0
+		cmp/ge	r3,r0
 		bf	.negtv
 		sub	r3,r0
 .negtv:
-		cmp/pl	r1
+		cmp/pz	r1
 		bt	.postv
-		mov	#%10,r5
+		mov	#%0010,r5
 		add	#-$20,r0
 		cmp/pz	r0
 		bt	.postv
-		mov	r3,r0
+		add	r3,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_Xbg_inc,gbr)
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
