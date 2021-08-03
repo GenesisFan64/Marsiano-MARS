@@ -39,6 +39,7 @@ marsGbl_Bg_XbgInc_L	ds.w 1		; Address X increment
 marsGbl_Bg_XbgInc_R	ds.w 1		;
 marsGbl_Bg_YbgInc_D	ds.w 1		; Address Y increment (NOTE: multiply with BGWIDTH externally)
 marsGbl_Bg_YbgInc_U	ds.w 1		;
+marsGbl_Bg_YbgIncU_LR	ds.w 1		; For Left/Right drawing only
 marsGbl_Bg_DrwReq	ds.w 1		; Scroll-Draw request
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PolyBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
@@ -1107,43 +1108,10 @@ mstr_step2:
 	; X/Y scroll and wrap checks
 	; ---------------------------------------
 
-	; Y framebuffer pos
-		mov	#240+8,r3
-		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
-		add	r2,r0
-		cmp/pl	r2
-		bf	.yp_negtv
-		cmp/ge	r3,r0
-		bf	.yp_negtv
-		sub	r3,r0
-.yp_negtv:
-		cmp/pz	r2
-		bt	.yp_postv
-		cmp/pz	r0
-		bt	.yp_postv
-		add	r3,r0
-.yp_postv:
-		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
-		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
-		add	r2,r0
-		cmp/pl	r2
-		bf	.ypu_negtv
-		cmp/ge	r3,r0
-		bf	.ypu_negtv
-		sub	r3,r0
-.ypu_negtv:
-		cmp/pz	r2
-		bt	.ypu_postv
-		cmp/pz	r0
-		bt	.ypu_postv
-		add	r3,r0
-.ypu_postv:
-		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
-
-	; Y top/bottom heads
+	; Y head only for Left/Right drawing
 		mov.w	@(marsGbl_BgHeight,gbr),r0
 		mov	r0,r3
-		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		mov.w	@(marsGbl_Bg_YbgIncU_LR,gbr),r0
 		add	r2,r0
 		cmp/pl	r2
 		bf	.y_negtv
@@ -1157,42 +1125,93 @@ mstr_step2:
 		bt	.y_postv
 		add	r3,r0
 .y_postv:
+		mov.w	r0,@(marsGbl_Bg_YbgIncU_LR,gbr)
+
+	; Up/Down scroll settings
+		mov.w	@(marsGbl_Bg_Yset,gbr),r0	; Yset draw request
+		add	r2,r0
+		mov	r0,r5
+		tst	#%11110000,r0
+		bt	.y_dontset
+		mov	#%0000,r4
+		mov	#240+8,r3
+		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
+		cmp/pl	r2
+		bf	.yp_negtv
+		add	#$10,r0
+		mov	#%0100,r4
+		cmp/ge	r3,r0
+		bf	.yp_negtv
+		sub	r3,r0
+.yp_negtv:
+		cmp/pz	r2
+		bt	.yp_postv
+		mov	#%1000,r4
+		add	#-$10,r0
+		cmp/pz	r0
+		bt	.yp_postv
+		add	r3,r0
+.yp_postv:
+		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
+		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+; 		add	r2,r0
+		cmp/pl	r2
+		bf	.ypu_negtv
+		add	#$10,r0
+		cmp/ge	r3,r0
+		bf	.ypu_negtv
+		sub	r3,r0
+.ypu_negtv:
+		cmp/pz	r2
+		bt	.ypu_postv
+		add	#-$10,r0
+		cmp/pz	r0
+		bt	.ypu_postv
+		add	r3,r0
+.ypu_postv:
+		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+
+; 	; Y top/bottom heads
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		cmp/pl	r2
+		bf	.ybu_negtv
+		add	#$10,r0
+		cmp/ge	r3,r0
+		bf	.ybu_negtv
+		sub	r3,r0
+.ybu_negtv:
+		cmp/pz	r2
+		bt	.ybu_postv
+		add	#-$10,r0
+		cmp/pz	r0
+		bt	.ybu_postv
+		add	r3,r0
+.ybu_postv:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
 		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
-		add	r2,r0
 		cmp/pl	r2
 		bf	.yb_negtv
+		add	#$10,r0
 		cmp/ge	r3,r0
 		bf	.yb_negtv
 		sub	r3,r0
 .yb_negtv:
 		cmp/pz	r2
 		bt	.yb_postv
+		add	#-$10,r0
 		cmp/pz	r0
 		bt	.yb_postv
 		add	r3,r0
 .yb_postv:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
 
-		mov.w	@(marsGbl_Bg_Yset,gbr),r0	; Yset draw request
-		add	r2,r0
-		mov	r0,r5
-		tst	#%11111000,r0
-		bt	.y_dontset
-		mov	#%0000,r4
-		cmp/pl	r2
-		bf	.ys_neg
-		mov	#%0100,r4
-.ys_neg:
-		cmp/pz	r2
-		bt	.ys_set
-		mov	#%1000,r4
-.ys_set:
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
 		or	r4,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 .y_dontset:
-		mov	#$07,r0
+		mov	#$0F,r0
 		and	r0,r5
 		mov	r5,r0
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)

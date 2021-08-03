@@ -44,6 +44,7 @@ drwtsk_01:
 		mov	r4,@-r15
 		mov	r5,@-r15
 		mov	r6,@-r15
+		mov	r7,@-r15
 
 ; 		mov	#_vdpreg,r1
 ; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
@@ -78,18 +79,22 @@ drwtsk_01:
 		mov	@(marsGbl_Bg_FbBase_R,gbr),r0
 		and	r1,r0
 		add	r1,r0
-		mov	#$00100,r2
-		cmp/ge	r2,r0
+		mov	#$00100,r7
+		cmp/ge	r7,r0
 		bt	.lastline_l
 		mov	#1,r6
 		mov	#(_framebuffer+$200)+$3F000,r4
 		add	r0,r4
 .lastline_l:
-		mov	#_framebuffer+$200,r2
-		add	r0,r2
+		mov	#_framebuffer+$200,r7
+		add	r0,r7
 		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	r0,r1
-		mov	#Cach_YHead_U,r0
+		mov	r0,r2
+		mov	r0,r3
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r3
+		mov	#Cach_YHeadU_LR,r0
 		mov	@r0,r0
 		add	r0,r1
 		mov	#Cach_XHead_L,r0
@@ -99,25 +104,29 @@ drwtsk_01:
 		mov	r1,r5
 
 .dtsk01_dright:
-		mov	#-$10,r3
+; 		mov	#-$10,r3
 		mov	@(marsGbl_Bg_FbBase_R,gbr),r0
 		mov	#320,r1
 		add	r1,r0
-		and	r3,r0
-		mov	#$1F000,r2
-		cmp/ge	r2,r0
+; 		and	r3,r0
+		mov	#$1F000,r7
+		cmp/ge	r7,r0
 		bf	.lastline_r
 		mov	#1,r6
 		mov	#_framebuffer+$200,r4
 		add	r0,r4
-		sub	r2,r0
+		sub	r7,r0
 .lastline_r:
-		mov	#_framebuffer+$200,r2
-		add	r0,r2
+		mov	#_framebuffer+$200,r7
+		add	r0,r7
 		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	r0,r1
-		mov	#-$10,r3
-		mov	#Cach_YHead_U,r0
+		mov	r0,r2
+		mov	r0,r3
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r3
+; 		mov	#-$10,r3
+		mov	#Cach_YHeadU_LR,r0
 		mov	@r0,r0
 		add	r0,r1
 		mov	#Cach_XHead_R,r0
@@ -125,13 +134,16 @@ drwtsk_01:
 		add	r0,r1
 		mov	r1,r5
 .dtsk01_lrdraw:
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r3
+
 
 	rept 8				; in longs
+; 		cmp/ge	r3,r1
+; 		bf	.xlon1
+; 		mov	r2,r1
+; .xlon1:
 		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
+		mov	r0,@r7
+		add	#4,r7
 	endm
 		cmp/pl	r6		; *** Last line only ***
 		bf	.no_lastone	; r5 - BG in / r4 - FB out
@@ -148,7 +160,8 @@ drwtsk_01:
 		mov	r0,r2
 		mov.w	@(marsGbl_BgHeight,gbr),r0
 		mov	r0,r4
-		; r3 - width
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r3
 		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	r0,r5
 		add	r3,r5
@@ -158,7 +171,7 @@ drwtsk_01:
 		bf	.resety
 		mov	r2,r5
 		xor	r0,r0
-		mov	#Cach_YHead_U,r4
+		mov	#Cach_YHeadU_LR,r4
 		mov	r0,@r4
 .resety:
 		mov	r0,@r1
@@ -197,62 +210,88 @@ dtsk01_exit:
 		add	#-1,r0
 		mov	r0,@r1
 
-; ; 	; **** Up/Down check
-; 		mov	#Cach_DrawDir,r1	; Draw right
-; 		mov	@r1,r0
-; 		and	#%1100,r0
-; 		cmp/eq	#0,r0
-; 		bt	tsk00_gonext
-; 		tst	#%0100,r0
-; 		bt	tsk00_gonext
-;
-; 		mov	#-2,r5
-; 		mov	@(marsGbl_BgData,gbr),r0
-; 		mov	#Cach_YHead_D,r2
-; 		mov	@r2,r2
-; ; 		and	r5,r2
-; 		add	r0,r2
-; 		mov	#Cach_CurrFbY_D,r0
-; 		mov	@r0,r6
-; ; 		and	r5,r6
-; 		mov	#16,r3
-; .rept_y:
-; 		mov	r6,r5
-; 		shll8	r5
-; 		shll	r5
-; ; 		mov	#Cach_XHead_L,r0
-; ; 		mov	@r0,r0
-; ; 		add	r0,r5
-; 		mov	#_framebuffer+$200,r0
-; 		add	r0,r5
-; 		mov	#((320+64)/4)/8,r4
-; 		mov	r2,r1
-; .rept_x:
-; 	rept 8
-; 		mov	@r1+,r0
-; 		mov	r0,@r5
-; 		add	#4,r5
-; 	endm
-; 		dt	r4
-; 		bf	.rept_x
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		add	r0,r2
-; 		mov	r6,r0
-; 		mov	#$F8,r6
-; 		add	#1,r0
-; 		cmp/ge	r6,r0
-; 		bf	.lel3
-; 		sub	r6,r0
-; .lel3:
-; 		mov	r0,r6
-; 		dt	r3
-; 		bf	.rept_y
-; 	; ****
+	; **** Up/Down check
+	; TODO: special check for the hidden line
+		mov	#Cach_DrawDir,r1	; Draw right
+		mov	@r1,r0
+		and	#%1100,r0
+		cmp/eq	#0,r0
+		bt	tsk00_gonext
+		tst	#%0100,r0
+		bf	.tsk00_down
+		tst	#%1000,r0
+		bf	.tsk00_up
+		bra	tsk00_gonext
+		nop
+.tsk00_down:
+		mov	#Cach_YHead_D,r0
+		mov	@r0,r1
+		mov	@(marsGbl_BgData,gbr),r0
+		add	r1,r0
+		mov	r0,r2
+		mov	r0,r3
+		mov	#Cach_CurrFbY_D,r0
+		mov	@r0,r6
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		bra	.drwy_go
+		add	r0,r3
+.tsk00_up:
+		mov	#Cach_YHead_U,r0
+		mov	@r0,r1
+		mov	@(marsGbl_BgData,gbr),r0
+		add	r1,r0
+		mov	r0,r2
+		mov	r0,r3
+		mov	#Cach_CurrFbY_U,r0
+		mov	@r0,r6
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r3
+.drwy_go:
+		mov	#16,r7
+.rept_y:
+		mov	r6,r5
+		shll8	r5
+		shll	r5
+		mov	#_framebuffer+$200,r0
+		add	r0,r5
+		mov	#Cach_XHead_L,r0
+		mov	@r0,r0
+		add	r0,r5
+		mov	#((320+32)/4)/8,r4
+		mov	r2,r1
+		add	r0,r1
+.rept_x:
+	rept 8
+		cmp/ge	r3,r1
+		bf	.xlon1
+		mov	r2,r1
+.xlon1:
+		mov	@r1+,r0
+		mov	r0,@r5
+		add	#4,r5
+	endm
+		dt	r4
+		bf	.rept_x
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r2
+		add	r0,r3
+		mov	r6,r0
+		mov	#$F8,r6
+		add	#1,r0
+		cmp/ge	r6,r0
+		bf	.lel3
+		sub	r6,r0
+.lel3:
+		mov	r0,r6
+		dt	r7
+		bf	.rept_y
+	; ****
 
 tsk00_gonext:
 		mov	#2,r0			; If finished: Set task $02
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 tsk00_exit:
+		mov	@r15+,r7
 		mov	@r15+,r6
 		mov	@r15+,r5
 		mov	@r15+,r4
@@ -822,8 +861,8 @@ Cach_XHead_L	ds.l 1
 Cach_XHead_R	ds.l 1
 Cach_YHead_D	ds.l 1
 Cach_YHead_U	ds.l 1
-; Cach_CurrX_U	ds.l 1			; U/D needs this
-; Cach_CurrX_D	ds.l 1
+
+Cach_YHeadU_LR	ds.l 1
 Cach_CurrY_U	ds.l 1			; L/R draw needs this
 Cach_CurrY_D	ds.l 1
 Cach_CurrFbY_U	ds.l 1

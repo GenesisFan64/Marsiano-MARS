@@ -946,7 +946,7 @@ MarsVideo_DrawAllBg:
 		add	r0,r3
 
 		mov	#_framebuffer+$200,r5
-		mov	#240,r7
+		mov	#240+8,r7
 .y_next:
 		mov	r5,r4
 		mov	#(320+32)/4,r6
@@ -1089,6 +1089,7 @@ MarsVideo_SetBg:
 		mov	#224,r1
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
+		mov.w	r0,@(marsGbl_Bg_YbgIncU_LR,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
@@ -1150,19 +1151,23 @@ MarsVideo_SetWatchdog:
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	r0,r1
 		mov	#Cach_CurrY_U,r2
-		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		mov.w	@(marsGbl_Bg_YbgIncU_LR,gbr),r0
 		mov	r0,@r2
+		muls	r1,r0
+		sts	macl,r0
+		mov	#Cach_YHeadU_LR,r2
+		mov	r0,@r2
+
+		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
+		muls	r1,r0
+		sts	macl,r0
+		mov	#Cach_YHead_D,r2
+		mov	r0,@r2
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
 		muls	r1,r0
 		sts	macl,r0
 		mov	#Cach_YHead_U,r2
 		mov	r0,@r2
-		mov	#Cach_CurrY_D,r2
-		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
-		mov	r0,@r2
-		muls	r1,r0
-		sts	macl,r0
-		mov	#Cach_YHead_D,r1
-		mov	r0,@r1
 
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
 		cmp/eq	#0,r0
