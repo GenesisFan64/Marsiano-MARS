@@ -74,18 +74,10 @@ drwtsk_01:
 		nop
 		align 4
 .dtsk01_dleft:
-		mov	#Cach_FbY,r1
-		mov	@r1,r0
-		mov	r0,r2
-		add	#1,r2
-		mov	r2,@r1
-		shll2	r0
-		mov	#0,r6
-		mov	#-$20,r2
-		mov	#RAM_Mars_Linescroll,r1
-		add	r0,r1
-		mov	@r1,r0
-		and	r2,r0
+		mov	#-$10,r1	; trick
+		mov	@(marsGbl_Bg_FbBase_R,gbr),r0
+		and	r1,r0
+		add	r1,r0
 		mov	#$00100,r2
 		cmp/ge	r2,r0
 		bt	.lastline_l
@@ -95,34 +87,23 @@ drwtsk_01:
 .lastline_l:
 		mov	#_framebuffer+$200,r2
 		add	r0,r2
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r3
 		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	r0,r1
-		mov	#Cach_YHead,r0
+		mov	#Cach_YHead_U,r0
 		mov	@r0,r0
 		add	r0,r1
-		mov	#Cach_XHead,r0
+		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		add	r0,r1
 		bra	.dtsk01_lrdraw
 		mov	r1,r5
 
 .dtsk01_dright:
-		mov	#Cach_FbY,r1
-		mov	@r1,r0
-		mov	r0,r2
-		add	#1,r2
-		mov	r2,@r1
-		shll2	r0
-		mov	#0,r6
-		mov	#-$20,r2
-		mov	#RAM_Mars_Linescroll,r1
-		add	r0,r1
-		mov	@r1,r0
-		and	r2,r0
+		mov	#-$10,r3
+		mov	@(marsGbl_Bg_FbBase_R,gbr),r0
 		mov	#320,r1
 		add	r1,r0
+		and	r3,r0
 		mov	#$1F000,r2
 		cmp/ge	r2,r0
 		bf	.lastline_r
@@ -133,20 +114,20 @@ drwtsk_01:
 .lastline_r:
 		mov	#_framebuffer+$200,r2
 		add	r0,r2
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r3
 		mov	@(marsGbl_BgData_R,gbr),r0
 		mov	r0,r1
-		mov	#Cach_YHead,r0
+		mov	#-$10,r3
+		mov	#Cach_YHead_U,r0
 		mov	@r0,r0
 		add	r0,r1
-		mov	#Cach_XHead,r0
+		mov	#Cach_XHead_R,r0
 		mov	@r0,r0
-		add	r0,r1
-		mov	#320,r0
 		add	r0,r1
 		mov	r1,r5
 .dtsk01_lrdraw:
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r3
+
 	rept 8				; in longs
 		mov	@r1+,r0
 		mov	r0,@r2
@@ -162,7 +143,7 @@ drwtsk_01:
 
 .no_lastone:
 
-		mov	#Cach_CurrY,r1
+		mov	#Cach_CurrY_U,r1
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r2
 		mov.w	@(marsGbl_BgHeight,gbr),r0
@@ -177,12 +158,21 @@ drwtsk_01:
 		bf	.resety
 		mov	r2,r5
 		xor	r0,r0
-		mov	#Cach_YHead,r4
+		mov	#Cach_YHead_U,r4
 		mov	r0,@r4
 .resety:
 		mov	r0,@r1
 		mov	r5,r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
+		mov	@(marsGbl_Bg_FbBase_R,gbr),r0	; Next FB line
+		mov	#$1F000,r2
+		mov	#$200,r1
+		add	r1,r0
+		cmp/ge	r2,r0
+		bf	.fbmuch
+		sub	r2,r0
+.fbmuch:
+		mov	r0,@(marsGbl_Bg_FbBase_R,gbr)
 		bra	dtsk01_exit
 		nop
 		align 4
@@ -207,42 +197,57 @@ dtsk01_exit:
 		add	#-1,r0
 		mov	r0,@r1
 
-	; **** Up/Down check
-		mov	#Cach_DrawDir,r1	; Draw right
-		mov	@r1,r0
-		and	#%1100,r0
-		cmp/eq	#0,r0
-		bt	tsk00_gonext
-		tst	#%0100,r0
-		bt	tsk00_gonext
-
-		mov	#224,r6
-		mov	#Cach_CurrY,r0
-		mov	#-8,r5
-		mov	@r0,r0
-		and	r5,r0
-		add	r0,r6
-		mov	#8,r3
-.rept_y:
-		mov	r6,r5
-		add	#1,r5
-		shll8	r5
-		shll	r5
-		mov	#_framebuffer+$200,r0
-		add	r0,r5
-		mov	#((320+32)/4)/8,r4
-.rept_x:
-	rept 8
-		mov	#$01010101,r0
-		mov	r0,@r5
-		add	#4,r5
-	endm
-		dt	r4
-		bf	.rept_x
-		add	#1,r6
-		dt	r3
-		bf	.rept_y
-	; ****
+; ; 	; **** Up/Down check
+; 		mov	#Cach_DrawDir,r1	; Draw right
+; 		mov	@r1,r0
+; 		and	#%1100,r0
+; 		cmp/eq	#0,r0
+; 		bt	tsk00_gonext
+; 		tst	#%0100,r0
+; 		bt	tsk00_gonext
+;
+; 		mov	#-2,r5
+; 		mov	@(marsGbl_BgData,gbr),r0
+; 		mov	#Cach_YHead_D,r2
+; 		mov	@r2,r2
+; ; 		and	r5,r2
+; 		add	r0,r2
+; 		mov	#Cach_CurrFbY_D,r0
+; 		mov	@r0,r6
+; ; 		and	r5,r6
+; 		mov	#16,r3
+; .rept_y:
+; 		mov	r6,r5
+; 		shll8	r5
+; 		shll	r5
+; ; 		mov	#Cach_XHead_L,r0
+; ; 		mov	@r0,r0
+; ; 		add	r0,r5
+; 		mov	#_framebuffer+$200,r0
+; 		add	r0,r5
+; 		mov	#((320+64)/4)/8,r4
+; 		mov	r2,r1
+; .rept_x:
+; 	rept 8
+; 		mov	@r1+,r0
+; 		mov	r0,@r5
+; 		add	#4,r5
+; 	endm
+; 		dt	r4
+; 		bf	.rept_x
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		add	r0,r2
+; 		mov	r6,r0
+; 		mov	#$F8,r6
+; 		add	#1,r0
+; 		cmp/ge	r6,r0
+; 		bf	.lel3
+; 		sub	r6,r0
+; .lel3:
+; 		mov	r0,r6
+; 		dt	r3
+; 		bf	.rept_y
+; 	; ****
 
 tsk00_gonext:
 		mov	#2,r0			; If finished: Set task $02
@@ -808,17 +813,22 @@ drwtask_exit:
 ; ------------------------------------------------
 
 		align 4
-; Cach_XPreCalc	ds.w 320
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2
 Cach_DDA_Src_L	ds.l 4			; X/DX/Y/DX result for textures
 Cach_DDA_Src_R	ds.l 4
-Cach_XHead	ds.l 1
-Cach_YHead	ds.l 1
-; Cach_CurrX	ds.l 1
-Cach_CurrY	ds.l 1
-Cach_FbY	ds.l 1
+Cach_XHead_L	ds.l 1
+Cach_XHead_R	ds.l 1
+Cach_YHead_D	ds.l 1
+Cach_YHead_U	ds.l 1
+; Cach_CurrX_U	ds.l 1			; U/D needs this
+; Cach_CurrX_D	ds.l 1
+Cach_CurrY_U	ds.l 1			; L/R draw needs this
+Cach_CurrY_D	ds.l 1
+Cach_CurrFbY_U	ds.l 1
+Cach_CurrFbY_D	ds.l 1
+Cach_CurrRdY	ds.l 1
 Cach_DrawDir	ds.l 1
 Cach_Redraw	ds.l 1
 Cach_ClrLines	ds.l 1			; Current lines to clear
