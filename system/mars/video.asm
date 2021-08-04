@@ -946,10 +946,10 @@ MarsVideo_DrawAllBg:
 		add	r0,r3
 
 		mov	#_framebuffer+$200,r5
-		mov	#240+8,r7
+		mov	#224+16,r7
 .y_next:
 		mov	r5,r4
-		mov	#(320+32)/4,r6
+		mov	#(320+64)/4,r6
 .x_next:
 		cmp/ge	r3,r1
 		bf	.nolm
@@ -1122,22 +1122,17 @@ MarsVideo_SetWatchdog:
 	; Background drawing start-values
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-		mov	#RAM_Mars_Linescroll,r0
-		mov	@r0,r0
-		mov	r0,@(marsGbl_Bg_FbBase_R,gbr)
-		mov	#Cach_ClrLines,r1
-		mov	#240,r0
-		mov	r0,@r1
 		mov	#Cach_CurrRdY,r1
 		mov	#0,r0
 		mov	r0,@r1
-
-	; X draw heads
-		mov	#Cach_XHead_L,r1
-		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		mov	#Cach_ClrLines,r1
+		mov	#240,r0
 		mov	r0,@r1
-		mov	#Cach_XHead_R,r1
-		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+		mov	#-$10,r2
+		mov	#Cach_BgFbBaseR,r1
+		mov	#RAM_Mars_Linescroll,r0
+		mov	@r0,r0
+		and	r2,r0
 		mov	r0,@r1
 
 	; Y draw heads and other vars
@@ -1179,6 +1174,18 @@ MarsVideo_SetWatchdog:
 		mov	r0,@r1
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+
+
+
+
+	; X draw heads
+		mov	#Cach_XHead_L,r1
+		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		mov	r0,@r1
+		mov	#Cach_XHead_R,r1
+		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+		mov	r0,@r1
+
 .drw_req:
 
 		mov	#1,r0				; Set first task $01

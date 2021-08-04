@@ -23,14 +23,13 @@ marsGbl_CurrZList	ds.l 1		; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1		; Current top face of the list while reading model data
 marsGbl_Bg_Xinc		ds.l 1
 marsGbl_Bg_Yinc		ds.l 1
-marsGbl_Bg_FbBase_R	ds.l 1
+marsGbl_Bg_Xpos		ds.l 1
+marsGbl_Bg_Ypos		ds.l 1
+marsGbl_Bg_Xpos_old	ds.l 1
+marsGbl_Bg_Ypos_old	ds.l 1
 marsGbl_GraphMode	ds.w 1
 marsGbl_BgWidth		ds.w 1
 marsGbl_BgHeight	ds.w 1
-marsGbl_Bg_Xpos		ds.w 1
-marsGbl_Bg_Ypos		ds.w 1
-marsGbl_Bg_Xpos_old	ds.w 1
-marsGbl_Bg_Ypos_old	ds.w 1
 marsGbl_Bg_Xset		ds.w 1		; Redraw timers
 marsGbl_Bg_Yset		ds.w 1		;
 marsGbl_Bg_YFbPos_U	ds.w 1		; Y position for Up/Down drawing section
@@ -932,8 +931,8 @@ SH2_M_HotStart:
 		mov	r0,@(8,r14)
 		mov	r0,@($10,r14)
 		mov	r0,@($18,r14)
-; 		mov	#1,r0
-; 		mov.w	r0,@r13
+		mov	#1,r0			; enable test polygon
+		mov.w	r0,@r13
 		mov 	#_vdpreg,r1
 .wait_fb:	mov.w   @($A,r1),r0
 		tst     #2,r0
@@ -1049,20 +1048,20 @@ mstr_step2:
 		bf	.wait_frmswp
 
 
-		mov.w	@(marsGbl_Bg_Xpos,gbr),r0	; Get OLD X pos for shift reg
+		mov	@(marsGbl_Bg_Xpos,gbr),r0	; Get OLD X pos for shift reg
 		mov	#_vdpreg+shift,r7
 		and	#1,r0
 		mov.w	r0,@r7
 
 		mov 	#_sysreg+comm0,r8		; temporal communication
 		mov.w	@r8,r0
-		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
+		mov	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov.w	@(2,r8),r0
-		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
-		mov.w	@(4,r8),r0
-		mov	r0,@(marsGbl_Bg_Xinc,gbr)
-		mov.w	@(6,r8),r0
-		mov	r0,@(marsGbl_Bg_Yinc,gbr)
+		mov	r0,@(marsGbl_Bg_Ypos,gbr)
+; 		mov.w	@(4,r8),r0
+; 		mov	r0,@(marsGbl_Bg_Xinc,gbr)
+; 		mov.w	@(6,r8),r0
+; 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
 	; ---------------------------------------
 	; Get X/Y increment values (at r1 and r2)
@@ -1073,9 +1072,9 @@ mstr_step2:
 		mov	#0,r1				; X start
 		mov	#0,r2				; Y start
 		mov 	#_sysreg+comm0,r8
-		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		mov	r0,r3
-		mov.w	@(marsGbl_Bg_Xpos_old,gbr),r0
+		mov	@(marsGbl_Bg_Xpos_old,gbr),r0
 		cmp/eq	r0,r3
 		bt	.xequ
 		mov	r3,r1
@@ -1084,17 +1083,19 @@ mstr_step2:
 		mov.w	r0,@r7
 .xequ:
 		mov	r3,r0
-		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
-		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	r0,@(marsGbl_Bg_Xpos_old,gbr)
+		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		mov	r0,r3
-		mov.w	@(marsGbl_Bg_Ypos_old,gbr),r0
+		mov	@(marsGbl_Bg_Ypos_old,gbr),r0
 		cmp/eq	r0,r3
 		bt	.yequ
 		mov	r3,r2
 		sub	r0,r2
 .yequ:
 		mov	r3,r0
-		mov.w	r0,@(marsGbl_Bg_Ypos_old,gbr)
+		mov	r0,@(marsGbl_Bg_Ypos_old,gbr)
+
+	; TODO: ver si necesito esto todavia
 		cmp/pz	r1
 		bt	.x_stend
 		exts	r1,r1
@@ -1131,14 +1132,14 @@ mstr_step2:
 		mov.w	@(marsGbl_Bg_Yset,gbr),r0	; Yset draw request
 		add	r2,r0
 		mov	r0,r5
-		tst	#%11110000,r0
+		tst	#%11111000,r0
 		bt	.y_dontset
 		mov	#%0000,r4
 		mov	#240+8,r3
 		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
 		cmp/pl	r2
 		bf	.yp_negtv
-		add	#$10,r0
+		add	#$08,r0
 		mov	#%0100,r4
 		cmp/ge	r3,r0
 		bf	.yp_negtv
@@ -1147,7 +1148,7 @@ mstr_step2:
 		cmp/pz	r2
 		bt	.yp_postv
 		mov	#%1000,r4
-		add	#-$10,r0
+		add	#-$08,r0
 		cmp/pz	r0
 		bt	.yp_postv
 		add	r3,r0
@@ -1157,14 +1158,14 @@ mstr_step2:
 ; 		add	r2,r0
 		cmp/pl	r2
 		bf	.ypu_negtv
-		add	#$10,r0
+		add	#$08,r0
 		cmp/ge	r3,r0
 		bf	.ypu_negtv
 		sub	r3,r0
 .ypu_negtv:
 		cmp/pz	r2
 		bt	.ypu_postv
-		add	#-$10,r0
+		add	#-$08,r0
 		cmp/pz	r0
 		bt	.ypu_postv
 		add	r3,r0
@@ -1177,14 +1178,14 @@ mstr_step2:
 		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
 		cmp/pl	r2
 		bf	.ybu_negtv
-		add	#$10,r0
+		add	#$08,r0
 		cmp/ge	r3,r0
 		bf	.ybu_negtv
 		sub	r3,r0
 .ybu_negtv:
 		cmp/pz	r2
 		bt	.ybu_postv
-		add	#-$10,r0
+		add	#-$08,r0
 		cmp/pz	r0
 		bt	.ybu_postv
 		add	r3,r0
@@ -1193,14 +1194,14 @@ mstr_step2:
 		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
 		cmp/pl	r2
 		bf	.yb_negtv
-		add	#$10,r0
+		add	#$08,r0
 		cmp/ge	r3,r0
 		bf	.yb_negtv
 		sub	r3,r0
 .yb_negtv:
 		cmp/pz	r2
 		bt	.yb_postv
-		add	#-$10,r0
+		add	#-$08,r0
 		cmp/pz	r0
 		bt	.yb_postv
 		add	r3,r0
@@ -1211,7 +1212,7 @@ mstr_step2:
 		or	r4,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 .y_dontset:
-		mov	#$0F,r0
+		mov	#$07,r0
 		and	r0,r5
 		mov	r5,r0
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
@@ -1225,14 +1226,14 @@ mstr_step2:
 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
 		add	r1,r0
 		mov	r0,r4
-		tst	#%11100000,r0			; X Halfway?
+		tst	#%11000000,r0			; X Halfway?
 		bt	.dontrgr
 		mov	#0,r5
 		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
 		cmp/pl	r1
 		bf	.negtv
 		mov	#%0001,r5
-		add	#$20,r0
+		add	#$40,r0
 		cmp/ge	r3,r0
 		bf	.negtv
 		sub	r3,r0
@@ -1240,7 +1241,7 @@ mstr_step2:
 		cmp/pz	r1
 		bt	.postv
 		mov	#%0010,r5
-		add	#-$20,r0
+		add	#-$40,r0
 		cmp/pz	r0
 		bt	.postv
 		add	r3,r0
@@ -1249,14 +1250,14 @@ mstr_step2:
 		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
 		cmp/pl	r1
 		bf	.negtvl
-		add	#$20,r0
+		add	#$40,r0
 		cmp/ge	r3,r0
 		bf	.negtvl
 		sub	r3,r0
 .negtvl:
 		cmp/pz	r1
 		bt	.postvl
-		add	#-$20,r0
+		add	#-$40,r0
 		cmp/pz	r0
 		bt	.postvl
 		add	r3,r0
@@ -1267,7 +1268,7 @@ mstr_step2:
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 
 .dontrgr:
-		mov	#$1F,r0
+		mov	#$3F,r0
 		and	r0,r4
 		mov	r4,r0
 		mov.w	r0,@(marsGbl_Bg_Xset,gbr)

@@ -194,21 +194,21 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		sub.w	#8,(sysmars_reg+comm2).l
+		sub.w	#1,(sysmars_reg+comm2).l
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		add.w	#8,(sysmars_reg+comm2).l
+		add.w	#1,(sysmars_reg+comm2).l
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
 		sub.w	#1,(RAM_BgCamCurr).l
-		sub.w	#1,(sysmars_reg+comm0).l
+		sub.w	#$10,(sysmars_reg+comm0).l
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
 		add.w	#1,(RAM_BgCamCurr).l
-		add.w	#1,(sysmars_reg+comm0).l
+		add.w	#$10,(sysmars_reg+comm0).l
 .no_rf:
 
 ; 		move.w	(Controller_2+on_hold),d7
