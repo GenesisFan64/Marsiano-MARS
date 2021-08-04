@@ -33,7 +33,7 @@ marsGbl_BgHeight	ds.w 1
 marsGbl_Bg_Xset		ds.w 1		; Redraw timers
 marsGbl_Bg_Yset		ds.w 1		;
 marsGbl_Bg_YFbPos_U	ds.w 1		; Y position for Up/Down drawing section
-marsGbl_Bg_YFbPos_D	ds.w 1		;
+marsGbl_Bg_YFbPos_D	ds.w 1
 marsGbl_Bg_XbgInc_L	ds.w 1		; Address X increment
 marsGbl_Bg_XbgInc_R	ds.w 1		;
 marsGbl_Bg_YbgInc_D	ds.w 1		; Address Y increment (NOTE: multiply with BGWIDTH externally)
@@ -1128,94 +1128,79 @@ mstr_step2:
 .y_postv:
 		mov.w	r0,@(marsGbl_Bg_YbgIncU_LR,gbr)
 
-	; Up/Down scroll settings
-		mov.w	@(marsGbl_Bg_Yset,gbr),r0	; Yset draw request
-		add	r2,r0
-		mov	r0,r5
-		tst	#%11111000,r0
-		bt	.y_dontset
-		mov	#%0000,r4
+	; ---------------------------------------
+	; Y move
+	; ---------------------------------------
+
+	; Y framebuffer pos
 		mov	#240+8,r3
-		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
-		cmp/pl	r2
-		bf	.yp_negtv
-		add	#$08,r0
-		mov	#%0100,r4
-		cmp/ge	r3,r0
-		bf	.yp_negtv
-		sub	r3,r0
-.yp_negtv:
-		cmp/pz	r2
-		bt	.yp_postv
-		mov	#%1000,r4
-		add	#-$08,r0
-		cmp/pz	r0
-		bt	.yp_postv
-		add	r3,r0
-.yp_postv:
-		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
-; 		add	r2,r0
+		add	r2,r0
 		cmp/pl	r2
 		bf	.ypu_negtv
-		add	#$08,r0
 		cmp/ge	r3,r0
 		bf	.ypu_negtv
 		sub	r3,r0
 .ypu_negtv:
 		cmp/pz	r2
 		bt	.ypu_postv
-		add	#-$08,r0
 		cmp/pz	r0
 		bt	.ypu_postv
 		add	r3,r0
 .ypu_postv:
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
+		add	r2,r0
+		cmp/pl	r2
+		bf	.ypd_negtv
+		cmp/ge	r3,r0
+		bf	.ypd_negtv
+		sub	r3,r0
+.ypd_negtv:
+		cmp/pz	r2
+		bt	.ypd_postv
+		cmp/pz	r0
+		bt	.ypd_postv
+		add	r3,r0
+.ypd_postv:
+		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
 
-; 	; Y top/bottom heads
+	; Y Map limit
 		mov.w	@(marsGbl_BgHeight,gbr),r0
 		mov	r0,r3
+		mov	#0,r7
 		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		add	r2,r0
 		cmp/pl	r2
-		bf	.ybu_negtv
-		add	#$08,r0
+		bf	.ynegtv
+		mov	#%0001,r7
 		cmp/ge	r3,r0
-		bf	.ybu_negtv
+		bf	.ynegtv
 		sub	r3,r0
-.ybu_negtv:
+.ynegtv:
 		cmp/pz	r2
-		bt	.ybu_postv
-		add	#-$08,r0
+		bt	.ypostv
+		mov	#%0010,r7
 		cmp/pz	r0
-		bt	.ybu_postv
+		bt	.ypostv
 		add	r3,r0
-.ybu_postv:
+.ypostv:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
 		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
+		add	r2,r0
 		cmp/pl	r2
-		bf	.yb_negtv
-		add	#$08,r0
+		bf	.ynegtvl
 		cmp/ge	r3,r0
-		bf	.yb_negtv
+		bf	.ynegtvl
 		sub	r3,r0
-.yb_negtv:
+.ynegtvl:
 		cmp/pz	r2
-		bt	.yb_postv
-		add	#-$08,r0
+		bt	.ypostvl
 		cmp/pz	r0
-		bt	.yb_postv
+		bt	.ypostvl
 		add	r3,r0
-.yb_postv:
+.ypostvl:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
-
-		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
-		or	r4,r0
-		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
-.y_dontset:
-		mov	#$07,r0
-		and	r0,r5
-		mov	r5,r0
-		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
 
 	; ---------------------------------------
 	; X move
@@ -1223,64 +1208,49 @@ mstr_step2:
 
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	r0,r3
-		mov.w	@(marsGbl_Bg_Xset,gbr),r0
-		add	r1,r0
-		mov	r0,r4
-		tst	#%11000000,r0			; X Halfway?
-		bt	.dontrgr
-		mov	#0,r5
+		mov	#0,r7
 		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+		add	r1,r0
 		cmp/pl	r1
 		bf	.negtv
-		mov	#%0001,r5
-		add	#$40,r0
+		mov	#%0001,r7
 		cmp/ge	r3,r0
 		bf	.negtv
 		sub	r3,r0
 .negtv:
 		cmp/pz	r1
 		bt	.postv
-		mov	#%0010,r5
-		add	#-$40,r0
+		mov	#%0010,r7
 		cmp/pz	r0
 		bt	.postv
 		add	r3,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
 		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		add	r1,r0
 		cmp/pl	r1
 		bf	.negtvl
-		add	#$40,r0
 		cmp/ge	r3,r0
 		bf	.negtvl
 		sub	r3,r0
 .negtvl:
 		cmp/pz	r1
 		bt	.postvl
-		add	#-$40,r0
 		cmp/pz	r0
 		bt	.postvl
 		add	r3,r0
 .postvl:
 		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
-		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; L/R request bits
-		or	r5,r0
-		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 
-.dontrgr:
-		mov	#$3F,r0
-		and	r0,r4
-		mov	r4,r0
-		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
+		; r7 - set bits
+		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions (%DURL)
+		or	r7,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 
 	; ---------------------------------------
 	; Set linescroll
 	; ---------------------------------------
 
-; 		mov	#_vdpreg,r8
-; .wait_fb:	mov.w	@($A,r8),r0
-; 		tst	#2,r0
-; 		bf	.wait_fb
 		mov	#RAM_Mars_Linescroll,r9
 		mov	#_framebuffer,r10
 		mov	#$200,r8
@@ -1288,9 +1258,6 @@ mstr_step2:
 		mov	#240,r3
 		shll8	r2
 		shll	r2
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		muls	r0,r2
-; 		sts	macl,r2
 .ln_loop:
 		mov	@r9,r0
 		add	r1,r0
@@ -1305,7 +1272,6 @@ mstr_step2:
 .xl_l:
 		mov	r0,@r9
 		add	#4,r9
-
 		add	r8,r0
 		shlr	r0
 		mov.w	r0,@r10
