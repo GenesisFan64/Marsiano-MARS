@@ -1109,25 +1109,24 @@ mstr_step2:
 	; Y move
 	; ---------------------------------------
 
-		mov	#$1E000,r3
-		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
-		add	r1,r0
-		cmp/pl	r1
-		bf	.yx_negtv
-		cmp/ge	r3,r0
-		bf	.yx_negtv
-		sub	r3,r0
-.yx_negtv:
-		cmp/pz	r1
-		bt	.yx_postv
-		cmp/pz	r0
-		bt	.yx_postv
-		add	r3,r0
-.yx_postv:
-		mov	r0,@(marsGbl_Bg_YbgXBase,gbr)
+; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
+; 		add	r2,r0
+; 		mov	r0,r4
+; 		tst	#%11110000,r0
+; 		bt	.yset_w
+
+		mov	#0,r7
+		mov	r2,r0
+		cmp/eq	#0,r0
+		bt	.noy
+		mov	#%0100,r7
+		cmp/pz	r2
+		bt	.noy
+		mov	#%1000,r7
+.noy:
 
 	; Y framebuffer pos
-		mov	#240,r3
+		mov	#256,r3
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
 		add	r2,r0
 		cmp/pl	r2
@@ -1136,7 +1135,7 @@ mstr_step2:
 		bf	.ypu_negtv
 		sub	r3,r0
 .ypu_negtv:
-		cmp/pz	r2
+		cmp/pz	r2			; TODO: ver si necesito poner cmp/pl a los otros
 		bt	.ypu_postv
 		cmp/pz	r0
 		bt	.ypu_postv
@@ -1162,19 +1161,16 @@ mstr_step2:
 	; Y Map limit
 		mov.w	@(marsGbl_BgHeight,gbr),r0
 		mov	r0,r3
-		mov	#0,r7
 		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
 		add	r2,r0
 		cmp/pl	r2
 		bf	.ynegtv
-		mov	#%0100,r7
 		cmp/ge	r3,r0
 		bf	.ynegtv
 		sub	r3,r0
 .ynegtv:
 		cmp/pz	r2
 		bt	.ypostv
-		mov	#%1000,r7
 		cmp/pz	r0
 		bt	.ypostv
 		add	r3,r0
@@ -1195,9 +1191,30 @@ mstr_step2:
 		add	r3,r0
 .ypostvl:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
+		mov	#$18000,r3
+		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+		add	r1,r0
+		cmp/pl	r1
+		bf	.yx_negtv
+		cmp/ge	r3,r0
+		bf	.yx_negtv
+		sub	r3,r0
+.yx_negtv:
+		cmp/pz	r1
+		bt	.yx_postv
+		cmp/pz	r0
+		bt	.yx_postv
+		add	r3,r0
+.yx_postv:
+		mov	r0,@(marsGbl_Bg_YbgXBase,gbr)
+
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions
 		or	r7,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+.yset_w:
+; 		mov	r4,r0
+; 		and	#$0F,r0
+; 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
 
 	; ---------------------------------------
 	; X move
@@ -1268,10 +1285,13 @@ mstr_step2:
 		mov	#RAM_Mars_Linescroll,r9
 		mov	#_framebuffer,r10
 		mov	#$200,r8
-		mov	#$1E000,r7
+		mov	#$18000,r7
 		mov	#240,r3
-		shll8	r2
-		shll	r2
+		mov	#384,r0
+		muls	r2,r0
+		sts	macl,r2
+; 		shll8	r2
+; 		shll	r2
 .ln_loop:
 		mov	@r9,r0
 		add	r1,r0

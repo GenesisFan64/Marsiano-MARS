@@ -121,7 +121,7 @@ MarsVideo_Init:
 
 		mov	#RAM_Mars_Linescroll,r4
 		mov	#0,r3
-		mov	#$200,r2
+		mov	#384,r2
 		mov	#240,r1
 .copy:
 		mov	r3,@r4
@@ -949,7 +949,7 @@ MarsVideo_DrawAllBg:
 		mov	#240,r7
 .y_next:
 		mov	r5,r4
-		mov	#(320+32)/4,r6
+		mov	#(320+64)/4,r6
 .x_next:
 		cmp/ge	r3,r1
 		bf	.nolm
@@ -960,7 +960,7 @@ MarsVideo_DrawAllBg:
 		add	#4,r4
 		dt	r6
 		bf	.x_next
-		mov	#512,r0
+		mov	#384,r0
 		add	r0,r5
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r2
@@ -977,7 +977,7 @@ MarsVideo_DrawAllBg:
 		mov	r0,r3			; r3 - end
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r3
-		mov	#(_framebuffer+$200)+$1E000,r5
+		mov	#(_framebuffer+$200)+$18000,r5
 		mov	r5,r4
 		mov	#(320+16)/4,r6
 .x_next_l:
@@ -995,7 +995,7 @@ MarsVideo_DrawAllBg:
 .fb_wait1:	mov.w   @($A,r4),r0	; Swap for next table
 		tst     #2,r0
 		bf      .fb_wait1
-		mov.w   @($A,r4), r0
+		mov.w   @($A,r4),r0
 		xor     #1,r0
 		mov.w   r0,@($A,r4)
 		and     #1,r0
@@ -1166,11 +1166,16 @@ MarsVideo_SetWatchdog:
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
 		cmp/eq	#0,r0
 		bt	.drw_req
-		mov	#Cach_DrawDir,r1
-		mov	r0,@r1
+		mov	r0,r3
 		mov	#Cach_DrawReq,r1
+; 		mov	@r2,r0
+; 		cmp/eq	#0,r0
+; 		bf	.drw_req2
+		mov	#Cach_DrawDir,r2
+		mov	r3,@r2
 		mov	#2,r0
 		mov	r0,@r1
+.drw_req2:
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 .drw_req:

@@ -88,7 +88,7 @@ drwtsk_01:
 		mov	#$00200,r7
 		cmp/ge	r7,r0
 		bt	.lastline_l
-		mov	#(_framebuffer+$200)+$3E000,r4
+		mov	#(_framebuffer+$200)+($20000+$18000),r4
 		add	r0,r4
 		mov	#1,r6
 .lastline_l:
@@ -115,7 +115,7 @@ drwtsk_01:
 		mov	@r0,r0
 		and	r5,r0
 		add	r1,r0
-		mov	#$1E000,r7
+		mov	#$18000,r7
 		cmp/ge	r7,r0
 		bf	.lastline_r
 		mov	#1,r6
@@ -190,8 +190,8 @@ drwtsk_01:
 		mov	r0,@(marsGbl_BgData_R,gbr)
 		mov	#Cach_BgFbBaseR,r3
 		mov	@r3,r0
-		mov	#$1E000,r2
-		mov	#$200,r1
+		mov	#$18000,r2
+		mov	#384,r1
 		add	r1,r0
 		cmp/ge	r2,r0
 		bf	.fbmuch
@@ -287,7 +287,6 @@ dtsk01_exit:
 		mov	@r0,r0
 		and	r4,r0
 		mov	r0,r6
-
 ; loop
 .drwy_go:
 		mov	#16,r8
@@ -300,10 +299,13 @@ dtsk01_exit:
 		add	r0,r1
 		mov	r5,r4		; r4 - X
 		mov	r6,r0
-		shll8	r0
-		shll	r0
+		mov	#384,r7
+		mulu	r7,r0
+		sts	macl,r0
+; 		shll8	r0
+; 		shll	r0
 		add	r0,r4		; X + Y
-		mov	#$1E000,r0
+		mov	#$18000,r0
 		cmp/gt	r0,r4
 		bf	.nomchx
 		sub	r0,r4
@@ -338,12 +340,12 @@ dtsk01_exit:
 		and	r4,r0
 		add	r0,r1
 		mov	r5,r4
-		mov	#$1E000,r0
+		mov	#$18000,r0
 		cmp/gt	r0,r4
 		bf	.nomchx2
 		sub	r0,r4
 .nomchx2:
-		mov	#(_framebuffer+$200)+$1E000,r0
+		mov	#(_framebuffer+$200)+$18000,r0
 		add	r0,r4
 		mov	#((320+16)/4),r7
 .hdnloop:
@@ -351,8 +353,8 @@ dtsk01_exit:
 		bf	.xlon2
 		mov	r2,r1
 .xlon2:
-; 		mov	@r1+,r0
-		mov	#$01010101,r0
+		mov	@r1+,r0
+; 		mov	#$01010101,r0
 		mov	r0,@r4
 		add	#4,r4
 		dt	r7
@@ -361,11 +363,12 @@ dtsk01_exit:
 	;
 
 		mov	r6,r0
-		mov	#$F0,r6
+; 		mov	#$F0,r6
 		add	#1,r0
-		cmp/ge	r6,r0
-		bf	.lel3
-		sub	r6,r0
+		and	#$FF,r0
+; 		cmp/ge	r6,r0
+; 		bf	.lel3
+; 		sub	r6,r0
 ; 		cmp/eq	#0,r0
 ; 		bt	*
 .lel3:
@@ -663,7 +666,7 @@ drwsld_nxtline_tex:
 		mov	@r10,r10
 		mov	#-2,r0
 		and	r0,r0
-		mov	#$1D000,r9
+		mov	#$18000-$1000,r9
 		mov	#_overwrite+$200,r0
 		add	r0,r10
 		add	r0,r9
