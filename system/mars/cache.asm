@@ -72,7 +72,6 @@ drwtsk_01:
 		mov	#Cach_DrawDir,r1	; Draw right
 		mov	@r1,r0
 		mov	#0,r6
-		mov	#-$10,r5		; Limiter
 		tst	#%0001,r0
 		bf	.dtsk01_dright
 		tst	#%0010,r0
@@ -82,11 +81,15 @@ drwtsk_01:
 		nop
 		align 4
 .dtsk01_dleft:
-		mov	#Cach_BgFbBaseR,r0
+		mov	#Cach_BgFbPosLR,r0
 		mov	@r0,r0
-		and	r5,r0
-		mov	#$00200,r7
-		cmp/ge	r7,r0
+		mov	#$18000,r1
+		cmp/gt	r1,r0
+		bf	.prefix_l
+		sub	r1,r0
+.prefix_l:
+		mov	#384,r1
+		cmp/ge	r1,r0
 		bt	.lastline_l
 		mov	#(_framebuffer+$200)+($20000+$18000),r4
 		add	r0,r4
@@ -105,15 +108,18 @@ drwtsk_01:
 		add	r0,r3
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
-		and	r5,r0
 		add	r0,r1
 		bra	.dtsk01_lrdraw
 		mov	r1,r5
 .dtsk01_dright:
-		mov	#320,r1
-		mov	#Cach_BgFbBaseR,r0
+		mov	#Cach_BgFbPosLR,r0
 		mov	@r0,r0
-		and	r5,r0
+		mov	#$18000,r1
+		cmp/gt	r1,r0
+		bf	.prefix_r
+		sub	r1,r0
+.prefix_r:
+		mov	#320,r1
 		add	r1,r0
 		mov	#$18000,r7
 		cmp/ge	r7,r0
@@ -136,7 +142,6 @@ drwtsk_01:
 		add	r0,r3
 		mov	#Cach_XHead_R,r0
 		mov	@r0,r0
-		and	r5,r0
 		add	r0,r1
 		mov	r1,r5
 .dtsk01_lrdraw:
@@ -188,12 +193,12 @@ drwtsk_01:
 		mov	r0,@r1
 		mov	r5,r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-		mov	#Cach_BgFbBaseR,r3
+		mov	#Cach_BgFbPosLR,r3
 		mov	@r3,r0
 		mov	#$18000,r2
 		mov	#384,r1
 		add	r1,r0
-		cmp/ge	r2,r0
+		cmp/gt	r2,r0
 		bf	.fbmuch
 		sub	r2,r0
 .fbmuch:
@@ -235,7 +240,6 @@ dtsk01_exit:
 		and	#%1100,r0
 		cmp/eq	#0,r0
 		bt	go_tsk00_gonext
-		mov	#-$10,r4
 		tst	#%0100,r0
 		bf	.tsk00_down
 		tst	#%1000,r0
@@ -245,14 +249,12 @@ dtsk01_exit:
 
 	; r2 - Start bg line
 	; r3 - End bg line
-	; r4 - Block -AND size
 	; r6 - Y current
 	; r5 - FB current base
 .tsk00_down:
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	#Cach_YHead_D,r2
 		mov	@r2,r2
-		and	r4,r2
 		mulu	r0,r2
 		sts	macl,r2
 		mov	@(marsGbl_BgData,gbr),r0
@@ -262,17 +264,14 @@ dtsk01_exit:
 		add	r0,r3
 		mov	#Cach_BgFbBaseUD,r0
 		mov	@r0,r5
-		and	r4,r5
 		mov	#Cach_BgFbPos_D,r0
 		mov	@r0,r0
-		and	r4,r0
 		bra	.drwy_go
 		mov	r0,r6
 .tsk00_up:
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	#Cach_YHead_U,r2
 		mov	@r2,r2
-		and	r4,r2
 		mulu	r0,r2
 		sts	macl,r2
 		mov	@(marsGbl_BgData,gbr),r0
@@ -282,10 +281,8 @@ dtsk01_exit:
 		add	r0,r3
 		mov	#Cach_BgFbBaseUD,r0
 		mov	@r0,r5
-		and	r4,r5
 		mov	#Cach_BgFbPos_U,r0
 		mov	@r0,r0
-		and	r4,r0
 		mov	r0,r6
 ; loop
 .drwy_go:
@@ -312,7 +309,7 @@ dtsk01_exit:
 .nomchx:
 		mov	#_framebuffer+$200,r0
 		add	r0,r4
-		mov	#((320+16)/4),r7
+		mov	#((320+32)/4),r7
 .rept_x:
 		cmp/ge	r3,r1
 		bf	.xlon1
@@ -347,7 +344,7 @@ dtsk01_exit:
 .nomchx2:
 		mov	#(_framebuffer+$200)+$18000,r0
 		add	r0,r4
-		mov	#((320+16)/4),r7
+		mov	#((320+32)/4),r7
 .hdnloop:
 		cmp/ge	r3,r1
 		bf	.xlon2
@@ -959,17 +956,16 @@ Cach_XHead_L	ds.l 1			; Left draw beam
 Cach_XHead_R	ds.l 1			; Right draw beam
 Cach_YHead_D	ds.l 1			; Bottom draw beam
 Cach_YHead_U	ds.l 1			; Top draw beam
+Cach_YHead_LR	ds.l 1			; (L/R) Top Y position (updates)
+Cach_YRead_LR	ds.l 1			; (L/R) Current Y (updates)
+Cach_BgFbPosLR	ds.l 1			; (L/R) Current Y FB position (updates)
+
 Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos
 Cach_BgFbPos_D	ds.l 1			; (U/D) Lower Y FB pos
 Cach_BgFbBaseUD	ds.l 1			; (U/D) Current X FB position
-
-Cach_YHead_LR	ds.l 1			; (L/R) Top Y position (updates)
-Cach_YRead_LR	ds.l 1			; (L/R) Current Y (updates)
-Cach_BgFbBaseR	ds.l 1			; (L/R) Current Y FB position (updates)
 Cach_ClrLines	ds.l 1			; (L/R) Lines to process
 Cach_DrawReq	ds.l 1			; Write $02 to request scroll drawing
 Cach_DrawDir	ds.l 1			; Direction bits: %DURL
-
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2

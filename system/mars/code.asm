@@ -39,7 +39,6 @@ marsGbl_Bg_XbgInc_L	ds.w 1		; Address X increment
 marsGbl_Bg_XbgInc_R	ds.w 1		;
 marsGbl_Bg_YbgInc_D	ds.w 1		; Address Y increment (NOTE: multiply with BGWIDTH externally)
 marsGbl_Bg_YbgInc_U	ds.w 1		;
-marsGbl_Bg_YbgIncU_LR	ds.w 1		; For Left/Right drawing only
 marsGbl_BgYFb_Xpos	ds.w 1
 marsGbl_Bg_DrwReq	ds.w 1		; Scroll-Draw request
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
@@ -933,8 +932,8 @@ SH2_M_HotStart:
 		mov	r0,@(8,r14)
 		mov	r0,@($10,r14)
 		mov	r0,@($18,r14)
-; 		mov	#1,r0			; enable test polygon
-; 		mov.w	r0,@r13
+		mov	#1,r0			; enable test polygon
+		mov.w	r0,@r13
 		mov 	#_vdpreg,r1
 .wait_fb:	mov.w   @($A,r1),r0
 		tst     #2,r0
@@ -1109,6 +1108,8 @@ mstr_step2:
 	; Y move
 	; ---------------------------------------
 
+	; TODO: broken (again)
+
 ; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
 ; 		add	r2,r0
 ; 		mov	r0,r4
@@ -1124,7 +1125,6 @@ mstr_step2:
 		bt	.noy
 		mov	#%1000,r7
 .noy:
-
 	; Y framebuffer pos
 		mov	#256,r3
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
@@ -1191,6 +1191,10 @@ mstr_step2:
 		add	r3,r0
 .ypostvl:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
+		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions
+		or	r7,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+.yset_w:
 		mov	#$18000,r3
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		add	r1,r0
@@ -1208,57 +1212,32 @@ mstr_step2:
 .yx_postv:
 		mov	r0,@(marsGbl_Bg_YbgXBase,gbr)
 
-		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions
-		or	r7,r0
-		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
-.yset_w:
-; 		mov	r4,r0
-; 		and	#$0F,r0
-; 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
-
 	; ---------------------------------------
 	; X move
 	; ---------------------------------------
 
-	; Y data head for Left/Right drawing
-		mov.w	@(marsGbl_BgHeight,gbr),r0
-		mov	r0,r3
-		mov.w	@(marsGbl_Bg_YbgIncU_LR,gbr),r0
-		add	r2,r0
-		cmp/pl	r2
-		bf	.y_negtv
-		cmp/ge	r3,r0
-		bf	.y_negtv
-		sub	r3,r0
-.y_negtv:
-		cmp/pz	r2
-		bt	.y_postv
-		cmp/pz	r0
-		bt	.y_postv
-		add	r3,r0
-.y_postv:
-		mov.w	r0,@(marsGbl_Bg_YbgIncU_LR,gbr)
-
+	; X draw heads for Left/Right drawing
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	r0,r3
-		mov	#0,r7
+		mov	#0,r5
 		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
 		add	r1,r0
 		cmp/pl	r1
 		bf	.negtv
-		mov	#%0001,r7
+		mov	#%0001,r5
 		cmp/ge	r3,r0
 		bf	.negtv
 		sub	r3,r0
 .negtv:
 		cmp/pz	r1
 		bt	.postv
-		mov	#%0010,r7
+		mov	#%0010,r5
 		cmp/pz	r0
 		bt	.postv
 		add	r3,r0
 .postv:
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
+
 		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
 		add	r1,r0
 		cmp/pl	r1
@@ -1275,8 +1254,9 @@ mstr_step2:
 .postvl:
 		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions (%DURL)
-		or	r7,r0
+		or	r5,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+.no_xset:
 
 	; ---------------------------------------
 	; Set linescroll

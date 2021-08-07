@@ -949,7 +949,7 @@ MarsVideo_DrawAllBg:
 		mov	#240,r7
 .y_next:
 		mov	r5,r4
-		mov	#(320+64)/4,r6
+		mov	#(320+32)/4,r6
 .x_next:
 		cmp/ge	r3,r1
 		bf	.nolm
@@ -1088,7 +1088,6 @@ MarsVideo_SetBg:
 		mov	#224,r1
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
-		mov.w	r0,@(marsGbl_Bg_YbgIncU_LR,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
@@ -1120,47 +1119,65 @@ MarsVideo_SetWatchdog:
 
 	; Vars that require reset
 		mov	#Cach_ClrLines,r1		; Background drawing start-values
-		mov	#240,r0
+		mov	#240+16,r0
 		mov	r0,@r1
+
+	; X draw settings
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-		mov	#-$10,r3
-		mov	#Cach_BgFbBaseR,r1		; Left/Right current FB pos
-		mov	#RAM_Mars_Linescroll,r0
-		mov	@r0,r0
-		and	r3,r0
-		mov	r0,@r1
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r1
-		mov	#Cach_YRead_LR,r2
-		mov.w	@(marsGbl_Bg_YbgIncU_LR,gbr),r0
-		mov	r0,@r2
-		muls	r1,r0
+		mov	#384,r4					; Set Top-Left framebuffer position
+		mov	#-$10,r2				; for L/R drawing
+		mov	#Cach_BgFbPosLR,r1
+		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+		and	r2,r0
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+		and	r2,r0
+		mulu	r0,r4
 		sts	macl,r0
-		mov	#Cach_YHead_LR,r2
-		mov	r0,@r2
-		mov	#Cach_XHead_L,r1		; X draw heads
+		add	r3,r0
+		mov	r0,@r1
+		mov	#Cach_YRead_LR,r1
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		and	r2,r0
+		mov	r0,@r1
+		mov.w	@(marsGbl_BgWidth,gbr),r0		; Y add for L/R
+		mov	r0,r3
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		and	r2,r0
+		mulu	r3,r0
+		sts	macl,r0
+		mov	#Cach_YHead_LR,r1
+		mov	r0,@r1
+		mov	#Cach_XHead_L,r1			; X draw heads
 		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		and	r2,r0
 		mov	r0,@r1
 		mov	#Cach_XHead_R,r1
 		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+		and	r2,r0
 		mov	r0,@r1
 
 	; Y draw heads and other vars
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
 		mov	#Cach_BgFbPos_U,r1
+		and	r2,r0
 		mov	r0,@r1
 		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
 		mov	#Cach_BgFbPos_D,r1
+		and	r2,r0
 		mov	r0,@r1
 		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
 		mov	#Cach_YHead_D,r1
+		and	r2,r0
 		mov	r0,@r1
 		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
 		mov	#Cach_YHead_U,r1
+		and	r2,r0
 		mov	r0,@r1
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		mov	#Cach_BgFbBaseUD,r1
+		and	r2,r0
 		mov	r0,@r1
 
 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
@@ -1168,9 +1185,6 @@ MarsVideo_SetWatchdog:
 		bt	.drw_req
 		mov	r0,r3
 		mov	#Cach_DrawReq,r1
-; 		mov	@r2,r0
-; 		cmp/eq	#0,r0
-; 		bf	.drw_req2
 		mov	#Cach_DrawDir,r2
 		mov	r3,@r2
 		mov	#2,r0
