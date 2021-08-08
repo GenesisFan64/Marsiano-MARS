@@ -1085,6 +1085,7 @@ MarsVideo_SetBg:
 		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
+
 		mov	#224,r1
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
@@ -1092,7 +1093,6 @@ MarsVideo_SetBg:
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
-
 		rts
 		nop
 		align 4
@@ -1119,14 +1119,24 @@ MarsVideo_SetWatchdog:
 
 	; Vars that require reset
 		mov	#Cach_ClrLines,r1		; Background drawing start-values
-		mov	#240+16,r0
+		mov	#240,r0
 		mov	r0,@r1
 
 	; X draw settings
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
+
+	; *** updates every line ***
 		mov	#384,r4					; Set Top-Left framebuffer position
 		mov	#-$10,r2				; for L/R drawing
+		mov	#Cach_XHead_L,r1			; X draw heads
+		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		and	r2,r0
+		mov	r0,@r1
+		mov	#Cach_XHead_R,r1
+		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+		and	r2,r0
+		mov	r0,@r1
 		mov	#Cach_BgFbPosLR,r1
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		and	r2,r0
@@ -1149,32 +1159,7 @@ MarsVideo_SetWatchdog:
 		sts	macl,r0
 		mov	#Cach_YHead_LR,r1
 		mov	r0,@r1
-		mov	#Cach_XHead_L,r1			; X draw heads
-		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
-		and	r2,r0
-		mov	r0,@r1
-		mov	#Cach_XHead_R,r1
-		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
-		and	r2,r0
-		mov	r0,@r1
 
-	; Y draw heads and other vars
-		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
-		mov	#Cach_BgFbPos_U,r1
-		and	r2,r0
-		mov	r0,@r1
-		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
-		mov	#Cach_BgFbPos_D,r1
-		and	r2,r0
-		mov	r0,@r1
-		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
-		mov	#Cach_YHead_D,r1
-		and	r2,r0
-		mov	r0,@r1
-		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
-		mov	#Cach_YHead_U,r1
-		and	r2,r0
-		mov	r0,@r1
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		mov	#Cach_BgFbBaseUD,r1
 		and	r2,r0
@@ -1189,9 +1174,6 @@ MarsVideo_SetWatchdog:
 		mov	r3,@r2
 		mov	#2,r0
 		mov	r0,@r1
-.drw_req2:
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 .drw_req:
 
 

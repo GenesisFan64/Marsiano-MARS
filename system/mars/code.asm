@@ -41,6 +41,8 @@ marsGbl_Bg_YbgInc_D	ds.w 1		; Address Y increment (NOTE: multiply with BGWIDTH e
 marsGbl_Bg_YbgInc_U	ds.w 1		;
 marsGbl_BgYFb_Xpos	ds.w 1
 marsGbl_Bg_DrwReq	ds.w 1		; Scroll-Draw request
+marsGbl_Bg_DrwReqU	ds.w 1		; (Write 2)
+marsGbl_Bg_DrwReqD	ds.w 1		; (Write 2)
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PolyBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_PzListCntr	ds.w 1		; Number of graphic pieces to draw
@@ -1116,32 +1118,37 @@ mstr_step2:
 ; 		tst	#%11110000,r0
 ; 		bt	.yset_w
 
-		mov	#0,r7
-		mov	r2,r0
-		cmp/eq	#0,r0
-		bt	.noy
-		mov	#%0100,r7
-		cmp/pz	r2
-		bt	.noy
-		mov	#%1000,r7
-.noy:
+; 		mov	#0,r7
+; 		mov	r2,r0
+; 		cmp/eq	#0,r0
+; 		bt	.noy
+; 		mov	#%0100,r7
+; 		cmp/pz	r2
+; 		bt	.noy
+; 		mov	#%1000,r7
+; .noy:
 	; Y framebuffer pos
+		mov	#0,r4
+		mov	#0,r5
 		mov	#256,r3
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
 		add	r2,r0
 		cmp/pl	r2
 		bf	.ypu_negtv
+		mov	#2,r4
 		cmp/ge	r3,r0
 		bf	.ypu_negtv
 		sub	r3,r0
 .ypu_negtv:
-		cmp/pz	r2			; TODO: ver si necesito poner cmp/pl a los otros
+		cmp/pz	r2
 		bt	.ypu_postv
+		mov	#2,r5
 		cmp/pz	r0
 		bt	.ypu_postv
 		add	r3,r0
 .ypu_postv:
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+
 		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
 		add	r2,r0
 		cmp/pl	r2
@@ -1191,10 +1198,52 @@ mstr_step2:
 		add	r3,r0
 .ypostvl:
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
-		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions
-		or	r7,r0
-		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+; 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0	; r7: draw directions
+; 		or	r7,r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
 .yset_w:
+
+	; Set Up/Down requests
+		mov	#-$10,r3
+		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
+		cmp/eq	#0,r0
+		bf	.reqd_b
+		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
+		mov	#Cach_YHead_D,r6
+		and	r3,r0
+		mov	r0,@r6
+		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
+		mov	#Cach_BgFbPos_D,r6
+		and	r3,r0
+		mov	r0,@r6
+		mov	r4,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqD,gbr)
+.reqd_b:
+		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
+		cmp/eq	#0,r0
+		bf	.requ_b
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		mov	#Cach_YHead_U,r6
+		and	r3,r0
+		mov	r0,@r6
+		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+		mov	#Cach_BgFbPos_U,r6
+		and	r3,r0
+		mov	r0,@r6
+		mov	r5,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
+.requ_b:
+
+		bra	mstr_do_x
+		nop
+		align 4
+		ltorg
+mstr_do_x:
+
+	; ---------------------------------------
+	; X move
+	; ---------------------------------------
+
 		mov	#$18000,r3
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		add	r1,r0
@@ -1211,10 +1260,6 @@ mstr_step2:
 		add	r3,r0
 .yx_postv:
 		mov	r0,@(marsGbl_Bg_YbgXBase,gbr)
-
-	; ---------------------------------------
-	; X move
-	; ---------------------------------------
 
 	; X draw heads for Left/Right drawing
 		mov.w	@(marsGbl_BgWidth,gbr),r0
@@ -1289,12 +1334,14 @@ mstr_step2:
 		add	r8,r0
 		shlr	r0
 		mov.w	r0,@r10
-		add	#2,r10
 		dt	r3
-		bf	.ln_loop
+		bf/s	.ln_loop
+		add	#2,r10
 
 	; ---------------------------------------
-	; Draw to framebuffer
+	; Draw Up/Down here.
+	; Left/Right is drawn per line in
+	; Watchdog
 	; ---------------------------------------
 
 		mov	#_CCR,r1			; <-- Required for Watchdog
@@ -1305,6 +1352,162 @@ mstr_step2:
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
+
+		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
+		mov	r0,r1
+		xor	r0,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReq,gbr)
+
+	; **** Up/Down check
+		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
+		cmp/eq	#0,r0
+		bf	.tsk00_down
+		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
+		cmp/eq	#0,r0
+		bf	.tsk00_up
+		bra	drw_ud_exit
+		nop
+
+	; r2 - Start bg line
+	; r3 - End bg line
+	; r6 - Y current
+	; r5 - FB current base
+.tsk00_down:
+		dt	r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqD,gbr)
+
+		mov	#Cach_YHead_D,r2
+		mov	@r2,r2
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mulu	r0,r2
+		sts	macl,r2
+		mov	@(marsGbl_BgData,gbr),r0
+		add	r0,r2
+		mov	r2,r3
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r3
+		mov	#Cach_BgFbBaseUD,r0
+		mov	@r0,r5
+		mov	#Cach_BgFbPos_D,r0
+		mov	@r0,r0
+		bra	.drwy_go
+		mov	r0,r6
+.tsk00_up:
+		dt	r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
+
+		mov	#Cach_YHead_U,r2
+		mov	@r2,r2
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mulu	r0,r2
+		sts	macl,r2
+		mov	@(marsGbl_BgData,gbr),r0
+		add	r0,r2
+		mov	r2,r3
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r3
+		mov	#Cach_BgFbBaseUD,r0
+		mov	@r0,r5
+		mov	#Cach_BgFbPos_U,r0
+		mov	@r0,r0
+		mov	r0,r6
+; loop
+.drwy_go:
+		mov	#16,r8
+.rept_y:
+		mov	r2,r1		; r1 - bg pixel data
+		mov	#-$10,r7
+		mov	#Cach_XHead_L,r0
+		mov	@r0,r0
+		and	r7,r0
+		add	r0,r1
+		mov	r5,r4		; r4 - X
+		mov	r6,r0
+		mov	#384,r7
+		mulu	r7,r0
+		sts	macl,r0
+; 		shll8	r0
+; 		shll	r0
+		add	r0,r4		; X + Y
+		mov	#$18000,r0
+		cmp/gt	r0,r4
+		bf	.nomchx
+		sub	r0,r4
+.nomchx:
+		mov	#_framebuffer+$200,r0
+		add	r0,r4
+		mov	#((320+32)/4),r7
+.rept_x:
+		cmp/ge	r3,r1
+		bf	.xlon1
+		mov	r2,r1
+.xlon1:
+		mov	@r1+,r0
+; 		mov	#$01010101,r0
+		mov	r0,@r4
+		add	#4,r4
+		dt	r7
+		bf	.rept_x
+
+	; Check for the hidden line
+		mov	r6,r0
+		cmp/eq	#0,r0		; Line 0?
+		bf	.hdndrw
+		mov	#320,r0		; X < 320?
+		cmp/gt	r0,r5
+		bt	.hdndrw
+; 		bra	*
+		mov	r2,r1
+		mov	#-$10,r4
+		mov	#Cach_XHead_L,r0
+		mov	@r0,r0
+		and	r4,r0
+		add	r0,r1
+		mov	r5,r4
+		mov	#$18000,r0
+		cmp/gt	r0,r4
+		bf	.nomchx2
+		sub	r0,r4
+.nomchx2:
+		mov	#(_framebuffer+$200)+$18000,r0
+		add	r0,r4
+		mov	#((320+32)/4),r7
+.hdnloop:
+		cmp/ge	r3,r1
+		bf	.xlon2
+		mov	r2,r1
+.xlon2:
+		mov	@r1+,r0
+; 		mov	#$01010101,r0
+		mov	r0,@r4
+		add	#4,r4
+		dt	r7
+		bf	.hdnloop
+.hdndrw:
+	;
+
+		mov	r6,r0
+; 		mov	#$F0,r6
+		add	#1,r0
+		and	#$FF,r0
+; 		cmp/ge	r6,r0
+; 		bf	.lel3
+; 		sub	r6,r0
+; 		cmp/eq	#0,r0
+; 		bt	*
+.lel3:
+		mov	r0,r6
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r2
+		add	r0,r3
+		dt	r8
+		bt	drw_ud_exit
+		bra	.rept_y
+		nop
+		align 4
+; 	****
+drw_ud_exit:
+
 	; r14 - Polygon pointers list
 	; r13 - Number of polygons to build
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
