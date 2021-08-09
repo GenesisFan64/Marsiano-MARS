@@ -91,7 +91,7 @@ drwtsk_01:
 		mov	#384,r1
 		cmp/ge	r1,r0
 		bt	.lastline_l
-		mov	#(_framebuffer+$200)+($20000+$18000),r4
+		mov	#(_framebuffer+$200)+$18000,r4
 		add	r0,r4
 		mov	#1,r6
 .lastline_l:
@@ -155,11 +155,36 @@ drwtsk_01:
 		add	#4,r7
 	endm
 
+	; ex line
+; 		mov	#Cach_YRead_LR,r1
+; 		cmp/pl	r6
+; 		bf	.not_ln0
+; 		mov	@r1,r0
+; 		cmp/eq	#0,r0
+; 		bf	.not_ln0
+; 		mov	#RAM_Mars_Line0_Data,r7
+; 		mov	#Cach_BgFbPosLR,r0
+; 		mov	@r0,r0
+; 		add	r0,r7
+; 		mov	#8,r6
+; .y_ex:
+; 		cmp/ge	r3,r5
+; 		bf	.nolm_e
+; 		mov	r2,r5
+; .nolm_e:
+; 		mov	@r5+,r0
+; 		mov	r0,@r7
+; 		dt	r6
+; 		bf/s	.y_ex
+; 		add	#4,r7
+; 		mov	#2,r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwLine0,gbr)
+
 	; *** Last line only ***
 	; r6 - flag
 	; r5 - BG in / r4 - FB out
 		cmp/pl	r6
-		bf	.no_lastone
+		bf	.not_ln0
 	rept 8
 		cmp/ge	r3,r5
 		bf	.toomx
@@ -170,7 +195,7 @@ drwtsk_01:
 		add	#4,r4
 	endm
 
-.no_lastone:
+.not_ln0:
 		mov	#Cach_YRead_LR,r1
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r2
@@ -193,6 +218,8 @@ drwtsk_01:
 		mov	r0,@r1
 		mov	r5,r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
+
+	; TODO: cambiame a otro var de Y
 		mov	#Cach_BgFbPosLR,r3
 		mov	@r3,r0
 		mov	#$18000,r2
@@ -203,16 +230,8 @@ drwtsk_01:
 		sub	r2,r0
 .fbmuch:
 		mov	r0,@r3
-		bra	dtsk01_exit
-		nop
-		align 4
-		ltorg
-go_tsk00_gonext:
-		bra	tsk00_gonext
-		nop
-go_tsk00_exit:
-		bra	tsk00_exit
-		nop
+
+
 dtsk01_exit:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
@@ -224,12 +243,12 @@ dtsk01_exit:
 		mov	#Cach_ClrLines,r1	; Decrement a line to progress
 		mov	@r1,r0
 		dt	r0
-		bf/s	go_tsk00_exit
+		bf/s	tsk00_exit
 		mov	r0,@r1
 		mov	#Cach_DrawReq,r1
 		mov	@r1,r0
 		cmp/eq	#0,r0
-		bt	go_tsk00_gonext
+		bt	tsk00_gonext
 		add	#-1,r0
 		mov	r0,@r1
 
@@ -520,13 +539,11 @@ drwsld_nxtline_tex:
 		mov	#_overwrite+$200,r0
 		add	r0,r10
 		add	r0,r9
-
 ; 		mov 	r9,r0				; Y position * $200
 ; 		shll8	r0
 ; 		shll	r0
 ; 		add 	r0,r10				; Add Y
 		add 	r11,r10				; Add X
-
 		mov	#$1FFF,r2
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r11		; r11 - texture data
@@ -811,6 +828,7 @@ Cach_YHead_D	ds.l 1			; Bottom draw beam
 Cach_YHead_U	ds.l 1			; Top draw beam
 Cach_YHead_LR	ds.l 1			; (L/R) Top Y position (updates)
 Cach_YRead_LR	ds.l 1			; (L/R) Current Y (updates)
+Cach_XHead_UD	ds.l 1
 Cach_BgFbPosLR	ds.l 1			; (L/R) Current Y FB position (updates)
 
 Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos

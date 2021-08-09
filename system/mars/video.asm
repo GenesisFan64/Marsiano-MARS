@@ -118,7 +118,6 @@ MarsVideo_Init:
 ; 		nop
 		mov	#0,r0			; Start at blank
 		mov.b	r0,@(bitmapmd,r4)
-
 		mov	#RAM_Mars_Linescroll,r4
 		mov	#0,r3
 		mov	#384,r2
@@ -129,7 +128,6 @@ MarsVideo_Init:
 		add	r2,r3
 		dt	r1
 		bf	.copy
-
 		lds	@r15+,pr
 		rts
 		nop
@@ -944,12 +942,29 @@ MarsVideo_DrawAllBg:
 		mov	r0,r3			; r3 - end
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r3
-
 		mov	#_framebuffer+$200,r5
-		mov	#240,r7
+		mov	#224+32,r7
+
+	; ex line
+		mov	#RAM_Mars_Line0_Data,r8
+		mov	#320/4,r6
+		mov	r2,r1
+.y_ex:
+		cmp/ge	r3,r1
+		bf	.nolm_e
+		mov	r2,r1
+.nolm_e:
+		mov	@r1+,r0
+		mov	r0,@r8
+		add	#4,r8
+		dt	r6
+		bf	.y_ex
+		mov	#2,r0
+		mov.w	r0,@(marsGbl_Bg_DrwLine0,gbr)
+		mov	r2,r1
 .y_next:
 		mov	r5,r4
-		mov	#(320+32)/4,r6
+		mov	#(320+16)/4,r6
 .x_next:
 		cmp/ge	r3,r1
 		bf	.nolm
@@ -969,28 +984,28 @@ MarsVideo_DrawAllBg:
 		dt	r7
 		bf	.y_next
 
-	; copy-paste but for last line
-	; (TODO: improve this)
-		mov	@(marsGbl_BgData,gbr),r0
-		mov	r0,r1			; r1 - read
-		mov	r0,r2			; r2 - start
-		mov	r0,r3			; r3 - end
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		add	r0,r3
-		mov	#(_framebuffer+$200)+$18000,r5
-		mov	r5,r4
-		mov	#(320+16)/4,r6
-.x_next_l:
-		cmp/ge	r3,r1
-		bf	.nolm_l
-		mov	r2,r1
-.nolm_l:
-		mov	@r1+,r0
-		mov	r0,@r4
-		add	#4,r4
-		dt	r6
-		bf	.x_next_l
-
+; 	; copy-paste but for last line
+; 	; (TODO: improve this)
+; 		mov	@(marsGbl_BgData,gbr),r0
+; 		mov	r0,r1			; r1 - read
+; 		mov	r0,r2			; r2 - start
+; 		mov	r0,r3			; r3 - end
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		add	r0,r3
+; 		mov	#(_framebuffer+$200)+$18000,r5
+; 		mov	r5,r4
+; 		mov	#(320+16)/4,r6
+; .x_next_l:
+; 		cmp/ge	r3,r1
+; 		bf	.nolm_l
+; 		mov	r2,r1
+; .nolm_l:
+; 		mov	@r1+,r0
+; 		mov	r0,@r4
+; 		add	#4,r4
+; 		dt	r6
+; 		bf	.x_next_l
+;
 		mov	#_vdpreg,r4
 .fb_wait1:	mov.w   @($A,r4),r0	; Swap for next table
 		tst     #2,r0
@@ -1080,16 +1095,25 @@ MarsVideo_SetBg:
 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
 	; Scroll setup values
+
+		mov	@(marsGbl_Bg_Xpos,gbr),r0
+		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
 		mov	#320,r1
 		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
-		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
 
-		mov	#224,r1
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov.w	r0,@(marsGbl_Bg_YbgInc_LR,gbr)
+		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
+
+		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	#0,r1
+		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	#224,r1
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
@@ -1119,14 +1143,12 @@ MarsVideo_SetWatchdog:
 
 	; Vars that require reset
 		mov	#Cach_ClrLines,r1		; Background drawing start-values
-		mov	#240,r0
+		mov	#224+16,r0
 		mov	r0,@r1
 
 	; X draw settings
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-
-	; *** updates every line ***
 		mov	#384,r4					; Set Top-Left framebuffer position
 		mov	#-$10,r2				; for L/R drawing
 		mov	#Cach_XHead_L,r1			; X draw heads
@@ -1137,44 +1159,43 @@ MarsVideo_SetWatchdog:
 		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
 		and	r2,r0
 		mov	r0,@r1
+
 		mov	#Cach_BgFbPosLR,r1
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		and	r2,r0
 		mov	r0,r3
-		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
 		and	r2,r0
 		mulu	r0,r4
 		sts	macl,r0
 		add	r3,r0
 		mov	r0,@r1
-		mov	#Cach_YRead_LR,r1
-		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
-		and	r2,r0
-		mov	r0,@r1
 		mov.w	@(marsGbl_BgWidth,gbr),r0		; Y add for L/R
 		mov	r0,r3
-		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		mov	#Cach_YRead_LR,r1
+		mov.w	@(marsGbl_Bg_YbgInc_LR,gbr),r0
+		and	r2,r0
+		mov	r0,@r1
 		and	r2,r0
 		mulu	r3,r0
 		sts	macl,r0
 		mov	#Cach_YHead_LR,r1
 		mov	r0,@r1
-
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		mov	#Cach_BgFbBaseUD,r1
 		and	r2,r0
 		mov	r0,@r1
 
-		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
-		cmp/eq	#0,r0
-		bt	.drw_req
-		mov	r0,r3
-		mov	#Cach_DrawReq,r1
-		mov	#Cach_DrawDir,r2
-		mov	r3,@r2
-		mov	#2,r0
-		mov	r0,@r1
-.drw_req:
+; 		mov.w	@(marsGbl_Bg_DrwReq,gbr),r0
+; 		cmp/eq	#0,r0
+; 		bt	.drw_req
+; 		mov	r0,r3
+; 		mov	#Cach_DrawReq,r1
+; 		mov	#Cach_DrawDir,r2
+; 		mov	r3,@r2
+; 		mov	#2,r0
+; 		mov	r0,@r1
+; .drw_req:
 
 
 		mov	#1,r0				; Set first task $01
