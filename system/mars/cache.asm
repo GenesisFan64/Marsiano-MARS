@@ -65,28 +65,24 @@ drwtsk_01:
 
 ; 	Left/Right draw
 ; 	goes in and out
-		mov	#Cach_DrawReq,r1
-		mov	@r1,r0
+		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
 		cmp/eq	#0,r0
-		bt	.get_out
-		mov	#Cach_DrawDir,r1	; Draw right
-		mov	@r1,r0
-		mov	#0,r6
-		tst	#%0001,r0
 		bf	.dtsk01_dright
-		tst	#%0010,r0
+		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
+		cmp/eq	#0,r0
 		bf	.dtsk01_dleft
 .get_out:
 		bra	dtsk01_exit
 		nop
 		align 4
 .dtsk01_dleft:
-		mov	#Cach_BgFbPosLR,r0
-		mov	@r0,r0
+		mov	#Cach_BgFbPosLR,r2
+		mov	@r2,r0
 		mov	#$18000,r1
 		cmp/gt	r1,r0
 		bf	.prefix_l
 		sub	r1,r0
+		mov	r0,@r2
 .prefix_l:
 		mov	#384,r1
 		cmp/ge	r1,r0
@@ -112,15 +108,17 @@ drwtsk_01:
 		bra	.dtsk01_lrdraw
 		mov	r1,r5
 .dtsk01_dright:
-		mov	#Cach_BgFbPosLR,r0
-		mov	@r0,r0
+		mov	#Cach_BgFbPosLR,r2
+		mov	@r2,r0
 		mov	#$18000,r1
 		cmp/gt	r1,r0
 		bf	.prefix_r
 		sub	r1,r0
+		mov	r0,@r2
 .prefix_r:
 		mov	#320,r1
 		add	r1,r0
+
 		mov	#$18000,r7
 		cmp/ge	r7,r0
 		bf	.lastline_r
@@ -218,9 +216,7 @@ drwtsk_01:
 		mov	r0,@r1
 		mov	r5,r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-
-	; TODO: cambiame a otro var de Y
-		mov	#Cach_BgFbPosLR,r3
+		mov	#Cach_BgFbPosLR,r3	; TODO: cambiame a otro var de Y
 		mov	@r3,r0
 		mov	#$18000,r2
 		mov	#384,r1
@@ -245,12 +241,18 @@ dtsk01_exit:
 		dt	r0
 		bf/s	tsk00_exit
 		mov	r0,@r1
-		mov	#Cach_DrawReq,r1
-		mov	@r1,r0
+
+		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
+		cmp/eq	#0,r0
+		bt	.ndrw_r
+		dt	r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
+.ndrw_r:
+		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
 		cmp/eq	#0,r0
 		bt	tsk00_gonext
-		add	#-1,r0
-		mov	r0,@r1
+		dt	r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
 
 tsk00_gonext:
 		mov	#2,r0			; If finished: Set task $02
@@ -835,8 +837,6 @@ Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos
 Cach_BgFbPos_D	ds.l 1			; (U/D) Lower Y FB pos
 Cach_BgFbBaseUD	ds.l 1			; (U/D) Current X FB position
 Cach_ClrLines	ds.l 1			; (L/R) Lines to process
-Cach_DrawReq	ds.l 1			; Write $02 to request scroll drawing
-Cach_DrawDir	ds.l 1			; Direction bits: %DURL
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2

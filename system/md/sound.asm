@@ -10,7 +10,7 @@
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-; 		align $100				; (GENS emulator only)
+		align $80				; (GENS emulator only)
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Stop Z80
 		move.b	#1,(z80_reset).l		; Reset
