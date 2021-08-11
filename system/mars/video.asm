@@ -120,7 +120,7 @@ MarsVideo_Init:
 		mov.b	r0,@(bitmapmd,r4)
 		mov	#RAM_Mars_Linescroll,r4
 		mov	#0,r3
-		mov	#384,r2
+		mov	#MSCRL_WIDTH,r2
 		mov	#240,r1
 .copy:
 		mov	r3,@r4
@@ -943,7 +943,7 @@ MarsVideo_DrawAllBg:
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r3
 		mov	#_framebuffer+$200,r5
-		mov	#256,r7
+		mov	#MSCRL_HEIGHT,r7
 
 	; ex line
 ; 		mov	#RAM_Mars_Line0_Data,r8
@@ -965,7 +965,7 @@ MarsVideo_DrawAllBg:
 
 .y_next:
 		mov	r5,r4
-		mov	#(320+32)/4,r6
+		mov	#(MSCRL_WIDTH)/4,r6
 .x_next:
 		cmp/ge	r3,r1
 		bf	.nolm
@@ -976,7 +976,7 @@ MarsVideo_DrawAllBg:
 		add	#4,r4
 		dt	r6
 		bf	.x_next
-		mov	#384,r0
+		mov	#MSCRL_WIDTH,r0
 		add	r0,r5
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r2
@@ -993,7 +993,7 @@ MarsVideo_DrawAllBg:
 		mov	r0,r3			; r3 - end
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r3
-		mov	#(_framebuffer+$200)+$18000,r5
+		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r5
 		mov	r5,r4
 		mov	#(320+16)/4,r6
 .x_next_l:
@@ -1090,31 +1090,34 @@ MarsVideo_SetBg:
 		mov.w	r0,@(marsGbl_BgWidth,gbr)
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_BgHeight,gbr)
-		mov	r4,r0
-		mov	r0,@(marsGbl_Bg_Xinc,gbr)
-		mov	r5,r0
-		mov	r0,@(marsGbl_Bg_Yinc,gbr)
+; 		mov	r4,r0
+; 		mov	r0,@(marsGbl_Bg_Xinc,gbr)
+; 		mov	r5,r0
+; 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
 	; Scroll setup values
-
+	; TODO: basic settings, needs extra check
+	; for drawing from specific X/Y point
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
-		mov	#320,r1
+		mov	#MSCRL_WIDTH-MSCRL_BLKSIZE,r1
 		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
 
+		mov	#-MSCRL_BLKSIZE,r2
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_LR,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
 		mov	#0,r1
 		add	r1,r0
-		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
+		and	r2,r0
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
 		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
-		mov	#224,r1
+		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r1
 		add	r1,r0
+		and	r2,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
 		rts
@@ -1143,14 +1146,14 @@ MarsVideo_SetWatchdog:
 
 	; Vars that require reset
 		mov	#Cach_ClrLines,r1		; Background drawing start-values
-		mov	#256,r0
+		mov	#MSCRL_HEIGHT,r0
 		mov	r0,@r1
 
 	; X draw settings
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-		mov	#384,r4					; Set Top-Left framebuffer position
-		mov	#-$20,r2				; for L/R drawing
+		mov	#MSCRL_WIDTH,r4				; Set Top-Left framebuffer position
+		mov	#-MSCRL_BLKSIZE,r2			; for L/R drawing
 		mov	#Cach_XHead_L,r1			; X draw heads
 		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
 		and	r2,r0

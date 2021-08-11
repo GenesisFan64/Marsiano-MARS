@@ -78,16 +78,16 @@ drwtsk_01:
 .dtsk01_dleft:
 		mov	#Cach_BgFbPosLR,r2
 		mov	@r2,r0
-		mov	#$18000,r1
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r1
 		cmp/gt	r1,r0
 		bf	.prefix_l
 		sub	r1,r0
 		mov	r0,@r2
 .prefix_l:
-		mov	#384,r1
+		mov	#MSCRL_WIDTH,r1
 		cmp/ge	r1,r0
 		bt	.lastline_l
-		mov	#(_framebuffer+$200)+$18000,r4
+		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r4
 		add	r0,r4
 		mov	#1,r6
 .lastline_l:
@@ -110,7 +110,7 @@ drwtsk_01:
 .dtsk01_dright:
 		mov	#Cach_BgFbPosLR,r2
 		mov	@r2,r0
-		mov	#$18000,r1
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r1
 		cmp/gt	r1,r0
 		bf	.prefix_r
 		sub	r1,r0
@@ -119,7 +119,7 @@ drwtsk_01:
 		mov	#320,r1
 		add	r1,r0
 
-		mov	#$18000,r7
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7
 		cmp/ge	r7,r0
 		bf	.lastline_r
 		mov	#1,r6
@@ -143,7 +143,7 @@ drwtsk_01:
 		add	r0,r1
 		mov	r1,r5
 .dtsk01_lrdraw:
-	rept 8
+	rept (MSCRL_BLKSIZE>>2)
 		cmp/ge	r3,r1
 		bf	.toomx
 		mov	r2,r1
@@ -158,7 +158,7 @@ drwtsk_01:
 	; r5 - BG in / r4 - FB out
 		cmp/pl	r6
 		bf	.not_ln0
-	rept 8
+	rept (MSCRL_BLKSIZE>>2)
 		cmp/ge	r3,r5
 		bf	.toomx
 		mov	r2,r5
@@ -193,8 +193,8 @@ drwtsk_01:
 		mov	r0,@(marsGbl_BgData_R,gbr)
 		mov	#Cach_BgFbPosLR,r3	; TODO: cambiame a otro var de Y
 		mov	@r3,r0
-		mov	#$18000,r2
-		mov	#384,r1
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r2
+		mov	#MSCRL_WIDTH,r1
 		add	r1,r0
 		cmp/gt	r2,r0
 		bf	.fbmuch
@@ -510,7 +510,7 @@ drwsld_nxtline_tex:
 		mov	@r10,r10
 		mov	#-2,r0
 		and	r0,r0
-		mov	#$18000-$1000,r9
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT)-$1000,r9
 		mov	#_overwrite+$200,r0
 		add	r0,r10
 		add	r0,r9
@@ -616,7 +616,7 @@ drwtex_gonxtpz:
 ; r10  - Number of lines
 ; ------------------------------------
 
-; TODO: BROKEN because of the new internal width (384)
+; TODO: BROKEN because of the new internal width
 
 drwtsk_solidmode:
 		mov	#$FF,r0
@@ -685,7 +685,7 @@ drwsld_nxtline:
 
 		mov	r9,r5
 		add	#1,r5
-		mov	#384,r0
+		mov	#MSCRL_WIDTH,r0
 		mulu	r0,r5
 		sts	macl,r5
 		mov	r5,r0

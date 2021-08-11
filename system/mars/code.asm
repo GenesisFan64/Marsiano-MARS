@@ -7,7 +7,31 @@
 ; ----------------------------------------------------------------
 
 		phase CS3		; now we are at SDRAM
-		cpu SH7600		; should be SH7095 but this works too.
+		cpu SH7600		; should be SH7095 but this works.
+
+; ====================================================================
+; ----------------------------------------------------------------
+; User settings
+; ----------------------------------------------------------------
+
+; Third scrolling layer settings, Screen mode 1 only.
+;
+; The scrolling system only draws new sections when the camera
+; reaches certain points, do note that drawing the new sections
+; takes TWO frames, because of how the framebuffer shows pixels
+; on screen. (one buffer for drawing, one for display)
+; The maximum scrolling speed is divided by 2 depending of
+; the BLKSIZE setting. (BLKSIZE/2)
+;
+; Map data can be either ROM data or RAM section,
+; WIDTH and HEIGHT are defined by gbr variables (BgWidth and BgHeight)
+; but the sizes must be aligned by the same value as BLKSIZE
+;
+; SVDP FILL only works properly if WIDTH is set to 512 pixels long.
+
+MSCRL_BLKSIZE		equ $20		; Block size, this/2 is the maximum speed
+MSCRL_WIDTH		equ 320+$20	; Internal width for scrolldata
+MSCRL_HEIGHT		equ 256		; Internal height for scrolldata
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -21,8 +45,6 @@ marsGbl_PlyPzList_R	ds.l 1		; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1		; Current graphic piece to write
 marsGbl_CurrZList	ds.l 1		; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1		; Current top face of the list while reading model data
-marsGbl_Bg_Xinc		ds.l 1
-marsGbl_Bg_Yinc		ds.l 1
 marsGbl_Bg_Xpos		ds.l 1
 marsGbl_Bg_Ypos		ds.l 1
 marsGbl_Bg_Xpos_old	ds.l 1
@@ -38,7 +60,7 @@ marsGbl_Bg_YFbPos_D	ds.w 1
 marsGbl_Bg_YFbPos_LR	ds.w 1		; Y position only for L/R draw
 marsGbl_Bg_XbgInc_L	ds.w 1		; Address X increment
 marsGbl_Bg_XbgInc_R	ds.w 1		;
-marsGbl_Bg_YbgInc_D	ds.w 1		; Address Y increment (NOTE: multiply with BGWIDTH externally)
+marsGbl_Bg_YbgInc_D	ds.w 1		; Address Y increment (Multiply with BGWIDTH externally)
 marsGbl_Bg_YbgInc_U	ds.w 1		;
 marsGbl_Bg_YbgInc_LR	ds.w 1		; Y bg position for L/R draw
 marsGbl_BgYFb_Xpos	ds.w 1
@@ -917,8 +939,8 @@ SH2_M_HotStart:
 		jsr	@r0
 		nop
 		mov	#TESTMARS_BG,r1			; Set image
-		mov	#512,r2
-		mov	#384,r3
+		mov	#992,r2
+		mov	#800,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -961,16 +983,16 @@ SH2_M_HotStart:
 
 this_polygon:
 		dc.w $8000
-		dc.w 512
+		dc.w 992
 		dc.l TESTMARS_BG
 dest_data:	dc.w  64,-64
 		dc.w -64,-64
 		dc.w -64, 64
 		dc.w  64, 64
-		dc.w 357,384
-		dc.w   0,384
-		dc.w   0,784
-		dc.w 357,784
+		dc.w 992,  0
+		dc.w   0,  0
+		dc.w   0,800
+		dc.w 992,800
 rot_angle	dc.l 0
 
 ; --------------------------------------------------------
@@ -983,13 +1005,9 @@ master_loop:
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov.w	@(2,r8),r0
 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
-; 		mov.w	@(4,r8),r0
-; 		mov	r0,@(marsGbl_Bg_Xinc,gbr)
-; 		mov.w	@(6,r8),r0
-; 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
-	mov	#40*65536,r5
-	mov	#-40*65536,r6
+	mov	#80*65536,r5
+	mov	#-80*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -1002,8 +1020,8 @@ master_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#-40*65536,r5
-	mov	#-40*65536,r6
+	mov	#-80*65536,r5
+	mov	#-80*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -1016,8 +1034,8 @@ master_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#-40*65536,r5
-	mov	#40*65536,r6
+	mov	#-80*65536,r5
+	mov	#80*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -1030,8 +1048,8 @@ master_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#40*65536,r5
-	mov	#40*65536,r6
+	mov	#80*65536,r5
+	mov	#80*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -1081,9 +1099,9 @@ mstr_step2:
 		mov	#RAM_Mars_Linescroll,r9
 		mov	#_framebuffer,r10
 		mov	#$200,r8		; base position
-		mov	#$18000,r7
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7
 		mov	#240,r3
-		mov	#384,r0
+		mov	#MSCRL_WIDTH,r0		; TODO: maybe a gbr variable?
 		muls	r2,r0
 		sts	macl,r2
 ; 		shll8	r2
@@ -1159,7 +1177,17 @@ mstr_step2:
 		add	#8,r14				; Move to next entry
 .skip:
 	; **** Up/Down check
-		mov	#-$20,r6
+		mov	@(marsGbl_BgData,gbr),r0
+		mov	r0,r11
+		mov	r0,r12
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r1
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mulu	r1,r0
+		sts	macl,r0
+		add	r0,r12
+
+		mov	#-MSCRL_BLKSIZE,r6
 		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
 		cmp/eq	#0,r0
 		bf	.tsk00_down
@@ -1216,10 +1244,17 @@ mstr_step2:
 		mov	r0,r6
 
 .drwy_go:
-		mov	#32,r8
+		mov	#MSCRL_BLKSIZE,r8
 .rept_y:
+		cmp/ge	r12,r2
+		bf	.ybgend
+		mov	r11,r2
+		mov	r11,r3
+		add	r0,r3
+.ybgend:
+
 		mov	r2,r1		; r1 - bg pixel data
-		mov	#-$20,r7
+		mov	#-MSCRL_BLKSIZE,r7
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		and	r7,r0
@@ -1227,15 +1262,15 @@ mstr_step2:
 
 		mov	r5,r4		; r4 - X
 		mov	r6,r0
-		mov	#384,r7
+		mov	#MSCRL_WIDTH,r7
 		mulu	r7,r0
 		sts	macl,r0
 ; 		shll8	r0
 ; 		shll	r0
 		add	r0,r4		; X + Y
-		mov	#(320+32)/4,r7
+		mov	#(MSCRL_WIDTH)/4,r7
 .rept_x:
-		mov	#$18000,r0
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
 		cmp/gt	r0,r4
 		bf	.res_x
 		sub	r0,r4
@@ -1244,7 +1279,7 @@ mstr_step2:
 		bf	.xlon1
 		mov	r2,r1
 .xlon1:
-		mov	@r1+,r11
+		mov	@r1+,r10
 
 		mov	r4,r9
 		mov	#_framebuffer+$200,r0
@@ -1252,23 +1287,32 @@ mstr_step2:
 		mov	#320,r0
 		cmp/gt	r0,r4
 		bt	.not_l2
-	; TODO: make external RAM line
-		mov	#(_framebuffer+$200)+$18000,r0
+		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r0
 		add	r4,r0
-		mov	r11,@r0
+		mov	r10,@r0
 .not_l2:
-		mov	r11,@r9
+		mov	r10,@r9
 		add	#4,r4
 		dt	r7
 		bf	.rept_x
 
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r2
+		add	r0,r3
+
+	if MSCRL_HEIGHT=256
 		mov	r6,r0
 		add	#1,r0
 		and	#$FF,r0
 		mov	r0,r6
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		add	r0,r2
-		add	r0,r3
+	else
+		mov	#MSCRL_HEIGHT,r0
+		add	#1,r6
+		cmp/gt	r0,r6
+		bf	.rdhlow
+		sub	r0,r6
+.rdhlow:
+	endif
 		dt	r8
 		bf	.rept_y
 drw_ud_exit:
@@ -1388,50 +1432,74 @@ mstr_readscrl:
 ; 		bt	.noy
 ; 		mov	#%1000,r7
 ; .noy:
-	; Y framebuffer pos
-		mov	#0,r4
-		mov	#0,r5
-; 		mov	#256,r3
+
+	; Set Y framebuffer position
+	if MSCRL_HEIGHT=256	; Optimized...
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
 		add	r2,r0
 		and	#$FF,r0
-; 		add	r2,r0
-; 		cmp/pl	r2
-; 		bf	.ypu_negtv
-; 		mov	#2,r4
-; 		cmp/ge	r3,r0
-; 		bf	.ypu_negtv
-; 		sub	r3,r0
-; .ypu_negtv:
-; 		cmp/pz	r2
-; 		bt	.ypu_postv
-; 		mov	#2,r5
-; 		cmp/pz	r0
-; 		bt	.ypu_postv
-; 		add	r3,r0
-; .ypu_postv:
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
 		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
 		add	r2,r0
 		and	#$FF,r0
-; 		add	r2,r0
-; 		cmp/pl	r2
-; 		bf	.ypd_negtv
-; 		cmp/ge	r3,r0
-; 		bf	.ypd_negtv
-; 		sub	r3,r0
-; .ypd_negtv:
-; 		cmp/pz	r2
-; 		bt	.ypd_postv
-; 		cmp/pz	r0
-; 		bt	.ypd_postv
-; 		add	r3,r0
-; .ypd_postv:
 		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
 		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
 		add	r2,r0
 		and	#$FF,r0
 		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
+	else
+	; If not 256...
+		mov	#0,r4
+		mov	#0,r5
+		mov	#MSCRL_HEIGHT,r3
+		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+		add	r2,r0
+		cmp/pl	r2
+		bf	.ypu_negtv
+		mov	#2,r4
+		cmp/ge	r3,r0
+		bf	.ypu_negtv
+		sub	r3,r0
+.ypu_negtv:
+		cmp/pz	r2
+		bt	.ypu_postv
+		mov	#2,r5
+		cmp/pz	r0
+		bt	.ypu_postv
+		add	r3,r0
+.ypu_postv:
+		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
+		add	r2,r0
+		cmp/pl	r2
+		bf	.ypd_negtv
+		cmp/ge	r3,r0
+		bf	.ypd_negtv
+		sub	r3,r0
+.ypd_negtv:
+		cmp/pz	r2
+		bt	.ypd_postv
+		cmp/pz	r0
+		bt	.ypd_postv
+		add	r3,r0
+.ypd_postv:
+		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
+		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
+		add	r2,r0
+		cmp/pl	r2
+		bf	.ylr_negtv
+		cmp/ge	r3,r0
+		bf	.ylr_negtv
+		sub	r3,r0
+.ylr_negtv:
+		cmp/pz	r2
+		bt	.ylr_postv
+		cmp/pz	r0
+		bt	.ylr_postv
+		add	r3,r0
+.ylr_postv:
+		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
+	endif
 
 	; Y Map limit
 		mov.w	@(marsGbl_BgHeight,gbr),r0
@@ -1440,7 +1508,7 @@ mstr_readscrl:
 		add	r2,r0
 		cmp/pl	r2
 		bf	.ynegtv
-		cmp/ge	r3,r0
+		cmp/gt	r3,r0
 		bf	.ynegtv
 		sub	r3,r0
 .ynegtv:
@@ -1455,7 +1523,7 @@ mstr_readscrl:
 		add	r2,r0
 		cmp/pl	r2
 		bf	.ynegtvl
-		cmp/ge	r3,r0
+		cmp/gt	r3,r0
 		bf	.ynegtvl
 		sub	r3,r0
 .ynegtvl:
@@ -1491,9 +1559,9 @@ mstr_readscrl:
 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
 		add	r2,r0
 		mov	r0,r6
-		tst	#%11100000,r0
+		tst	#(-MSCRL_BLKSIZE)&$FF,r0
 		bt	.ydr_busy
-		mov	#-$20,r3
+		mov	#-MSCRL_BLKSIZE,r3
 		cmp/pl	r2
 		bf	.reqd_b
 		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
@@ -1533,7 +1601,7 @@ mstr_readscrl:
 		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
 .ydr_busy:
 		mov	r6,r0
-		and	#$1F,r0
+		and	#MSCRL_BLKSIZE-1,r0
 		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
 
 .skipyset:
@@ -1542,7 +1610,7 @@ mstr_readscrl:
 	; X move
 	; ---------------------------------------
 
-		mov	#$18000,r3
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r3
 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
 		add	r1,r0
 		cmp/pl	r1
@@ -1603,9 +1671,9 @@ mstr_readscrl:
 		mov.w	@(marsGbl_Bg_Xset,gbr),r0
 		add	r1,r0
 		mov	r0,r6
-		tst	#%11100000,r0
+		tst	#(-MSCRL_BLKSIZE)&$FF,r0
 		bt	.ydl_busy
-		mov	#-$20,r3
+		mov	#-MSCRL_BLKSIZE,r3
 		cmp/pl	r1
 		bf	.reqr_b
 		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
@@ -1645,7 +1713,7 @@ mstr_readscrl:
 		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
 .ydl_busy:
 		mov	r6,r0
-		and	#$1F,r0
+		and	#MSCRL_BLKSIZE-1,r0
 		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
 		rts
 		nop

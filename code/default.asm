@@ -93,7 +93,7 @@ thisCode_Top:
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
 		neg.w	d0
-		asr.w	#2,d0
+; 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
@@ -176,6 +176,9 @@ thisCode_Top:
 ; Mode 0 mainloop
 .mode0_loop:
 
+; 		move.b	(sysmars_reg+comm14).l,d7
+; 		tst.b	d7
+; 		bne	.busy_mstr
 		move.w	(Controller_1+on_press),d7
 		move.w	d7,d6
 		and.w	#JoyY,d6
@@ -194,21 +197,21 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		sub.w	#8,(sysmars_reg+comm2).l
+		sub.w	#$10,(sysmars_reg+comm2).l
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		add.w	#8,(sysmars_reg+comm2).l
+		add.w	#$10,(sysmars_reg+comm2).l
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
 		sub.w	#1,(RAM_BgCamCurr).l
-		sub.w	#8,(sysmars_reg+comm0).l
+		sub.w	#$10,(sysmars_reg+comm0).l
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
 		add.w	#1,(RAM_BgCamCurr).l
-		add.w	#8,(sysmars_reg+comm0).l
+		add.w	#$10,(sysmars_reg+comm0).l
 .no_rf:
 
 ; 		move.w	(Controller_2+on_hold),d7
@@ -232,6 +235,7 @@ thisCode_Top:
 
 ; 		move.l	#CmdTaskMd_UpdModels,d0
 ; 		bsr	System_MdMars_SlvTask
+.busy_mstr:
 		rts
 
 ; ====================================================================

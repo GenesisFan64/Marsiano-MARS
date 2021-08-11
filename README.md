@@ -2,7 +2,9 @@
 A video "driver" for the Sega 32X (audio too.) for easily doing visual and audio tasks like drawing a third background, sprites, polygons...
 
 Things working:
-- Draw an extra background in 256-color mode of any size in either ROM or RAM: Internal scrolling screen of 384x256 (map WIDTH must be aligned by 4)
+- Draw an extra background in 256-color mode of any size in either ROM or RAM (maps WIDTH and HEIGHT must be aligned by 32 pixels)
+Custom internal scrolling screen: 384x256
+- Polygons system from Shinrinx-MARS
 
 Notes/Issues:
 - SVDP FILL can't be used anymore because of the new internal width (384, only works if 512 is used), solidcolor polygons need reworking
