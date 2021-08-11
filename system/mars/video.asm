@@ -1181,10 +1181,10 @@ MarsVideo_SetWatchdog:
 		sts	macl,r0
 		mov	#Cach_YHead_LR,r1
 		mov	r0,@r1
-		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
-		mov	#Cach_BgFbBaseUD,r1
-		and	r2,r0
-		mov	r0,@r1
+; 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+; 		mov	#Cach_BgFbBaseUD,r1
+; 		and	r2,r0
+; 		mov	r0,@r1
 
 		mov	#1,r0				; Set first task $01
 		mov.w	r0,@(marsGbl_DrwTask,gbr)

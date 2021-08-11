@@ -48,7 +48,6 @@ drwtsk_01:
 		mov	r7,@-r15
 		mov	r8,@-r15
 		mov	r9,@-r15
-		mov	r10,@-r15
 		sts	macl,@-r15
 
 ; 		mov	#_vdpreg,r1
@@ -65,6 +64,7 @@ drwtsk_01:
 
 ; 	Left/Right draw
 ; 	goes in and out
+		mov	#0,r6
 		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
 		cmp/eq	#0,r0
 		bf	.dtsk01_dright
@@ -153,31 +153,6 @@ drwtsk_01:
 		add	#4,r7
 	endm
 
-	; ex line
-; 		mov	#Cach_YRead_LR,r1
-; 		cmp/pl	r6
-; 		bf	.not_ln0
-; 		mov	@r1,r0
-; 		cmp/eq	#0,r0
-; 		bf	.not_ln0
-; 		mov	#RAM_Mars_Line0_Data,r7
-; 		mov	#Cach_BgFbPosLR,r0
-; 		mov	@r0,r0
-; 		add	r0,r7
-; 		mov	#8,r6
-; .y_ex:
-; 		cmp/ge	r3,r5
-; 		bf	.nolm_e
-; 		mov	r2,r5
-; .nolm_e:
-; 		mov	@r5+,r0
-; 		mov	r0,@r7
-; 		dt	r6
-; 		bf/s	.y_ex
-; 		add	#4,r7
-; 		mov	#2,r0
-; 		mov.w	r0,@(marsGbl_Bg_DrwLine0,gbr)
-
 	; *** Last line only ***
 	; r6 - flag
 	; r5 - BG in / r4 - FB out
@@ -227,7 +202,6 @@ drwtsk_01:
 .fbmuch:
 		mov	r0,@r3
 
-
 dtsk01_exit:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
@@ -259,7 +233,6 @@ tsk00_gonext:
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 tsk00_exit:
 		lds	@r15+,macl
-		mov	@r15+,r10
 		mov	@r15+,r9
 		mov	@r15+,r8
 		mov	@r15+,r7
@@ -643,6 +616,8 @@ drwtex_gonxtpz:
 ; r10  - Number of lines
 ; ------------------------------------
 
+; TODO: BROKEN because of the new internal width (384)
+
 drwtsk_solidmode:
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r6
@@ -707,16 +682,35 @@ drwsld_nxtline:
 		mov	r0,r12
 		shlr	r0
 		mov.w	r0,@(4,r13)	; length
-		mov	r11,r0
-		shlr	r0
+
 		mov	r9,r5
 		add	#1,r5
-		shll8	r5
-		add	r5,r0
+		mov	#384,r0
+		mulu	r0,r5
+		sts	macl,r5
+		mov	r5,r0
+
+; 		mov	#$100,r0
+; 		add	r11,r0
+; 		add	r5,r0
+
+; 		mov	r11,r0
+; 		shlr	r0
+; 		add	#1,r0
+; 		shll8	r0
+
+; 		add	#1,r5
+
+; 		sts	macl,r5
+; 		add	r5,r0
+		shlr	r0
 		mov.w	r0,@(6,r13)	; address
+
 		mov	r6,r0
 		shll8	r0
 		or	r6,r0
+
+		mov	r12,r0
 		mov.w	r0,@(8,r13)	; Set data
 ; .wait:	mov.w	@(10,r13),r0
 ; 		tst	#2,r0
@@ -835,7 +829,6 @@ Cach_BgFbPosLR	ds.l 1			; (L/R) Current Y FB position (updates)
 
 Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos
 Cach_BgFbPos_D	ds.l 1			; (U/D) Lower Y FB pos
-Cach_BgFbBaseUD	ds.l 1			; (U/D) Current X FB position
 Cach_ClrLines	ds.l 1			; (L/R) Lines to process
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
