@@ -41,6 +41,8 @@ RAM_CamSpeed	ds.l 1
 RAM_MdlCurrMd	ds.w 1
 RAM_BgCamera	ds.w 1
 RAM_BgCamCurr	ds.w 1
+RAM_Layout_X	ds.w 1
+RAM_Layout_Y	ds.w 1
 sizeof_mdglbl	ds.l 0
 		finish
 
@@ -93,7 +95,7 @@ thisCode_Top:
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
 		neg.w	d0
-; 		asr.w	#1,d0
+		asr.w	#2,d0
 		move.w	d0,(vdp_data).l
 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
@@ -175,6 +177,8 @@ thisCode_Top:
 
 ; Mode 0 mainloop
 .mode0_loop:
+		moveq	#0,d0
+		moveq	#0,d1
 
 ; 		move.b	(sysmars_reg+comm14).l,d7
 ; 		tst.b	d7
@@ -184,35 +188,41 @@ thisCode_Top:
 		and.w	#JoyY,d6
 		beq.s	.no_x
 		sub.w	#1,(RAM_BgCamCurr).l
-		sub.w	#1,(sysmars_reg+comm2).l
+		move.w	#-1,d1
 .no_x:
 		move.w	d7,d6
 		and.w	#JoyZ,d6
 		beq.s	.no_y
 		add.w	#1,(RAM_BgCamCurr).l
-		add.w	#1,(sysmars_reg+comm2).l
+		move.w	#1,d1
 .no_y:
 
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		sub.w	#$10,(sysmars_reg+comm2).l
+		move.w	#-7,d1
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		add.w	#$10,(sysmars_reg+comm2).l
+		move.w	#7,d1
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		sub.w	#1,(RAM_BgCamCurr).l
-		sub.w	#$10,(sysmars_reg+comm0).l
+		sub.w	#7,(RAM_BgCamCurr).l
+		move.w	#-7,d0
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		add.w	#1,(RAM_BgCamCurr).l
-		add.w	#$10,(sysmars_reg+comm0).l
+		add.w	#7,(RAM_BgCamCurr).l
+		move.w	#7,d0
 .no_rf:
+; 		move.b	(sysmars_reg+comm14).l,d7
+; 		tst.b	d7
+; 		bne.s	.busy
+		move.w	d0,(sysmars_reg+comm0).l
+		move.w	d1,(sysmars_reg+comm2).l
+.busy:
 
 ; 		move.w	(Controller_2+on_hold),d7
 ; 		btst	#bitJoyUp,d7

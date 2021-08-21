@@ -1096,25 +1096,26 @@ MarsVideo_SetBg:
 ; 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
 	; Scroll setup values
-	; TODO: basic settings, needs extra check
-	; for drawing from specific X/Y point
-		mov	@(marsGbl_Bg_Xpos,gbr),r0
+	; TODO: very basic setup
+	; needs extra checks for drawing from
+	; specific X/Y point
+		mov	#0,r0;@(marsGbl_Bg_Xpos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
-		mov	#MSCRL_WIDTH-MSCRL_BLKSIZE,r1
-		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		mov	#320,r1
+		mov	#0,r0;@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
 
 		mov	#-MSCRL_BLKSIZE,r2
-		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	#0,r0;@(marsGbl_Bg_Ypos,gbr),r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_LR,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
-		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	#0,r0;@(marsGbl_Bg_Ypos,gbr),r0
 		mov	#0,r1
 		add	r1,r0
 		and	r2,r0
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
-		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	#0,r0;@(marsGbl_Bg_Ypos,gbr),r0
 		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r1
 		add	r1,r0
 		and	r2,r0
@@ -2007,7 +2008,7 @@ MarsMdl_ReadModel:
 ; 		mov	@(marsGbl_CurrZList,gbr),r0
 ; 		mov	r0,r6
 		mov	#RAM_Mars_Plgn_ZList_0,r6
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
+		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
 		tst     #1,r0
 		bt	.page_2
 		mov	#RAM_Mars_Plgn_ZList_1,r6

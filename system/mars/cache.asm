@@ -84,7 +84,7 @@ drwtsk_01:
 		sub	r1,r0
 		mov	r0,@r2
 .prefix_l:
-		mov	#MSCRL_WIDTH,r1
+		mov	.tag_scrlwdth,r1
 		cmp/ge	r1,r0
 		bt	.lastline_l
 		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r4
@@ -105,7 +105,7 @@ drwtsk_01:
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		add	r0,r1
-		bra	.dtsk01_lrdraw
+		bra	dtsk01_lrdraw
 		mov	r1,r5
 .dtsk01_dright:
 		mov	#Cach_BgFbPosLR,r2
@@ -116,7 +116,7 @@ drwtsk_01:
 		sub	r1,r0
 		mov	r0,@r2
 .prefix_r:
-		mov	#320,r1
+		mov	.tag_scrnwdth,r1			; TODO: a variable for this?
 		add	r1,r0
 
 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7
@@ -141,8 +141,13 @@ drwtsk_01:
 		mov	#Cach_XHead_R,r0
 		mov	@r0,r0
 		add	r0,r1
+		bra	dtsk01_lrdraw
 		mov	r1,r5
-.dtsk01_lrdraw:
+		align 4
+.tag_scrlwdth:	dc.l MSCRL_WIDTH
+.tag_scrnwdth	dc.l 320
+
+dtsk01_lrdraw:
 	rept (MSCRL_BLKSIZE>>2)
 		cmp/ge	r3,r1
 		bf	.toomx
@@ -491,7 +496,7 @@ drwsld_nxtline_tex:
 
 	; X right - X left
 		sub 	r11,r12
-		shar	r12
+; 		shar	r12
 ; 		shar	r12
 		cmp/pl	r12
 		bf	.tex_skip_line
@@ -510,10 +515,10 @@ drwsld_nxtline_tex:
 		mov	@r10,r10
 		mov	#-2,r0
 		and	r0,r0
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT)-$1000,r9
+; 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT)-$1000,r9
 		mov	#_overwrite+$200,r0
 		add	r0,r10
-		add	r0,r9
+; 		add	r0,r9
 ; 		mov 	r9,r0				; Y position * $200
 ; 		shll8	r0
 ; 		shll	r0
@@ -545,31 +550,8 @@ drwsld_nxtline_tex:
 		mov.b	@(r0,r11),r0			; Read pixel
 		add	r13,r0
 		and	#$FF,r0
-		mov	r0,r1
-		shll8	r1
-
-		mov	r7,r2
-		shlr16	r2
-		muls	r2,r4
-		mov	r5,r2	   			; Build column index
-		add	r6,r5				; Update X
-		add	r8,r7				; Update Y
-		sts	macl,r0
-		shlr16	r2
-		add	r2,r0
-		mov.b	@(r0,r11),r0			; Read pixel
-		add	r13,r0
-		and	#$FF,r0
-		or	r1,r0
-		mov.w	r0,@r10	   			; Write pixels
-
-		add 	#2,r10
-; 		cmp/ge	r9,r10
-; 		bf	.notrh
-; 		mov	#_overwrite+$200,r10
-; 		bra	*
-; 		nop
-.notrh:
+		mov.b	r0,@r10	   			; Write pixels
+		add 	#1,r10
 		dt	r12
 		bf	.tex_xloop
 
@@ -616,7 +598,8 @@ drwtex_gonxtpz:
 ; r10  - Number of lines
 ; ------------------------------------
 
-; TODO: BROKEN because of the new internal width
+; BUG: Not working anymore because
+; of the scrolling system.
 
 drwtsk_solidmode:
 		mov	#$FF,r0
@@ -682,37 +665,18 @@ drwsld_nxtline:
 		mov	r0,r12
 		shlr	r0
 		mov.w	r0,@(4,r13)	; length
-
+		mov	r11,r0
+		shlr	r0
 		mov	r9,r5
 		add	#1,r5
-		mov	#MSCRL_WIDTH,r0
-		mulu	r0,r5
-		sts	macl,r5
-		mov	r5,r0
-
-; 		mov	#$100,r0
-; 		add	r11,r0
-; 		add	r5,r0
-
-; 		mov	r11,r0
-; 		shlr	r0
-; 		add	#1,r0
-; 		shll8	r0
-
-; 		add	#1,r5
-
-; 		sts	macl,r5
-; 		add	r5,r0
-		shlr	r0
+		shll8	r5
+		add	r5,r0
 		mov.w	r0,@(6,r13)	; address
-
 		mov	r6,r0
 		shll8	r0
 		or	r6,r0
-
-		mov	r12,r0
 		mov.w	r0,@(8,r13)	; Set data
-; .wait:	mov.w	@(10,r13),r0
+; .wait:		mov.w	@(10,r13),r0
 ; 		tst	#2,r0
 ; 		bf	.wait
 
