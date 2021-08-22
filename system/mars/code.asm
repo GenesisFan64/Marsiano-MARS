@@ -948,8 +948,8 @@ SH2_M_HotStart:
 		jsr	@r0
 		nop
 		mov	#TESTMARS_BG,r1			; Set image
-		mov	#1840,r2
-		mov	#1008,r3
+		mov	#304,r2
+		mov	#224,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -983,16 +983,16 @@ SH2_M_HotStart:
 
 this_polygon:
 		dc.w $8000
-		dc.w 1840
+		dc.w 304
 		dc.l TESTMARS_BG
 dest_data:	dc.w  32,-32
 		dc.w -32,-32
 		dc.w -32, 32
 		dc.w  32, 32
-		dc.w 992,  0
-		dc.w   0,  0
-		dc.w   0,800-1
-		dc.w 992,800-1
+		dc.w 274, 79
+		dc.w 199, 79
+		dc.w 199,142-1
+		dc.w 274,142-1
 rot_angle	dc.l 0
 
 ; --------------------------------------------------------
@@ -1125,48 +1125,7 @@ master_loop:
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
-
-	; r14 - Polygon pointers list
-	; r13 - Number of polygons to build
-
-		mov.w	@(marsGbl_PlgnReqDraw,gbr),r0
-		cmp/eq	#0,r0
-		bt	.skip
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_PlgnReqDraw,gbr)
-		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-		tst     #1,r0				; Check for which buffer to use
-		bt	.page_2
-		mov 	#RAM_Mars_Plgn_ZList_0,r14
-		mov	#RAM_Mars_PlgnNum_0,r13
-		bra	.cont_plgn
-		nop
-.page_2:
-		mov 	#RAM_Mars_Plgn_ZList_1,r14
-		mov	#RAM_Mars_PlgnNum_1,r13
-		nop
-		nop
-.cont_plgn:
-		mov.w	@r13,r13			; read from memory to register
-		cmp/pl	r13				; zero?
-		bf	.skip
-.loop:
-		mov	r14,@-r15
-		mov	r13,@-r15
-		mov	@r14,r14			; Get location of the polygon
-		cmp/pl	r14				; Zero?
-		bf	.invalid			; if yes, skip
-		mov 	#MarsVideo_SlicePlgn,r0
-		jsr	@r0
-		nop
-.invalid:
-		mov	@r15+,r13
-		mov	@r15+,r14
-		dt	r13				; Decrement numof_polygons
-		bf/s	.loop
-		add	#8,r14				; Move to next entry
-.skip:
-	; **** Up/Down check
+	; **** Up/Down draw check
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r11
 		mov	r0,r12
@@ -1307,6 +1266,47 @@ master_loop:
 		bf	.rept_y
 drw_ud_exit:
 
+	; r14 - Polygon pointers list
+	; r13 - Number of polygons to build
+
+		mov.w	@(marsGbl_PlgnReqDraw,gbr),r0
+		cmp/eq	#0,r0
+		bt	.skip
+		xor	r0,r0
+		mov.w	r0,@(marsGbl_PlgnReqDraw,gbr)
+		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
+		tst     #1,r0				; Check for which buffer to use
+		bt	.page_2
+		mov 	#RAM_Mars_Plgn_ZList_0,r14
+		mov	#RAM_Mars_PlgnNum_0,r13
+		bra	.cont_plgn
+		nop
+.page_2:
+		mov 	#RAM_Mars_Plgn_ZList_1,r14
+		mov	#RAM_Mars_PlgnNum_1,r13
+		nop
+		nop
+.cont_plgn:
+		mov.w	@r13,r13			; read from memory to register
+		cmp/pl	r13				; zero?
+		bf	.skip
+.loop:
+		mov	r14,@-r15
+		mov	r13,@-r15
+		mov	@r14,r14			; Get location of the polygon
+		cmp/pl	r14				; Zero?
+		bf	.invalid			; if yes, skip
+		mov 	#MarsVideo_SlicePlgn,r0
+		jsr	@r0
+		nop
+.invalid:
+		mov	@r15+,r13
+		mov	@r15+,r14
+		dt	r13				; Decrement numof_polygons
+		bf/s	.loop
+		add	#8,r14				; Move to next entry
+.skip:
+
 	; --------------------------------------
 .wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
 		cmp/eq	#0,r0
@@ -1363,6 +1363,8 @@ drw_ud_exit:
 		ltorg
 
 gfxmd1_refill:
+		mov	r14,@-r15
+		mov	r13,@-r15
 		mov	r12,r11
 		add	#polygn_points,r11
 		mov	r12,r0
@@ -1424,7 +1426,6 @@ gfxmd1_refill:
 	; r2 - X right
 	; r3 - Y top
 	; r4 - Y bottom
-
 		mov	#SCREEN_WIDTH/2,r0		; Make them direct positions
 		add	r0,r1
 		add	r0,r2
@@ -1438,7 +1439,7 @@ gfxmd1_refill:
 		sub	r3,r4
 		cmp/pz	r4
 		bf	.len_off
-		add	#1,r4
+; 		add	#1,r4
 		mov	#-4,r0
 		and	r0,r1
 		and	r0,r2
@@ -1448,50 +1449,98 @@ gfxmd1_refill:
 		shlr2	r2
 		mov	#RAM_Mars_Linescroll,r0
 		mov	@r0,r0
-		mov	r0,r5
+		mov	r0,r12
 		mov	#MSCRL_WIDTH,r0
 		mulu	r0,r3
 		sts	macl,r0
-		add	r0,r5
+		add	r0,r12
+		add	r1,r12
+
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r5
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r6
+		mulu	r5,r6
+		sts	macl,r5
+		mov	@(marsGbl_BgData,gbr),r0
+		mov	r0,r10
+		mov	r0,r9
+		mov	r0,r8
+		add	r5,r8
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r5
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		add	r3,r0
+		cmp/ge	r5,r0
+		bf	.noyrest
+		sub	r5,r0
+.noyrest:
+		mulu	r6,r0
+		sts	macl,r0
+		add	r0,r10
+
+	; r10 - Y curr
+	;  r9 - Y start
+	;  r8 - Y end
+	;  r7 - X read
 .y_nxt:
-		mov	r5,r6
-		add	r1,r6
-		mov	r2,r9
-		add	#1,r9
-.x_nxt:
-		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
-		cmp/ge	r0,r6
-		bf	.ylarg
-		sub	r0,r6
-.ylarg:
-		mov	r6,r7
-		mov	r6,r8
-		mov	#_framebuffer+$200,r0
+		cmp/ge	r8,r10
+		bf	.ybgres
+		mov	r9,r10
+.ybgres:
+		mov	r10,r7
+		mov	r10,r6
+		mov	r10,r5
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r11
+		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		add	r1,r0
+		cmp/ge	r11,r0
+		bf	.noxres
+		sub	r11,r0
+.noxres:
 		add	r0,r7
-		mov	#_framebuffer+$200+(MSCRL_WIDTH*MSCRL_HEIGHT),r0
-		add	r0,r8
-		mov	#$12345678,r0
-		mov	r0,@r7
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r5
+		mov	r12,r11		; X current
+		mov	r2,r13		; X width
+		add	#1,r13		; TODO: temporal...
+; X loop
+.x_nxt:
+		cmp/ge	r5,r7
+		bf	.xbgres
+		mov	r6,r7
+.xbgres:
+		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
+		cmp/ge	r0,r11
+		bf	.ylarg
+		sub	r0,r11
+.ylarg:
+		mov	@r7+,r3
+		mov	#_framebuffer+$200,r0
+		add	r11,r0
+		mov	r3,@r0
 		mov	#320,r0
-		cmp/gt	r0,r6
+		cmp/gt	r0,r11
 		bt	.not_hdn
-		mov	#$12345678,r0
-		mov	r0,@r8
+		mov	#_framebuffer+$200+(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+		add	r11,r0
+		mov	r3,@r0
 .not_hdn:
-		dt	r9
+		dt	r13
 		bf/s	.x_nxt
-		add	#4,r6
+		add	#4,r11
 
-
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		add	r0,r10
 		mov	#MSCRL_WIDTH,r0
 		dt	r4
 		bf/s	.y_nxt
-		add	r0,r5
-
-; 		bra	*
-; 		nop
+		add	r0,r12
 
 .len_off:
+		mov	@r15+,r13
+		mov	@r15+,r14
 		rts
 		nop
 		align 4
@@ -2059,8 +2108,8 @@ slave_loop:
 		bt	.wait_drw
 
 	; Polygon interaction
-	mov	#30*65536,r5
-	mov	#-30*65536,r6
+	mov	#40*65536,r5
+	mov	#-40*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -2073,8 +2122,8 @@ slave_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#-30*65536,r5
-	mov	#-30*65536,r6
+	mov	#-40*65536,r5
+	mov	#-40*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -2087,8 +2136,8 @@ slave_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#-30*65536,r5
-	mov	#30*65536,r6
+	mov	#-40*65536,r5
+	mov	#40*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -2101,8 +2150,8 @@ slave_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#30*65536,r5
-	mov	#30*65536,r6
+	mov	#40*65536,r5
+	mov	#40*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7

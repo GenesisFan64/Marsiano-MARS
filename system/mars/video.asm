@@ -925,6 +925,7 @@ MarsVideo_ClearFrame:
 ; 		nop
 ; 		align 4
 
+; TODO: improve this
 MarsVideo_DrawAllBg:
 		sts	pr,@-r15
 		bsr	.this
@@ -936,6 +937,16 @@ MarsVideo_DrawAllBg:
 		tst     #2,r0
 		bf      .wait_fb
 		mov	#-2,r4
+		mov	@(marsGbl_BgData,gbr),r0
+		mov	r0,r8
+		mov	r0,r9
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r1
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mulu	r1,r0
+		sts	macl,r0
+		add	r0,r9
+
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r1			; r1 - read
 		mov	r0,r2			; r2 - start
@@ -981,6 +992,12 @@ MarsVideo_DrawAllBg:
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r2
 		add	r0,r3
+		cmp/ge	r9,r2
+		bf	.ylrge
+		mov	r8,r2
+		mov	r8,r3
+		add	r0,r3
+.ylrge:
 		mov	r2,r1
 		dt	r7
 		bf	.y_next
