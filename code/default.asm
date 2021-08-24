@@ -201,21 +201,21 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		move.w	#-7,d1
+		move.w	#-3,d1
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		move.w	#7,d1
+		move.w	#3,d1
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		sub.w	#7,(RAM_BgCamCurr).l
-		move.w	#-7,d0
+		sub.w	#3,(RAM_BgCamCurr).l
+		move.w	#-3,d0
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		add.w	#7,(RAM_BgCamCurr).l
-		move.w	#7,d0
+		add.w	#3,(RAM_BgCamCurr).l
+		move.w	#3,d0
 .no_rf:
 ; 		move.b	(sysmars_reg+comm14).l,d7
 ; 		tst.b	d7
@@ -269,174 +269,174 @@ MdMdl_SetNewCamera:
 
 ; d7 - Move to this mode after
 ;      animation ends.
-MdMdl_RunAnimation:
-		bsr	MdMdl_CamAnimate
-		bpl.s	.stay
-		move.w	d7,(RAM_MdlCurrMd).w
-		rts					; exit mode
-.stay:
-		moveq	#0,d1
-		move.l	(RAM_Cam_Xpos),d2
-		move.l	(RAM_Cam_Ypos),d3
-		move.l	(RAM_Cam_Zpos),d4
-		move.l	(RAM_Cam_Xrot),d5
-		move.l	(RAM_Cam_Yrot),d6
-		move.l	(RAM_Cam_Zrot),d7
-		move.l	#CmdTaskMd_CameraPos,d0		; Load map
-		bsr	System_MdMars_SlvAddTask
-		move.l	#CmdTaskMd_UpdModels,d0
-		bsr	System_MdMars_SlvAddTask
-		bsr	System_MdMars_SlvSendDrop
-.nel2:
-		bne.s	.busy
-		move.l	(RAM_Cam_Xrot),d1
-		neg.l	d1
-		lsr.l	#8,d1
-		move.w	d1,(RAM_BgCamCurr).l
-.busy:
-		rts
+; MdMdl_RunAnimation:
+; 		bsr	MdMdl_CamAnimate
+; 		bpl.s	.stay
+; 		move.w	d7,(RAM_MdlCurrMd).w
+; 		rts					; exit mode
+; .stay:
+; 		moveq	#0,d1
+; 		move.l	(RAM_Cam_Xpos),d2
+; 		move.l	(RAM_Cam_Ypos),d3
+; 		move.l	(RAM_Cam_Zpos),d4
+; 		move.l	(RAM_Cam_Xrot),d5
+; 		move.l	(RAM_Cam_Yrot),d6
+; 		move.l	(RAM_Cam_Zrot),d7
+; ; 		move.l	#CmdTaskMd_CameraPos,d0		; Load map
+; ; 		bsr	System_MdMars_SlvAddTask
+; ; 		move.l	#CmdTaskMd_UpdModels,d0
+; ; 		bsr	System_MdMars_SlvAddTask
+; 		bsr	System_MdMars_SlvSendDrop
+; .nel2:
+; 		bne.s	.busy
+; 		move.l	(RAM_Cam_Xrot),d1
+; 		neg.l	d1
+; 		lsr.l	#8,d1
+; 		move.w	d1,(RAM_BgCamCurr).l
+; .busy:
+; 		rts
 
-MdMdl_CamAnimate:
-		move.l	(RAM_CamData).l,d0			; If 0 == No animation
-		beq.s	.no_camanim
-		sub.l	#1,(RAM_CamTimer).l
-		bpl.s	.no_camanim
-		move.l	(RAM_CamSpeed).l,(RAM_CamTimer).l	; TEMPORAL timer
-		move.l	d0,a1
-		move.l	(a1)+,d1
-		move.l	(RAM_CamFrame).l,d0
-		add.l	#1,d0
-		cmp.l	d1,d0
-		bne.s	.on_frames
-		moveq	#-1,d0
-		rts
-.on_frames:
-		move.l	d0,(RAM_CamFrame).l
-		mulu.w	#$18,d0
-		adda	d0,a1
-		move.l	(a1)+,(RAM_Cam_Xpos).l
-		move.l	(a1)+,(RAM_Cam_Ypos).l
-		move.l	(a1)+,(RAM_Cam_Zpos).l
-		move.l	(a1)+,(RAM_Cam_Xrot).l
-		move.l	(a1)+,(RAM_Cam_Yrot).l
-		move.l	(a1)+,(RAM_Cam_Zrot).l
-		lsr.l	#7,d1
-		move.w	d1,(RAM_BgCamera).l
-.no_camanim:
-		moveq	#0,d0
-		rts
-
-MdMdl1_Usercontrol:
-		move.l	#var_MoveSpd,d5
-		move.l	#-var_MoveSpd,d6
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyUp,d7
-		beq.s	.no_up
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Zpos).l,d0
-		add.l	d5,d0
-		move.l	d0,(RAM_Cam_Zpos).l
-.no_up:
-		btst	#bitJoyDown,d7
-		beq.s	.no_dw
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Zpos).l,d0
-		add.l	d6,d0
-		move.l	d0,(RAM_Cam_Zpos).l
-.no_dw:
-		btst	#bitJoyLeft,d7
-		beq.s	.no_lf
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Xpos).l,d0
-		add.l	d6,d0
-		move.l	d0,(RAM_Cam_Xpos).l
-.no_lf:
-		btst	#bitJoyRight,d7
-		beq.s	.no_rg
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Xpos).l,d0
-		add.l	d5,d0
-		move.l	d0,(RAM_Cam_Xpos).l
-.no_rg:
-
-		btst	#bitJoyB,d7
-		beq.s	.no_a
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Xrot).l,d0
-		move.l	d6,d1
-		add.l	d1,d0
-		move.l	d0,(RAM_Cam_Xrot).l
-		lsr.l	#7,d0
-		neg.l	d0
-		move.w	d0,(RAM_BgCamera).l
-.no_a:
-		btst	#bitJoyC,d7
-		beq.s	.no_b
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Xrot).l,d0
-		move.l	d5,d1
-		add.l	d1,d0
-		move.l	d0,(RAM_Cam_Xrot).l
-		lsr.l	#7,d0
-		neg.l	d0
-		move.w	d0,(RAM_BgCamera).l
-.no_b:
-	; Reset all
-; 		btst	#bitJoyC,d7
-; 		beq.s	.no_c
-; 		;move.w	#1,(RAM_MdMdlsUpd).l
-; 		lea	(RAM_MdCamera),a0
+; MdMdl_CamAnimate:
+; 		move.l	(RAM_CamData).l,d0			; If 0 == No animation
+; 		beq.s	.no_camanim
+; 		sub.l	#1,(RAM_CamTimer).l
+; 		bpl.s	.no_camanim
+; 		move.l	(RAM_CamSpeed).l,(RAM_CamTimer).l	; TEMPORAL timer
+; 		move.l	d0,a1
+; 		move.l	(a1)+,d1
+; 		move.l	(RAM_CamFrame).l,d0
+; 		add.l	#1,d0
+; 		cmp.l	d1,d0
+; 		bne.s	.on_frames
+; 		moveq	#-1,d0
+; 		rts
+; .on_frames:
+; 		move.l	d0,(RAM_CamFrame).l
+; 		mulu.w	#$18,d0
+; 		adda	d0,a1
+; 		move.l	(a1)+,(RAM_Cam_Xpos).l
+; 		move.l	(a1)+,(RAM_Cam_Ypos).l
+; 		move.l	(a1)+,(RAM_Cam_Zpos).l
+; 		move.l	(a1)+,(RAM_Cam_Xrot).l
+; 		move.l	(a1)+,(RAM_Cam_Yrot).l
+; 		move.l	(a1)+,(RAM_Cam_Zrot).l
+; 		lsr.l	#7,d1
+; 		move.w	d1,(RAM_BgCamera).l
+; .no_camanim:
 ; 		moveq	#0,d0
-; 		move.l	d0,(RAM_Cam_Xpos).l
-; 		move.l	d0,(RAM_Cam_Ypos).l
+; 		rts
+;
+; MdMdl1_Usercontrol:
+; 		move.l	#var_MoveSpd,d5
+; 		move.l	#-var_MoveSpd,d6
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.no_up
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Zpos).l,d0
+; 		add.l	d5,d0
 ; 		move.l	d0,(RAM_Cam_Zpos).l
+; .no_up:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.no_dw
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Zpos).l,d0
+; 		add.l	d6,d0
+; 		move.l	d0,(RAM_Cam_Zpos).l
+; .no_dw:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.no_lf
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Xpos).l,d0
+; 		add.l	d6,d0
+; 		move.l	d0,(RAM_Cam_Xpos).l
+; .no_lf:
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.no_rg
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Xpos).l,d0
+; 		add.l	d5,d0
+; 		move.l	d0,(RAM_Cam_Xpos).l
+; .no_rg:
+;
+; 		btst	#bitJoyB,d7
+; 		beq.s	.no_a
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Xrot).l,d0
+; 		move.l	d6,d1
+; 		add.l	d1,d0
 ; 		move.l	d0,(RAM_Cam_Xrot).l
-; 		move.l	d0,(RAM_Cam_Yrot).l
-; 		move.l	d0,(RAM_Cam_Zrot).l
-; .no_c:
-
-
-	; Up/Down
-		move.w	(Controller_1+on_hold),d7
-		move.w	d7,d4
-		and.w	#JoyZ,d4
-		beq.s	.no_x
-		;move.w	#1,(RAM_MdMdlsUpd).l
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Ypos).l,d0
-		add.l	d5,d0
-		move.l	d0,(RAM_Cam_Ypos).l
-.no_x:
-		move.w	d7,d4
-		and.w	#JoyY,d4
-		beq.s	.no_y
-		;move.w	#1,(RAM_MdMdlsUpd).l
-; 		lea	(RAM_MdCamera),a0
-		move.l	(RAM_Cam_Ypos).l,d0
-		add.l	d6,d0
-		move.l	d0,(RAM_Cam_Ypos).l
-.no_y:
-
-		moveq	#0,d1
-		move.l	(RAM_Cam_Xpos),d2
-		move.l	(RAM_Cam_Ypos),d3
-		move.l	(RAM_Cam_Zpos),d4
-		move.l	(RAM_Cam_Xrot),d5
-		move.l	(RAM_Cam_Yrot),d6
-		move.l	(RAM_Cam_Zrot),d7
-		move.l	#CmdTaskMd_CameraPos,d0		; Load map
-		bsr	System_MdMars_SlvAddTask
-		move.l	#CmdTaskMd_UpdModels,d0
-		bsr	System_MdMars_SlvAddTask
-		bsr	System_MdMars_SlvSendDrop
-.nel2:
-		bne.s	.busy
-		move.l	(RAM_Cam_Xrot),d1
-		neg.l	d1
-		lsr.l	#8,d1
-		move.w	d1,(RAM_BgCamCurr).l
-.busy:
-		rts
+; 		lsr.l	#7,d0
+; 		neg.l	d0
+; 		move.w	d0,(RAM_BgCamera).l
+; .no_a:
+; 		btst	#bitJoyC,d7
+; 		beq.s	.no_b
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Xrot).l,d0
+; 		move.l	d5,d1
+; 		add.l	d1,d0
+; 		move.l	d0,(RAM_Cam_Xrot).l
+; 		lsr.l	#7,d0
+; 		neg.l	d0
+; 		move.w	d0,(RAM_BgCamera).l
+; .no_b:
+; 	; Reset all
+; ; 		btst	#bitJoyC,d7
+; ; 		beq.s	.no_c
+; ; 		;move.w	#1,(RAM_MdMdlsUpd).l
+; ; 		lea	(RAM_MdCamera),a0
+; ; 		moveq	#0,d0
+; ; 		move.l	d0,(RAM_Cam_Xpos).l
+; ; 		move.l	d0,(RAM_Cam_Ypos).l
+; ; 		move.l	d0,(RAM_Cam_Zpos).l
+; ; 		move.l	d0,(RAM_Cam_Xrot).l
+; ; 		move.l	d0,(RAM_Cam_Yrot).l
+; ; 		move.l	d0,(RAM_Cam_Zrot).l
+; ; .no_c:
+;
+;
+; 	; Up/Down
+; 		move.w	(Controller_1+on_hold),d7
+; 		move.w	d7,d4
+; 		and.w	#JoyZ,d4
+; 		beq.s	.no_x
+; 		;move.w	#1,(RAM_MdMdlsUpd).l
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Ypos).l,d0
+; 		add.l	d5,d0
+; 		move.l	d0,(RAM_Cam_Ypos).l
+; .no_x:
+; 		move.w	d7,d4
+; 		and.w	#JoyY,d4
+; 		beq.s	.no_y
+; 		;move.w	#1,(RAM_MdMdlsUpd).l
+; ; 		lea	(RAM_MdCamera),a0
+; 		move.l	(RAM_Cam_Ypos).l,d0
+; 		add.l	d6,d0
+; 		move.l	d0,(RAM_Cam_Ypos).l
+; .no_y:
+;
+; 		moveq	#0,d1
+; 		move.l	(RAM_Cam_Xpos),d2
+; 		move.l	(RAM_Cam_Ypos),d3
+; 		move.l	(RAM_Cam_Zpos),d4
+; 		move.l	(RAM_Cam_Xrot),d5
+; 		move.l	(RAM_Cam_Yrot),d6
+; 		move.l	(RAM_Cam_Zrot),d7
+; 		move.l	#CmdTaskMd_CameraPos,d0		; Load map
+; 		bsr	System_MdMars_SlvAddTask
+; 		move.l	#CmdTaskMd_UpdModels,d0
+; 		bsr	System_MdMars_SlvAddTask
+; 		bsr	System_MdMars_SlvSendDrop
+; .nel2:
+; 		bne.s	.busy
+; 		move.l	(RAM_Cam_Xrot),d1
+; 		neg.l	d1
+; 		lsr.l	#8,d1
+; 		move.w	d1,(RAM_BgCamCurr).l
+; .busy:
+; 		rts
 
 ; 		lea	(RAM_MdCamera),a0
 ; 		move.l	#CmdTaskMd_CameraPos,d0		; Cmnd $0D: Set camera positions

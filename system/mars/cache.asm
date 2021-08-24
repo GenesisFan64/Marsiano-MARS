@@ -62,8 +62,10 @@ drwtsk_01:
 ; 		mov.w	#$0000,r0		; SVDP-fill pixel data and start filling
 ; 		mov.w   r0,@(8,r1)		; After finishing, SVDP-address got updated
 
-; 	Left/Right draw
-; 	goes in and out
+; Left/Right draw goes in and out
+		mov	@(marsGbl_BgData,gbr),r0
+		cmp/pl	r0
+		bf	.get_out
 		mov	#0,r6
 		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
 		cmp/eq	#0,r0
@@ -118,7 +120,6 @@ drwtsk_01:
 .prefix_r:
 		mov	.tag_scrnwdth,r1			; TODO: a variable for this?
 		add	r1,r0
-
 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7
 		cmp/ge	r7,r0
 		bf	.lastline_r
@@ -172,7 +173,6 @@ dtsk01_lrdraw:
 		mov	r0,@r4
 		add	#4,r4
 	endm
-
 .not_ln0:
 		mov	#Cach_YRead_LR,r1
 		mov	@(marsGbl_BgData,gbr),r0
@@ -215,7 +215,7 @@ dtsk01_exit:
 		mov.w   r0,@r1
 		mov.w   #$5A10,r0		; Timer before next watchdog
 		mov.w   r0,@r1
-		mov	#Cach_ClrLines,r1	; Decrement a line to progress
+		mov	#Cach_LR_Lines,r1	; Decrement a line to progress
 		mov	@r1,r0
 		dt	r0
 		bf/s	tsk00_exit
@@ -576,9 +576,9 @@ drwsld_updline_tex:
 		mov	@(plypz_src_yr_dx,r14),r0
 		add	r0,r8
 		add	r2,r1				; Update X postions
-		add	r4,r3
 		dt	r10
-		bt	drwtex_gonxtpz
+		bt/s	drwtex_gonxtpz
+		add	r4,r3
 		bra	drwsld_nxtline_tex
 		add	#1,r9
 drwtex_gonxtpz:
@@ -790,10 +790,12 @@ Cach_YHead_LR	ds.l 1			; (L/R) Top Y position (updates)
 Cach_YRead_LR	ds.l 1			; (L/R) Current Y (updates)
 Cach_XHead_UD	ds.l 1
 Cach_BgFbPosLR	ds.l 1			; (L/R) Current Y FB position (updates)
-
 Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos
 Cach_BgFbPos_D	ds.l 1			; (U/D) Lower Y FB pos
-Cach_ClrLines	ds.l 1			; (L/R) Lines to process
+
+Cach_LR_Lines	ds.l 1			; (L/R) X Lines to process
+Cach_UD_Lines	ds.l 1			; (U/D) Y Lines to process
+
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2
