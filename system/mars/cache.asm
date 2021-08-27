@@ -2,7 +2,7 @@
 ; ----------------------------------------------------------------
 ; CACHE code for Master CPU
 ;
-; LIMIT: $800 bytes for each CPU
+; LIMIT: $800 bytes
 ; ----------------------------------------------------------------
 
 		align 4
@@ -31,11 +31,13 @@ m_irq_custom:
 		dc.l drwtsk_00		; (null entry)
 		dc.l drwtsk_01		; Draw background
 		dc.l drwtsk_02		; Main polygons jump
-		dc.l drwtsk_03		; Resume from solid-color
+; 		dc.l drwtsk_03		; Resume from solid-color
 .tag_FRT:	dc.l _FRT
 
 ; --------------------------------
-; Task $01
+; Task $01: Left/Right drawing
+;
+; (Called on Watchdog)
 ; --------------------------------
 
 		align 4
@@ -249,53 +251,207 @@ tsk00_exit:
 		rts
 		nop
 		align 4
+; 		ltorg
+
+; --------------------------------
+; Up/Down drawing
+;
+; (Called on mainloop)
+; --------------------------------
+
+CachJmp_DrwUpDown:
+; 	; **** Up/Down draw check
+; 		mov	@(marsGbl_BgData,gbr),r0
+; 		mov	r0,r11
+; 		mov	r0,r12
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		mov	r0,r1
+; 		mov.w	@(marsGbl_BgHeight,gbr),r0
+; 		mulu	r1,r0
+; 		sts	macl,r0
+; 		add	r0,r12
+; 		mov	#-MSCRL_BLKSIZE,r6
+; 		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
+; 		cmp/eq	#0,r0
+; 		bf	.tsk00_down
+; 		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
+; 		cmp/eq	#0,r0
+; 		bf	.tsk00_up
+; 		bra	drw_ud_exit
+; 		nop
+;
+; 	; r2 - Start bg line
+; 	; r3 - End bg line
+; 	; r6 - Y current
+; 	; r5 - FB current base
+; .tsk00_down:
+; 		dt	r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwReqD,gbr)
+;
+; 		mov	#Cach_YHead_D,r2
+; 		mov	@r2,r2
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		muls	r0,r2
+; 		sts	macl,r2
+; 		mov	@(marsGbl_BgData,gbr),r0
+; 		add	r0,r2
+; 		mov	r2,r3
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		add	r0,r3
+; 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+; 		and	r6,r0
+; 		mov	r0,r5
+; 		mov	#Cach_BgFbPos_D,r0
+; 		mov	@r0,r0
+; 		bra	.drwy_go
+; 		mov	r0,r6
+;
+; .tsk00_up:
+; 		dt	r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
+;
+; 		mov	#Cach_YHead_U,r2
+; 		mov	@r2,r2
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		muls	r0,r2
+; 		sts	macl,r2
+; 		mov	@(marsGbl_BgData,gbr),r0
+; 		add	r0,r2
+; 		mov	r2,r3
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		add	r0,r3
+; 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+; 		and	r6,r0
+; 		mov	r0,r5
+; 		mov	#Cach_BgFbPos_U,r0
+; 		mov	@r0,r0
+; 		mov	r0,r6
+;
+; .drwy_go:
+; 		mov	#MSCRL_BLKSIZE,r8
+; .rept_y:
+; 		cmp/ge	r12,r2
+; 		bf	.ybgend
+; 		mov	r11,r2
+; 		mov	r11,r3
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		add	r0,r3
+; .ybgend:
+;
+; 		mov	r2,r1		; r1 - bg pixel data
+; 		mov	#-MSCRL_BLKSIZE,r7
+; 		mov	#Cach_XHead_L,r0
+; 		mov	@r0,r0
+; 		and	r7,r0
+; 		add	r0,r1
+;
+; 		mov	r5,r4		; r4 - X
+; 		mov	r6,r0
+; 		mov	#MSCRL_WIDTH,r7
+; 		mulu	r7,r0
+; 		sts	macl,r0
+; ; 		shll8	r0
+; ; 		shll	r0
+; 		add	r0,r4		; X + Y
+; 		mov	#(MSCRL_WIDTH)/4,r7
+;
+;
+; .rept_x:
+; 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+; 		cmp/ge	r0,r4
+; 		bf	.res_x
+; 		sub	r0,r4
+; .res_x:
+; 		cmp/ge	r3,r1
+; 		bf	.xlon1
+; 		mov	r2,r1
+; .xlon1:
+; 		mov	@r1+,r10
+;
+; 		mov	r4,r9
+; 		mov	#_framebuffer+$200,r0
+; 		add	r0,r9
+; 		mov	#320,r0
+; 		cmp/gt	r0,r4
+; 		bt	.not_l2
+; 		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+; 		add	r4,r0
+; 		mov	r10,@r0
+; .not_l2:
+; 		mov	r10,@r9
+; 		dt	r7
+; 		bf/s	.rept_x
+; 		add	#4,r4
+;
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		add	r0,r2
+; 		add	r0,r3
+; 	if MSCRL_HEIGHT=256
+; 		mov	r6,r0
+; 		add	#1,r0
+; 		and	#$FF,r0
+; 		mov	r0,r6
+; 	else
+; 		mov	#MSCRL_HEIGHT,r0
+; 		add	#1,r6
+; 		cmp/gt	r0,r6
+; 		bf	.rdhlow
+; 		sub	r0,r6
+; .rdhlow:
+; 	endif
+; 		dt	r8
+; 		bf	.rept_y
+; drw_ud_exit:
+		rts
+		nop
+		align 4
 		ltorg
 
-; --------------------------------
-; Task $03
-; --------------------------------
-
-drwtsk_03:
-		mov	r2,@-r15
-		mov.w	@(marsGbl_DrwPause,gbr),r0
-		cmp/eq	#1,r0
-		bt	.exit
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
-		mov	r6,@-r15
-		mov	r7,@-r15
-		mov	r8,@-r15
-		mov	r9,@-r15
-		mov	r10,@-r15
-		mov	r11,@-r15
-		mov	r12,@-r15
-		mov	r13,@-r15
-		mov	r14,@-r15
-		sts	macl,@-r15
-		sts	mach,@-r15
-		mov	#Cach_LnDrw_L,r0
-		mov	@r0+,r14
-		mov	@r0+,r13
-		mov	@r0+,r12
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		mov	@r0+,r4
-		mov	@r0+,r3
-		mov	@r0+,r2
-		mov	@r0+,r1
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
-		bra	drwsld_updline
-		nop
-.exit:		bra	drwtask_exit
-		mov	#$10,r2
-		align 4
+; ; --------------------------------
+; ; Task $03
+; ; --------------------------------
+;
+; drwtsk_03:
+; 		mov	r2,@-r15
+; 		mov.w	@(marsGbl_DrwPause,gbr),r0
+; 		cmp/eq	#1,r0
+; 		bt	.exit
+; 		mov	r3,@-r15
+; 		mov	r4,@-r15
+; 		mov	r5,@-r15
+; 		mov	r6,@-r15
+; 		mov	r7,@-r15
+; 		mov	r8,@-r15
+; 		mov	r9,@-r15
+; 		mov	r10,@-r15
+; 		mov	r11,@-r15
+; 		mov	r12,@-r15
+; 		mov	r13,@-r15
+; 		mov	r14,@-r15
+; 		sts	macl,@-r15
+; 		sts	mach,@-r15
+; 		mov	#Cach_LnDrw_L,r0
+; 		mov	@r0+,r14
+; 		mov	@r0+,r13
+; 		mov	@r0+,r12
+; 		mov	@r0+,r11
+; 		mov	@r0+,r10
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+; 		mov	@r0+,r7
+; 		mov	@r0+,r6
+; 		mov	@r0+,r5
+; 		mov	@r0+,r4
+; 		mov	@r0+,r3
+; 		mov	@r0+,r2
+; 		mov	@r0+,r1
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+; 		bra	drwsld_updline
+; 		nop
+; .exit:		bra	drwtask_exit
+; 		mov	#$10,r2
+; 		align 4
 
 ; --------------------------------
 ; Task $02
@@ -727,12 +883,14 @@ drwsld_nextpz:
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
 		cmp/pl	r0
-		bf	.finish_it
-		bra	drwtsk02_newpz
-		nop
+		bt	.activ
+; 		bf	.finish_it
+; 		bra	drwtsk02_newpz2
+; 		nop
 .finish_it:
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+.activ:
 		bra	drwtask_return
 		mov	#$10,r2			; Timer for next watchdog
 

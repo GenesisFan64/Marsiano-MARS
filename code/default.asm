@@ -99,9 +99,9 @@ thisCode_Top:
 		move.w	d0,(vdp_data).l
 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
-; 		lea	str_Status(pc),a0
-; 		move.l	#locate(0,0,0),d0
-; 		bsr	Video_Print
+		lea	str_Status(pc),a0
+		move.l	#locate(0,0,0),d0
+		bsr	Video_Print
 		move.w	(RAM_MdlCurrMd).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -128,29 +128,29 @@ thisCode_Top:
 		bmi	.mode0_loop
 		or.w	#$8000,(RAM_MdlCurrMd).w
 
-		lea	MdPal_BgTestB(pc),a0
-		move.w	#0,d0
-		move.w	#32-1,d1
-		bsr	Video_LoadPal
-		lea	(MdMap_BgTestB),a0
-		move.l	#locate(1,0,0),d0
-		move.l	#mapsize(512,224),d1
-		move.w	#1,d2
-		bsr	Video_LoadMap
-		move.l	#MdGfx_BgTestB,d0
-		move.w	#(MdGfx_BgTestB_e-MdGfx_BgTestB),d1
-		move.w	#1,d2
-		bsr	Video_LoadArt
-
-		lea	(MdMap_BgTestT),a0
-		move.l	#locate(0,0,0),d0
-		move.l	#mapsize(512,224),d1
-		move.w	#$180,d2
-		bsr	Video_LoadMap
-		move.l	#MdGfx_BgTestT,d0
-		move.w	#(MdGfx_BgTestT_e-MdGfx_BgTestT),d1
-		move.w	#$180,d2
-		bsr	Video_LoadArt
+; 		lea	MdPal_BgTestB(pc),a0
+; 		move.w	#0,d0
+; 		move.w	#32-1,d1
+; 		bsr	Video_LoadPal
+; 		lea	(MdMap_BgTestB),a0
+; 		move.l	#locate(1,0,0),d0
+; 		move.l	#mapsize(512,224),d1
+; 		move.w	#1,d2
+; 		bsr	Video_LoadMap
+; 		move.l	#MdGfx_BgTestB,d0
+; 		move.w	#(MdGfx_BgTestB_e-MdGfx_BgTestB),d1
+; 		move.w	#1,d2
+; 		bsr	Video_LoadArt
+;
+; 		lea	(MdMap_BgTestT),a0
+; 		move.l	#locate(0,0,0),d0
+; 		move.l	#mapsize(512,224),d1
+; 		move.w	#$180,d2
+; 		bsr	Video_LoadMap
+; 		move.l	#MdGfx_BgTestT,d0
+; 		move.w	#(MdGfx_BgTestT_e-MdGfx_BgTestT),d1
+; 		move.w	#$180,d2
+; 		bsr	Video_LoadArt
 
 ; 		move.l	#CmdTaskMd_SetBitmap,d0		; 32X display OFF
 ; 		moveq	#0,d1
@@ -171,8 +171,8 @@ thisCode_Top:
 
 		move.w	#$0000,(sysmars_reg+comm0)
 		move.w	#$0000,(sysmars_reg+comm2)
-		move.w	#$0100,(sysmars_reg+comm4)
-		move.w	#$0100,(sysmars_reg+comm6)
+; 		move.w	#$0100,(sysmars_reg+comm4)
+; 		move.w	#$0100,(sysmars_reg+comm6)
 		move.w	#"GO",(sysmars_reg+comm14)
 
 ; Mode 0 mainloop
@@ -209,12 +209,12 @@ thisCode_Top:
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		sub.w	#3,(RAM_BgCamCurr).l
+; 		sub.w	#3,(RAM_BgCamCurr).l
 		move.w	#-3,d0
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		add.w	#3,(RAM_BgCamCurr).l
+; 		add.w	#3,(RAM_BgCamCurr).l
 		move.w	#3,d0
 .no_rf:
 ; 		move.b	(sysmars_reg+comm14).l,d7
@@ -503,9 +503,17 @@ MdMdl_SetNewCamera:
 ; ------------------------------------------------------
 
 str_Status:
-		dc.b "\\w \\w",0
-		dc.l RAM_BgCamCurr
+		dc.b "\\w \\w \\w \\w",$A
+		dc.b "\\w \\w \\w \\w",0
 		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm2
+		dc.l sysmars_reg+comm4
+		dc.l sysmars_reg+comm6
+		dc.l sysmars_reg+comm8
+		dc.l sysmars_reg+comm10
+		dc.l sysmars_reg+comm12
+		dc.l sysmars_reg+comm14
+
 		align 2
 MdPal_BgTestB:
 		binclude "data/md/bg/bg_b_pal.bin"

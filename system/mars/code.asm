@@ -92,6 +92,7 @@ marsGbl_Bg_DrwReqU	ds.w 1		; Draw UP request, write 2
 marsGbl_Bg_DrwReqD	ds.w 1		; Draw DOWN request, write 2
 marsGbl_Bg_DrwReqL	ds.w 1		; Draw LEFT request, write 2
 marsGbl_Bg_DrwReqR	ds.w 1		; Draw RIGHT request, write 2
+marsGbl_Bg_DrwReqFull	ds.w 1		; FULL Draw, write 2
 marsGbl_MdlFacesCntr	ds.w 1		; And the number of faces stored on that list
 marsGbl_PlgnBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_MstrReqDraw	ds.w 1
@@ -958,12 +959,43 @@ SH2_M_HotStart:
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
+	; *** TEMPORAL
+
+		mov	#RAM_Mars_Linescroll,r4
+		mov	#0,r3
+		mov	#MSCRL_WIDTH,r2
+		mov	#240,r1
+.copyln:
+		mov	r3,@r4
+		add	#4,r4
+		add	r2,r3
+		dt	r1
+		bf	.copyln
+
+		mov	#TESTMARS_BG,r1			; Set image
+		mov	#304,r2
+		mov	#224,r3
+		mov	#$00010000,r4
+		mov	#$00010000,r5
+		bsr	MarsVideo_SetBg
+		nop
+		mov	#TESTMARS_BG_PAL,r1		; Load palette
+		mov	#0,r2
+		mov	#256,r3
+		mov	#$0000,r4
+		mov	#MarsVideo_LoadPal,r0
+		jsr	@r0
+		nop
+		mov	#2,r0				; Request full draw on loop
+		mov.w	r0,@(marsGbl_Bg_DrwReqFull,gbr)
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
+
 ; --------------------------------------------------------
 ; MASTER Loop
 ; --------------------------------------------------------
 
-; To call a new pseudo-graphics mode
-; write word $80|mode to marsGbl_CurrGfxMode(gbr) in SLAVE cpu
 
 master_loop:
 		mov	#_vdpreg,r4			; Wait if frameswap is done
@@ -972,14 +1004,7 @@ master_loop:
 		mov	#.list,r1
 		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
 		and	#$FF,r0
-		tst	#$80,r0
-		bt	.no_init
-		and	#$7F,r0
-		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
-		add 	#4,r1
-.no_init:
 		shll2	r0
-		shll	r0
 		mov	@(r0,r1),r2
 .wait_frmswp:	mov.b	@(framectl,r4),r0
 		cmp/eq	r0,r3
@@ -993,9 +1018,8 @@ master_loop:
 ; --------------------------------------------------------
 
 .list:
-		dc.l master_loop,master_loop
-		dc.l mstr_gfx0,mstr_gfx0_init
-		dc.l mstr_gfx0,mstr_gfx0_init
+		dc.l mstr_gfx0
+		dc.l mstr_gfx0
 
 ; ---------------------------------------
 ; Custom graphics mode 0
@@ -1005,48 +1029,56 @@ master_loop:
 ; ---------------------------------------
 
 mstr_gfx0_init:
-		mov	#RAM_Mars_Linescroll,r4
-		mov	#0,r3
-		mov	#MSCRL_WIDTH,r2
-		mov	#240,r1
-.copy:
-		mov	r3,@r4
-		add	#4,r4
-		add	r2,r3
-		dt	r1
-		bf	.copy
+; 		mov	#RAM_Mars_Linescroll,r4
+; 		mov	#0,r3
+; 		mov	#MSCRL_WIDTH,r2
+; 		mov	#240,r1
+; .copy:
+; 		mov	r3,@r4
+; 		add	#4,r4
+; 		add	r2,r3
+; 		dt	r1
+; 		bf	.copy
+;
+; 		mov	#TESTMARS_BG,r1			; Set image
+; 		mov	#304,r2
+; 		mov	#224,r3
+; 		mov	#$00010000,r4
+; 		mov	#$00010000,r5
+; 		bsr	MarsVideo_SetBg
+; 		nop
+; 		mov	#TESTMARS_BG_PAL,r1			; Load palette
+; 		mov	#0,r2
+; 		mov	#256,r3
+; 		mov	#$0000,r4
+; 		mov	#MarsVideo_LoadPal,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#2,r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwReqFull,gbr)
+; 		mov 	#_vdpreg,r1
+; 		mov	#1,r0
+; 		mov.b	r0,@(bitmapmd,r1)
+; 		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+; 		and	#$7F,r0
+; 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 
-		mov	#TESTMARS_BG,r1			; Set image
-		mov	#304,r2
-		mov	#224,r3
-		mov	#$00010000,r4
-		mov	#$00010000,r5
-		bsr	MarsVideo_SetBg
-		nop
+; ---------------------------------------
+; Mode0 loop
+; ---------------------------------------
+
+mstr_gfx0:
+		mov.w	@(marsGbl_Bg_DrwReqFull,gbr),r0
+		cmp/eq	#0,r0
+		bt	.no_redraw
+		dt	r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqFull,gbr)
 		bsr	MarsVideo_DrawAllBg
 		nop
-		mov	#TESTMARS_BG_PAL,r1			; Load palette
-		mov	#0,r2
-		mov	#256,r3
-		mov	#$8000,r4
-		mov	#MarsVideo_LoadPal,r0
-		jsr	@r0
-		nop
-		mov 	#_vdpreg,r1
-.wait_fb:	mov.w   @($A,r1),r0
-		tst     #2,r0
-		bf      .wait_fb
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
-
-; loop
-mstr_gfx0:
-		mov.w	@(marsGbl_MstrReqDraw,gbr),r0	; Draw request?
-		cmp/eq	#0,r0
-		bt	.no_req
+.no_redraw:
 		mov	@(marsGbl_BgData,gbr),r0	; Background data?
 		cmp/pl	r0
-		bf	.no_num
+		bf	.no_num				; No BG: swap only
 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
 		tst     #1,r0				; Check for which buffer to use
 		bt	.p2_rfl
@@ -1146,8 +1178,12 @@ gfxmd1_step2:
 	; ---------------------------------------
 	; Read 3rd-layer scroll values
 	; ---------------------------------------
-		mov	#0,r1
+
+		mov	#0,r1				; X/Y reset
 		mov	#0,r2
+		mov.w	@(marsGbl_MstrReqDraw,gbr),r0	; Draw request?
+		cmp/eq	#0,r0
+		bt	.no_scrldata
 		mov	@(marsGbl_BgData,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_scrldata
@@ -1221,46 +1257,51 @@ gfxmd1_step2:
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
+; 		mov	#CachJmp_DrwUpDown,r0
+; 		jsr	@r0
+; 		nop
 
-	; r14 - Polygon pointers list
-	; r13 - Number of polygons to build
-		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
-		cmp/eq	#0,r0
-		bt	.skip
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
-		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-		tst     #1,r0				; Check for which buffer to use
-		bt	.page_2
-		mov 	#RAM_Mars_Plgn_ZList_0,r14
-		mov	#RAM_Mars_PlgnNum_0,r13
-		bra	.cont_plgn
-		nop
-.page_2:
-		mov 	#RAM_Mars_Plgn_ZList_1,r14
-		mov	#RAM_Mars_PlgnNum_1,r13
-		nop
-		nop
-.cont_plgn:
-		mov.w	@r13,r13			; read from memory to register
-		cmp/pl	r13				; zero?
-		bf	.skip
-.loop:
-		mov	r14,@-r15
-		mov	r13,@-r15
-		mov	@r14,r14			; Get location of the polygon
-		cmp/pl	r14				; Zero?
-		bf	.invalid			; if yes, skip
-		mov 	#MarsVideo_SlicePlgn,r0
-		jsr	@r0
-		nop
-.invalid:
-		mov	@r15+,r13
-		mov	@r15+,r14
-		dt	r13				; Decrement numof_polygons
-		bf/s	.loop
-		add	#8,r14				; Move to next entry
-.skip:
+; 	; Start slicing polygons
+; 	; r14 - Polygon pointers list
+; 	; r13 - Number of polygons to build
+; 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
+; 		cmp/eq	#0,r0
+; 		bt	.skip
+; 		xor	r0,r0
+; 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
+; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
+; 		tst     #1,r0				; Check for which buffer to use
+; 		bt	.page_2
+; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
+; 		mov	#RAM_Mars_PlgnNum_0,r13
+; 		bra	.cont_plgn
+; 		nop
+; .page_2:
+; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
+; 		mov	#RAM_Mars_PlgnNum_1,r13
+; 		nop
+; 		nop
+; .cont_plgn:
+; 		mov.w	@r13,r13			; read from memory to register
+; 		cmp/pl	r13				; zero?
+; 		bf	.skip
+; .loop:
+; 		mov	r14,@-r15
+; 		mov	r13,@-r15
+; 		mov	@r14,r14			; Get location of the polygon
+; 		cmp/pl	r14				; Zero?
+; 		bf	.invalid			; if yes, skip
+; 		mov 	#MarsVideo_SlicePlgn,r0
+; 		jsr	@r0
+; 		nop
+; .invalid:
+; 		mov	@r15+,r13
+; 		mov	@r15+,r14
+; 		dt	r13				; Decrement numof_polygons
+; 		bf/s	.loop
+; 		add	#8,r14				; Move to next entry
+; .skip:
+
 	; **** Up/Down draw check
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r11
@@ -1404,16 +1445,33 @@ gfxmd1_step2:
 		bf	.rept_y
 drw_ud_exit:
 
+		mov	#_sysreg+comm8,r1
+; 		mov.w	@(marsGbl_PzListCntr,gbr),r0
+;
+; 		mov.w	@(marsGbl_DrwTask,gbr),r0
+
+		mov	#0,r0
+		mov.w	r0,@r1
+		mov.w	r0,@(2,r1)
 	; --------------------------------------
-.wait_pz: 	mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
+.wait_pz:
+		mov.w	@r1,r0
+		add	#1,r0
+		mov.w	r0,@r1
+		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
 		cmp/eq	#0,r0
 		bf	.wait_pz
-.wait_task:	mov.w	@(marsGbl_DrwTask,gbr),r0	; Any drawing task active?
+.wait_task:
+		mov.w	@(2,r1),r0
+		add	#1,r0
+		mov.w	r0,@(2,r1)
+		mov.w	@(marsGbl_DrwTask,gbr),r0	; Any drawing task active?
 		cmp/eq	#0,r0
 		bf	.wait_task
 		mov.l   #$FFFFFE80,r1			; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
+
 		mov	#_vdpreg,r1
 .waitfb:	mov.w	@(vdpsts,r1),r0			; Wait until any line-fill finishes.
 		tst	#%10,r0
@@ -2111,8 +2169,13 @@ SH2_S_HotStart:
 ; 		mov	#1,r0			; enable test polygon
 ; 		mov.w	r0,@r13
 
-		mov	#$81,r0
-		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
+; 		mov	#_sysreg+comm0,r1
+; 		mov	#1,r0
+; 		mov.w	r0,@r1
+; 		mov.w	r0,@(2,r1)
+
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 
 		mov	#-1,r14
 slave_loop:
@@ -2121,8 +2184,8 @@ slave_loop:
 		bt	.wait_drw
 ;
 	; Polygon interaction
-	mov	#60*65536,r5
-	mov	#-60*65536,r6
+	mov	#30*65536,r5
+	mov	#-30*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -2135,8 +2198,8 @@ slave_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#-60*65536,r5
-	mov	#-60*65536,r6
+	mov	#-30*65536,r5
+	mov	#-30*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -2149,8 +2212,8 @@ slave_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#-60*65536,r5
-	mov	#60*65536,r6
+	mov	#-30*65536,r5
+	mov	#30*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7
@@ -2163,8 +2226,8 @@ slave_loop:
 	mov	r1,r0
 	mov.w	r0,@(2,r2)
 
-	mov	#60*65536,r5
-	mov	#60*65536,r6
+	mov	#30*65536,r5
+	mov	#30*65536,r6
 	mov	#rot_angle,r7
 	bsr	Rotate_Point
 	mov	@r7,r7

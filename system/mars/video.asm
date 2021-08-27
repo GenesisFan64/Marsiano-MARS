@@ -903,15 +903,12 @@ MarsVideo_ClearFrame:
 
 ; TODO: improve this
 MarsVideo_DrawAllBg:
-		sts	pr,@-r15
-		bsr	.this
-		nop
-		lds	@r15+,pr
-.this:
-		mov	#_vdpreg,r1
-.wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
-		tst     #2,r0
-		bf      .wait_fb
+
+
+; 		mov	#_vdpreg,r1
+; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
+; 		tst     #2,r0
+; 		bf      .wait_fb
 		mov	#-2,r4
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r8
@@ -999,22 +996,7 @@ MarsVideo_DrawAllBg:
 		add	#4,r4
 		dt	r6
 		bf	.x_next_l
-
-	; Swap frame and wait VBlank
-		mov	#_vdpreg,r4
-.fb_wait1:	mov.w   @($A,r4),r0
-		tst     #2,r0
-		bf      .fb_wait1
-		mov.w   @($A,r4),r0
-		xor     #1,r0
-		mov.w   r0,@($A,r4)
-		and     #1,r0
-		mov     r0,r1
-.wait_result:
-		mov.w   @($A,r4),r0
-		and     #1,r0
-		cmp/eq  r0,r1
-		bf      .wait_result
+.stop:
 		rts
 		nop
 		align 4
@@ -1182,7 +1164,6 @@ MarsVideo_SetWatchdog:
 		mov	r0,@r1
 
 	; Y draw settings
-
 		mov	#1,r0				; Set first task $01
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 		ldc	@r15+,sr			; Restore interrupts
