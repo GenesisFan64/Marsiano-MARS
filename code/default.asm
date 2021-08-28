@@ -187,35 +187,35 @@ thisCode_Top:
 		move.w	d7,d6
 		and.w	#JoyY,d6
 		beq.s	.no_x
-		sub.w	#1,(RAM_BgCamCurr).l
-		move.w	#-1,d1
+; 		sub.w	#1,(RAM_BgCamCurr).l
+		move.w	#-1,d0
 .no_x:
 		move.w	d7,d6
 		and.w	#JoyZ,d6
 		beq.s	.no_y
-		add.w	#1,(RAM_BgCamCurr).l
-		move.w	#1,d1
+; 		add.w	#1,(RAM_BgCamCurr).l
+		move.w	#1,d0
 .no_y:
 
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		move.w	#-3,d1
+		move.w	#-4,d1
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		move.w	#3,d1
+		move.w	#4,d1
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
 ; 		sub.w	#3,(RAM_BgCamCurr).l
-		move.w	#-3,d0
+		move.w	#-4,d0
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
 ; 		add.w	#3,(RAM_BgCamCurr).l
-		move.w	#3,d0
+		move.w	#4,d0
 .no_rf:
 ; 		move.b	(sysmars_reg+comm14).l,d7
 ; 		tst.b	d7

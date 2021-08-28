@@ -67,13 +67,13 @@ marsGbl_PlyPzList_R	ds.l 1		; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1		; Current graphic piece to write
 marsGbl_CurrZList	ds.l 1		; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1		; Current top face of the list while reading model data
-; marsGbl_Bg_Xpos		ds.l 1
-; marsGbl_Bg_Ypos		ds.l 1
-; marsGbl_Bg_Xpos_old	ds.l 1
-; marsGbl_Bg_Ypos_old	ds.l 1
+marsGbl_Bg_Xpos		ds.l 1
+marsGbl_Bg_Ypos		ds.l 1
+marsGbl_Bg_Xpos_old	ds.l 1
+marsGbl_Bg_Ypos_old	ds.l 1
 marsGbl_Plgn_Read	ds.l 1
 marsGbl_Plgn_Write	ds.l 1
-marsGbl_Bg_YbgXBase	ds.l 1		; X base position for Up/Down draw
+marsGbl_Bg_FbBase	ds.l 1		; X base position for Up/Down draw
 marsGbl_Bg_Xshift	ds.w 1
 marsGbl_GraphMode	ds.w 1
 marsGbl_BgWidth		ds.w 1
@@ -960,7 +960,6 @@ SH2_M_HotStart:
 		ldc	r0,sr
 
 	; *** TEMPORAL
-
 		mov	#RAM_Mars_Linescroll,r4
 		mov	#0,r3
 		mov	#MSCRL_WIDTH,r2
@@ -973,8 +972,8 @@ SH2_M_HotStart:
 		bf	.copyln
 
 		mov	#TESTMARS_BG,r1			; Set image
-		mov	#304,r2
-		mov	#224,r3
+		mov	#640,r2
+		mov	#480,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -1187,19 +1186,33 @@ gfxmd1_step2:
 		mov	@(marsGbl_BgData,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_scrldata
- 		mov 	#_sysreg+comm0,r3
- 		mov.w	@r3,r1
-		mov.w	@(marsGbl_Bg_Xshift,gbr),r0	; Xshift bit
-		mov	r0,r5
-		add	r1,r0
-		mov.w	r0,@(marsGbl_Bg_Xshift,gbr)
-		mov	#_vdpreg+shift,r4
-		mov	r5,r0
-		and	#1,r0
-		mov.w	r0,@r4
- 		mov.w	@(2,r3),r0
-		bsr	mstr_movebg
+
+	; Small COMM
+ 		mov 	#_sysreg+comm0,r5
+ 		mov.w	@r5,r1
+ 		mov.w	@(2,r5),r0
  		mov	r0,r2
+ 		mov	@(marsGbl_Bg_Xpos,gbr),r0
+		mov	r0,r3				; Get OLD X value
+ 		add	r1,r0
+ 		mov	r0,@(marsGbl_Bg_Xpos,gbr)	; Set NEW value
+ 		mov	@(marsGbl_Bg_Ypos,gbr),r0
+ 		add	r2,r0
+ 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
+		mov	#_vdpreg+shift,r4
+		mov	r3,r0
+		and	#1,r0
+		bsr	mstr_movebg
+		mov.w	r0,@r4				; Write OLD value & 1
+
+		mov 	#_sysreg+comm4,r5
+		mov	#RAM_Mars_Linescroll,r0
+		mov	@r0,r0
+		shlr	r0
+		mov.w	r0,@r5
+		mov	#_vdpreg+shift,r4
+		mov.w	@r4,r0
+		mov.w	r0,@(2,r5)
 .no_scrldata:
 
 	; ---------------------------------------
@@ -1261,46 +1274,46 @@ gfxmd1_step2:
 ; 		jsr	@r0
 ; 		nop
 
-; 	; Start slicing polygons
-; 	; r14 - Polygon pointers list
-; 	; r13 - Number of polygons to build
-; 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
-; 		cmp/eq	#0,r0
-; 		bt	.skip
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
-; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-; 		tst     #1,r0				; Check for which buffer to use
-; 		bt	.page_2
-; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
-; 		mov	#RAM_Mars_PlgnNum_0,r13
-; 		bra	.cont_plgn
-; 		nop
-; .page_2:
-; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
-; 		mov	#RAM_Mars_PlgnNum_1,r13
-; 		nop
-; 		nop
-; .cont_plgn:
-; 		mov.w	@r13,r13			; read from memory to register
-; 		cmp/pl	r13				; zero?
-; 		bf	.skip
-; .loop:
-; 		mov	r14,@-r15
-; 		mov	r13,@-r15
-; 		mov	@r14,r14			; Get location of the polygon
-; 		cmp/pl	r14				; Zero?
-; 		bf	.invalid			; if yes, skip
-; 		mov 	#MarsVideo_SlicePlgn,r0
-; 		jsr	@r0
-; 		nop
-; .invalid:
-; 		mov	@r15+,r13
-; 		mov	@r15+,r14
-; 		dt	r13				; Decrement numof_polygons
-; 		bf/s	.loop
-; 		add	#8,r14				; Move to next entry
-; .skip:
+	; Start slicing polygons
+	; r14 - Polygon pointers list
+	; r13 - Number of polygons to build
+		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
+		cmp/eq	#0,r0
+		bt	.skip
+		xor	r0,r0
+		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
+		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
+		tst     #1,r0				; Check for which buffer to use
+		bt	.page_2
+		mov 	#RAM_Mars_Plgn_ZList_0,r14
+		mov	#RAM_Mars_PlgnNum_0,r13
+		bra	.cont_plgn
+		nop
+.page_2:
+		mov 	#RAM_Mars_Plgn_ZList_1,r14
+		mov	#RAM_Mars_PlgnNum_1,r13
+		nop
+		nop
+.cont_plgn:
+		mov.w	@r13,r13			; read from memory to register
+		cmp/pl	r13				; zero?
+		bf	.skip
+.loop:
+		mov	r14,@-r15
+		mov	r13,@-r15
+		mov	@r14,r14			; Get location of the polygon
+		cmp/pl	r14				; Zero?
+		bf	.invalid			; if yes, skip
+		mov 	#MarsVideo_SlicePlgn,r0
+		jsr	@r0
+		nop
+.invalid:
+		mov	@r15+,r13
+		mov	@r15+,r14
+		dt	r13				; Decrement numof_polygons
+		bf/s	.loop
+		add	#8,r14				; Move to next entry
+.skip:
 
 	; **** Up/Down draw check
 		mov	@(marsGbl_BgData,gbr),r0
@@ -1340,7 +1353,7 @@ gfxmd1_step2:
 		mov	r2,r3
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r3
-		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+		mov	@(marsGbl_Bg_FbBase,gbr),r0
 		and	r6,r0
 		mov	r0,r5
 		mov	#Cach_BgFbPos_D,r0
@@ -1362,7 +1375,7 @@ gfxmd1_step2:
 		mov	r2,r3
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		add	r0,r3
-		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+		mov	@(marsGbl_Bg_FbBase,gbr),r0
 		and	r6,r0
 		mov	r0,r5
 		mov	#Cach_BgFbPos_U,r0
@@ -1445,26 +1458,22 @@ gfxmd1_step2:
 		bf	.rept_y
 drw_ud_exit:
 
-		mov	#_sysreg+comm8,r1
-; 		mov.w	@(marsGbl_PzListCntr,gbr),r0
-;
-; 		mov.w	@(marsGbl_DrwTask,gbr),r0
-
-		mov	#0,r0
-		mov.w	r0,@r1
-		mov.w	r0,@(2,r1)
+; 		mov	#_sysreg+comm8,r1
+; 		mov	#0,r0
+; 		mov.w	r0,@r1
+; 		mov.w	r0,@(2,r1)
 	; --------------------------------------
 .wait_pz:
-		mov.w	@r1,r0
-		add	#1,r0
-		mov.w	r0,@r1
+; 		mov.w	@r1,r0
+; 		add	#1,r0
+; 		mov.w	r0,@r1
 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
 		cmp/eq	#0,r0
 		bf	.wait_pz
 .wait_task:
-		mov.w	@(2,r1),r0
-		add	#1,r0
-		mov.w	r0,@(2,r1)
+; 		mov.w	@(2,r1),r0
+; 		add	#1,r0
+; 		mov.w	r0,@(2,r1)
 		mov.w	@(marsGbl_DrwTask,gbr),r0	; Any drawing task active?
 		cmp/eq	#0,r0
 		bf	.wait_task
@@ -1506,9 +1515,21 @@ mstr_bgfill:
 		cmp/pz	r2
 		bf	.len_off
 		shlr2	r2
-		mov	#RAM_Mars_Linescroll,r0
-		mov	@r0,r0
+
+		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+		mov	#MSCRL_WIDTH,r12
+		mulu	r12,r0
+		sts	macl,r12
+		mov	@(marsGbl_Bg_FbBase,gbr),r0
+		add	r12,r0
+		mov	#-4,r12
+		and	r12,r0
 		mov	r0,r12
+; 		mov	#RAM_Mars_Linescroll,r0
+; 		mov	@r0,r0
+; 		mov	#-4,r12
+; 		and	r12,r0
+; 		mov	r0,r12
 		mov	#MSCRL_WIDTH,r0
 		mulu	r0,r3
 		sts	macl,r0
@@ -1612,57 +1633,57 @@ mstr_movebg:
 ; 		mov	#1,r0
 ; 		mov.b	r0,@r3
 
-; 	; ---------------------------------------
-; 	; Get X/Y increment values (at r1 and r2)
-; 	; using CURR and OLD values
-; 	; and Set the X-shift bit
-; 	; ---------------------------------------
-;
-; 		mov 	#_sysreg+comm0,r8
-; 		mov	@(marsGbl_Bg_Xpos,gbr),r0
-; 		mov	r0,r3
-; 		mov	@(marsGbl_Bg_Xpos_old,gbr),r0
-; 		cmp/eq	r0,r3
-; 		bt	.xequ
-; 		mov	r3,r1
-; 		sub	r0,r1
-; 		and	#1,r0
-; 		mov.w	r0,@r7
-; .xequ:
-; 		mov	r3,r0
-; 		mov	r0,@(marsGbl_Bg_Xpos_old,gbr)
-; 		mov	@(marsGbl_Bg_Ypos,gbr),r0
-; 		mov	r0,r3
-; 		mov	@(marsGbl_Bg_Ypos_old,gbr),r0
-; 		cmp/eq	r0,r3
-; 		bt	.yequ
-; 		mov	r3,r2
-; 		sub	r0,r2
-; .yequ:
-; 		mov	r3,r0
-; 		mov	r0,@(marsGbl_Bg_Ypos_old,gbr)
-; 		cmp/pz	r1
-; 		bt	.x_stend
-; 		exts	r1,r1
-; .x_stend:
-; 		cmp/pz	r2
-; 		bt	.y_stend
-; 		exts	r2,r2
-; .y_stend:
-; 		mov 	#_sysreg+comm14,r3		; temporal communication
-; 		mov	#0,r0
-; 		mov.b	r0,@r3
+	; ---------------------------------------
+	; Get X/Y increment values (at r1 and r2)
+	; using CURR and OLD values
+	; and Set the X-shift bit
+	; ---------------------------------------
 
-	; ---------------------------------------
-	; Y move
-	; ---------------------------------------
+		mov 	#_sysreg+comm0,r8
+		mov	@(marsGbl_Bg_Xpos,gbr),r0
+		mov	r0,r3
+		mov	@(marsGbl_Bg_Xpos_old,gbr),r0
+		cmp/eq	r0,r3
+		bt	.xequ
+		mov	r3,r1
+		sub	r0,r1
+		and	#1,r0
+		mov.w	r0,@r7
+.xequ:
+		mov	r3,r0
+		mov	r0,@(marsGbl_Bg_Xpos_old,gbr)
+		mov	@(marsGbl_Bg_Ypos,gbr),r0
+		mov	r0,r3
+		mov	@(marsGbl_Bg_Ypos_old,gbr),r0
+		cmp/eq	r0,r3
+		bt	.yequ
+		mov	r3,r2
+		sub	r0,r2
+.yequ:
+		mov	r3,r0
+		mov	r0,@(marsGbl_Bg_Ypos_old,gbr)
+		cmp/pz	r1
+		bt	.x_stend
+		exts	r1,r1
+.x_stend:
+		cmp/pz	r2
+		bt	.y_stend
+		exts	r2,r2
+.y_stend:
+		mov 	#_sysreg+comm14,r3		; temporal communication
+		mov	#0,r0
+		mov.b	r0,@r3
+
+; 	---------------------------------------
+; 	Y move
+; 	---------------------------------------
 
 ; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
 ; 		add	r2,r0
 ; 		mov	r0,r4
 ; 		tst	#%11110000,r0
 ; 		bt	.yset_w
-
+;
 ; 		mov	#0,r7
 ; 		mov	r2,r0
 ; 		cmp/eq	#0,r0
@@ -1855,7 +1876,7 @@ mstr_movebg:
 	; ---------------------------------------
 
 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r3
-		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+		mov	@(marsGbl_Bg_FbBase,gbr),r0
 		add	r1,r0
 		cmp/pl	r1
 		bf	.yx_negtv
@@ -1869,7 +1890,7 @@ mstr_movebg:
 		bt	.yx_postv
 		add	r3,r0
 .yx_postv:
-		mov	r0,@(marsGbl_Bg_YbgXBase,gbr)
+		mov	r0,@(marsGbl_Bg_FbBase,gbr)
 
 	; X draw heads for Left/Right drawing
 		mov.w	@(marsGbl_BgWidth,gbr),r0

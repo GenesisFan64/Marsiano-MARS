@@ -1142,7 +1142,7 @@ MarsVideo_SetWatchdog:
 		and	r2,r0
 		mov	r0,@r1
 		mov	#Cach_BgFbPosLR,r1
-		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
+		mov	@(marsGbl_Bg_FbBase,gbr),r0
 		and	r2,r0
 		mov	r0,r3
 		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
