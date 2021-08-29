@@ -662,24 +662,32 @@ drwsld_nxtline_tex:
 ; 		mov	r0,r12
 ; .testlwrit:
 
-	; TODO: a check for cloning
-	; line 0 to $1F000
+	; TODO: a check for the hidden line
 		mov	#RAM_Mars_Linescroll,r10
-		mov 	r9,r0				; Y position * $200
-		shll2	r0
-		add	r0,r10
+	if MSCRL_WIDTH=256
+		shll8	r9
+		shll	r9
+	else
+		mov	#MSCRL_WIDTH,r0
+		muls	r9,r0
+		sts	macl,r9
+	endif
 		mov	@r10,r10
-		mov	#-2,r0
-		and	r0,r0
-; 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT)-$1000,r9
+		add	r9,r10
+		add 	r11,r10				; Add X
+		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+		cmp/ge	r0,r10
+		bf	.xl_r
+		sub	r0,r10
+.xl_r:
+		cmp/pz	r10
+		bt	.xl_l
+		add	r0,r10
+.xl_l:
+
+
 		mov	#_overwrite+$200,r0
 		add	r0,r10
-; 		add	r0,r9
-; 		mov 	r9,r0				; Y position * $200
-; 		shll8	r0
-; 		shll	r0
-; 		add 	r0,r10				; Add Y
-		add 	r11,r10				; Add X
 		mov	#$1FFF,r2
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r11		; r11 - texture data

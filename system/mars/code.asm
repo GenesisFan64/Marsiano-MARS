@@ -23,16 +23,13 @@
 ; (one buffer for drawing, one for display)
 ; The maximum moving speed is divided by 2 depending of
 ; the BLKSIZE setting. (BLKSIZE/2)
-; If you draw anything else (ex. polygons), it will remain
-; on-screen until the scrolling reaches the section drawn
-; again.
 ;
-; Map data can be either ROM data or RAM section,
-; WIDTH and HEIGHT are defined by gbr variables (BgWidth and BgHeight)
+; Map data can be either ROM data or a RAM section,
+; Background's WIDTH and HEIGHT are defined by gbr variables (BgWidth and BgHeight)
 ; but the sizes must be aligned by the same value as BLKSIZE
 ;
-; SVDP FILL can't be used anymore because this scroll system
-; manipulates the linetable. (unless I come up with a workaround)
+; SVDP FILL breaks because this scroll system manipulates the linetable.
+; (unless I come up with a workaround)
 
 MSCRL_BLKSIZE		equ $10		; Block size for both directions, maximum speed is (blksize/2)
 MSCRL_WIDTH		equ 320+$10	; Internal width for scrolldata
@@ -1202,8 +1199,9 @@ gfxmd1_step2:
 		mov	#_vdpreg+shift,r4
 		mov	r3,r0
 		and	#1,r0
-		bsr	mstr_movebg
 		mov.w	r0,@r4				; Write OLD value & 1
+		bsr	mstr_movebg
+		nop
 
 		mov 	#_sysreg+comm4,r5
 		mov	#RAM_Mars_Linescroll,r0
@@ -1216,7 +1214,7 @@ gfxmd1_step2:
 .no_scrldata:
 
 	; ---------------------------------------
-	; Set linescroll
+	; Write linetable to current framebuffer
 	; ---------------------------------------
 
 	; r1 - X increment
@@ -1516,20 +1514,20 @@ mstr_bgfill:
 		bf	.len_off
 		shlr2	r2
 
-		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
-		mov	#MSCRL_WIDTH,r12
-		mulu	r12,r0
-		sts	macl,r12
-		mov	@(marsGbl_Bg_FbBase,gbr),r0
-		add	r12,r0
-		mov	#-4,r12
-		and	r12,r0
-		mov	r0,r12
-; 		mov	#RAM_Mars_Linescroll,r0
-; 		mov	@r0,r0
+; 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+; 		mov	#MSCRL_WIDTH,r12
+; 		mulu	r12,r0
+; 		sts	macl,r12
+; 		mov	@(marsGbl_Bg_FbBase,gbr),r0
+; 		add	r12,r0
 ; 		mov	#-4,r12
 ; 		and	r12,r0
 ; 		mov	r0,r12
+		mov	#RAM_Mars_Linescroll,r0
+		mov	@r0,r0
+		mov	#-4,r12
+		and	r12,r0
+		mov	r0,r12
 		mov	#MSCRL_WIDTH,r0
 		mulu	r0,r3
 		sts	macl,r0
@@ -1957,6 +1955,8 @@ mstr_movebg:
 ; 		mov	r0,@r4
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
 .reqr_b:
 		cmp/pz	r1
 		bt	.ydl_busy
@@ -1976,6 +1976,8 @@ mstr_movebg:
 ; 		mov	r0,@r4
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
 .ydl_busy:
 		mov	r6,r0
 		and	#MSCRL_BLKSIZE-1,r0
@@ -2203,7 +2205,7 @@ slave_loop:
 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
 		cmp/eq	#1,r0
 		bt	.wait_drw
-;
+
 	; Polygon interaction
 	mov	#30*65536,r5
 	mov	#-30*65536,r6
@@ -2267,7 +2269,7 @@ slave_loop:
 	mov	#2047,r2
 	and	r2,r1
 	mov	r1,@r0
-;
+
 		mov.w	#1,r0
 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
 .wait_drw:
