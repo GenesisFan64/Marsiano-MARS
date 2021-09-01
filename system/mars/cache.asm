@@ -52,19 +52,31 @@ drwtsk_01:
 		mov	r9,@-r15
 		sts	macl,@-r15
 
-; 		mov	#_vdpreg,r1
-; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
-; 		tst     #2,r0
-; 		bf      .wait_fb
-; 		mov.w   @(6,r1),r0		; SVDP-fill address
-; 		add     #$5F,r0			; Preincrement
-; 		mov.w   r0,@(6,r1)
-; 		mov.w   #320/2,r0		; SVDP-fill size (320 pixels)
-; 		mov.w   r0,@(4,r1)
-; 		mov.w	#$0000,r0		; SVDP-fill pixel data and start filling
-; 		mov.w   r0,@(8,r1)		; After finishing, SVDP-address got updated
+		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+		and	#$7F,r0
+		cmp/eq	#1,r0
+		bt	drtsk_gm1
+		cmp/eq	#2,r0
+		bt	drtsk_gm2
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
+		tst     #2,r0
+		bf      .wait_fb
+		mov.w   @(6,r1),r0		; SVDP-fill address
+		add     #$5F,r0			; Preincrement
+		mov.w   r0,@(6,r1)
+		mov.w   #320/2,r0		; SVDP-fill size (320 pixels)
+		mov.w   r0,@(4,r1)
+		mov.w	#$0000,r0		; SVDP-fill pixel data and start filling
+		mov.w   r0,@(8,r1)		; After finishing, SVDP-address got updated
+		bra	dtsk01_exit
+		nop
+		align 4
+		ltorg
 
-; Left/Right draw goes in and out
+; Mode1 draw routine
+; Left/Right scroll
+drtsk_gm1:
 		mov	@(marsGbl_BgData,gbr),r0
 		cmp/pl	r0
 		bf	.get_out
@@ -150,8 +162,92 @@ drwtsk_01:
 .tag_scrlwdth:	dc.l MSCRL_WIDTH
 .tag_scrnwdth	dc.l 320
 
+; Mode2 draw routine
+; Full scaling
+drtsk_gm2:
+		mov	#Cach_Ycurr,r1
+		mov	@r1,r1
+		shlr16	r1
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		muls	r1,r0
+		sts	macl,r1
+		mov	@(marsGbl_Bg_FbCurrR,gbr),r0
+		mov	r0,r9
+		mov	@(marsGbl_BgData,gbr),r0
+		mov	r0,r8
+		add	r1,r8
+		mov	#Cach_Xpos,r1
+		mov 	@r1,r7
+		mov.w	@(marsGbl_BgWidth,gbr),r0
+		mov	r0,r6
+		mov	#-2,r0
+		and	r0,r7
+		and	r0,r6
+		shll16	r7
+		shll16	r6
+		mov	#Cach_Xadd,r4
+		mov	@r4,r4
+		and	r0,r4
+		shll	r4		; shift by size
+		xor	r5,r5
+		mov	#20,r2
+.x_next:
+	rept 8
+		cmp/ge	r6,r7
+		bf	.lowr
+		sub	r6,r7
+.lowr:
+		mov	r7,r1
+		shlr16	r1
+		add	r8,r1
+; 		mov.b	@r1,r0
+; 		and	#$FF,r0
+; 		mov	r0,r5
+; 		shll8	r5
+; 		or	r0,r5
+; 		shll8	r5
+; 		or	r0,r5
+; 		shll8	r5
+; 		or	r0,r5
+; 		mov	r5,@r9
+		mov.w	@r1,r0
+		mov.w	r0,@r9
+		add	#2,r9
+		add	r4,r7
+	endm
+		dt	r2
+		bt	.x_ex
+		bra	.x_next
+		nop
+.x_ex:
+		mov	#$200,r1
+		mov	@(marsGbl_Bg_FbCurrR,gbr),r0
+		add	r1,r0
+		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
+
+		mov.w	@(marsGbl_BgHeight,gbr),r0
+		mov	r0,r3
+		shll16	r3
+		mov	#Cach_Yadd,r2
+		mov	@r2,r2
+; 		shll	r2
+		mov	#Cach_Ycurr,r1
+		mov	@r1,r0
+		add	r2,r0
+		cmp/ge	r3,r0
+		bf	.ylarge
+		sub	r3,r0
+.ylarge:
+		mov	r0,@r1
+		bra	dtsk01_exit
+		nop
+		align 4
+
+; Mode1 continued
 dtsk01_lrdraw:
-	rept (MSCRL_BLKSIZE>>2)
+		mov	#MSCRL_BLKSIZE/4,r9
+		mov	r9,r8
+.xline:
 		cmp/ge	r3,r1
 		bf	.toomx
 		mov	r2,r1
@@ -159,22 +255,24 @@ dtsk01_lrdraw:
 		mov	@r1+,r0
 		mov	r0,@r7
 		add	#4,r7
-	endm
+		dt	r9
+		bf	.xline
 
 	; *** Last line only ***
 	; r6 - flag
 	; r5 - BG in / r4 - FB out
 		cmp/pl	r6
 		bf	.not_ln0
-	rept (MSCRL_BLKSIZE>>2)
+.hxline:
 		cmp/ge	r3,r5
-		bf	.toomx
+		bf	.toomx2
 		mov	r2,r5
-.toomx:
+.toomx2:
 		mov	@r5+,r0
 		mov	r0,@r4
 		add	#4,r4
-	endm
+		dt	r8
+		bf	.hxline
 .not_ln0:
 		mov	#Cach_YRead_LR,r1
 		mov	@(marsGbl_BgData,gbr),r0
@@ -209,6 +307,7 @@ dtsk01_lrdraw:
 .fbmuch:
 		mov	r0,@r3
 
+
 dtsk01_exit:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
@@ -234,7 +333,6 @@ dtsk01_exit:
 		bt	tsk00_gonext
 		dt	r0
 		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
-
 tsk00_gonext:
 		mov	#2,r0			; If finished: Set task $02
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
@@ -251,212 +349,15 @@ tsk00_exit:
 		rts
 		nop
 		align 4
-; 		ltorg
-
-; --------------------------------
-; Up/Down drawing
-;
-; (Called on mainloop)
-; --------------------------------
-
-CachJmp_DrwUpDown:
-; 	; **** Up/Down draw check
-; 		mov	@(marsGbl_BgData,gbr),r0
-; 		mov	r0,r11
-; 		mov	r0,r12
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		mov	r0,r1
-; 		mov.w	@(marsGbl_BgHeight,gbr),r0
-; 		mulu	r1,r0
-; 		sts	macl,r0
-; 		add	r0,r12
-; 		mov	#-MSCRL_BLKSIZE,r6
-; 		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
-; 		cmp/eq	#0,r0
-; 		bf	.tsk00_down
-; 		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
-; 		cmp/eq	#0,r0
-; 		bf	.tsk00_up
-; 		bra	drw_ud_exit
-; 		nop
-;
-; 	; r2 - Start bg line
-; 	; r3 - End bg line
-; 	; r6 - Y current
-; 	; r5 - FB current base
-; .tsk00_down:
-; 		dt	r0
-; 		mov.w	r0,@(marsGbl_Bg_DrwReqD,gbr)
-;
-; 		mov	#Cach_YHead_D,r2
-; 		mov	@r2,r2
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		muls	r0,r2
-; 		sts	macl,r2
-; 		mov	@(marsGbl_BgData,gbr),r0
-; 		add	r0,r2
-; 		mov	r2,r3
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		add	r0,r3
-; 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
-; 		and	r6,r0
-; 		mov	r0,r5
-; 		mov	#Cach_BgFbPos_D,r0
-; 		mov	@r0,r0
-; 		bra	.drwy_go
-; 		mov	r0,r6
-;
-; .tsk00_up:
-; 		dt	r0
-; 		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
-;
-; 		mov	#Cach_YHead_U,r2
-; 		mov	@r2,r2
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		muls	r0,r2
-; 		sts	macl,r2
-; 		mov	@(marsGbl_BgData,gbr),r0
-; 		add	r0,r2
-; 		mov	r2,r3
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		add	r0,r3
-; 		mov	@(marsGbl_Bg_YbgXBase,gbr),r0
-; 		and	r6,r0
-; 		mov	r0,r5
-; 		mov	#Cach_BgFbPos_U,r0
-; 		mov	@r0,r0
-; 		mov	r0,r6
-;
-; .drwy_go:
-; 		mov	#MSCRL_BLKSIZE,r8
-; .rept_y:
-; 		cmp/ge	r12,r2
-; 		bf	.ybgend
-; 		mov	r11,r2
-; 		mov	r11,r3
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		add	r0,r3
-; .ybgend:
-;
-; 		mov	r2,r1		; r1 - bg pixel data
-; 		mov	#-MSCRL_BLKSIZE,r7
-; 		mov	#Cach_XHead_L,r0
-; 		mov	@r0,r0
-; 		and	r7,r0
-; 		add	r0,r1
-;
-; 		mov	r5,r4		; r4 - X
-; 		mov	r6,r0
-; 		mov	#MSCRL_WIDTH,r7
-; 		mulu	r7,r0
-; 		sts	macl,r0
-; ; 		shll8	r0
-; ; 		shll	r0
-; 		add	r0,r4		; X + Y
-; 		mov	#(MSCRL_WIDTH)/4,r7
-;
-;
-; .rept_x:
-; 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
-; 		cmp/ge	r0,r4
-; 		bf	.res_x
-; 		sub	r0,r4
-; .res_x:
-; 		cmp/ge	r3,r1
-; 		bf	.xlon1
-; 		mov	r2,r1
-; .xlon1:
-; 		mov	@r1+,r10
-;
-; 		mov	r4,r9
-; 		mov	#_framebuffer+$200,r0
-; 		add	r0,r9
-; 		mov	#320,r0
-; 		cmp/gt	r0,r4
-; 		bt	.not_l2
-; 		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r0
-; 		add	r4,r0
-; 		mov	r10,@r0
-; .not_l2:
-; 		mov	r10,@r9
-; 		dt	r7
-; 		bf/s	.rept_x
-; 		add	#4,r4
-;
-; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; 		add	r0,r2
-; 		add	r0,r3
-; 	if MSCRL_HEIGHT=256
-; 		mov	r6,r0
-; 		add	#1,r0
-; 		and	#$FF,r0
-; 		mov	r0,r6
-; 	else
-; 		mov	#MSCRL_HEIGHT,r0
-; 		add	#1,r6
-; 		cmp/gt	r0,r6
-; 		bf	.rdhlow
-; 		sub	r0,r6
-; .rdhlow:
-; 	endif
-; 		dt	r8
-; 		bf	.rept_y
-; drw_ud_exit:
-		rts
-		nop
-		align 4
 		ltorg
-
-; ; --------------------------------
-; ; Task $03
-; ; --------------------------------
-;
-; drwtsk_03:
-; 		mov	r2,@-r15
-; 		mov.w	@(marsGbl_DrwPause,gbr),r0
-; 		cmp/eq	#1,r0
-; 		bt	.exit
-; 		mov	r3,@-r15
-; 		mov	r4,@-r15
-; 		mov	r5,@-r15
-; 		mov	r6,@-r15
-; 		mov	r7,@-r15
-; 		mov	r8,@-r15
-; 		mov	r9,@-r15
-; 		mov	r10,@-r15
-; 		mov	r11,@-r15
-; 		mov	r12,@-r15
-; 		mov	r13,@-r15
-; 		mov	r14,@-r15
-; 		sts	macl,@-r15
-; 		sts	mach,@-r15
-; 		mov	#Cach_LnDrw_L,r0
-; 		mov	@r0+,r14
-; 		mov	@r0+,r13
-; 		mov	@r0+,r12
-; 		mov	@r0+,r11
-; 		mov	@r0+,r10
-; 		mov	@r0+,r9
-; 		mov	@r0+,r8
-; 		mov	@r0+,r7
-; 		mov	@r0+,r6
-; 		mov	@r0+,r5
-; 		mov	@r0+,r4
-; 		mov	@r0+,r3
-; 		mov	@r0+,r2
-; 		mov	@r0+,r1
-; 		mov	#1,r0
-; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
-; 		bra	drwsld_updline
-; 		nop
-; .exit:		bra	drwtask_exit
-; 		mov	#$10,r2
-; 		align 4
 
 ; --------------------------------
 ; Task $02
 ; --------------------------------
 
+; TODO: a "not using polygons" flag.
+
+; enters-and-exits until marsGbl_PzListCntr != 0
 drwtsk_02:
 		mov	r2,@-r15
 		mov.w	@(marsGbl_DrwPause,gbr),r0
@@ -465,8 +366,8 @@ drwtsk_02:
 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
@@ -663,7 +564,23 @@ drwsld_nxtline_tex:
 ; .testlwrit:
 
 	; TODO: a check for the hidden line
-		mov	#RAM_Mars_Linescroll,r10
+		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+		mov	#MSCRL_WIDTH,r10
+		mulu	r10,r0
+		sts	macl,r10
+		mov	@(marsGbl_Bg_FbBase,gbr),r0
+		add	r10,r0
+; 		mov	#-4,r10
+; 		and	r10,r0
+		mov	r0,r10
+		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
+		cmp/ge	r0,r10
+		bf	.fbbaset
+		sub	r0,r10
+.fbbaset:
+; 		mov	#RAM_Mars_Linescroll,r10
+; 		mov	@r10,r10
+
 	if MSCRL_WIDTH=256
 		shll8	r9
 		shll	r9
@@ -672,7 +589,6 @@ drwsld_nxtline_tex:
 		muls	r9,r0
 		sts	macl,r9
 	endif
-		mov	@r10,r10
 		add	r9,r10
 		add 	r11,r10				; Add X
 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
@@ -715,9 +631,9 @@ drwsld_nxtline_tex:
 		add	r13,r0
 		and	#$FF,r0
 		mov.b	r0,@r10	   			; Write pixels
-		add 	#1,r10
 		dt	r12
-		bf	.tex_xloop
+		bf/s	.tex_xloop
+		add 	#1,r10
 
 .tex_skip_line:
 		mov	@r15+,r13
@@ -945,9 +861,59 @@ drwtask_exit:
 		align 4
 		ltorg
 
+; ; --------------------------------
+; ; Task $03
+; ; --------------------------------
+;
+; drwtsk_03:
+; 		mov	r2,@-r15
+; 		mov.w	@(marsGbl_DrwPause,gbr),r0
+; 		cmp/eq	#1,r0
+; 		bt	.exit
+; 		mov	r3,@-r15
+; 		mov	r4,@-r15
+; 		mov	r5,@-r15
+; 		mov	r6,@-r15
+; 		mov	r7,@-r15
+; 		mov	r8,@-r15
+; 		mov	r9,@-r15
+; 		mov	r10,@-r15
+; 		mov	r11,@-r15
+; 		mov	r12,@-r15
+; 		mov	r13,@-r15
+; 		mov	r14,@-r15
+; 		sts	macl,@-r15
+; 		sts	mach,@-r15
+; 		mov	#Cach_LnDrw_L,r0
+; 		mov	@r0+,r14
+; 		mov	@r0+,r13
+; 		mov	@r0+,r12
+; 		mov	@r0+,r11
+; 		mov	@r0+,r10
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+; 		mov	@r0+,r7
+; 		mov	@r0+,r6
+; 		mov	@r0+,r5
+; 		mov	@r0+,r4
+; 		mov	@r0+,r3
+; 		mov	@r0+,r2
+; 		mov	@r0+,r1
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+; 		bra	drwsld_updline
+; 		nop
+; .exit:		bra	drwtask_exit
+; 		mov	#$10,r2
+; 		align 4
+
 ; ------------------------------------------------
 
 		align 4
+Cach_Xpos	ds.l 1
+Cach_Xadd	ds.l 1
+Cach_Yadd	ds.l 1
+Cach_Ycurr	ds.l 1
 Cach_XHead_L	ds.l 1			; Left draw beam
 Cach_XHead_R	ds.l 1			; Right draw beam
 Cach_YHead_D	ds.l 1			; Bottom draw beam
@@ -958,10 +924,9 @@ Cach_XHead_UD	ds.l 1
 Cach_BgFbPosLR	ds.l 1			; (L/R) Current Y FB position (updates)
 Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos
 Cach_BgFbPos_D	ds.l 1			; (U/D) Lower Y FB pos
-
 Cach_LR_Lines	ds.l 1			; (L/R) X Lines to process
 Cach_UD_Lines	ds.l 1			; (U/D) Y Lines to process
-
+Cach_Md2_Lines	ds.l 1
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2

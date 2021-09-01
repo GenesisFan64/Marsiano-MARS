@@ -633,216 +633,42 @@ put_piece:
 		align 4
 		ltorg
 
-; ; ------------------------------------------------
-; ; Refill screen.
-; ; ------------------------------------------------
+; ; ------------------------------------
+; ; MarsVideo_ClearFrame
+; ;
+; ; Clear the current framebuffer
+; ; ------------------------------------
 ;
-; MarsVideo_Refill:
-; 		mov	r2,@-r15
-; 		mov	r3,@-r15
-; 		mov	r4,@-r15
-; 		mov	r5,@-r15
-; 		mov	r6,@-r15
-; 		sts	macl,@-r15
-; ; 		mov	#_vdpreg,r1
-; ; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
-; ; 		tst     #2,r0
-; ; 		bf      .wait_fb
-; ;
-; ; 		mov	.tag_Cach_Redraw,r1
-; ; 		mov 	@r1,r0
-; ; 		cmp/eq	#0,r0
-; ; 		bt	.g_exitthis
-; ; 		mov	@(marsGbl_Bg_Xinc,gbr),r0
-; ; ; 		shlr8	r0
-; ; 		shll2	r0
-; ; 		mov	r0,r6
-; ; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; ; 		mov	r0,r2
-; ; 		mov	.tag_Cach_CurrY,r0
-; ; 		mov	@r0,r0
-; ; 		shlr8	r0
-; ; 		exts.w	r0,r0
-; ; 		muls	r0,r2
-; ; 		sts	macl,r5
-; ; 		mov	@(marsGbl_BgData_R,gbr),r0
-; ; 		add	r5,r0
-; ;
-; ; 		mov	r0,r5
-; ; 		mov	r0,r4
-; ; 		mov	r0,r3
-; ; 		add	r2,r3
-; ; 		mov	#-4,r1
-; ; 		mov	.tag_Cach_XHead,r0
-; ; 		mov	@r0,r0
-; ; 		and	r1,r0
-; ; 		and	r1,r5
-; ; 		and	r1,r4
-; ; 		and	r1,r3
-; ; 		add	r0,r5
-; ; ; 		shll8	r5
-; ; ; 		shll8	r4
-; ; ; 		shll8	r3
-; ; ; 		mov	.tag_CS1,r1
-; ; 		mov	@(marsGbl_BgFbPos_R,gbr),r0
-; ; 		bra	.blast_me
-; ; 		mov	r0,r2
-; ; .g_exitthis:
-; ; 		bra	.exitthis
-; ; 		nop
-; ; 		align 4
-; ; .tag_Cach_CurrY	dc.l Cach_CurrY
-; ; .tag_Cach_XHead	dc.l Cach_XHead
-; ; .tag_CS1	dc.l CS1
-; ; .tag_Cach_Redraw
-; ; 		dc.l Cach_Redraw
-; ;
-; ; ; Blast ALL the pixels.
-; ; .blast_me:
-; ;
-; ; ; 	NORMAL
-; ; 	rept 16*5
-; ; 		cmp/ge	r3,r5
-; ; 		bf	.lel2r
-; ; 		mov	r4,r5
-; ; .lel2r:
-; ; 		mov	@r5+,r0
-; ; 		mov	r0,@r2
-; ; 		add	#4,r2
-; ; 	endm
-; ; 	rept 2
-; ; 		cmp/ge	r3,r5		; last 4 bytes
-; ; 		bf	.lel2r
-; ; 		mov	r4,r5
-; ; .lel2r:
-; ; 		mov	@r5+,r0
-; ; 		mov	r0,@r2
-; ; 		add	#4,r2
-; ; 	endm
-; ;
-; ; ; 	SCALED
-; ; ; 	rept 16*5
-; ; ; 		cmp/ge	r3,r5
-; ; ; 		bf	.lel2r
-; ; ; 		mov	r4,r5
-; ; ; .lel2r:
-; ; ; 		mov	r5,r0
-; ; ; 		shlr8	r0
-; ; ; 		or	r1,r0
-; ; ; 		mov	@r0,r0
-; ; ; 		mov	r0,@r2
-; ; ; 		add	#4,r2
-; ; ; 		add	r6,r5
-; ; ; 	endm
-; ; ; 		cmp/ge	r3,r5
-; ; ; 		bf	.lel3r
-; ; ; 		mov	r4,r5
-; ; ; .lel3r:
-; ; ; 		mov	r5,r0
-; ; ; 		shlr8	r0
-; ; ; 		or	r1,r0
-; ; ; 		mov	@r0,r0
-; ; ; 		mov	r0,@r2
-; ; ; 		add	#4,r2
-; ; ; 		add	r6,r5
-; ;
-; ; 	; Next Y
-; ; 		mov	#Cach_CurrY,r1
-; ; 		mov	@(marsGbl_BgData,gbr),r0
-; ; 		mov	r0,r2
-; ; 		mov.w	@(marsGbl_BgHeight,gbr),r0
-; ; 		mov	r0,r3
-; ; 		shll8	r3
-; ; 		mov	@(marsGbl_Bg_Yinc,gbr),r0
-; ; 		mov	r0,r4
-; ; 		mov	@(marsGbl_BgData_R,gbr),r0
-; ; 		mov	r0,r5
-; ; 		mov.w	@(marsGbl_BgWidth,gbr),r0
-; ; 		add	r0,r5
-; ; 		mov	@r1,r0
-; ; 		add	r4,r0
-; ; 		cmp/ge	r3,r0
-; ; 		bf	.lel2
-; ; 		xor	r0,r0
-; ; .lel2:
-; ; 		mov	r0,@r1
-; ; 		mov	@(marsGbl_BgFbPos_R,gbr),r0
-; ; 		mov	#$200,r5
-; ; 		add	r5,r0
-; ; 		mov	r0,@(marsGbl_BgFbPos_R,gbr)
+; MarsVideo_ClearFrame:
+; 		mov	#_vdpreg,r1
+; .wait2		mov.w	@(10,r1),r0		; Wait for FEN to clear
+; 		and	#%10,r0
+; 		cmp/eq	#2,r0
+; 		bt	.wait2
 ;
-; ; .exitthis:
-; 		mov.l   #$FFFFFE80,r1
-; 		mov.w   #$A518,r0		; OFF
-; 		mov.w   r0,@r1
-; 		or      #$20,r0			; ON
-; 		mov.w   r0,@r1
-; 		mov.w   #$5A10,r0		; Timer before next watchdog
-; 		mov.w   r0,@r1
-; 		mov	#Cach_ClrLines,r1	; Decrement a line to progress
-; 		mov	@r1,r0
-; 		dt	r0
-; 		bf/s	.on_clr
-; 		mov	r0,@r1
+; 		mov	#255,r2			; r2 - lenght: 256 words per pass
+; 		mov	#$200/2,r3		; r3 - Start address / 2
+; 		mov	#0,r4			; r4 - data (zero)
+; 		mov	#256,r5			; Increment address by 256
+; 		mov	#((512*240)/256)/2,r6	; 140 passes
+; .loop
+; 		mov	r2,r0
+; 		mov.w	r0,@(4,r1)		; Set length
+; 		mov	r3,r0
+; 		mov.w	r0,@(6,r1)		; Set address
+; 		mov	r4,r0
+; 		mov.w	r0,@(8,r1)		; Set data
+; 		add	r5,r3
 ;
-; 		mov	#Cach_Redraw,r1
-; 		mov	@r1,r0
-; 		cmp/eq	#0,r0
-; 		bt	.iszero
-; 		add	#-1,r0
-; 		mov	r0,@r1
-; .iszero:
-; 		mov	#2,r0			; If finished: Set task $02
-; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
-; .on_clr:
-;
-; 		lds	@r15+,macl
-; 		mov	@r15+,r6
-; 		mov	@r15+,r5
-; 		mov	@r15+,r4
-; 		mov	@r15+,r3
-; 		mov	@r15+,r2
+; .wait		mov.w	@(10,r1),r0		; Wait for FEN to clear
+; 		and	#%10,r0
+; 		cmp/eq	#2,r0
+; 		bt	.wait
+; 		dt	r6
+; 		bf	.loop
 ; 		rts
 ; 		nop
-; 		ltorg
 ; 		align 4
-
-; ------------------------------------
-; MarsVideo_ClearFrame
-;
-; Clear the current framebuffer
-; ------------------------------------
-
-MarsVideo_ClearFrame:
-		mov	#_vdpreg,r1
-.wait2		mov.w	@(10,r1),r0		; Wait for FEN to clear
-		and	#%10,r0
-		cmp/eq	#2,r0
-		bt	.wait2
-
-		mov	#255,r2			; r2 - lenght: 256 words per pass
-		mov	#$200/2,r3		; r3 - Start address / 2
-		mov	#0,r4			; r4 - data (zero)
-		mov	#256,r5			; Increment address by 256
-		mov	#((512*240)/256)/2,r6	; 140 passes
-.loop
-		mov	r2,r0
-		mov.w	r0,@(4,r1)		; Set length
-		mov	r3,r0
-		mov.w	r0,@(6,r1)		; Set address
-		mov	r4,r0
-		mov.w	r0,@(8,r1)		; Set data
-		add	r5,r3
-
-.wait		mov.w	@(10,r1),r0		; Wait for FEN to clear
-		and	#%10,r0
-		cmp/eq	#2,r0
-		bt	.wait
-		dt	r6
-		bf	.loop
-		rts
-		nop
-		align 4
 
 ; ------------------------------------
 ; MarsVideo_FrameSwap
@@ -868,47 +694,8 @@ MarsVideo_ClearFrame:
 ; 		nop
 ; 		align 4
 
-; ------------------------------------
-; MarsVdp_LoadPal
-;
-; Load palette to RAM
-; then the Palette will be transfered
-; on VBlank
-;
-; Input:
-; r1 - Palette data
-; r2 - Start index
-; r3 - Number of colors
-; r4 - OR value ($0000 or $8000)
-;
-; Uses:
-; r0,r4-r6
-; ------------------------------------
-
-; MarsVideo_TempDraw:
-; 		mov	#RAM_Mars_Background,r0
-; 		mov	r0,@(marsGbl_BgData,gbr)
-;
-; 		mov	#RAM_Mars_Background,r2
-; 		mov	#(336*232)/4,r3
-; .wvm2:
-; 		mov.l	@r1+,r0
-; 		mov.l	r0,@r2
-; 		add	#4,r2
-; 		dt	r3
-; 		bf	.wvm2
-; 		rts
-; 		nop
-; 		align 4
-
 ; TODO: improve this
 MarsVideo_DrawAllBg:
-
-
-; 		mov	#_vdpreg,r1
-; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
-; 		tst     #2,r0
-; 		bf      .wait_fb
 		mov	#-2,r4
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,r8
@@ -928,25 +715,6 @@ MarsVideo_DrawAllBg:
 		add	r0,r3
 		mov	#_framebuffer+$200,r5
 		mov	#MSCRL_HEIGHT,r7
-
-	; ex line
-; 		mov	#RAM_Mars_Line0_Data,r8
-; 		mov	#320/4,r6
-; 		mov	r2,r1
-; .y_ex:
-; 		cmp/ge	r3,r1
-; 		bf	.nolm_e
-; 		mov	r2,r1
-; .nolm_e:
-; 		mov	@r1+,r0
-; 		mov	r0,@r8
-; 		add	#4,r8
-; 		dt	r6
-; 		bf	.y_ex
-; ; 		mov	#2,r0
-; ; 		mov.w	r0,@(marsGbl_Bg_DrwLine0,gbr)
-; 		mov	r2,r1
-
 .y_next:
 		mov	r5,r4
 		mov	#(MSCRL_WIDTH)/4,r6
@@ -1121,11 +889,40 @@ MarsVideo_SetWatchdog:
 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
 
 	; Vars that require reset
+		mov	#MSCRL_HEIGHT,r2
+		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+		and	#$7F,r0
+		cmp/eq	#1,r0
+		bt	.mde1
+		mov	#224,r2
+.mde1:
 		mov	#Cach_LR_Lines,r1		; L/R lines to process
-		mov	#MSCRL_HEIGHT,r0
+		mov	r2,@r1
+; 		mov	#Cach_Md2_Lines,r1		; L/R lines to process
+; 		mov	#MSCRL_HEIGHT,r0
+; 		mov	r0,@r1
+
+; 		mov	#Cach_UD_Lines,r1		; U/D lines to process
+; 		mov	#MSCRL_BLKSIZE,r0
+; 		mov	r0,@r1
+
+	; Mode2
+		mov	#_framebuffer+$200,r0
+		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
+		mov	#Cach_Xadd,r1
+		mov	#Cach_Yadd,r2
+		mov.w	@(marsGbl_Bg_Xscale,gbr),r0
+		shll8	r0
 		mov	r0,@r1
-		mov	#Cach_UD_Lines,r1		; U/D lines to process
-		mov	#MSCRL_BLKSIZE,r0
+		mov.w	@(marsGbl_Bg_Yscale,gbr),r0
+		shll8	r0
+		mov	r0,@r2
+		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		mov	#Cach_Xpos,r1
+		mov	r0,@r1
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		shll16	r0
+		mov	#Cach_Ycurr,r1
 		mov	r0,@r1
 
 	; X draw settings

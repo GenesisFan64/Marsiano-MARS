@@ -171,58 +171,79 @@ thisCode_Top:
 
 		move.w	#$0000,(sysmars_reg+comm0)
 		move.w	#$0000,(sysmars_reg+comm2)
-; 		move.w	#$0100,(sysmars_reg+comm4)
-; 		move.w	#$0100,(sysmars_reg+comm6)
+		move.w	#$0100,(sysmars_reg+comm4)
+		move.w	#$0100,(sysmars_reg+comm6)
 		move.w	#"GO",(sysmars_reg+comm14)
 
 ; Mode 0 mainloop
 .mode0_loop:
+; 		moveq	#0,d0
+; 		move.w	(Controller_1+on_hold),d7
+; 		move.w	d7,d6
+; 		and.w	#JoyY,d6
+; 		beq.s	.no_x
+; 		move.w	#-1,d0
+; .no_x:
+; 		move.w	d7,d6
+; 		and.w	#JoyZ,d6
+; 		beq.s	.no_y
+; 		move.w	#1,d0
+; .no_y:
+; 		move.w	(sysmars_reg+comm0).l,d4
+; 		add	d0,d4
+; 		move.w	d4,(sysmars_reg+comm0).l
+
 		moveq	#0,d0
 		moveq	#0,d1
-
-; 		move.b	(sysmars_reg+comm14).l,d7
-; 		tst.b	d7
-; 		bne	.busy_mstr
-		move.w	(Controller_1+on_press),d7
-		move.w	d7,d6
-		and.w	#JoyY,d6
-		beq.s	.no_x
-; 		sub.w	#1,(RAM_BgCamCurr).l
-		move.w	#-1,d0
-.no_x:
-		move.w	d7,d6
-		and.w	#JoyZ,d6
-		beq.s	.no_y
-; 		add.w	#1,(RAM_BgCamCurr).l
-		move.w	#1,d0
-.no_y:
-
-
-		move.w	(Controller_1+on_hold),d7
+		move.w	(Controller_2+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		move.w	#-4,d1
+		move.l	#-4,d1
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		move.w	#4,d1
+		move.l	#4,d1
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-; 		sub.w	#3,(RAM_BgCamCurr).l
-		move.w	#-4,d0
+		move.l	#-4,d0
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-; 		add.w	#3,(RAM_BgCamCurr).l
-		move.w	#4,d0
+		move.l	#4,d0
 .no_rf:
-; 		move.b	(sysmars_reg+comm14).l,d7
-; 		tst.b	d7
-; 		bne.s	.busy
-		move.w	d0,(sysmars_reg+comm0).l
-		move.w	d1,(sysmars_reg+comm2).l
-.busy:
+		move.w	(sysmars_reg+comm4).l,d4
+		add	d0,d4
+		move.w	d4,(sysmars_reg+comm4).l
+		move.w	(sysmars_reg+comm6).l,d4
+		add	d1,d4
+		move.w	d4,(sysmars_reg+comm6).l
+
+		moveq	#0,d0
+		moveq	#0,d1
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyUp,d7
+		beq.s	.no2_up
+		move.l	#-4,d1
+.no2_up:
+		btst	#bitJoyDown,d7
+		beq.s	.no2_dw
+		move.l	#4,d1
+.no2_dw:
+		btst	#bitJoyLeft,d7
+		beq.s	.no2_lf
+		move.l	#-4,d0
+.no2_lf:
+		btst	#bitJoyRight,d7
+		beq.s	.no2_rf
+		move.l	#4,d0
+.no2_rf:
+		move.w	(sysmars_reg+comm0).l,d4
+		add	d0,d4
+		move.w	d4,(sysmars_reg+comm0).l
+		move.w	(sysmars_reg+comm2).l,d4
+		add	d1,d4
+		move.w	d4,(sysmars_reg+comm2).l
 
 ; 		move.w	(Controller_2+on_hold),d7
 ; 		btst	#bitJoyUp,d7
