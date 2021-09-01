@@ -963,6 +963,8 @@ SH2_M_HotStart:
 		nop
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
+		mov	#2,r0
+		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 
 ; --------------------------------------------------------
 ; MASTER Loop
@@ -1022,8 +1024,8 @@ mstr_gfx1:
 		mov	r0,@(marsGbl_BgArea_Size,gbr)
 
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#640,r2
-		mov	#480,r3
+		mov	#320,r2
+		mov	#240,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -1165,18 +1167,25 @@ gfxmd1_step2:
 
 		mov	#0,r1				; X/Y reset
 		mov	#0,r2
-		mov.w	@(marsGbl_MstrReqDraw,gbr),r0	; Draw request?
-		cmp/eq	#0,r0
-		bt	.no_scrldata
+; 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0	; Draw request?
+; 		cmp/eq	#0,r0
+; 		bt	.no_scrldata
 		mov	@(marsGbl_BgData,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_scrldata
 
-	; Small COMM
+; 	; Small COMM
+; 		mov 	#_sysreg+comm12,r6
+; 		mov.w	@r1,r0
+; 		add	#1,r0
+; 		mov.w	r0,@r1
+
  		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		mov	r0,r2				; Get OLD X value
  		mov 	#_sysreg+comm0,r5
  		mov.w	@r5,r1
+ 		nop
+ 		nop
  		mov.w	@(2,r5),r0
  		mov	r0,@(marsGbl_Bg_Ypos,gbr)
  		mov	r1,r0
@@ -1190,14 +1199,10 @@ gfxmd1_step2:
 		bsr	mstr_setreq1
 		nop
 	; DEBUG
-; 		mov 	#_sysreg+comm4,r5
-; 		mov	#RAM_Mars_Linescroll,r0
-; 		mov	@r0,r0
-; 		shlr	r0
-; 		mov.w	r0,@r5
-; 		mov	#_vdpreg+shift,r4
-; 		mov.w	@r4,r0
-; 		mov.w	r0,@(2,r5)
+		mov 	#_sysreg+comm8,r5
+		mov	#_vdpreg+shift,r4
+		mov.w	@r4,r0
+		mov.w	r0,@r5
 .no_scrldata:
 
 	; ---------------------------------------
@@ -1503,8 +1508,8 @@ mstr_gfx2:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgMd2_InitLtbl,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#640,r2
-		mov	#480,r3
+		mov	#320,r2
+		mov	#240,r3
 		mov	#$00010000,r4
 		mov	#$00010000,r5
 		bsr	MarsVideo_SetBg
@@ -2417,104 +2422,109 @@ SH2_S_HotStart:
 		mov.w	r0,@r1
 
 	; TEMPORAL polygon
-		mov	#this_polygon,r0
-		mov 	#RAM_Mars_Plgn_ZList_0,r14
-		mov	#RAM_Mars_PlgnNum_0,r13
-		mov	r0,@r14
-		mov	r0,@(8,r14)
-		mov	r0,@($10,r14)
-		mov	r0,@($18,r14)
-		mov	#1,r0			; enable test polygon
-		mov.w	r0,@r13
-		mov	#this_polygon,r0
-		mov 	#RAM_Mars_Plgn_ZList_1,r14
-		mov	#RAM_Mars_PlgnNum_1,r13
-		mov	r0,@r14
-		mov	r0,@(8,r14)
-		mov	r0,@($10,r14)
-		mov	r0,@($18,r14)
-		mov	#1,r0			; enable test polygon
-		mov.w	r0,@r13
+; 		mov	#this_polygon,r0
+; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
+; 		mov	#RAM_Mars_PlgnNum_0,r13
+; 		mov	r0,@r14
+; 		mov	r0,@(8,r14)
+; 		mov	r0,@($10,r14)
+; 		mov	r0,@($18,r14)
+; 		mov	#1,r0			; enable test polygon
+; 		mov.w	r0,@r13
+; 		mov	#this_polygon,r0
+; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
+; 		mov	#RAM_Mars_PlgnNum_1,r13
+; 		mov	r0,@r14
+; 		mov	r0,@(8,r14)
+; 		mov	r0,@($10,r14)
+; 		mov	r0,@($18,r14)
+; 		mov	#1,r0			; enable test polygon
+; 		mov.w	r0,@r13
 
 ; 		mov	#_sysreg+comm0,r1
 ; 		mov	#1,r0
 ; 		mov.w	r0,@r1
 ; 		mov.w	r0,@(2,r1)
 
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 		mov	#-1,r14
 slave_loop:
-		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
-		cmp/eq	#1,r0
-		bt	.wait_drw
+		mov	#_sysreg+comm10,r1
+		mov.w	@r1,r0
+		add	#1,r0
+		mov.w	r0,@r1
 
-	; Polygon interaction
-	mov	#30*65536,r5
-	mov	#-30*65536,r6
-	mov	#rot_angle,r7
-	bsr	Rotate_Point
-	mov	@r7,r7
-	mov	#dest_data,r2
-	shlr16	r0
-	exts.w	r0,r0
-	mov.w	r0,@r2
-	shlr16	r1
-	exts.w	r1,r1
-	mov	r1,r0
-	mov.w	r0,@(2,r2)
-
-	mov	#-30*65536,r5
-	mov	#-30*65536,r6
-	mov	#rot_angle,r7
-	bsr	Rotate_Point
-	mov	@r7,r7
-	mov	#dest_data+4,r2
-	shlr16	r0
-	exts.w	r0,r0
-	mov.w	r0,@r2
-	shlr16	r1
-	exts.w	r1,r1
-	mov	r1,r0
-	mov.w	r0,@(2,r2)
-
-	mov	#-30*65536,r5
-	mov	#30*65536,r6
-	mov	#rot_angle,r7
-	bsr	Rotate_Point
-	mov	@r7,r7
-	mov	#dest_data+8,r2
-	shlr16	r0
-	exts.w	r0,r0
-	mov.w	r0,@r2
-	shlr16	r1
-	exts.w	r1,r1
-	mov	r1,r0
-	mov.w	r0,@(2,r2)
-
-	mov	#30*65536,r5
-	mov	#30*65536,r6
-	mov	#rot_angle,r7
-	bsr	Rotate_Point
-	mov	@r7,r7
-	mov	#dest_data+$C,r2
-	shlr16	r0
-	exts.w	r0,r0
-	mov.w	r0,@r2
-	shlr16	r1
-	exts.w	r1,r1
-	mov	r1,r0
-	mov.w	r0,@(2,r2)
-
-	mov	#rot_angle,r0
-	mov	@r0,r1
-	add	#4,r1
-	mov	#2047,r2
-	and	r2,r1
-	mov	r1,@r0
-
-		mov.w	#1,r0
-		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
+; 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
+; 		cmp/eq	#1,r0
+; 		bt	.wait_drw
+;
+; 	; Polygon interaction
+; 	mov	#30*65536,r5
+; 	mov	#-30*65536,r6
+; 	mov	#rot_angle,r7
+; 	bsr	Rotate_Point
+; 	mov	@r7,r7
+; 	mov	#dest_data,r2
+; 	shlr16	r0
+; 	exts.w	r0,r0
+; 	mov.w	r0,@r2
+; 	shlr16	r1
+; 	exts.w	r1,r1
+; 	mov	r1,r0
+; 	mov.w	r0,@(2,r2)
+;
+; 	mov	#-30*65536,r5
+; 	mov	#-30*65536,r6
+; 	mov	#rot_angle,r7
+; 	bsr	Rotate_Point
+; 	mov	@r7,r7
+; 	mov	#dest_data+4,r2
+; 	shlr16	r0
+; 	exts.w	r0,r0
+; 	mov.w	r0,@r2
+; 	shlr16	r1
+; 	exts.w	r1,r1
+; 	mov	r1,r0
+; 	mov.w	r0,@(2,r2)
+;
+; 	mov	#-30*65536,r5
+; 	mov	#30*65536,r6
+; 	mov	#rot_angle,r7
+; 	bsr	Rotate_Point
+; 	mov	@r7,r7
+; 	mov	#dest_data+8,r2
+; 	shlr16	r0
+; 	exts.w	r0,r0
+; 	mov.w	r0,@r2
+; 	shlr16	r1
+; 	exts.w	r1,r1
+; 	mov	r1,r0
+; 	mov.w	r0,@(2,r2)
+;
+; 	mov	#30*65536,r5
+; 	mov	#30*65536,r6
+; 	mov	#rot_angle,r7
+; 	bsr	Rotate_Point
+; 	mov	@r7,r7
+; 	mov	#dest_data+$C,r2
+; 	shlr16	r0
+; 	exts.w	r0,r0
+; 	mov.w	r0,@r2
+; 	shlr16	r1
+; 	exts.w	r1,r1
+; 	mov	r1,r0
+; 	mov.w	r0,@(2,r2)
+;
+; 	mov	#rot_angle,r0
+; 	mov	@r0,r1
+; 	add	#4,r1
+; 	mov	#2047,r2
+; 	and	r2,r1
+; 	mov	r1,@r0
+;
+; 		mov.w	#1,r0
+; 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
 .wait_drw:
 		bra	slave_loop
 		nop
@@ -2524,7 +2534,7 @@ slave_loop:
 		align 4
 this_polygon:
 		dc.w $8000
-		dc.w 640
+		dc.w 320
 		dc.l TESTMARS_BG
 dest_data:	dc.w  32,-32
 		dc.w -32,-32

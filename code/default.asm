@@ -100,7 +100,7 @@ thisCode_Top:
 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
 		lea	str_Status(pc),a0
-		move.l	#locate(0,0,0),d0
+		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		move.w	(RAM_MdlCurrMd).w,d0
 		and.w	#%11111,d0
@@ -198,19 +198,19 @@ thisCode_Top:
 		move.w	(Controller_2+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no_up
-		move.l	#-4,d1
+		move.l	#-1,d1
 .no_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no_dw
-		move.l	#4,d1
+		move.l	#1,d1
 .no_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no_lf
-		move.l	#-4,d0
+		move.l	#-1,d0
 .no_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no_rf
-		move.l	#4,d0
+		move.l	#1,d0
 .no_rf:
 		move.w	(sysmars_reg+comm4).l,d4
 		add	d0,d4
@@ -221,22 +221,35 @@ thisCode_Top:
 
 		moveq	#0,d0
 		moveq	#0,d1
+
+		move.w	(Controller_1+on_press),d7
+		move.w	d7,d6
+		and.w	#JoyY,d6
+		beq.s	.no_x
+		move.w	#-1,d0
+.no_x:
+		move.w	d7,d6
+		and.w	#JoyZ,d6
+		beq.s	.no_y
+		move.w	#1,d0
+.no_y:
+
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no2_up
-		move.l	#-4,d1
+		move.l	#-1,d1
 .no2_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no2_dw
-		move.l	#4,d1
+		move.l	#1,d1
 .no2_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no2_lf
-		move.l	#-4,d0
+		move.l	#-1,d0
 .no2_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no2_rf
-		move.l	#4,d0
+		move.l	#1,d0
 .no2_rf:
 		move.w	(sysmars_reg+comm0).l,d4
 		add	d0,d4
@@ -524,7 +537,10 @@ MdMdl_SetNewCamera:
 ; ------------------------------------------------------
 
 str_Status:
+		dc.b "Xpos Ypos Xdx  Ydx",$A
 		dc.b "\\w \\w \\w \\w",$A
+		dc.b $A
+		dc.b "Xshf ---- ---- MODE",$A
 		dc.b "\\w \\w \\w \\w",0
 		dc.l sysmars_reg+comm0
 		dc.l sysmars_reg+comm2

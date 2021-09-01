@@ -180,15 +180,18 @@ drtsk_gm2:
 		mov 	@r1,r7
 		mov.w	@(marsGbl_BgWidth,gbr),r0
 		mov	r0,r6
-		mov	#-2,r0
+		mov	#-2,r0		; pixel size
 		and	r0,r7
 		and	r0,r6
 		shll16	r7
 		shll16	r6
 		mov	#Cach_Xadd,r4
 		mov	@r4,r4
-		and	r0,r4
-		shll	r4		; shift by size
+		shll	r4
+		mov	r4,r0
+		and	#1,r0
+		cmp/eq	#1,r0
+		bt	*
 		xor	r5,r5
 		mov	#20,r2
 .x_next:
@@ -199,7 +202,10 @@ drtsk_gm2:
 .lowr:
 		mov	r7,r1
 		shlr16	r1
+		mov	#-2,r0
+		and	r0,r1
 		add	r8,r1
+
 ; 		mov.b	@r1,r0
 ; 		and	#$FF,r0
 ; 		mov	r0,r5
@@ -363,11 +369,11 @@ drwtsk_02:
 		mov.w	@(marsGbl_DrwPause,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
-		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
-		cmp/pl	r0
-		bt	.has_pz
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+; 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
+; 		cmp/pl	r0
+; 		bt	.has_pz
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
