@@ -898,13 +898,6 @@ MarsVideo_SetWatchdog:
 .mde1:
 		mov	#Cach_LR_Lines,r1		; L/R lines to process
 		mov	r2,@r1
-; 		mov	#Cach_Md2_Lines,r1		; L/R lines to process
-; 		mov	#MSCRL_HEIGHT,r0
-; 		mov	r0,@r1
-
-; 		mov	#Cach_UD_Lines,r1		; U/D lines to process
-; 		mov	#MSCRL_BLKSIZE,r0
-; 		mov	r0,@r1
 
 	; Mode2
 		mov	#_framebuffer+$200,r0
@@ -938,6 +931,8 @@ MarsVideo_SetWatchdog:
 		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
 		and	r2,r0
 		mov	r0,@r1
+
+		mov	#MSCRL_WIDTH,r4				; Set Top-Left framebuffer position
 		mov	#Cach_BgFbPosLR,r1
 		mov	@(marsGbl_Bg_FbBase,gbr),r0
 		and	r2,r0
@@ -948,6 +943,7 @@ MarsVideo_SetWatchdog:
 		sts	macl,r0
 		add	r3,r0
 		mov	r0,@r1
+
 		mov.w	@(marsGbl_BgWidth,gbr),r0		; Y add for L/R
 		mov	r0,r3
 		mov	#Cach_YRead_LR,r1

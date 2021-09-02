@@ -237,19 +237,19 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.no2_up
-		move.l	#-1,d1
+		move.l	#-7,d1
 .no2_up:
 		btst	#bitJoyDown,d7
 		beq.s	.no2_dw
-		move.l	#1,d1
+		move.l	#7,d1
 .no2_dw:
 		btst	#bitJoyLeft,d7
 		beq.s	.no2_lf
-		move.l	#-1,d0
+		move.l	#-7,d0
 .no2_lf:
 		btst	#bitJoyRight,d7
 		beq.s	.no2_rf
-		move.l	#1,d0
+		move.l	#7,d0
 .no2_rf:
 		move.w	(sysmars_reg+comm0).l,d4
 		add	d0,d4

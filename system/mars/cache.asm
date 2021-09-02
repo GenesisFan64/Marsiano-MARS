@@ -77,90 +77,9 @@ drwtsk_01:
 ; Mode1 draw routine
 ; Left/Right scroll
 drtsk_gm1:
-		mov	@(marsGbl_BgData,gbr),r0
-		cmp/pl	r0
-		bf	.get_out
-		mov	#0,r6
-		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
-		cmp/eq	#0,r0
-		bf	.dtsk01_dright
-		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
-		cmp/eq	#0,r0
-		bf	.dtsk01_dleft
-.get_out:
 		bra	dtsk01_exit
 		nop
 		align 4
-.dtsk01_dleft:
-		mov	#Cach_BgFbPosLR,r2
-		mov	@r2,r0
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r1
-		cmp/gt	r1,r0
-		bf	.prefix_l
-		sub	r1,r0
-		mov	r0,@r2
-.prefix_l:
-		mov	.tag_scrlwdth,r1
-		cmp/ge	r1,r0
-		bt	.lastline_l
-		mov	#(_framebuffer+$200)+(MSCRL_WIDTH*MSCRL_HEIGHT),r4
-		add	r0,r4
-		mov	#1,r6
-.lastline_l:
-		mov	#_framebuffer+$200,r7
-		add	r0,r7
-		mov	@(marsGbl_BgData_R,gbr),r0
-		mov	r0,r1
-		mov	#Cach_YHead_LR,r0
-		mov	@r0,r0
-		add	r0,r1
-		mov	r1,r2
-		mov	r1,r3
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		add	r0,r3
-		mov	#Cach_XHead_L,r0
-		mov	@r0,r0
-		add	r0,r1
-		bra	dtsk01_lrdraw
-		mov	r1,r5
-.dtsk01_dright:
-		mov	#Cach_BgFbPosLR,r2
-		mov	@r2,r0
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r1
-		cmp/gt	r1,r0
-		bf	.prefix_r
-		sub	r1,r0
-		mov	r0,@r2
-.prefix_r:
-		mov	.tag_scrnwdth,r1			; TODO: a variable for this?
-		add	r1,r0
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7
-		cmp/ge	r7,r0
-		bf	.lastline_r
-		mov	#1,r6
-		mov	#_framebuffer+$200,r4
-		add	r0,r4
-		sub	r7,r0
-.lastline_r:
-		mov	#_framebuffer+$200,r7
-		add	r0,r7
-		mov	@(marsGbl_BgData_R,gbr),r0
-		mov	r0,r1
-		mov	#Cach_YHead_LR,r0
-		mov	@r0,r0
-		add	r0,r1
-		mov	r1,r2
-		mov	r1,r3
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		add	r0,r3
-		mov	#Cach_XHead_R,r0
-		mov	@r0,r0
-		add	r0,r1
-		bra	dtsk01_lrdraw
-		mov	r1,r5
-		align 4
-.tag_scrlwdth:	dc.l MSCRL_WIDTH
-.tag_scrnwdth	dc.l 320
 
 ; Mode2 draw routine
 ; Full scaling
@@ -189,9 +108,6 @@ drtsk_gm2:
 		mov	@r4,r4
 		shll	r4
 		mov	r4,r0
-		and	#1,r0
-		cmp/eq	#1,r0
-		bt	*
 		xor	r5,r5
 		mov	#20,r2
 .x_next:
@@ -249,71 +165,6 @@ drtsk_gm2:
 		nop
 		align 4
 
-; Mode1 continued
-dtsk01_lrdraw:
-		mov	#MSCRL_BLKSIZE/4,r9
-		mov	r9,r8
-.xline:
-		cmp/ge	r3,r1
-		bf	.toomx
-		mov	r2,r1
-.toomx:
-		mov	@r1+,r0
-		mov	r0,@r7
-		add	#4,r7
-		dt	r9
-		bf	.xline
-
-	; *** Last line only ***
-	; r6 - flag
-	; r5 - BG in / r4 - FB out
-		cmp/pl	r6
-		bf	.not_ln0
-.hxline:
-		cmp/ge	r3,r5
-		bf	.toomx2
-		mov	r2,r5
-.toomx2:
-		mov	@r5+,r0
-		mov	r0,@r4
-		add	#4,r4
-		dt	r8
-		bf	.hxline
-.not_ln0:
-		mov	#Cach_YRead_LR,r1
-		mov	@(marsGbl_BgData,gbr),r0
-		mov	r0,r2
-		mov.w	@(marsGbl_BgHeight,gbr),r0
-		mov	r0,r4
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r3
-		mov	@(marsGbl_BgData_R,gbr),r0
-		mov	r0,r5
-		add	r3,r5
-		mov	@r1,r0
-		add	#1,r0
-		cmp/ge	r4,r0
-		bf	.resety
-		mov	r2,r5
-		xor	r0,r0
-		mov	#Cach_YHead_LR,r4
-		mov	r0,@r4
-.resety:
-		mov	r0,@r1
-		mov	r5,r0
-		mov	r0,@(marsGbl_BgData_R,gbr)
-		mov	#Cach_BgFbPosLR,r3	; TODO: cambiame a otro var de Y
-		mov	@r3,r0
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r2
-		mov	#MSCRL_WIDTH,r1
-		add	r1,r0
-		cmp/gt	r2,r0
-		bf	.fbmuch
-		sub	r2,r0
-.fbmuch:
-		mov	r0,@r3
-
-
 dtsk01_exit:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
@@ -328,17 +179,17 @@ dtsk01_exit:
 		bf/s	tsk00_exit
 		mov	r0,@r1
 
-		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
-		cmp/eq	#0,r0
-		bt	.ndrw_r
-		dt	r0
-		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
-.ndrw_r:
-		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
-		cmp/eq	#0,r0
-		bt	tsk00_gonext
-		dt	r0
-		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
+; 		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
+; 		cmp/pl	r0
+; 		bf	.ndrw_r
+; 		dt	r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
+; .ndrw_r:
+; 		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
+; 		cmp/pl	r0
+; 		bf	tsk00_gonext
+; 		dt	r0
+; 		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
 tsk00_gonext:
 		mov	#2,r0			; If finished: Set task $02
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
@@ -369,9 +220,9 @@ drwtsk_02:
 		mov.w	@(marsGbl_DrwPause,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
-; 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
-; 		cmp/pl	r0
-; 		bt	.has_pz
+		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
+		cmp/pl	r0
+		bt	.has_pz
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_DrwTask,gbr)
 .exit:		bra	drwtask_exit
@@ -569,7 +420,11 @@ drwsld_nxtline_tex:
 ; 		mov	r0,r12
 ; .testlwrit:
 
-	; TODO: a check for the hidden line
+	; Mode 1
+		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+		and	#$7F,r0
+		cmp/eq	#1,r0
+		bf	.not_m1
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
 		mov	#MSCRL_WIDTH,r10
 		mulu	r10,r0
@@ -584,9 +439,6 @@ drwsld_nxtline_tex:
 		bf	.fbbaset
 		sub	r0,r10
 .fbbaset:
-; 		mov	#RAM_Mars_Linescroll,r10
-; 		mov	@r10,r10
-
 	if MSCRL_WIDTH=256
 		shll8	r9
 		shll	r9
@@ -606,8 +458,18 @@ drwsld_nxtline_tex:
 		bt	.xl_l
 		add	r0,r10
 .xl_l:
+		bra	.c_m1
+		nop
 
+	; Mode 0 and 2
+.not_m1:
+		mov	r11,r10
+		shll8	r9
+		shll	r9
+		add	r9,r10
+.c_m1:
 
+	; r10 - Framebuff base
 		mov	#_overwrite+$200,r0
 		add	r0,r10
 		mov	#$1FFF,r2
