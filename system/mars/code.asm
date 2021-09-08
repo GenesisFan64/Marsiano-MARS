@@ -1891,9 +1891,6 @@ mstr_bgfill:
 ; r1 - X move
 ; r2 - Y move
 mstr_movebg:
-; 		mov 	#_sysreg+comm14,r3		; temporal communication
-; 		mov	#1,r0
-; 		mov.b	r0,@r3
 
 	; ---------------------------------------
 	; Get X/Y increment values (at r1 and r2)

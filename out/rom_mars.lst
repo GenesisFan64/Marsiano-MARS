@@ -1,4 +1,4 @@
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 1 - 9/8/2021 3:31:38
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 1 - 9/8/2021 3:36:14
 
 
        1/       0 :                     ; ===========================================================================
@@ -6470,7 +6470,7 @@
 (1)  552/  FF1CC8 : 302D 0002           .wait_cmd:	move.w	standby(a5),d0		; interrupt is ready?
 (1)  553/  FF1CCC : 0800 0001           		btst    #1,d0
 (1)  554/  FF1CD0 : 66F6                		bne.s   .wait_cmd
-(1)  555/  FF1CD2 : 102D 002E           .wait_dma:	move.b	comm14(a5),d0
+(1)  555/  FF1CD2 : 102D 002E           .wait_dma:	move.b	comm14(a5),d0		; Another flag to check
 (1)  556/  FF1CD6 : 67FA                		beq.s	.wait_dma
 (1)  557/  FF1CD8 : 103C 0001           		move.b	#1,d0
 (1)  558/  FF1CDC : 1B40 002E           		move.b	d0,comm14(a5)
@@ -6524,54 +6524,47 @@
 (1)  605/  FF1D16 :                     ; ------------------------------------------------------
 (1)  606/  FF1D16 :                     
 (1)  607/  FF1D16 :                     str_Status:
-(1)  608/  FF1D16 : 5870 6F73 2059 706F 		dc.b "Xpos Ypos Xdx  Ydx",$A
-                    7320 5864 7820 2059 
-                    6478 0A             
-(1)  609/  FF1D29 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A
+(1)  608/  FF1D16 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A
                     205C 770A           
-(1)  610/  FF1D35 : 0A                  		dc.b $A
-(1)  611/  FF1D36 : 5873 6866 202D 2D2D 		dc.b "Xshf ---- ---- MODE",$A
-                    2D20 2D2D 2D2D 204D 
-                    4F44 450A           
-(1)  612/  FF1D4A : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",0
+(1)  609/  FF1D22 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",0
                     205C 7700           
-(1)  613/  FF1D56 : 00A1 5120           		dc.l sysmars_reg+comm0
-(1)  614/  FF1D5A : 00A1 5122           		dc.l sysmars_reg+comm2
-(1)  615/  FF1D5E : 00A1 5124           		dc.l sysmars_reg+comm4
-(1)  616/  FF1D62 : 00A1 5126           		dc.l sysmars_reg+comm6
-(1)  617/  FF1D66 : 00A1 5128           		dc.l sysmars_reg+comm8
-(1)  618/  FF1D6A : 00A1 512A           		dc.l sysmars_reg+comm10
-(1)  619/  FF1D6E : 00A1 512C           		dc.l sysmars_reg+comm12
-(1)  620/  FF1D72 : 00A1 512E           		dc.l sysmars_reg+comm14
-(1)  621/  FF1D76 :                     
-(1)  622/  FF1D76 :                     		align 2
-(1)  623/  FF1D76 :                     MdPal_BgTestB:
-(1)  624/  FF1D76 :                     		binclude "data/md/bg/bg_b_pal.bin"
-(1)  625/  FF1D94 :                     		binclude "data/md/bg/bg_t_pal.bin"
-(1)  626/  FF1DB4 :                     		align 2
-(1)  627/  FF1DB4 :                     
-(1)  628/  FF1DB4 :                     ; ====================================================================
-(1)  629/  FF1DB4 :                     
-(1)  634/  FF1DB4 :                     
-      65/    44A0 :                     		dephase
-      66/    44A0 :                     
-      67/    44A0 :                     ; ====================================================================
-      68/    44A0 :                     ; ----------------------------------------------------------------
-      69/    44A0 :                     ; 68k DATA BANKs (at $900000) 1MB max
-      70/    44A0 :                     ; ----------------------------------------------------------------
-      71/    44A0 :                     
-      72/    44A0 :                     	; First one is smaller than the rest...
-      73/  9044A0 :                     		phase $900000+*				; Only one currently
-      74/  9044A0 :                     		include "data/md_bank0.asm"
-(1)    1/  9044A0 :                     ; ====================================================================
-(1)    2/  9044A0 :                     ; ----------------------------------------------------------------
-(1)    3/  9044A0 :                     ; Single 68k DATA BANK for MD ($900000-$9FFFFF)
-(1)    4/  9044A0 :                     ; for stuff other than MD's DMA data
-(1)    5/  9044A0 :                     ; 
-(1)    6/  9044A0 :                     ; Maximum size: $0FFFFF bytes per bank
-(1)    7/  9044A0 :                     ; ----------------------------------------------------------------
-(1)    8/  9044A0 :                     
-(1)    9/  9044A0 :                     		align $8000
+(1)  610/  FF1D2E : 00A1 5120           		dc.l sysmars_reg+comm0
+(1)  611/  FF1D32 : 00A1 5122           		dc.l sysmars_reg+comm2
+(1)  612/  FF1D36 : 00A1 5124           		dc.l sysmars_reg+comm4
+(1)  613/  FF1D3A : 00A1 5126           		dc.l sysmars_reg+comm6
+(1)  614/  FF1D3E : 00A1 5128           		dc.l sysmars_reg+comm8
+(1)  615/  FF1D42 : 00A1 512A           		dc.l sysmars_reg+comm10
+(1)  616/  FF1D46 : 00A1 512C           		dc.l sysmars_reg+comm12
+(1)  617/  FF1D4A : 00A1 512E           		dc.l sysmars_reg+comm14
+(1)  618/  FF1D4E :                     
+(1)  619/  FF1D4E :                     		align 2
+(1)  620/  FF1D4E :                     MdPal_BgTestB:
+(1)  621/  FF1D4E :                     		binclude "data/md/bg/bg_b_pal.bin"
+(1)  622/  FF1D6C :                     		binclude "data/md/bg/bg_t_pal.bin"
+(1)  623/  FF1D8C :                     		align 2
+(1)  624/  FF1D8C :                     
+(1)  625/  FF1D8C :                     ; ====================================================================
+(1)  626/  FF1D8C :                     
+(1)  631/  FF1D8C :                     
+      65/    4478 :                     		dephase
+      66/    4478 :                     
+      67/    4478 :                     ; ====================================================================
+      68/    4478 :                     ; ----------------------------------------------------------------
+      69/    4478 :                     ; 68k DATA BANKs (at $900000) 1MB max
+      70/    4478 :                     ; ----------------------------------------------------------------
+      71/    4478 :                     
+      72/    4478 :                     	; First one is smaller than the rest...
+      73/  904478 :                     		phase $900000+*				; Only one currently
+      74/  904478 :                     		include "data/md_bank0.asm"
+(1)    1/  904478 :                     ; ====================================================================
+(1)    2/  904478 :                     ; ----------------------------------------------------------------
+(1)    3/  904478 :                     ; Single 68k DATA BANK for MD ($900000-$9FFFFF)
+(1)    4/  904478 :                     ; for stuff other than MD's DMA data
+(1)    5/  904478 :                     ; 
+(1)    6/  904478 :                     ; Maximum size: $0FFFFF bytes per bank
+(1)    7/  904478 :                     ; ----------------------------------------------------------------
+(1)    8/  904478 :                     
+(1)    9/  904478 :                     		align $8000
 (1)   10/  908000 :                     		include "data/sound/tracks.asm"
 (2)    1/  908000 :                     ; ================================================================
 (2)    2/  908000 :                     ; ------------------------------------------------------------
@@ -11334,582 +11327,579 @@
 (1) 1891/ 600135E :                     ; r1 - X move
 (1) 1892/ 600135E :                     ; r2 - Y move
 (1) 1893/ 600135E :                     mstr_movebg:
-(1) 1894/ 600135E :                     ; 		mov 	#_sysreg+comm14,r3		; temporal communication
-(1) 1895/ 600135E :                     ; 		mov	#1,r0
-(1) 1896/ 600135E :                     ; 		mov.b	r0,@r3
-(1) 1897/ 600135E :                     
-(1) 1898/ 600135E :                     	; ---------------------------------------
-(1) 1899/ 600135E :                     	; Get X/Y increment values (at r1 and r2)
-(1) 1900/ 600135E :                     	; using CURR and OLD values
-(1) 1901/ 600135E :                     	; and Set the X-shift bit
-(1) 1902/ 600135E :                     	; ---------------------------------------
-(1) 1903/ 600135E :                     
-(1) 1904/ 600135E : E100                		mov	#0,r1
-(1) 1905/ 6001360 : E200                		mov	#0,r2
-(1) 1906/ 6001362 : C510                		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
-(1) 1907/ 6001364 : 6303                		mov	r0,r3
-(1) 1908/ 6001366 : C513                		mov.w	@(marsGbl_Bg_Xpos_old,gbr),r0
-(1) 1909/ 6001368 : 3300                		cmp/eq	r0,r3
-(1) 1910/ 600136A : 8903                		bt	.xequ
-(1) 1911/ 600136C : 6133                		mov	r3,r1
-(1) 1912/ 600136E : 3108                		sub	r0,r1
-(1) 1913/ 6001370 : C901                		and	#1,r0
-(1) 1914/ 6001372 : 2701                		mov.w	r0,@r7
-(1) 1915/ 6001374 :                     .xequ:
-(1) 1916/ 6001374 : 6033                		mov	r3,r0
-(1) 1917/ 6001376 : C113                		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
-(1) 1918/ 6001378 : C511                		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
-(1) 1919/ 600137A : 6303                		mov	r0,r3
-(1) 1920/ 600137C : C514                		mov.w	@(marsGbl_Bg_Ypos_old,gbr),r0
-(1) 1921/ 600137E : 3300                		cmp/eq	r0,r3
-(1) 1922/ 6001380 : 8901                		bt	.yequ
-(1) 1923/ 6001382 : 6233                		mov	r3,r2
-(1) 1924/ 6001384 : 3208                		sub	r0,r2
-(1) 1925/ 6001386 :                     .yequ:
-(1) 1926/ 6001386 : 6033                		mov	r3,r0
-(1) 1927/ 6001388 : C114                		mov.w	r0,@(marsGbl_Bg_Ypos_old,gbr)
-(1) 1928/ 600138A : 4111                		cmp/pz	r1
-(1) 1929/ 600138C : 8900                		bt	.x_stend
-(1) 1930/ 600138E : 611F                		exts	r1,r1
-(1) 1931/ 6001390 :                     .x_stend:
-(1) 1932/ 6001390 : 4211                		cmp/pz	r2
-(1) 1933/ 6001392 : 8900                		bt	.y_stend
-(1) 1934/ 6001394 : 622F                		exts	r2,r2
-(1) 1935/ 6001396 :                     .y_stend:
-(1) 1936/ 6001396 : C512                		mov.w	@(marsGbl_Bg_XShift,gbr),r0
-(1) 1937/ 6001398 : 301C                		add	r1,r0
-(1) 1938/ 600139A : C112                		mov.w	r0,@(marsGbl_Bg_XShift,gbr)
-(1) 1939/ 600139C :                     
-(1) 1940/ 600139C :                     ; 	---------------------------------------
-(1) 1941/ 600139C :                     ; 	Y move
-(1) 1942/ 600139C :                     ; 	---------------------------------------
-(1) 1943/ 600139C :                     
-(1) 1944/ 600139C :                     ; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
-(1) 1945/ 600139C :                     ; 		add	r2,r0
-(1) 1946/ 600139C :                     ; 		mov	r0,r4
-(1) 1947/ 600139C :                     ; 		tst	#%11110000,r0
-(1) 1948/ 600139C :                     ; 		bt	.yset_w
-(1) 1949/ 600139C :                     ;
-(1) 1950/ 600139C :                     ; 		mov	#0,r7
-(1) 1951/ 600139C :                     ; 		mov	r2,r0
-(1) 1952/ 600139C :                     ; 		cmp/eq	#0,r0
+(1) 1894/ 600135E :                     
+(1) 1895/ 600135E :                     	; ---------------------------------------
+(1) 1896/ 600135E :                     	; Get X/Y increment values (at r1 and r2)
+(1) 1897/ 600135E :                     	; using CURR and OLD values
+(1) 1898/ 600135E :                     	; and Set the X-shift bit
+(1) 1899/ 600135E :                     	; ---------------------------------------
+(1) 1900/ 600135E :                     
+(1) 1901/ 600135E : E100                		mov	#0,r1
+(1) 1902/ 6001360 : E200                		mov	#0,r2
+(1) 1903/ 6001362 : C510                		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+(1) 1904/ 6001364 : 6303                		mov	r0,r3
+(1) 1905/ 6001366 : C513                		mov.w	@(marsGbl_Bg_Xpos_old,gbr),r0
+(1) 1906/ 6001368 : 3300                		cmp/eq	r0,r3
+(1) 1907/ 600136A : 8903                		bt	.xequ
+(1) 1908/ 600136C : 6133                		mov	r3,r1
+(1) 1909/ 600136E : 3108                		sub	r0,r1
+(1) 1910/ 6001370 : C901                		and	#1,r0
+(1) 1911/ 6001372 : 2701                		mov.w	r0,@r7
+(1) 1912/ 6001374 :                     .xequ:
+(1) 1913/ 6001374 : 6033                		mov	r3,r0
+(1) 1914/ 6001376 : C113                		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
+(1) 1915/ 6001378 : C511                		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+(1) 1916/ 600137A : 6303                		mov	r0,r3
+(1) 1917/ 600137C : C514                		mov.w	@(marsGbl_Bg_Ypos_old,gbr),r0
+(1) 1918/ 600137E : 3300                		cmp/eq	r0,r3
+(1) 1919/ 6001380 : 8901                		bt	.yequ
+(1) 1920/ 6001382 : 6233                		mov	r3,r2
+(1) 1921/ 6001384 : 3208                		sub	r0,r2
+(1) 1922/ 6001386 :                     .yequ:
+(1) 1923/ 6001386 : 6033                		mov	r3,r0
+(1) 1924/ 6001388 : C114                		mov.w	r0,@(marsGbl_Bg_Ypos_old,gbr)
+(1) 1925/ 600138A : 4111                		cmp/pz	r1
+(1) 1926/ 600138C : 8900                		bt	.x_stend
+(1) 1927/ 600138E : 611F                		exts	r1,r1
+(1) 1928/ 6001390 :                     .x_stend:
+(1) 1929/ 6001390 : 4211                		cmp/pz	r2
+(1) 1930/ 6001392 : 8900                		bt	.y_stend
+(1) 1931/ 6001394 : 622F                		exts	r2,r2
+(1) 1932/ 6001396 :                     .y_stend:
+(1) 1933/ 6001396 : C512                		mov.w	@(marsGbl_Bg_XShift,gbr),r0
+(1) 1934/ 6001398 : 301C                		add	r1,r0
+(1) 1935/ 600139A : C112                		mov.w	r0,@(marsGbl_Bg_XShift,gbr)
+(1) 1936/ 600139C :                     
+(1) 1937/ 600139C :                     ; 	---------------------------------------
+(1) 1938/ 600139C :                     ; 	Y move
+(1) 1939/ 600139C :                     ; 	---------------------------------------
+(1) 1940/ 600139C :                     
+(1) 1941/ 600139C :                     ; 		mov.w	@(marsGbl_Bg_Yset,gbr),r0
+(1) 1942/ 600139C :                     ; 		add	r2,r0
+(1) 1943/ 600139C :                     ; 		mov	r0,r4
+(1) 1944/ 600139C :                     ; 		tst	#%11110000,r0
+(1) 1945/ 600139C :                     ; 		bt	.yset_w
+(1) 1946/ 600139C :                     ;
+(1) 1947/ 600139C :                     ; 		mov	#0,r7
+(1) 1948/ 600139C :                     ; 		mov	r2,r0
+(1) 1949/ 600139C :                     ; 		cmp/eq	#0,r0
+(1) 1950/ 600139C :                     ; 		bt	.noy
+(1) 1951/ 600139C :                     ; 		mov	#%0100,r7
+(1) 1952/ 600139C :                     ; 		cmp/pz	r2
 (1) 1953/ 600139C :                     ; 		bt	.noy
-(1) 1954/ 600139C :                     ; 		mov	#%0100,r7
-(1) 1955/ 600139C :                     ; 		cmp/pz	r2
-(1) 1956/ 600139C :                     ; 		bt	.noy
-(1) 1957/ 600139C :                     ; 		mov	#%1000,r7
-(1) 1958/ 600139C :                     ; .noy:
-(1) 1959/ 600139C :                     
-(1) 1960/ 600139C :                     	; Set Y framebuffer position
-(1) 1962/ 600139C : C51E                		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
-(1) 1963/ 600139E : 302C                		add	r2,r0
-(1) 1964/ 60013A0 : C9FF                		and	#$FF,r0
-(1) 1965/ 60013A2 : C11E                		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
-(1) 1966/ 60013A4 : C51F                		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
-(1) 1967/ 60013A6 : 302C                		add	r2,r0
-(1) 1968/ 60013A8 : C9FF                		and	#$FF,r0
-(1) 1969/ 60013AA : C11F                		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
-(1) 1970/ 60013AC : C520                		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
-(1) 1971/ 60013AE : 302C                		add	r2,r0
-(1) 1972/ 60013B0 : C9FF                		and	#$FF,r0
-(1) 1973/ 60013B2 : C120                		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
-(1) 2027/ 60013B4 :                     
-(1) 2028/ 60013B4 :                     	; Y Map limit
-(1) 2029/ 60013B4 : C519                		mov.w	@(marsGbl_BgHeight,gbr),r0
-(1) 2030/ 60013B6 : 6303                		mov	r0,r3
-(1) 2031/ 60013B8 : C524                		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
-(1) 2032/ 60013BA : 302C                		add	r2,r0
-(1) 2033/ 60013BC : 4215                		cmp/pl	r2
-(1) 2034/ 60013BE : 8B02                		bf	.ynegtv
-(1) 2035/ 60013C0 : 3037                		cmp/gt	r3,r0
-(1) 2036/ 60013C2 : 8B00                		bf	.ynegtv
-(1) 2037/ 60013C4 : 3038                		sub	r3,r0
-(1) 2038/ 60013C6 :                     .ynegtv:
-(1) 2039/ 60013C6 : 4211                		cmp/pz	r2
-(1) 2040/ 60013C8 : 8902                		bt	.ypostv
-(1) 2041/ 60013CA : 4011                		cmp/pz	r0
-(1) 2042/ 60013CC : 8900                		bt	.ypostv
-(1) 2043/ 60013CE : 303C                		add	r3,r0
-(1) 2044/ 60013D0 :                     .ypostv:
-(1) 2045/ 60013D0 : C124                		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
-(1) 2046/ 60013D2 : C523                		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
-(1) 2047/ 60013D4 : 302C                		add	r2,r0
-(1) 2048/ 60013D6 : 4215                		cmp/pl	r2
-(1) 2049/ 60013D8 : 8B02                		bf	.ynegtvl
-(1) 2050/ 60013DA : 3037                		cmp/gt	r3,r0
-(1) 2051/ 60013DC : 8B00                		bf	.ynegtvl
-(1) 2052/ 60013DE : 3038                		sub	r3,r0
-(1) 2053/ 60013E0 :                     .ynegtvl:
-(1) 2054/ 60013E0 : 4211                		cmp/pz	r2
-(1) 2055/ 60013E2 : 8902                		bt	.ypostvl
-(1) 2056/ 60013E4 : 4011                		cmp/pz	r0
-(1) 2057/ 60013E6 : 8900                		bt	.ypostvl
-(1) 2058/ 60013E8 : 303C                		add	r3,r0
-(1) 2059/ 60013EA :                     .ypostvl:
-(1) 2060/ 60013EA : C123                		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
-(1) 2061/ 60013EC :                     ; 		mov.w	@(marsGbl_Bg_YbgInc_LR,gbr),r0
-(1) 2062/ 60013EC :                     ; 		add	r2,r0
-(1) 2063/ 60013EC :                     ; 		cmp/pl	r2
-(1) 2064/ 60013EC :                     ; 		bf	.yenegtv
-(1) 2065/ 60013EC :                     ; 		cmp/ge	r3,r0
-(1) 2066/ 60013EC :                     ; 		bf	.yenegtv
-(1) 2067/ 60013EC :                     ; 		sub	r3,r0
-(1) 2068/ 60013EC :                     ; .yenegtv:
-(1) 2069/ 60013EC :                     ; 		cmp/pz	r2
-(1) 2070/ 60013EC :                     ; 		bt	.yepostv
-(1) 2071/ 60013EC :                     ; 		cmp/pz	r0
-(1) 2072/ 60013EC :                     ; 		bt	.yepostv
-(1) 2073/ 60013EC :                     ; 		add	r3,r0
-(1) 2074/ 60013EC :                     ; .yepostv:
-(1) 2075/ 60013EC :                     ; 		mov.w	r0,@(marsGbl_Bg_YbgInc_LR,gbr)
-(1) 2076/ 60013EC :                     
-(1) 2077/ 60013EC :                     	; ---------------------------------------
-(1) 2078/ 60013EC :                     	; X move
-(1) 2079/ 60013EC :                     	; ---------------------------------------
-(1) 2080/ 60013EC :                     
-(1) 2081/ 60013EC : D018                		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
-(1) 2082/ 60013EE : 6303                		mov	r0,r3
-(1) 2083/ 60013F0 : C606                		mov	@(marsGbl_Bg_FbBase,gbr),r0
-(1) 2084/ 60013F2 : 301C                		add	r1,r0
-(1) 2085/ 60013F4 : 4115                		cmp/pl	r1
-(1) 2086/ 60013F6 : 8B02                		bf	.yx_negtv
-(1) 2087/ 60013F8 : 3037                		cmp/gt	r3,r0
-(1) 2088/ 60013FA : 8B00                		bf	.yx_negtv
-(1) 2089/ 60013FC : 3038                		sub	r3,r0
-(1) 2090/ 60013FE :                     .yx_negtv:
-(1) 2091/ 60013FE : 4111                		cmp/pz	r1
-(1) 2092/ 6001400 : 8902                		bt	.yx_postv
-(1) 2093/ 6001402 : 4011                		cmp/pz	r0
-(1) 2094/ 6001404 : 8900                		bt	.yx_postv
-(1) 2095/ 6001406 : 303C                		add	r3,r0
-(1) 2096/ 6001408 :                     .yx_postv:
-(1) 2097/ 6001408 : C206                		mov	r0,@(marsGbl_Bg_FbBase,gbr)
-(1) 2098/ 600140A :                     
-(1) 2099/ 600140A :                     	; X draw heads for Left/Right drawing
-(1) 2100/ 600140A : C518                		mov.w	@(marsGbl_BgWidth,gbr),r0
-(1) 2101/ 600140C : 6303                		mov	r0,r3
-(1) 2102/ 600140E : E500                		mov	#0,r5
-(1) 2103/ 6001410 : E600                		mov	#0,r6
-(1) 2104/ 6001412 : C522                		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
-(1) 2105/ 6001414 : 301C                		add	r1,r0
-(1) 2106/ 6001416 : 4115                		cmp/pl	r1
-(1) 2107/ 6001418 : 8B03                		bf	.negtv
-(1) 2108/ 600141A : E501                		mov	#%0001,r5
-(1) 2109/ 600141C : 3033                		cmp/ge	r3,r0
-(1) 2110/ 600141E : 8B00                		bf	.negtv
-(1) 2111/ 6001420 : 3038                		sub	r3,r0
-(1) 2112/ 6001422 :                     .negtv:
-(1) 2113/ 6001422 : 4111                		cmp/pz	r1
-(1) 2114/ 6001424 : 8903                		bt	.postv
-(1) 2115/ 6001426 : E502                		mov	#%0010,r5
-(1) 2116/ 6001428 : 4011                		cmp/pz	r0
-(1) 2117/ 600142A : 8900                		bt	.postv
-(1) 2118/ 600142C : 303C                		add	r3,r0
-(1) 2119/ 600142E :                     .postv:
-(1) 2120/ 600142E : C122                		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
-(1) 2121/ 6001430 :                     
-(1) 2122/ 6001430 : C521                		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
-(1) 2123/ 6001432 : 301C                		add	r1,r0
-(1) 2124/ 6001434 : 4115                		cmp/pl	r1
-(1) 2125/ 6001436 : 8B02                		bf	.negtvl
-(1) 2126/ 6001438 : 3033                		cmp/ge	r3,r0
-(1) 2127/ 600143A : 8B00                		bf	.negtvl
-(1) 2128/ 600143C : 3038                		sub	r3,r0
-(1) 2129/ 600143E :                     .negtvl:
-(1) 2130/ 600143E : 4111                		cmp/pz	r1
-(1) 2131/ 6001440 : 8902                		bt	.postvl
-(1) 2132/ 6001442 : 4011                		cmp/pz	r0
-(1) 2133/ 6001444 : 8900                		bt	.postvl
-(1) 2134/ 6001446 : 303C                		add	r3,r0
-(1) 2135/ 6001448 :                     .postvl:
-(1) 2136/ 6001448 : C121                		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
-(1) 2137/ 600144A : 000B                		rts
-(1) 2138/ 600144C : 0009                		nop
-(1) 2139/ 600144E :                     		align 4
-(1) 2140/ 6001450 : 0001 5000           		ltorg
-(1) 2141/ 6001454 :                     
-(1) 2142/ 6001454 :                     mstr_setreq1:
-(1) 2143/ 6001454 : E500                		mov	#0,r5
-(1) 2144/ 6001456 : C51D                		mov.w	@(marsGbl_Bg_Yset,gbr),r0
-(1) 2145/ 6001458 : 302C                		add	r2,r0
-(1) 2146/ 600145A : 6603                		mov	r0,r6
-(1) 2147/ 600145C : C8F0                		tst	#(-MSCRL_BLKSIZE)&$FF,r0
-(1) 2148/ 600145E : 8916                		bt	.ydr_busy
-(1) 2149/ 6001460 : E3F0                		mov	#-MSCRL_BLKSIZE,r3
-(1) 2150/ 6001462 : 4215                		cmp/pl	r2
-(1) 2151/ 6001464 : 8B08                		bf	.reqd_b
-(1) 2152/ 6001466 : C525                		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
-(1) 2153/ 6001468 : 6403                		mov	r0,r4
-(1) 2154/ 600146A : C526                		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
-(1) 2155/ 600146C : 204B                		or	r4,r0
-(1) 2156/ 600146E : 8800                		cmp/eq	#0,r0
-(1) 2157/ 6001470 : 8B0D                		bf	.ydr_busy
-(1) 2158/ 6001472 : E002                		mov	#2,r0
-(1) 2159/ 6001474 : C126                		mov.w	r0,@(marsGbl_Bg_DrwReqD,gbr)
-(1) 2160/ 6001476 : 7501                		add	#$01,r5
-(1) 2161/ 6001478 :                     .reqd_b:
-(1) 2162/ 6001478 : 4211                		cmp/pz	r2
-(1) 2163/ 600147A : 8908                		bt	.ydr_busy
-(1) 2164/ 600147C : C525                		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
-(1) 2165/ 600147E : 6403                		mov	r0,r4
-(1) 2166/ 6001480 : C526                		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
-(1) 2167/ 6001482 : 204B                		or	r4,r0
-(1) 2168/ 6001484 : 8800                		cmp/eq	#0,r0
-(1) 2169/ 6001486 : 8B02                		bf	.ydr_busy
-(1) 2170/ 6001488 : E002                		mov	#2,r0
-(1) 2171/ 600148A : C125                		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
-(1) 2172/ 600148C : 7501                		add	#$01,r5
-(1) 2173/ 600148E :                     .ydr_busy:
-(1) 2174/ 600148E : 6063                		mov	r6,r0
-(1) 2175/ 6001490 : C90F                		and	#MSCRL_BLKSIZE-1,r0
-(1) 2176/ 6001492 : C11D                		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
-(1) 2177/ 6001494 : C51C                		mov.w	@(marsGbl_Bg_Xset,gbr),r0
-(1) 2178/ 6001496 : 301C                		add	r1,r0
-(1) 2179/ 6001498 : 6603                		mov	r0,r6
-(1) 2180/ 600149A : C8F0                		tst	#(-MSCRL_BLKSIZE)&$FF,r0
-(1) 2181/ 600149C : 8916                		bt	.ydl_busy
-(1) 2182/ 600149E : E3F0                		mov	#-MSCRL_BLKSIZE,r3
-(1) 2183/ 60014A0 : 4115                		cmp/pl	r1
-(1) 2184/ 60014A2 : 8B08                		bf	.reqr_b
-(1) 2185/ 60014A4 : C527                		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
-(1) 2186/ 60014A6 : 6403                		mov	r0,r4
-(1) 2187/ 60014A8 : C528                		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
-(1) 2188/ 60014AA : 204B                		or	r4,r0
-(1) 2189/ 60014AC : 8800                		cmp/eq	#0,r0
-(1) 2190/ 60014AE : 8B0D                		bf	.ydl_busy
-(1) 2191/ 60014B0 :                     
-(1) 2192/ 60014B0 : E002                		mov	#2,r0
-(1) 2193/ 60014B2 : C128                		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
-(1) 2194/ 60014B4 : 7502                		add	#$02,r5
-(1) 2195/ 60014B6 :                     .reqr_b:
-(1) 2196/ 60014B6 : 4111                		cmp/pz	r1
-(1) 2197/ 60014B8 : 8908                		bt	.ydl_busy
-(1) 2198/ 60014BA : C527                		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
-(1) 2199/ 60014BC : 6403                		mov	r0,r4
-(1) 2200/ 60014BE : C528                		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
-(1) 2201/ 60014C0 : 204B                		or	r4,r0
-(1) 2202/ 60014C2 : 8800                		cmp/eq	#0,r0
-(1) 2203/ 60014C4 : 8B02                		bf	.ydl_busy
-(1) 2204/ 60014C6 :                     
-(1) 2205/ 60014C6 : E002                		mov	#2,r0
-(1) 2206/ 60014C8 : C127                		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
-(1) 2207/ 60014CA : 7502                		add	#$02,r5
-(1) 2208/ 60014CC :                     .ydl_busy:
-(1) 2209/ 60014CC : 6063                		mov	r6,r0
-(1) 2210/ 60014CE : C90F                		and	#MSCRL_BLKSIZE-1,r0
-(1) 2211/ 60014D0 : C11C                		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
-(1) 2212/ 60014D2 :                     
-(1) 2213/ 60014D2 :                     	; Make snapshot of scroll variables
-(1) 2214/ 60014D2 :                     	; to CACHE
-(1) 2215/ 60014D2 : 4515                		cmp/pl	r5
-(1) 2216/ 60014D4 : 8B24                		bf	.dont_snap
-(1) 2217/ 60014D6 : E2F0                		mov	#-MSCRL_BLKSIZE,r2
-(1) 2218/ 60014D8 : D112                		mov	#Cach_XHead_L,r1
-(1) 2219/ 60014DA : C521                		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
-(1) 2220/ 60014DC : 2029                		and	r2,r0
-(1) 2221/ 60014DE : 2102                		mov	r0,@r1
-(1) 2222/ 60014E0 : D111                		mov	#Cach_XHead_R,r1
-(1) 2223/ 60014E2 : C522                		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
-(1) 2224/ 60014E4 : 2029                		and	r2,r0
-(1) 2225/ 60014E6 : 2102                		mov	r0,@r1
-(1) 2226/ 60014E8 : C523                		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
-(1) 2227/ 60014EA : D110                		mov	#Cach_YHead_D,r1
-(1) 2228/ 60014EC : 2029                		and	r2,r0
-(1) 2229/ 60014EE : 2102                		mov	r0,@r1
-(1) 2230/ 60014F0 : C524                		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
-(1) 2231/ 60014F2 : D10F                		mov	#Cach_YHead_U,r1
-(1) 2232/ 60014F4 : 2029                		and	r2,r0
-(1) 2233/ 60014F6 : 2102                		mov	r0,@r1
-(1) 2234/ 60014F8 : C51E                		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
-(1) 2235/ 60014FA : D10E                		mov	#Cach_BgFbPos_U,r1
-(1) 2236/ 60014FC : 2029                		and	r2,r0
-(1) 2237/ 60014FE : 2102                		mov	r0,@r1
-(1) 2238/ 6001500 : C51F                		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
-(1) 2239/ 6001502 : D10D                		mov	#Cach_BgFbPos_D,r1
-(1) 2240/ 6001504 : 2029                		and	r2,r0
-(1) 2241/ 6001506 : 2102                		mov	r0,@r1
-(1) 2242/ 6001508 : C606                		mov	@(marsGbl_Bg_FbBase,gbr),r0
-(1) 2243/ 600150A : D10C                		mov	#Cach_BgFbPos_LR,r1
-(1) 2244/ 600150C : 2029                		and	r2,r0
-(1) 2245/ 600150E : 2102                		mov	r0,@r1
-(1) 2246/ 6001510 :                     
-(1) 2247/ 6001510 : C522                		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
-(1) 2248/ 6001512 : D40B                		mov	#Cach_XHead_R,r4
-(1) 2249/ 6001514 : 2039                		and	r3,r0
-(1) 2250/ 6001516 : 2402                		mov	r0,@r4
-(1) 2251/ 6001518 :                     ; 		mov.w	@(marsGbl_Bg_XFbPos_R,gbr),r0
-(1) 2252/ 6001518 :                     ; 		mov	#Cach_BgFbPos_R,r4
-(1) 2253/ 6001518 :                     ; 		and	r3,r0
-(1) 2254/ 6001518 :                     ; 		mov	r0,@r4
-(1) 2255/ 6001518 : C521                		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
-(1) 2256/ 600151A : D40A                		mov	#Cach_XHead_L,r4
-(1) 2257/ 600151C : 2039                		and	r3,r0
-(1) 2258/ 600151E : 2402                		mov	r0,@r4
-(1) 2259/ 6001520 :                     ; 		mov.w	@(marsGbl_Bg_XFbPos_L,gbr),r0
-(1) 2260/ 6001520 :                     ; 		mov	#Cach_BgFbPos_L,r4
-(1) 2261/ 6001520 :                     ; 		and	r3,r0
-(1) 2262/ 6001520 :                     ; 		mov	r0,@r4
-(1) 2263/ 6001520 :                     
-(1) 2264/ 6001520 :                     .dont_snap:
-(1) 2265/ 6001520 :                     
-(1) 2266/ 6001520 : 000B                		rts
-(1) 2267/ 6001522 : 0009                		nop
-(1) 2268/ 6001524 :                     		align 4
-(1) 2269/ 6001524 : C000 050C C000 0510 		ltorg
+(1) 1954/ 600139C :                     ; 		mov	#%1000,r7
+(1) 1955/ 600139C :                     ; .noy:
+(1) 1956/ 600139C :                     
+(1) 1957/ 600139C :                     	; Set Y framebuffer position
+(1) 1959/ 600139C : C51E                		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+(1) 1960/ 600139E : 302C                		add	r2,r0
+(1) 1961/ 60013A0 : C9FF                		and	#$FF,r0
+(1) 1962/ 60013A2 : C11E                		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+(1) 1963/ 60013A4 : C51F                		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
+(1) 1964/ 60013A6 : 302C                		add	r2,r0
+(1) 1965/ 60013A8 : C9FF                		and	#$FF,r0
+(1) 1966/ 60013AA : C11F                		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
+(1) 1967/ 60013AC : C520                		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
+(1) 1968/ 60013AE : 302C                		add	r2,r0
+(1) 1969/ 60013B0 : C9FF                		and	#$FF,r0
+(1) 1970/ 60013B2 : C120                		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
+(1) 2024/ 60013B4 :                     
+(1) 2025/ 60013B4 :                     	; Y Map limit
+(1) 2026/ 60013B4 : C519                		mov.w	@(marsGbl_BgHeight,gbr),r0
+(1) 2027/ 60013B6 : 6303                		mov	r0,r3
+(1) 2028/ 60013B8 : C524                		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+(1) 2029/ 60013BA : 302C                		add	r2,r0
+(1) 2030/ 60013BC : 4215                		cmp/pl	r2
+(1) 2031/ 60013BE : 8B02                		bf	.ynegtv
+(1) 2032/ 60013C0 : 3037                		cmp/gt	r3,r0
+(1) 2033/ 60013C2 : 8B00                		bf	.ynegtv
+(1) 2034/ 60013C4 : 3038                		sub	r3,r0
+(1) 2035/ 60013C6 :                     .ynegtv:
+(1) 2036/ 60013C6 : 4211                		cmp/pz	r2
+(1) 2037/ 60013C8 : 8902                		bt	.ypostv
+(1) 2038/ 60013CA : 4011                		cmp/pz	r0
+(1) 2039/ 60013CC : 8900                		bt	.ypostv
+(1) 2040/ 60013CE : 303C                		add	r3,r0
+(1) 2041/ 60013D0 :                     .ypostv:
+(1) 2042/ 60013D0 : C124                		mov.w	r0,@(marsGbl_Bg_YbgInc_U,gbr)
+(1) 2043/ 60013D2 : C523                		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
+(1) 2044/ 60013D4 : 302C                		add	r2,r0
+(1) 2045/ 60013D6 : 4215                		cmp/pl	r2
+(1) 2046/ 60013D8 : 8B02                		bf	.ynegtvl
+(1) 2047/ 60013DA : 3037                		cmp/gt	r3,r0
+(1) 2048/ 60013DC : 8B00                		bf	.ynegtvl
+(1) 2049/ 60013DE : 3038                		sub	r3,r0
+(1) 2050/ 60013E0 :                     .ynegtvl:
+(1) 2051/ 60013E0 : 4211                		cmp/pz	r2
+(1) 2052/ 60013E2 : 8902                		bt	.ypostvl
+(1) 2053/ 60013E4 : 4011                		cmp/pz	r0
+(1) 2054/ 60013E6 : 8900                		bt	.ypostvl
+(1) 2055/ 60013E8 : 303C                		add	r3,r0
+(1) 2056/ 60013EA :                     .ypostvl:
+(1) 2057/ 60013EA : C123                		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
+(1) 2058/ 60013EC :                     ; 		mov.w	@(marsGbl_Bg_YbgInc_LR,gbr),r0
+(1) 2059/ 60013EC :                     ; 		add	r2,r0
+(1) 2060/ 60013EC :                     ; 		cmp/pl	r2
+(1) 2061/ 60013EC :                     ; 		bf	.yenegtv
+(1) 2062/ 60013EC :                     ; 		cmp/ge	r3,r0
+(1) 2063/ 60013EC :                     ; 		bf	.yenegtv
+(1) 2064/ 60013EC :                     ; 		sub	r3,r0
+(1) 2065/ 60013EC :                     ; .yenegtv:
+(1) 2066/ 60013EC :                     ; 		cmp/pz	r2
+(1) 2067/ 60013EC :                     ; 		bt	.yepostv
+(1) 2068/ 60013EC :                     ; 		cmp/pz	r0
+(1) 2069/ 60013EC :                     ; 		bt	.yepostv
+(1) 2070/ 60013EC :                     ; 		add	r3,r0
+(1) 2071/ 60013EC :                     ; .yepostv:
+(1) 2072/ 60013EC :                     ; 		mov.w	r0,@(marsGbl_Bg_YbgInc_LR,gbr)
+(1) 2073/ 60013EC :                     
+(1) 2074/ 60013EC :                     	; ---------------------------------------
+(1) 2075/ 60013EC :                     	; X move
+(1) 2076/ 60013EC :                     	; ---------------------------------------
+(1) 2077/ 60013EC :                     
+(1) 2078/ 60013EC : D018                		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+(1) 2079/ 60013EE : 6303                		mov	r0,r3
+(1) 2080/ 60013F0 : C606                		mov	@(marsGbl_Bg_FbBase,gbr),r0
+(1) 2081/ 60013F2 : 301C                		add	r1,r0
+(1) 2082/ 60013F4 : 4115                		cmp/pl	r1
+(1) 2083/ 60013F6 : 8B02                		bf	.yx_negtv
+(1) 2084/ 60013F8 : 3037                		cmp/gt	r3,r0
+(1) 2085/ 60013FA : 8B00                		bf	.yx_negtv
+(1) 2086/ 60013FC : 3038                		sub	r3,r0
+(1) 2087/ 60013FE :                     .yx_negtv:
+(1) 2088/ 60013FE : 4111                		cmp/pz	r1
+(1) 2089/ 6001400 : 8902                		bt	.yx_postv
+(1) 2090/ 6001402 : 4011                		cmp/pz	r0
+(1) 2091/ 6001404 : 8900                		bt	.yx_postv
+(1) 2092/ 6001406 : 303C                		add	r3,r0
+(1) 2093/ 6001408 :                     .yx_postv:
+(1) 2094/ 6001408 : C206                		mov	r0,@(marsGbl_Bg_FbBase,gbr)
+(1) 2095/ 600140A :                     
+(1) 2096/ 600140A :                     	; X draw heads for Left/Right drawing
+(1) 2097/ 600140A : C518                		mov.w	@(marsGbl_BgWidth,gbr),r0
+(1) 2098/ 600140C : 6303                		mov	r0,r3
+(1) 2099/ 600140E : E500                		mov	#0,r5
+(1) 2100/ 6001410 : E600                		mov	#0,r6
+(1) 2101/ 6001412 : C522                		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+(1) 2102/ 6001414 : 301C                		add	r1,r0
+(1) 2103/ 6001416 : 4115                		cmp/pl	r1
+(1) 2104/ 6001418 : 8B03                		bf	.negtv
+(1) 2105/ 600141A : E501                		mov	#%0001,r5
+(1) 2106/ 600141C : 3033                		cmp/ge	r3,r0
+(1) 2107/ 600141E : 8B00                		bf	.negtv
+(1) 2108/ 6001420 : 3038                		sub	r3,r0
+(1) 2109/ 6001422 :                     .negtv:
+(1) 2110/ 6001422 : 4111                		cmp/pz	r1
+(1) 2111/ 6001424 : 8903                		bt	.postv
+(1) 2112/ 6001426 : E502                		mov	#%0010,r5
+(1) 2113/ 6001428 : 4011                		cmp/pz	r0
+(1) 2114/ 600142A : 8900                		bt	.postv
+(1) 2115/ 600142C : 303C                		add	r3,r0
+(1) 2116/ 600142E :                     .postv:
+(1) 2117/ 600142E : C122                		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
+(1) 2118/ 6001430 :                     
+(1) 2119/ 6001430 : C521                		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+(1) 2120/ 6001432 : 301C                		add	r1,r0
+(1) 2121/ 6001434 : 4115                		cmp/pl	r1
+(1) 2122/ 6001436 : 8B02                		bf	.negtvl
+(1) 2123/ 6001438 : 3033                		cmp/ge	r3,r0
+(1) 2124/ 600143A : 8B00                		bf	.negtvl
+(1) 2125/ 600143C : 3038                		sub	r3,r0
+(1) 2126/ 600143E :                     .negtvl:
+(1) 2127/ 600143E : 4111                		cmp/pz	r1
+(1) 2128/ 6001440 : 8902                		bt	.postvl
+(1) 2129/ 6001442 : 4011                		cmp/pz	r0
+(1) 2130/ 6001444 : 8900                		bt	.postvl
+(1) 2131/ 6001446 : 303C                		add	r3,r0
+(1) 2132/ 6001448 :                     .postvl:
+(1) 2133/ 6001448 : C121                		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
+(1) 2134/ 600144A : 000B                		rts
+(1) 2135/ 600144C : 0009                		nop
+(1) 2136/ 600144E :                     		align 4
+(1) 2137/ 6001450 : 0001 5000           		ltorg
+(1) 2138/ 6001454 :                     
+(1) 2139/ 6001454 :                     mstr_setreq1:
+(1) 2140/ 6001454 : E500                		mov	#0,r5
+(1) 2141/ 6001456 : C51D                		mov.w	@(marsGbl_Bg_Yset,gbr),r0
+(1) 2142/ 6001458 : 302C                		add	r2,r0
+(1) 2143/ 600145A : 6603                		mov	r0,r6
+(1) 2144/ 600145C : C8F0                		tst	#(-MSCRL_BLKSIZE)&$FF,r0
+(1) 2145/ 600145E : 8916                		bt	.ydr_busy
+(1) 2146/ 6001460 : E3F0                		mov	#-MSCRL_BLKSIZE,r3
+(1) 2147/ 6001462 : 4215                		cmp/pl	r2
+(1) 2148/ 6001464 : 8B08                		bf	.reqd_b
+(1) 2149/ 6001466 : C525                		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
+(1) 2150/ 6001468 : 6403                		mov	r0,r4
+(1) 2151/ 600146A : C526                		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
+(1) 2152/ 600146C : 204B                		or	r4,r0
+(1) 2153/ 600146E : 8800                		cmp/eq	#0,r0
+(1) 2154/ 6001470 : 8B0D                		bf	.ydr_busy
+(1) 2155/ 6001472 : E002                		mov	#2,r0
+(1) 2156/ 6001474 : C126                		mov.w	r0,@(marsGbl_Bg_DrwReqD,gbr)
+(1) 2157/ 6001476 : 7501                		add	#$01,r5
+(1) 2158/ 6001478 :                     .reqd_b:
+(1) 2159/ 6001478 : 4211                		cmp/pz	r2
+(1) 2160/ 600147A : 8908                		bt	.ydr_busy
+(1) 2161/ 600147C : C525                		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
+(1) 2162/ 600147E : 6403                		mov	r0,r4
+(1) 2163/ 6001480 : C526                		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
+(1) 2164/ 6001482 : 204B                		or	r4,r0
+(1) 2165/ 6001484 : 8800                		cmp/eq	#0,r0
+(1) 2166/ 6001486 : 8B02                		bf	.ydr_busy
+(1) 2167/ 6001488 : E002                		mov	#2,r0
+(1) 2168/ 600148A : C125                		mov.w	r0,@(marsGbl_Bg_DrwReqU,gbr)
+(1) 2169/ 600148C : 7501                		add	#$01,r5
+(1) 2170/ 600148E :                     .ydr_busy:
+(1) 2171/ 600148E : 6063                		mov	r6,r0
+(1) 2172/ 6001490 : C90F                		and	#MSCRL_BLKSIZE-1,r0
+(1) 2173/ 6001492 : C11D                		mov.w	r0,@(marsGbl_Bg_Yset,gbr)
+(1) 2174/ 6001494 : C51C                		mov.w	@(marsGbl_Bg_Xset,gbr),r0
+(1) 2175/ 6001496 : 301C                		add	r1,r0
+(1) 2176/ 6001498 : 6603                		mov	r0,r6
+(1) 2177/ 600149A : C8F0                		tst	#(-MSCRL_BLKSIZE)&$FF,r0
+(1) 2178/ 600149C : 8916                		bt	.ydl_busy
+(1) 2179/ 600149E : E3F0                		mov	#-MSCRL_BLKSIZE,r3
+(1) 2180/ 60014A0 : 4115                		cmp/pl	r1
+(1) 2181/ 60014A2 : 8B08                		bf	.reqr_b
+(1) 2182/ 60014A4 : C527                		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
+(1) 2183/ 60014A6 : 6403                		mov	r0,r4
+(1) 2184/ 60014A8 : C528                		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
+(1) 2185/ 60014AA : 204B                		or	r4,r0
+(1) 2186/ 60014AC : 8800                		cmp/eq	#0,r0
+(1) 2187/ 60014AE : 8B0D                		bf	.ydl_busy
+(1) 2188/ 60014B0 :                     
+(1) 2189/ 60014B0 : E002                		mov	#2,r0
+(1) 2190/ 60014B2 : C128                		mov.w	r0,@(marsGbl_Bg_DrwReqR,gbr)
+(1) 2191/ 60014B4 : 7502                		add	#$02,r5
+(1) 2192/ 60014B6 :                     .reqr_b:
+(1) 2193/ 60014B6 : 4111                		cmp/pz	r1
+(1) 2194/ 60014B8 : 8908                		bt	.ydl_busy
+(1) 2195/ 60014BA : C527                		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
+(1) 2196/ 60014BC : 6403                		mov	r0,r4
+(1) 2197/ 60014BE : C528                		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
+(1) 2198/ 60014C0 : 204B                		or	r4,r0
+(1) 2199/ 60014C2 : 8800                		cmp/eq	#0,r0
+(1) 2200/ 60014C4 : 8B02                		bf	.ydl_busy
+(1) 2201/ 60014C6 :                     
+(1) 2202/ 60014C6 : E002                		mov	#2,r0
+(1) 2203/ 60014C8 : C127                		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
+(1) 2204/ 60014CA : 7502                		add	#$02,r5
+(1) 2205/ 60014CC :                     .ydl_busy:
+(1) 2206/ 60014CC : 6063                		mov	r6,r0
+(1) 2207/ 60014CE : C90F                		and	#MSCRL_BLKSIZE-1,r0
+(1) 2208/ 60014D0 : C11C                		mov.w	r0,@(marsGbl_Bg_Xset,gbr)
+(1) 2209/ 60014D2 :                     
+(1) 2210/ 60014D2 :                     	; Make snapshot of scroll variables
+(1) 2211/ 60014D2 :                     	; to CACHE
+(1) 2212/ 60014D2 : 4515                		cmp/pl	r5
+(1) 2213/ 60014D4 : 8B24                		bf	.dont_snap
+(1) 2214/ 60014D6 : E2F0                		mov	#-MSCRL_BLKSIZE,r2
+(1) 2215/ 60014D8 : D112                		mov	#Cach_XHead_L,r1
+(1) 2216/ 60014DA : C521                		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+(1) 2217/ 60014DC : 2029                		and	r2,r0
+(1) 2218/ 60014DE : 2102                		mov	r0,@r1
+(1) 2219/ 60014E0 : D111                		mov	#Cach_XHead_R,r1
+(1) 2220/ 60014E2 : C522                		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+(1) 2221/ 60014E4 : 2029                		and	r2,r0
+(1) 2222/ 60014E6 : 2102                		mov	r0,@r1
+(1) 2223/ 60014E8 : C523                		mov.w	@(marsGbl_Bg_YbgInc_D,gbr),r0
+(1) 2224/ 60014EA : D110                		mov	#Cach_YHead_D,r1
+(1) 2225/ 60014EC : 2029                		and	r2,r0
+(1) 2226/ 60014EE : 2102                		mov	r0,@r1
+(1) 2227/ 60014F0 : C524                		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+(1) 2228/ 60014F2 : D10F                		mov	#Cach_YHead_U,r1
+(1) 2229/ 60014F4 : 2029                		and	r2,r0
+(1) 2230/ 60014F6 : 2102                		mov	r0,@r1
+(1) 2231/ 60014F8 : C51E                		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
+(1) 2232/ 60014FA : D10E                		mov	#Cach_BgFbPos_U,r1
+(1) 2233/ 60014FC : 2029                		and	r2,r0
+(1) 2234/ 60014FE : 2102                		mov	r0,@r1
+(1) 2235/ 6001500 : C51F                		mov.w	@(marsGbl_Bg_YFbPos_D,gbr),r0
+(1) 2236/ 6001502 : D10D                		mov	#Cach_BgFbPos_D,r1
+(1) 2237/ 6001504 : 2029                		and	r2,r0
+(1) 2238/ 6001506 : 2102                		mov	r0,@r1
+(1) 2239/ 6001508 : C606                		mov	@(marsGbl_Bg_FbBase,gbr),r0
+(1) 2240/ 600150A : D10C                		mov	#Cach_BgFbPos_LR,r1
+(1) 2241/ 600150C : 2029                		and	r2,r0
+(1) 2242/ 600150E : 2102                		mov	r0,@r1
+(1) 2243/ 6001510 :                     
+(1) 2244/ 6001510 : C522                		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
+(1) 2245/ 6001512 : D40B                		mov	#Cach_XHead_R,r4
+(1) 2246/ 6001514 : 2039                		and	r3,r0
+(1) 2247/ 6001516 : 2402                		mov	r0,@r4
+(1) 2248/ 6001518 :                     ; 		mov.w	@(marsGbl_Bg_XFbPos_R,gbr),r0
+(1) 2249/ 6001518 :                     ; 		mov	#Cach_BgFbPos_R,r4
+(1) 2250/ 6001518 :                     ; 		and	r3,r0
+(1) 2251/ 6001518 :                     ; 		mov	r0,@r4
+(1) 2252/ 6001518 : C521                		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+(1) 2253/ 600151A : D40A                		mov	#Cach_XHead_L,r4
+(1) 2254/ 600151C : 2039                		and	r3,r0
+(1) 2255/ 600151E : 2402                		mov	r0,@r4
+(1) 2256/ 6001520 :                     ; 		mov.w	@(marsGbl_Bg_XFbPos_L,gbr),r0
+(1) 2257/ 6001520 :                     ; 		mov	#Cach_BgFbPos_L,r4
+(1) 2258/ 6001520 :                     ; 		and	r3,r0
+(1) 2259/ 6001520 :                     ; 		mov	r0,@r4
+(1) 2260/ 6001520 :                     
+(1) 2261/ 6001520 :                     .dont_snap:
+(1) 2262/ 6001520 :                     
+(1) 2263/ 6001520 : 000B                		rts
+(1) 2264/ 6001522 : 0009                		nop
+(1) 2265/ 6001524 :                     		align 4
+(1) 2266/ 6001524 : C000 050C C000 0510 		ltorg
                     C000 0514 C000 0518 
                     C000 051C C000 0520 
                     C000 0524 C000 0510 
                     C000 050C           
-(1) 2270/ 6001548 :                     
-(1) 2271/ 6001548 :                     ; 	; --------------------
-(1) 2272/ 6001548 :                     ; 	; DEBUG counter
-(1) 2273/ 6001548 :                     ; ; 		mov	#_sysreg+comm2,r4		; DEBUG COUNTER
-(1) 2274/ 6001548 :                     ; ; 		mov.b	@r4,r0
-(1) 2275/ 6001548 :                     ; ; 		add	#1,r0
-(1) 2276/ 6001548 :                     ; ; 		mov.b	r0,@r4
-(1) 2277/ 6001548 :                     ; 	; --------------------
-(1) 2278/ 6001548 :                     ;
-(1) 2279/ 6001548 :                     ; 		mov	#_sysreg+comm14,r1
-(1) 2280/ 6001548 :                     ; 		mov.b	@r1,r0
-(1) 2281/ 6001548 :                     ; 		mov	r0,r2
-(1) 2282/ 6001548 :                     ; 		and 	#$80,r0
-(1) 2283/ 6001548 :                     ; 		cmp/eq	#0,r0			; Genesis requested tasks? (bit 7)
-(1) 2284/ 6001548 :                     ; 		bf	.md_req			; If yes, process them first.
-(1) 2285/ 6001548 :                     ; 		mov	r2,r0			; OR Process tasks from Slave SH2
-(1) 2286/ 6001548 :                     ; 		and	#$7F,r0
-(1) 2287/ 6001548 :                     ; 		shll2	r0
-(1) 2288/ 6001548 :                     ; 		mov	#.list,r1
-(1) 2289/ 6001548 :                     ; 		mov	@(r1,r0),r0
-(1) 2290/ 6001548 :                     ; 		jmp	@r0
-(1) 2291/ 6001548 :                     ; 		nop
-(1) 2292/ 6001548 :                     ; 		align 4
-(1) 2293/ 6001548 :                     ;
-(1) 2294/ 6001548 :                     ; ; ------------------------------------------------
-(1) 2295/ 6001548 :                     ; ; Graphic processing list for Master
-(1) 2296/ 6001548 :                     ; ; ------------------------------------------------
-(1) 2297/ 6001548 :                     ;
-(1) 2298/ 6001548 :                     ; .list:
-(1) 2299/ 6001548 :                     ; 		dc.l .draw_objects	; Null task
-(1) 2300/ 6001548 :                     ; 		dc.l .draw_objects
-(1) 2301/ 6001548 :                     ; 		dc.l master_loop
-(1) 2302/ 6001548 :                     ;
-(1) 2303/ 6001548 :                     ; ; ------------------------------------------------
-(1) 2304/ 6001548 :                     ; ; Process Visual/Audio requests from Genesis
-(1) 2305/ 6001548 :                     ; ; ------------------------------------------------
-(1) 2306/ 6001548 :                     ;
-(1) 2307/ 6001548 :                     ; .md_req:
-(1) 2308/ 6001548 :                     ; 		stc	sr,@-r15
-(1) 2309/ 6001548 :                     ; 		mov	#$F0,r0			; Disable interrupts
-(1) 2310/ 6001548 :                     ; 		ldc	r0,sr
-(1) 2311/ 6001548 :                     ; 		mov	#MAX_MDTASKS,r13
-(1) 2312/ 6001548 :                     ; 		mov	#RAM_Mars_MdTasksFifo_M,r14
-(1) 2313/ 6001548 :                     ; .next_req:
-(1) 2314/ 6001548 :                     ; 		mov	r13,@-r15
-(1) 2315/ 6001548 :                     ; 		mov	@r14,r0
-(1) 2316/ 6001548 :                     ; 		cmp/eq	#0,r0
-(1) 2317/ 6001548 :                     ; 		bt	.no_task
-(1) 2318/ 6001548 :                     ; 		jsr	@r0
-(1) 2319/ 6001548 :                     ; 		nop
-(1) 2320/ 6001548 :                     ; 		xor	r0,r0
-(1) 2321/ 6001548 :                     ; 		mov	r0,@r14
-(1) 2322/ 6001548 :                     ; .no_task:
-(1) 2323/ 6001548 :                     ; 		mov	#MAX_MDTSKARG*4,r0
-(1) 2324/ 6001548 :                     ; 		mov	@r15+,r13
-(1) 2325/ 6001548 :                     ; 		dt	r13
-(1) 2326/ 6001548 :                     ; 		bf/s	.next_req
-(1) 2327/ 6001548 :                     ; 		add	r0,r14
-(1) 2328/ 6001548 :                     ; 		mov	#_sysreg+comm14,r1
-(1) 2329/ 6001548 :                     ; 		mov.b	@r1,r0
-(1) 2330/ 6001548 :                     ; 		and	#$7F,r0
-(1) 2331/ 6001548 :                     ; 		mov.b	r0,@r1
-(1) 2332/ 6001548 :                     ; 		ldc 	@r15+,sr		; Re-enable interrupts
-(1) 2333/ 6001548 :                     ; 		bra	master_loop
-(1) 2334/ 6001548 :                     ; 		nop
-(1) 2335/ 6001548 :                     ;
-(1) 2336/ 6001548 :                     ; ; --------------------------------------------------------
-(1) 2337/ 6001548 :                     ; ; Drawing task $01
-(1) 2338/ 6001548 :                     ; ;
-(1) 2339/ 6001548 :                     ; ; Polygons mode
-(1) 2340/ 6001548 :                     ; ; --------------------------------------------------------
-(1) 2341/ 6001548 :                     
-(1) 2342/ 6001548 :                     ; .draw_objects:
-(1) 2343/ 6001548 :                     
-(1) 2344/ 6001548 :                     ; ====================================================================
-(1) 2345/ 6001548 :                     ; ----------------------------------------------------------------
-(1) 2346/ 6001548 :                     ; Slave entry
-(1) 2347/ 6001548 :                     ; ----------------------------------------------------------------
-(1) 2348/ 6001548 :                     
-(1) 2349/ 6001548 :                     		align 4
-(1) 2350/ 6001548 :                     SH2_S_Entry:
-(1) 2351/ 6001548 : DF38                		mov.l	#CS3|$3F000,r15			; Reset stack
-(1) 2352/ 600154A : 918D                		mov	#_FRT,r1
-(1) 2353/ 600154C : E000                		mov     #0,r0
-(1) 2354/ 600154E : 8010                		mov.b   r0,@(0,r1)
-(1) 2355/ 6001550 : E0E2                		mov     #$FFFFFFE2,r0
-(1) 2356/ 6001552 : 8017                		mov.b   r0,@(7,r1)
-(1) 2357/ 6001554 : E000                		mov     #0,r0
-(1) 2358/ 6001556 : 8014                		mov.b   r0,@(4,r1)
-(1) 2359/ 6001558 : E001                		mov     #1,r0
-(1) 2360/ 600155A : 8015                		mov.b   r0,@(5,r1)
-(1) 2361/ 600155C : E000                		mov     #0,r0
-(1) 2362/ 600155E : 8016                		mov.b   r0,@(6,r1)
-(1) 2363/ 6001560 : E001                		mov     #1,r0
-(1) 2364/ 6001562 : 8011                		mov.b   r0,@(1,r1)
-(1) 2365/ 6001564 : E000                		mov     #0,r0
-(1) 2366/ 6001566 : 8013                		mov.b   r0,@(3,r1)
-(1) 2367/ 6001568 : 8012                		mov.b   r0,@(2,r1)
-(1) 2368/ 600156A : 907E                		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
-(1) 2369/ 600156C : E150                		mov     #%0101<<4,r1
-(1) 2370/ 600156E : 2011                		mov.w   r1,@r0
-(1) 2371/ 6001570 : 907C                		mov.l   #$FFFFFEE4,r0
-(1) 2372/ 6001572 : E148                		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
-(1) 2373/ 6001574 : 4118                		shll8   r1
-(1) 2374/ 6001576 : 2011                		mov.w   r1,@r0
-(1) 2375/ 6001578 :                     		
-(1) 2376/ 6001578 :                     ; ------------------------------------------------
-(1) 2377/ 6001578 :                     ; Wait for Genesis, report to Master SH2
-(1) 2378/ 6001578 :                     ; ------------------------------------------------
-(1) 2379/ 6001578 :                     
-(1) 2380/ 6001578 :                     .wait_md:
-(1) 2381/ 6001578 : D22D                		mov 	#_sysreg+comm0,r2
-(1) 2382/ 600157A : 6022                		mov.l	@r2,r0
-(1) 2383/ 600157C : 8800                		cmp/eq	#0,r0
-(1) 2384/ 600157E : 8BFB                		bf	.wait_md
-(1) 2385/ 6001580 : D02C                		mov.l	#"SLAV",r0
-(1) 2386/ 6001582 : 1202                		mov.l	r0,@(8,r2)
-(1) 2387/ 6001584 :                     
-(1) 2388/ 6001584 :                     ; ====================================================================
-(1) 2389/ 6001584 :                     ; ----------------------------------------------------------------
-(1) 2390/ 6001584 :                     ; Slave main code
-(1) 2391/ 6001584 :                     ; ----------------------------------------------------------------
-(1) 2392/ 6001584 :                     
-(1) 2393/ 6001584 :                     SH2_S_HotStart:
-(1) 2394/ 6001584 : DF29                		mov.l	#CS3|$3F000,r15			; Reset stack
-(1) 2395/ 6001586 : DE2C                		mov.l	#RAM_Mars_Global,r14		; Reset gbr
-(1) 2396/ 6001588 : 4E1E                		ldc	r14,gbr
-(1) 2397/ 600158A : 9070                		mov.l	#$F0,r0				; Interrupts OFF
-(1) 2398/ 600158C : 400E                		ldc	r0,sr
-(1) 2399/ 600158E : 916F                		mov.l	#_CCR,r1
-(1) 2400/ 6001590 : E008                		mov	#%00001000,r0			; Cache OFF
-(1) 2401/ 6001592 : 2101                		mov.w	r0,@r1
-(1) 2402/ 6001594 : E019                		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-(1) 2403/ 6001596 : 2101                		mov.w	r0,@r1
-(1) 2404/ 6001598 : D128                		mov	#_sysreg,r1
-(1) 2405/ 600159A : E003                		mov	#PWMIRQ_ON|CMDIRQ_ON,r0		; Enable these interrupts
-(1) 2406/ 600159C : 8011                    		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
-(1) 2407/ 600159E : D128                		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
-(1) 2408/ 60015A0 : D228                		mov 	#$C0000000,r2
-(1) 2409/ 60015A2 : 9366                		mov 	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r3
-(1) 2410/ 60015A4 :                     .copy:
-(1) 2411/ 60015A4 : 6016                		mov 	@r1+,r0
-(1) 2412/ 60015A6 : 2202                		mov 	r0,@r2
-(1) 2413/ 60015A8 : 7204                		add 	#4,r2
-(1) 2414/ 60015AA : 4310                		dt	r3
-(1) 2415/ 60015AC : 8BFA                		bf	.copy
-(1) 2416/ 60015AE : BAF8                		bsr	MarsSound_Init			; Init Sound
-(1) 2417/ 60015B0 : 0009                		nop
-(1) 2418/ 60015B2 :                     ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
-(1) 2419/ 60015B2 :                     ; 		jsr	@r0
-(1) 2420/ 60015B2 :                     ; 		nop
-(1) 2421/ 60015B2 :                     ; 		mov	#0,r1
-(1) 2422/ 60015B2 :                     ; 		mov	#PWM_STEREO,r2
-(1) 2423/ 60015B2 :                     ; 		mov	#PWM_STEREO_e,r3
-(1) 2424/ 60015B2 :                     ; 		mov	#0,r4
-(1) 2425/ 60015B2 :                     ; 		mov	#$100,r5
-(1) 2426/ 60015B2 :                     ; 		mov	#0,r6
-(1) 2427/ 60015B2 :                     ; 		mov	#%11|%10000000,r7
-(1) 2428/ 60015B2 :                     ; 		mov	#MarsSound_SetPwm,r0
-(1) 2429/ 60015B2 :                     ; 		jsr	@r0
-(1) 2430/ 60015B2 :                     ; 		nop
-(1) 2431/ 60015B2 :                     ; 		mov	#1,r1
-(1) 2432/ 60015B2 :                     ; 		mov	#PWM_STEREO,r2
-(1) 2433/ 60015B2 :                     ; 		mov	#PWM_STEREO_e,r3
-(1) 2434/ 60015B2 :                     ; 		mov	#0,r4
-(1) 2435/ 60015B2 :                     ; 		mov	#$100,r5
-(1) 2436/ 60015B2 :                     ; 		mov	#0,r6
-(1) 2437/ 60015B2 :                     ; 		mov	#%11|%10000000,r7
-(1) 2438/ 60015B2 :                     ; 		mov	#MarsSound_SetPwm,r0
-(1) 2439/ 60015B2 :                     ; 		jsr	@r0
-(1) 2440/ 60015B2 :                     ; 		nop
-(1) 2441/ 60015B2 : E020                		mov.l	#$20,r0				; Interrupts ON
-(1) 2442/ 60015B4 : 400E                		ldc	r0,sr
-(1) 2443/ 60015B6 :                     
-(1) 2444/ 60015B6 :                     ; --------------------------------------------------------
-(1) 2445/ 60015B6 :                     ; Loop
-(1) 2446/ 60015B6 :                     ; --------------------------------------------------------
-(1) 2447/ 60015B6 :                     
-(1) 2448/ 60015B6 : 925D                		mov	#"GO",r2
-(1) 2449/ 60015B8 : D123                		mov	#_sysreg+comm14,r1
-(1) 2450/ 60015BA : 6011                .lel:		mov.w	@r1,r0
-(1) 2451/ 60015BC : 3020                		cmp/eq	r2,r0
-(1) 2452/ 60015BE : 8BFC                		bf	.lel
-(1) 2453/ 60015C0 : 200A                		xor	r0,r0
-(1) 2454/ 60015C2 : 2101                		mov.w	r0,@r1
-(1) 2455/ 60015C4 :                     
-(1) 2456/ 60015C4 :                     	; TEMPORAL polygon
-(1) 2457/ 60015C4 : D021                		mov	#this_polygon,r0
-(1) 2458/ 60015C6 : DE22                		mov 	#RAM_Mars_Plgn_ZList_0,r14
-(1) 2459/ 60015C8 : DD22                		mov	#RAM_Mars_PlgnNum_0,r13
-(1) 2460/ 60015CA : 2E02                		mov	r0,@r14
-(1) 2461/ 60015CC : 1E02                		mov	r0,@(8,r14)
-(1) 2462/ 60015CE : 1E04                		mov	r0,@($10,r14)
-(1) 2463/ 60015D0 : 1E06                		mov	r0,@($18,r14)
-(1) 2464/ 60015D2 : E001                		mov	#1,r0			; enable test polygon
-(1) 2465/ 60015D4 : 2D01                		mov.w	r0,@r13
-(1) 2466/ 60015D6 : D020                		mov	#this_polygon,r0
-(1) 2467/ 60015D8 : DE20                		mov 	#RAM_Mars_Plgn_ZList_1,r14
-(1) 2468/ 60015DA : DD21                		mov	#RAM_Mars_PlgnNum_1,r13
-(1) 2469/ 60015DC : 2E02                		mov	r0,@r14
-(1) 2470/ 60015DE : 1E02                		mov	r0,@(8,r14)
-(1) 2471/ 60015E0 : 1E04                		mov	r0,@($10,r14)
-(1) 2472/ 60015E2 : 1E06                		mov	r0,@($18,r14)
-(1) 2473/ 60015E4 : E001                		mov	#1,r0			; enable test polygon
-(1) 2474/ 60015E6 : 2D01                		mov.w	r0,@r13
-(1) 2475/ 60015E8 :                     
-(1) 2476/ 60015E8 :                     slave_loop:
-(1) 2477/ 60015E8 :                     
-(1) 2478/ 60015E8 : C52D                		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
-(1) 2479/ 60015EA : 8801                		cmp/eq	#1,r0
-(1) 2480/ 60015EC : 891B                		bt	.wait_drw
-(1) 2481/ 60015EE :                     
-(1) 2482/ 60015EE : 4F03                		stc	sr,@-r15
-(1) 2483/ 60015F0 : 903D                		mov	#$F0,r0
-(1) 2484/ 60015F2 : 400E                		ldc	r0,sr
-(1) 2485/ 60015F4 : E100                		mov	#0,r1
-(1) 2486/ 60015F6 : E200                		mov	#0,r2
-(1) 2487/ 60015F8 : D31A                		mov	#_sysreg+comm12,r3
-(1) 2488/ 60015FA : 6031                		mov.w	@r3,r0
-(1) 2489/ 60015FC : C801                		tst	#JoyUp,r0
-(1) 2490/ 60015FE : 8900                		bt	.no2_up
-(1) 2491/ 6001600 : E2FF                		mov	#-1,r2
-(1) 2492/ 6001602 :                     .no2_up:
-(1) 2493/ 6001602 : C802                		tst	#JoyDown,r0
-(1) 2494/ 6001604 : 8900                		bt	.no2_dw
-(1) 2495/ 6001606 : E201                		mov	#1,r2
-(1) 2496/ 6001608 :                     .no2_dw:
-(1) 2497/ 6001608 : C804                		tst	#JoyLeft,r0
-(1) 2498/ 600160A : 8900                		bt	.no2_lf
-(1) 2499/ 600160C : E1FF                		mov	#-1,r1
-(1) 2500/ 600160E :                     .no2_lf:
-(1) 2501/ 600160E : C808                		tst	#JoyRight,r0
-(1) 2502/ 6001610 : 8900                		bt	.no2_rf
-(1) 2503/ 6001612 : E101                		mov	#1,r1
-(1) 2504/ 6001614 :                     .no2_rf:
-(1) 2505/ 6001614 : C510                		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
-(1) 2506/ 6001616 : 301C                		add	r1,r0
-(1) 2507/ 6001618 : C110                		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
-(1) 2508/ 600161A : C511                		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
-(1) 2509/ 600161C : 302C                		add	r2,r0
-(1) 2510/ 600161E : C111                		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
-(1) 2511/ 6001620 : 4F07                		ldc 	@r15+,sr
-(1) 2512/ 6001622 :                     
-(1) 2513/ 6001622 : E001                		mov.w	#1,r0
-(1) 2514/ 6001624 : C12D                		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
-(1) 2515/ 6001626 :                     .wait_drw:
-(1) 2516/ 6001626 : AFDF                		bra	slave_loop
-(1) 2517/ 6001628 : 0009                		nop
-(1) 2518/ 600162A :                     		align 4
-(1) 2519/ 600162C : 0603 F000 2000 4020 		ltorg
+(1) 2267/ 6001548 :                     
+(1) 2268/ 6001548 :                     ; 	; --------------------
+(1) 2269/ 6001548 :                     ; 	; DEBUG counter
+(1) 2270/ 6001548 :                     ; ; 		mov	#_sysreg+comm2,r4		; DEBUG COUNTER
+(1) 2271/ 6001548 :                     ; ; 		mov.b	@r4,r0
+(1) 2272/ 6001548 :                     ; ; 		add	#1,r0
+(1) 2273/ 6001548 :                     ; ; 		mov.b	r0,@r4
+(1) 2274/ 6001548 :                     ; 	; --------------------
+(1) 2275/ 6001548 :                     ;
+(1) 2276/ 6001548 :                     ; 		mov	#_sysreg+comm14,r1
+(1) 2277/ 6001548 :                     ; 		mov.b	@r1,r0
+(1) 2278/ 6001548 :                     ; 		mov	r0,r2
+(1) 2279/ 6001548 :                     ; 		and 	#$80,r0
+(1) 2280/ 6001548 :                     ; 		cmp/eq	#0,r0			; Genesis requested tasks? (bit 7)
+(1) 2281/ 6001548 :                     ; 		bf	.md_req			; If yes, process them first.
+(1) 2282/ 6001548 :                     ; 		mov	r2,r0			; OR Process tasks from Slave SH2
+(1) 2283/ 6001548 :                     ; 		and	#$7F,r0
+(1) 2284/ 6001548 :                     ; 		shll2	r0
+(1) 2285/ 6001548 :                     ; 		mov	#.list,r1
+(1) 2286/ 6001548 :                     ; 		mov	@(r1,r0),r0
+(1) 2287/ 6001548 :                     ; 		jmp	@r0
+(1) 2288/ 6001548 :                     ; 		nop
+(1) 2289/ 6001548 :                     ; 		align 4
+(1) 2290/ 6001548 :                     ;
+(1) 2291/ 6001548 :                     ; ; ------------------------------------------------
+(1) 2292/ 6001548 :                     ; ; Graphic processing list for Master
+(1) 2293/ 6001548 :                     ; ; ------------------------------------------------
+(1) 2294/ 6001548 :                     ;
+(1) 2295/ 6001548 :                     ; .list:
+(1) 2296/ 6001548 :                     ; 		dc.l .draw_objects	; Null task
+(1) 2297/ 6001548 :                     ; 		dc.l .draw_objects
+(1) 2298/ 6001548 :                     ; 		dc.l master_loop
+(1) 2299/ 6001548 :                     ;
+(1) 2300/ 6001548 :                     ; ; ------------------------------------------------
+(1) 2301/ 6001548 :                     ; ; Process Visual/Audio requests from Genesis
+(1) 2302/ 6001548 :                     ; ; ------------------------------------------------
+(1) 2303/ 6001548 :                     ;
+(1) 2304/ 6001548 :                     ; .md_req:
+(1) 2305/ 6001548 :                     ; 		stc	sr,@-r15
+(1) 2306/ 6001548 :                     ; 		mov	#$F0,r0			; Disable interrupts
+(1) 2307/ 6001548 :                     ; 		ldc	r0,sr
+(1) 2308/ 6001548 :                     ; 		mov	#MAX_MDTASKS,r13
+(1) 2309/ 6001548 :                     ; 		mov	#RAM_Mars_MdTasksFifo_M,r14
+(1) 2310/ 6001548 :                     ; .next_req:
+(1) 2311/ 6001548 :                     ; 		mov	r13,@-r15
+(1) 2312/ 6001548 :                     ; 		mov	@r14,r0
+(1) 2313/ 6001548 :                     ; 		cmp/eq	#0,r0
+(1) 2314/ 6001548 :                     ; 		bt	.no_task
+(1) 2315/ 6001548 :                     ; 		jsr	@r0
+(1) 2316/ 6001548 :                     ; 		nop
+(1) 2317/ 6001548 :                     ; 		xor	r0,r0
+(1) 2318/ 6001548 :                     ; 		mov	r0,@r14
+(1) 2319/ 6001548 :                     ; .no_task:
+(1) 2320/ 6001548 :                     ; 		mov	#MAX_MDTSKARG*4,r0
+(1) 2321/ 6001548 :                     ; 		mov	@r15+,r13
+(1) 2322/ 6001548 :                     ; 		dt	r13
+(1) 2323/ 6001548 :                     ; 		bf/s	.next_req
+(1) 2324/ 6001548 :                     ; 		add	r0,r14
+(1) 2325/ 6001548 :                     ; 		mov	#_sysreg+comm14,r1
+(1) 2326/ 6001548 :                     ; 		mov.b	@r1,r0
+(1) 2327/ 6001548 :                     ; 		and	#$7F,r0
+(1) 2328/ 6001548 :                     ; 		mov.b	r0,@r1
+(1) 2329/ 6001548 :                     ; 		ldc 	@r15+,sr		; Re-enable interrupts
+(1) 2330/ 6001548 :                     ; 		bra	master_loop
+(1) 2331/ 6001548 :                     ; 		nop
+(1) 2332/ 6001548 :                     ;
+(1) 2333/ 6001548 :                     ; ; --------------------------------------------------------
+(1) 2334/ 6001548 :                     ; ; Drawing task $01
+(1) 2335/ 6001548 :                     ; ;
+(1) 2336/ 6001548 :                     ; ; Polygons mode
+(1) 2337/ 6001548 :                     ; ; --------------------------------------------------------
+(1) 2338/ 6001548 :                     
+(1) 2339/ 6001548 :                     ; .draw_objects:
+(1) 2340/ 6001548 :                     
+(1) 2341/ 6001548 :                     ; ====================================================================
+(1) 2342/ 6001548 :                     ; ----------------------------------------------------------------
+(1) 2343/ 6001548 :                     ; Slave entry
+(1) 2344/ 6001548 :                     ; ----------------------------------------------------------------
+(1) 2345/ 6001548 :                     
+(1) 2346/ 6001548 :                     		align 4
+(1) 2347/ 6001548 :                     SH2_S_Entry:
+(1) 2348/ 6001548 : DF38                		mov.l	#CS3|$3F000,r15			; Reset stack
+(1) 2349/ 600154A : 918D                		mov	#_FRT,r1
+(1) 2350/ 600154C : E000                		mov     #0,r0
+(1) 2351/ 600154E : 8010                		mov.b   r0,@(0,r1)
+(1) 2352/ 6001550 : E0E2                		mov     #$FFFFFFE2,r0
+(1) 2353/ 6001552 : 8017                		mov.b   r0,@(7,r1)
+(1) 2354/ 6001554 : E000                		mov     #0,r0
+(1) 2355/ 6001556 : 8014                		mov.b   r0,@(4,r1)
+(1) 2356/ 6001558 : E001                		mov     #1,r0
+(1) 2357/ 600155A : 8015                		mov.b   r0,@(5,r1)
+(1) 2358/ 600155C : E000                		mov     #0,r0
+(1) 2359/ 600155E : 8016                		mov.b   r0,@(6,r1)
+(1) 2360/ 6001560 : E001                		mov     #1,r0
+(1) 2361/ 6001562 : 8011                		mov.b   r0,@(1,r1)
+(1) 2362/ 6001564 : E000                		mov     #0,r0
+(1) 2363/ 6001566 : 8013                		mov.b   r0,@(3,r1)
+(1) 2364/ 6001568 : 8012                		mov.b   r0,@(2,r1)
+(1) 2365/ 600156A : 907E                		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+(1) 2366/ 600156C : E150                		mov     #%0101<<4,r1
+(1) 2367/ 600156E : 2011                		mov.w   r1,@r0
+(1) 2368/ 6001570 : 907C                		mov.l   #$FFFFFEE4,r0
+(1) 2369/ 6001572 : E148                		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
+(1) 2370/ 6001574 : 4118                		shll8   r1
+(1) 2371/ 6001576 : 2011                		mov.w   r1,@r0
+(1) 2372/ 6001578 :                     		
+(1) 2373/ 6001578 :                     ; ------------------------------------------------
+(1) 2374/ 6001578 :                     ; Wait for Genesis, report to Master SH2
+(1) 2375/ 6001578 :                     ; ------------------------------------------------
+(1) 2376/ 6001578 :                     
+(1) 2377/ 6001578 :                     .wait_md:
+(1) 2378/ 6001578 : D22D                		mov 	#_sysreg+comm0,r2
+(1) 2379/ 600157A : 6022                		mov.l	@r2,r0
+(1) 2380/ 600157C : 8800                		cmp/eq	#0,r0
+(1) 2381/ 600157E : 8BFB                		bf	.wait_md
+(1) 2382/ 6001580 : D02C                		mov.l	#"SLAV",r0
+(1) 2383/ 6001582 : 1202                		mov.l	r0,@(8,r2)
+(1) 2384/ 6001584 :                     
+(1) 2385/ 6001584 :                     ; ====================================================================
+(1) 2386/ 6001584 :                     ; ----------------------------------------------------------------
+(1) 2387/ 6001584 :                     ; Slave main code
+(1) 2388/ 6001584 :                     ; ----------------------------------------------------------------
+(1) 2389/ 6001584 :                     
+(1) 2390/ 6001584 :                     SH2_S_HotStart:
+(1) 2391/ 6001584 : DF29                		mov.l	#CS3|$3F000,r15			; Reset stack
+(1) 2392/ 6001586 : DE2C                		mov.l	#RAM_Mars_Global,r14		; Reset gbr
+(1) 2393/ 6001588 : 4E1E                		ldc	r14,gbr
+(1) 2394/ 600158A : 9070                		mov.l	#$F0,r0				; Interrupts OFF
+(1) 2395/ 600158C : 400E                		ldc	r0,sr
+(1) 2396/ 600158E : 916F                		mov.l	#_CCR,r1
+(1) 2397/ 6001590 : E008                		mov	#%00001000,r0			; Cache OFF
+(1) 2398/ 6001592 : 2101                		mov.w	r0,@r1
+(1) 2399/ 6001594 : E019                		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+(1) 2400/ 6001596 : 2101                		mov.w	r0,@r1
+(1) 2401/ 6001598 : D128                		mov	#_sysreg,r1
+(1) 2402/ 600159A : E003                		mov	#PWMIRQ_ON|CMDIRQ_ON,r0		; Enable these interrupts
+(1) 2403/ 600159C : 8011                    		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
+(1) 2404/ 600159E : D128                		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
+(1) 2405/ 60015A0 : D228                		mov 	#$C0000000,r2
+(1) 2406/ 60015A2 : 9366                		mov 	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r3
+(1) 2407/ 60015A4 :                     .copy:
+(1) 2408/ 60015A4 : 6016                		mov 	@r1+,r0
+(1) 2409/ 60015A6 : 2202                		mov 	r0,@r2
+(1) 2410/ 60015A8 : 7204                		add 	#4,r2
+(1) 2411/ 60015AA : 4310                		dt	r3
+(1) 2412/ 60015AC : 8BFA                		bf	.copy
+(1) 2413/ 60015AE : BAF8                		bsr	MarsSound_Init			; Init Sound
+(1) 2414/ 60015B0 : 0009                		nop
+(1) 2415/ 60015B2 :                     ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
+(1) 2416/ 60015B2 :                     ; 		jsr	@r0
+(1) 2417/ 60015B2 :                     ; 		nop
+(1) 2418/ 60015B2 :                     ; 		mov	#0,r1
+(1) 2419/ 60015B2 :                     ; 		mov	#PWM_STEREO,r2
+(1) 2420/ 60015B2 :                     ; 		mov	#PWM_STEREO_e,r3
+(1) 2421/ 60015B2 :                     ; 		mov	#0,r4
+(1) 2422/ 60015B2 :                     ; 		mov	#$100,r5
+(1) 2423/ 60015B2 :                     ; 		mov	#0,r6
+(1) 2424/ 60015B2 :                     ; 		mov	#%11|%10000000,r7
+(1) 2425/ 60015B2 :                     ; 		mov	#MarsSound_SetPwm,r0
+(1) 2426/ 60015B2 :                     ; 		jsr	@r0
+(1) 2427/ 60015B2 :                     ; 		nop
+(1) 2428/ 60015B2 :                     ; 		mov	#1,r1
+(1) 2429/ 60015B2 :                     ; 		mov	#PWM_STEREO,r2
+(1) 2430/ 60015B2 :                     ; 		mov	#PWM_STEREO_e,r3
+(1) 2431/ 60015B2 :                     ; 		mov	#0,r4
+(1) 2432/ 60015B2 :                     ; 		mov	#$100,r5
+(1) 2433/ 60015B2 :                     ; 		mov	#0,r6
+(1) 2434/ 60015B2 :                     ; 		mov	#%11|%10000000,r7
+(1) 2435/ 60015B2 :                     ; 		mov	#MarsSound_SetPwm,r0
+(1) 2436/ 60015B2 :                     ; 		jsr	@r0
+(1) 2437/ 60015B2 :                     ; 		nop
+(1) 2438/ 60015B2 : E020                		mov.l	#$20,r0				; Interrupts ON
+(1) 2439/ 60015B4 : 400E                		ldc	r0,sr
+(1) 2440/ 60015B6 :                     
+(1) 2441/ 60015B6 :                     ; --------------------------------------------------------
+(1) 2442/ 60015B6 :                     ; Loop
+(1) 2443/ 60015B6 :                     ; --------------------------------------------------------
+(1) 2444/ 60015B6 :                     
+(1) 2445/ 60015B6 : 925D                		mov	#"GO",r2
+(1) 2446/ 60015B8 : D123                		mov	#_sysreg+comm14,r1
+(1) 2447/ 60015BA : 6011                .lel:		mov.w	@r1,r0
+(1) 2448/ 60015BC : 3020                		cmp/eq	r2,r0
+(1) 2449/ 60015BE : 8BFC                		bf	.lel
+(1) 2450/ 60015C0 : 200A                		xor	r0,r0
+(1) 2451/ 60015C2 : 2101                		mov.w	r0,@r1
+(1) 2452/ 60015C4 :                     
+(1) 2453/ 60015C4 :                     	; TEMPORAL polygon
+(1) 2454/ 60015C4 : D021                		mov	#this_polygon,r0
+(1) 2455/ 60015C6 : DE22                		mov 	#RAM_Mars_Plgn_ZList_0,r14
+(1) 2456/ 60015C8 : DD22                		mov	#RAM_Mars_PlgnNum_0,r13
+(1) 2457/ 60015CA : 2E02                		mov	r0,@r14
+(1) 2458/ 60015CC : 1E02                		mov	r0,@(8,r14)
+(1) 2459/ 60015CE : 1E04                		mov	r0,@($10,r14)
+(1) 2460/ 60015D0 : 1E06                		mov	r0,@($18,r14)
+(1) 2461/ 60015D2 : E001                		mov	#1,r0			; enable test polygon
+(1) 2462/ 60015D4 : 2D01                		mov.w	r0,@r13
+(1) 2463/ 60015D6 : D020                		mov	#this_polygon,r0
+(1) 2464/ 60015D8 : DE20                		mov 	#RAM_Mars_Plgn_ZList_1,r14
+(1) 2465/ 60015DA : DD21                		mov	#RAM_Mars_PlgnNum_1,r13
+(1) 2466/ 60015DC : 2E02                		mov	r0,@r14
+(1) 2467/ 60015DE : 1E02                		mov	r0,@(8,r14)
+(1) 2468/ 60015E0 : 1E04                		mov	r0,@($10,r14)
+(1) 2469/ 60015E2 : 1E06                		mov	r0,@($18,r14)
+(1) 2470/ 60015E4 : E001                		mov	#1,r0			; enable test polygon
+(1) 2471/ 60015E6 : 2D01                		mov.w	r0,@r13
+(1) 2472/ 60015E8 :                     
+(1) 2473/ 60015E8 :                     slave_loop:
+(1) 2474/ 60015E8 :                     
+(1) 2475/ 60015E8 : C52D                		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
+(1) 2476/ 60015EA : 8801                		cmp/eq	#1,r0
+(1) 2477/ 60015EC : 891B                		bt	.wait_drw
+(1) 2478/ 60015EE :                     
+(1) 2479/ 60015EE : 4F03                		stc	sr,@-r15
+(1) 2480/ 60015F0 : 903D                		mov	#$F0,r0
+(1) 2481/ 60015F2 : 400E                		ldc	r0,sr
+(1) 2482/ 60015F4 : E100                		mov	#0,r1
+(1) 2483/ 60015F6 : E200                		mov	#0,r2
+(1) 2484/ 60015F8 : D31A                		mov	#_sysreg+comm12,r3
+(1) 2485/ 60015FA : 6031                		mov.w	@r3,r0
+(1) 2486/ 60015FC : C801                		tst	#JoyUp,r0
+(1) 2487/ 60015FE : 8900                		bt	.no2_up
+(1) 2488/ 6001600 : E2FF                		mov	#-1,r2
+(1) 2489/ 6001602 :                     .no2_up:
+(1) 2490/ 6001602 : C802                		tst	#JoyDown,r0
+(1) 2491/ 6001604 : 8900                		bt	.no2_dw
+(1) 2492/ 6001606 : E201                		mov	#1,r2
+(1) 2493/ 6001608 :                     .no2_dw:
+(1) 2494/ 6001608 : C804                		tst	#JoyLeft,r0
+(1) 2495/ 600160A : 8900                		bt	.no2_lf
+(1) 2496/ 600160C : E1FF                		mov	#-1,r1
+(1) 2497/ 600160E :                     .no2_lf:
+(1) 2498/ 600160E : C808                		tst	#JoyRight,r0
+(1) 2499/ 6001610 : 8900                		bt	.no2_rf
+(1) 2500/ 6001612 : E101                		mov	#1,r1
+(1) 2501/ 6001614 :                     .no2_rf:
+(1) 2502/ 6001614 : C510                		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+(1) 2503/ 6001616 : 301C                		add	r1,r0
+(1) 2504/ 6001618 : C110                		mov.w	r0,@(marsGbl_Bg_Xpos,gbr)
+(1) 2505/ 600161A : C511                		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+(1) 2506/ 600161C : 302C                		add	r2,r0
+(1) 2507/ 600161E : C111                		mov.w	r0,@(marsGbl_Bg_Ypos,gbr)
+(1) 2508/ 6001620 : 4F07                		ldc 	@r15+,sr
+(1) 2509/ 6001622 :                     
+(1) 2510/ 6001622 : E001                		mov.w	#1,r0
+(1) 2511/ 6001624 : C12D                		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
+(1) 2512/ 6001626 :                     .wait_drw:
+(1) 2513/ 6001626 : AFDF                		bra	slave_loop
+(1) 2514/ 6001628 : 0009                		nop
+(1) 2515/ 600162A :                     		align 4
+(1) 2516/ 600162C : 0603 F000 2000 4020 		ltorg
                     534C 4156 0600 4550 
                     2000 4000 0600 1D1C 
                     C000 0000 2000 402E 
@@ -11919,674 +11909,674 @@
                     2000 402C FE10 FEE2 
                     FEE4 00F0 FE92 000B 
                     474F                
-(1) 2520/ 6001676 :                     
-(1) 2521/ 6001676 :                     		align 4
-(1) 2522/ 6001678 :                     this_polygon:
-(1) 2523/ 6001678 : 8000                		dc.w $8000
-(1) 2524/ 600167A : 0140                		dc.w 320
-(1) 2525/ 600167C : 0205 1470           		dc.l TESTMARS_BG
-(1) 2526/ 6001680 : 0020 FFE0           dest_data:	dc.w  32,-32
-(1) 2527/ 6001684 : FFE0 FFE0           		dc.w -32,-32
-(1) 2528/ 6001688 : FFE0 0020           		dc.w -32, 32
-(1) 2529/ 600168C : 0020 0020           		dc.w  32, 32
-(1) 2530/ 6001690 : 0112 004F           		dc.w 274, 79
-(1) 2531/ 6001694 : 00C7 004F           		dc.w 199, 79
-(1) 2532/ 6001698 : 00C7 008D           		dc.w 199,142-1
-(1) 2533/ 600169C : 0112 008D           		dc.w 274,142-1
-(1) 2534/ 60016A0 :                     ; rot_angle	dc.l 0
-(1) 2535/ 60016A0 :                     ;
-(1) 2536/ 60016A0 :                     ;
-(1) 2537/ 60016A0 :                     ; 	; Polygon interaction
-(1) 2538/ 60016A0 :                     ; 	mov	#60*65536,r5
-(1) 2539/ 60016A0 :                     ; 	mov	#-60*65536,r6
-(1) 2540/ 60016A0 :                     ; 	mov	#rot_angle,r7
-(1) 2541/ 60016A0 :                     ; 	bsr	Rotate_Point
-(1) 2542/ 60016A0 :                     ; 	mov	@r7,r7
-(1) 2543/ 60016A0 :                     ; 	mov	#dest_data,r2
-(1) 2544/ 60016A0 :                     ; 	shlr16	r0
-(1) 2545/ 60016A0 :                     ; 	exts.w	r0,r0
-(1) 2546/ 60016A0 :                     ; 	mov.w	r0,@r2
-(1) 2547/ 60016A0 :                     ; 	shlr16	r1
-(1) 2548/ 60016A0 :                     ; 	exts.w	r1,r1
-(1) 2549/ 60016A0 :                     ; 	mov	r1,r0
-(1) 2550/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
-(1) 2551/ 60016A0 :                     ;
-(1) 2552/ 60016A0 :                     ; 	mov	#-60*65536,r5
-(1) 2553/ 60016A0 :                     ; 	mov	#-60*65536,r6
-(1) 2554/ 60016A0 :                     ; 	mov	#rot_angle,r7
-(1) 2555/ 60016A0 :                     ; 	bsr	Rotate_Point
-(1) 2556/ 60016A0 :                     ; 	mov	@r7,r7
-(1) 2557/ 60016A0 :                     ; 	mov	#dest_data+4,r2
-(1) 2558/ 60016A0 :                     ; 	shlr16	r0
-(1) 2559/ 60016A0 :                     ; 	exts.w	r0,r0
-(1) 2560/ 60016A0 :                     ; 	mov.w	r0,@r2
-(1) 2561/ 60016A0 :                     ; 	shlr16	r1
-(1) 2562/ 60016A0 :                     ; 	exts.w	r1,r1
-(1) 2563/ 60016A0 :                     ; 	mov	r1,r0
-(1) 2564/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
-(1) 2565/ 60016A0 :                     ;
-(1) 2566/ 60016A0 :                     ; 	mov	#-60*65536,r5
-(1) 2567/ 60016A0 :                     ; 	mov	#60*65536,r6
-(1) 2568/ 60016A0 :                     ; 	mov	#rot_angle,r7
-(1) 2569/ 60016A0 :                     ; 	bsr	Rotate_Point
-(1) 2570/ 60016A0 :                     ; 	mov	@r7,r7
-(1) 2571/ 60016A0 :                     ; 	mov	#dest_data+8,r2
-(1) 2572/ 60016A0 :                     ; 	shlr16	r0
-(1) 2573/ 60016A0 :                     ; 	exts.w	r0,r0
-(1) 2574/ 60016A0 :                     ; 	mov.w	r0,@r2
-(1) 2575/ 60016A0 :                     ; 	shlr16	r1
-(1) 2576/ 60016A0 :                     ; 	exts.w	r1,r1
-(1) 2577/ 60016A0 :                     ; 	mov	r1,r0
-(1) 2578/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
-(1) 2579/ 60016A0 :                     ;
-(1) 2580/ 60016A0 :                     ; 	mov	#60*65536,r5
-(1) 2581/ 60016A0 :                     ; 	mov	#60*65536,r6
-(1) 2582/ 60016A0 :                     ; 	mov	#rot_angle,r7
-(1) 2583/ 60016A0 :                     ; 	bsr	Rotate_Point
-(1) 2584/ 60016A0 :                     ; 	mov	@r7,r7
-(1) 2585/ 60016A0 :                     ; 	mov	#dest_data+$C,r2
-(1) 2586/ 60016A0 :                     ; 	shlr16	r0
-(1) 2587/ 60016A0 :                     ; 	exts.w	r0,r0
-(1) 2588/ 60016A0 :                     ; 	mov.w	r0,@r2
-(1) 2589/ 60016A0 :                     ; 	shlr16	r1
-(1) 2590/ 60016A0 :                     ; 	exts.w	r1,r1
-(1) 2591/ 60016A0 :                     ; 	mov	r1,r0
-(1) 2592/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
-(1) 2593/ 60016A0 :                     ;
-(1) 2594/ 60016A0 :                     ; 	mov	#rot_angle,r0
-(1) 2595/ 60016A0 :                     ; 	mov	@r0,r1
-(1) 2596/ 60016A0 :                     ; 	add	#4,r1
-(1) 2597/ 60016A0 :                     ; 	mov	#2047,r2
-(1) 2598/ 60016A0 :                     ; 	and	r2,r1
-(1) 2599/ 60016A0 :                     ; 	mov	r1,@r0
-(1) 2600/ 60016A0 :                     ;
-(1) 2601/ 60016A0 :                     ; Rotate_Point
-(1) 2602/ 60016A0 :                     ;
-(1) 2603/ 60016A0 :                     ; 	shll2	r7
-(1) 2604/ 60016A0 :                     ; 	mov	r7,r0
-(1) 2605/ 60016A0 :                     ; 	mov	#sin_table,r1
-(1) 2606/ 60016A0 :                     ; 	mov	#sin_table+$800,r2
-(1) 2607/ 60016A0 :                     ; 	mov	@(r0,r1),r3
-(1) 2608/ 60016A0 :                     ; 	mov	@(r0,r2),r4
-(1) 2609/ 60016A0 :                     ;
-(1) 2610/ 60016A0 :                     ; 	dmuls.l	r5,r4		; x cos @
-(1) 2611/ 60016A0 :                     ; 	sts	macl,r0
-(1) 2612/ 60016A0 :                     ; 	sts	mach,r1
-(1) 2613/ 60016A0 :                     ; 	xtrct	r1,r0
-(1) 2614/ 60016A0 :                     ; 	dmuls.l	r6,r3		; y sin @
-(1) 2615/ 60016A0 :                     ; 	sts	macl,r1
-(1) 2616/ 60016A0 :                     ; 	sts	mach,r2
-(1) 2617/ 60016A0 :                     ; 	xtrct	r2,r1
-(1) 2618/ 60016A0 :                     ; 	add	r1,r0
-(1) 2619/ 60016A0 :                     ;
-(1) 2620/ 60016A0 :                     ; 	neg	r3,r3
-(1) 2621/ 60016A0 :                     ; 	dmuls.l	r5,r3		; x -sin @
-(1) 2622/ 60016A0 :                     ; 	sts	macl,r1
-(1) 2623/ 60016A0 :                     ; 	sts	mach,r2
-(1) 2624/ 60016A0 :                     ; 	xtrct	r2,r1
-(1) 2625/ 60016A0 :                     ; 	dmuls.l	r6,r4		; y cos @
-(1) 2626/ 60016A0 :                     ; 	sts	macl,r2
-(1) 2627/ 60016A0 :                     ; 	sts	mach,r3
-(1) 2628/ 60016A0 :                     ; 	xtrct	r3,r2
-(1) 2629/ 60016A0 :                     ; 	add	r2,r1
-(1) 2630/ 60016A0 :                     ;
-(1) 2631/ 60016A0 :                     ; 	rts
-(1) 2632/ 60016A0 :                     ; 	nop
-(1) 2633/ 60016A0 :                     	align 4
-(1) 2634/ 60016A0 :                     	ltorg
-(1) 2635/ 60016A0 :                     
-(1) 2636/ 60016A0 :                     ; ; ------------------------------------------------
-(1) 2637/ 60016A0 :                     ; ; Process task requests from Genesis
-(1) 2638/ 60016A0 :                     ; ; ------------------------------------------------
-(1) 2639/ 60016A0 :                     ;
-(1) 2640/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
-(1) 2641/ 60016A0 :                     ; 		mov.b	@r1,r0
-(1) 2642/ 60016A0 :                     ; 		and	#$80,r0
-(1) 2643/ 60016A0 :                     ; 		cmp/eq	#0,r0
-(1) 2644/ 60016A0 :                     ; 		bt	.no_req
-(1) 2645/ 60016A0 :                     ; 		mov	#MAX_MDTASKS,r13
-(1) 2646/ 60016A0 :                     ; 		mov	#RAM_Mars_MdTasksFifo_S,r14
-(1) 2647/ 60016A0 :                     ; .next_req:
-(1) 2648/ 60016A0 :                     ; 		mov	r13,@-r15
-(1) 2649/ 60016A0 :                     ; 		mov	@r14,r0
-(1) 2650/ 60016A0 :                     ; 		cmp/eq	#0,r0
-(1) 2651/ 60016A0 :                     ; 		bt	.no_task
-(1) 2652/ 60016A0 :                     ; 		jsr	@r0
-(1) 2653/ 60016A0 :                     ; 		nop
-(1) 2654/ 60016A0 :                     ; 		xor	r0,r0
-(1) 2655/ 60016A0 :                     ; 		mov	r0,@r14
-(1) 2656/ 60016A0 :                     ; .no_task:
-(1) 2657/ 60016A0 :                     ; 		mov	#MAX_MDTSKARG*4,r0
-(1) 2658/ 60016A0 :                     ; 		mov	@r15+,r13
-(1) 2659/ 60016A0 :                     ; 		dt	r13
-(1) 2660/ 60016A0 :                     ; 		bf/s	.next_req
-(1) 2661/ 60016A0 :                     ; 		add	r0,r14
-(1) 2662/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
-(1) 2663/ 60016A0 :                     ; 		mov.b	@r1,r0
-(1) 2664/ 60016A0 :                     ; 		and	#$7F,r0
-(1) 2665/ 60016A0 :                     ; 		mov.b	r0,@r1
-(1) 2666/ 60016A0 :                     ; .no_req:
-(1) 2667/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
-(1) 2668/ 60016A0 :                     ; 		mov.b	@r1,r0
-(1) 2669/ 60016A0 :                     ; 		and	#$7F,r0
-(1) 2670/ 60016A0 :                     ; 		cmp/eq	#1,r0
-(1) 2671/ 60016A0 :                     ; 		bf	slave_loop
-(1) 2672/ 60016A0 :                     
-(1) 2673/ 60016A0 :                     ; --------------------------------------------------------
-(1) 2674/ 60016A0 :                     ; Start building polygons from models
-(1) 2675/ 60016A0 :                     ;
-(1) 2676/ 60016A0 :                     ; *** CAMERA ANIMATION IS DONE ON THE 68K ***
-(1) 2677/ 60016A0 :                     ; --------------------------------------------------------
-(1) 2678/ 60016A0 :                     
-(1) 2679/ 60016A0 :                     ; 		mov	#0,r0
-(1) 2680/ 60016A0 :                     ; 		mov.w	r0,@(marsGbl_MdlFacesCntr,gbr)
-(1) 2681/ 60016A0 :                     ; 		mov 	#RAM_Mars_Polygons_0,r1
-(1) 2682/ 60016A0 :                     ; 		mov	#RAM_Mars_Plgn_ZList_0,r2
-(1) 2683/ 60016A0 :                     ; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
-(1) 2684/ 60016A0 :                     ; 		tst     #1,r0
-(1) 2685/ 60016A0 :                     ; 		bt	.go_mdl
-(1) 2686/ 60016A0 :                     ; 		mov 	#RAM_Mars_Polygons_1,r1
-(1) 2687/ 60016A0 :                     ; 		mov	#RAM_Mars_Plgn_ZList_1,r2
-(1) 2688/ 60016A0 :                     ; .go_mdl:
-(1) 2689/ 60016A0 :                     ; 		mov	r1,r0
-(1) 2690/ 60016A0 :                     ; 		mov	r0,@(marsGbl_CurrFacePos,gbr)
-(1) 2691/ 60016A0 :                     ; 		mov	r2,r0
-(1) 2692/ 60016A0 :                     ; 		mov	r0,@(marsGbl_CurrZList,gbr)
-(1) 2693/ 60016A0 :                     ; 		mov	#$FFFFFE80,r1
-(1) 2694/ 60016A0 :                     ; 		mov.w	#$5A7F,r0			; Watchdog wait timer
-(1) 2695/ 60016A0 :                     ; 		mov.w	r0,@r1
-(1) 2696/ 60016A0 :                     ; 		mov.w	#$A538,r0			; Watchdog ON
-(1) 2697/ 60016A0 :                     ; 		mov.w	r0,@r1
-(1) 2698/ 60016A0 :                     ;
-(1) 2699/ 60016A0 :                     ; ; ----------------------------------------
-(1) 2700/ 60016A0 :                     ;
-(1) 2701/ 60016A0 :                     ; 		mov	#_CCR,r1			; <-- Required for Watchdog
-(1) 2702/ 60016A0 :                     ; 		mov	#%00001000,r0			; Two-way mode
-(1) 2703/ 60016A0 :                     ; 		mov.w	r0,@r1
-(1) 2704/ 60016A0 :                     ; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-(1) 2705/ 60016A0 :                     ; 		mov.w	r0,@r1
-(1) 2706/ 60016A0 :                     ; 		mov	#MarsLay_Read,r0		; Build layout inside camera
-(1) 2707/ 60016A0 :                     ; 		jsr	@r0				; takes 9 object slots
-(1) 2708/ 60016A0 :                     ; 		nop
-(1) 2709/ 60016A0 :                     ; 		mov	#RAM_Mars_Objects,r14		; Build all objects
-(1) 2710/ 60016A0 :                     ; 		mov	#MAX_MODELS,r13
-(1) 2711/ 60016A0 :                     ; .loop:
-(1) 2712/ 60016A0 :                     ; 		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
-(1) 2713/ 60016A0 :                     ; 		cmp/pl	r0
-(1) 2714/ 60016A0 :                     ; 		bf	.invlid
-(1) 2715/ 60016A0 :                     ; 		mov	#MarsMdl_ReadModel,r0
-(1) 2716/ 60016A0 :                     ; 		jsr	@r0
-(1) 2717/ 60016A0 :                     ; 		mov	r13,@-r15
-(1) 2718/ 60016A0 :                     ; 		mov	@r15+,r13
-(1) 2719/ 60016A0 :                     ; 		mov	#0,r0
-(1) 2720/ 60016A0 :                     ; 		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0	; Ran out of space to store faces?
-(1) 2721/ 60016A0 :                     ; 		mov	#MAX_MPLGN,r1
-(1) 2722/ 60016A0 :                     ; 		cmp/ge	r1,r0
-(1) 2723/ 60016A0 :                     ; 		bt	.skip
-(1) 2724/ 60016A0 :                     ; .invlid:
-(1) 2725/ 60016A0 :                     ; 		dt	r13
-(1) 2726/ 60016A0 :                     ; 		bf/s	.loop
-(1) 2727/ 60016A0 :                     ; 		add	#sizeof_mdlobj,r14
-(1) 2728/ 60016A0 :                     ; .skip:
-(1) 2729/ 60016A0 :                     ; 		mov	#1,r0
-(1) 2730/ 60016A0 :                     ; 		mov.w	r0,@(marsGbl_ZSortReq,gbr)
-(1) 2731/ 60016A0 :                     ;
-(1) 2732/ 60016A0 :                     ; ; ----------------------------------------
-(1) 2733/ 60016A0 :                     ;
-(1) 2734/ 60016A0 :                     ; .wait_z:
-(1) 2735/ 60016A0 :                     ; 		mov.w	@(marsGbl_ZSortReq,gbr),r0
-(1) 2736/ 60016A0 :                     ; 		cmp/eq	#1,r0
-(1) 2737/ 60016A0 :                     ; 		bt	.wait_z
-(1) 2738/ 60016A0 :                     ; 		mov.l   #$FFFFFE80,r1			; Stop watchdog
-(1) 2739/ 60016A0 :                     ; 		mov.w   #$A518,r0
-(1) 2740/ 60016A0 :                     ; 		mov.w   r0,@r1
-(1) 2741/ 60016A0 :                     ;
-(1) 2742/ 60016A0 :                     ; ; ----------------------------------------
-(1) 2743/ 60016A0 :                     ;
-(1) 2744/ 60016A0 :                     ; ; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
-(1) 2745/ 60016A0 :                     ; 		mov 	#RAM_Mars_PlgnNum_0,r13
-(1) 2746/ 60016A0 :                     ; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
-(1) 2747/ 60016A0 :                     ; 		tst     #1,r0
-(1) 2748/ 60016A0 :                     ; 		bt	.page_2
-(1) 2749/ 60016A0 :                     ; ; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
-(1) 2750/ 60016A0 :                     ; 		mov 	#RAM_Mars_PlgnNum_1,r13
-(1) 2751/ 60016A0 :                     ; .page_2:
-(1) 2752/ 60016A0 :                     ; 		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0
-(1) 2753/ 60016A0 :                     ; 		mov.w	r0,@r13
-(1) 2754/ 60016A0 :                     ;
-(1) 2755/ 60016A0 :                     ; 		mov	#_sysreg+comm2,r4		; DEBUG COUNTER
-(1) 2756/ 60016A0 :                     ; ; 		mov	#0,r0
-(1) 2757/ 60016A0 :                     ; 		mov.w	r0,@r4
-(1) 2758/ 60016A0 :                     ; 		mov	#_sysreg+comm14,r2
-(1) 2759/ 60016A0 :                     ; .mstr_busy:
-(1) 2760/ 60016A0 :                     ; 		mov.b	@r2,r0
-(1) 2761/ 60016A0 :                     ; 		and	#$7F,r0
-(1) 2762/ 60016A0 :                     ; 		cmp/eq	#0,r0
-(1) 2763/ 60016A0 :                     ; 		bf	.mstr_busy			; Skip frame
-(1) 2764/ 60016A0 :                     ; 		mov.w	@(marsGbl_PlgnBuffNum,gbr),r0	; Swap polygon buffer
-(1) 2765/ 60016A0 :                     ;  		xor	#1,r0
-(1) 2766/ 60016A0 :                     ;  		mov.w	r0,@(marsGbl_PlgnBuffNum,gbr)
-(1) 2767/ 60016A0 :                     ;  		mov	#1,r1				; Set task $01 to Master
-(1) 2768/ 60016A0 :                     ; 		mov.b	@r2,r0
-(1) 2769/ 60016A0 :                     ; 		and	#$80,r0
-(1) 2770/ 60016A0 :                     ; 		or	r1,r0
-(1) 2771/ 60016A0 :                     ; 		mov.b	r0,@r2
-(1) 2772/ 60016A0 :                     ;
-(1) 2773/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
-(1) 2774/ 60016A0 :                     ; 		mov.b	@r1,r0
-(1) 2775/ 60016A0 :                     ; 		and	#$80,r0
-(1) 2776/ 60016A0 :                     ; 		mov.b	r0,@r1
-(1) 2777/ 60016A0 :                     
-(1) 2778/ 60016A0 :                     ; ====================================================================
-(1) 2779/ 60016A0 :                     ; --------------------------------------------------------
-(1) 2780/ 60016A0 :                     ; Task list for MD-to-MARS tasks, call these 68k side
-(1) 2781/ 60016A0 :                     ; with the respective arguments
-(1) 2782/ 60016A0 :                     ; 
-(1) 2783/ 60016A0 :                     ; *** 68k EXAMPLES ***
-(1) 2784/ 60016A0 :                     ; 
-(1) 2785/ 60016A0 :                     ; Single task:
-(1) 2786/ 60016A0 :                     ; 	move.l	#CmdTaskMd_SetBitmap,d0		; 32X display ON
-(1) 2787/ 60016A0 :                     ; 	moveq	#1,d1
-(1) 2788/ 60016A0 :                     ; 	bsr	System_MdMars_MstAddTask
-(1) 2789/ 60016A0 :                     ; 	
-(1) 2790/ 60016A0 :                     ; Queued task:
-(1) 2791/ 60016A0 :                     ; 	move.l	#Palette_Intro,d1
-(1) 2792/ 60016A0 :                     ; 	moveq	#0,d2
-(1) 2793/ 60016A0 :                     ; 	mov.w	#16,d3
-(1) 2794/ 60016A0 :                     ; 	moveq	#0,d4
-(1) 2795/ 60016A0 :                     ; 	move.l	#CmdTaskMd_LoadSPal,d0		; Load palette
-(1) 2796/ 60016A0 :                     ; 	bsr	System_MdMars_MstAddTask
-(1) 2797/ 60016A0 :                     ;	; then add more requests
-(1) 2798/ 60016A0 :                     ; 	bsr	System_MdMars_MstSendAll	; <-- Send all and wait
-(1) 2799/ 60016A0 :                     ; 	; or
-(1) 2800/ 60016A0 :                     ; 	bsr	System_MdMars_MstSendDrop	; <-- Send all but skip if busy
-(1) 2801/ 60016A0 :                     ;
-(1) 2802/ 60016A0 :                     ; Mst: for Master, processes until all draw-tasks finished
-(1) 2803/ 60016A0 :                     ; Slv: for Slave, processes after sorting model faces
-(1) 2804/ 60016A0 :                     ; --------------------------------------------------------
-(1) 2805/ 60016A0 :                     
-(1) 2806/ 60016A0 :                     		align 4
-(1) 2807/ 60016A0 :                     
-(1) 2808/ 60016A0 :                     ; ------------------------------------------------
-(1) 2809/ 60016A0 :                     ; CALLS EXCLUSIVE TO MASTER CPU
-(1) 2810/ 60016A0 :                     ; ------------------------------------------------
-(1) 2811/ 60016A0 :                     
-(1) 2812/ 60016A0 :                     ; ------------------------------------------------
-(1) 2813/ 60016A0 :                     ; Set SuperVDP bitmap value
-(1) 2814/ 60016A0 :                     ;
-(1) 2815/ 60016A0 :                     ; @($04,r14) - SuperVDP bitmap number (0-3)
-(1) 2816/ 60016A0 :                     ; ------------------------------------------------
-(1) 2817/ 60016A0 :                     
-(1) 2818/ 60016A0 :                     CmdTaskMd_SetBitmap:
-(1) 2819/ 60016A0 : D108                		mov 	#_vdpreg,r1
-(1) 2820/ 60016A2 : 8515                .wait_fb:	mov.w   @($A,r1),r0
-(1) 2821/ 60016A4 : C802                		tst     #2,r0
-(1) 2822/ 60016A6 : 8BFC                		bf      .wait_fb
-(1) 2823/ 60016A8 : 50E1                		mov	@($04,r14),r0
-(1) 2824/ 60016AA : 8011                		mov.b	r0,@(bitmapmd,r1)
-(1) 2825/ 60016AC : 000B                		rts
-(1) 2826/ 60016AE : 0009                		nop
-(1) 2827/ 60016B0 :                     		align 4
-(1) 2828/ 60016B0 :                     
-(1) 2829/ 60016B0 :                     ; ------------------------------------------------
-(1) 2830/ 60016B0 :                     ; Load palette to SuperVDP from MD
-(1) 2831/ 60016B0 :                     ;
-(1) 2832/ 60016B0 :                     ; @($04,r14) - Palette data
-(1) 2833/ 60016B0 :                     ; @($08,r14) - Start from
-(1) 2834/ 60016B0 :                     ; @($0C,r14) - Number of colors
-(1) 2835/ 60016B0 :                     ; @($10,r14) - OR value
-(1) 2836/ 60016B0 :                     ; ------------------------------------------------
-(1) 2837/ 60016B0 :                     
-(1) 2838/ 60016B0 :                     CmdTaskMd_LoadSPal:
-(1) 2839/ 60016B0 : 6DE3                		mov	r14,r13
-(1) 2840/ 60016B2 : 7D04                		add	#4,r13
-(1) 2841/ 60016B4 : 61D6                		mov	@r13+,r1
-(1) 2842/ 60016B6 : 62D6                		mov	@r13+,r2
-(1) 2843/ 60016B8 : 63D6                		mov	@r13+,r3
-(1) 2844/ 60016BA : 64D6                		mov	@r13+,r4
-(1) 2845/ 60016BC : D002                		mov	#MarsVideo_LoadPal,r0
-(1) 2846/ 60016BE : 402B                		jmp	@r0
-(1) 2847/ 60016C0 : 0009                		nop
-(1) 2848/ 60016C2 :                     		align 4
-(1) 2849/ 60016C4 :                     
-(1) 2850/ 60016C4 :                     ; ------------------------------------------------
-(1) 2851/ 60016C4 :                     ; CALLS EXCLUSIVE TO SLAVE CPU
-(1) 2852/ 60016C4 :                     ; ------------------------------------------------
-(1) 2853/ 60016C4 :                     
-(1) 2854/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2855/ 60016C4 :                     ; ; Make new object and insert it to specific slot
-(1) 2856/ 60016C4 :                     ; ;
-(1) 2857/ 60016C4 :                     ; ; @($04,r14) - Object slot
-(1) 2858/ 60016C4 :                     ; ; @($08,r14) - Object data
-(1) 2859/ 60016C4 :                     ; ; @($0C,r14) - Object animation data
-(1) 2860/ 60016C4 :                     ; ; @($10,r14) - Object animation speed
-(1) 2861/ 60016C4 :                     ; ; @($14,r14) - Object options:
-(1) 2862/ 60016C4 :                     ; ;	       %????????????????????????pppppppp
-(1) 2863/ 60016C4 :                     ; ;		p - index pixel increment value
-(1) 2864/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2865/ 60016C4 :                     ;
-(1) 2866/ 60016C4 :                     ; CmdTaskMd_ObjectSet:
-(1) 2867/ 60016C4 :                     ; 		mov	#RAM_Mars_Objects+(sizeof_mdlobj*9),r12
-(1) 2868/ 60016C4 :                     ; 		mov	r14,r13
-(1) 2869/ 60016C4 :                     ; 		add	#4,r13
-(1) 2870/ 60016C4 :                     ; 		mov	@r13+,r0
-(1) 2871/ 60016C4 :                     ; 		mov	#sizeof_mdlobj,r1
-(1) 2872/ 60016C4 :                     ; 		mulu	r1,r0
-(1) 2873/ 60016C4 :                     ; 		sts	macl,r0
-(1) 2874/ 60016C4 :                     ; 		add	r0,r12
-(1) 2875/ 60016C4 :                     ; 		xor	r0,r0
-(1) 2876/ 60016C4 :                     ; 		mov	@r13+,r1
-(1) 2877/ 60016C4 :                     ; 		mov	r1,@(mdl_data,r12)
-(1) 2878/ 60016C4 :                     ; 		mov	@r13+,r1
-(1) 2879/ 60016C4 :                     ; 		mov	r1,@(mdl_animdata,r12)
-(1) 2880/ 60016C4 :                     ; 		mov	@r13+,r1
-(1) 2881/ 60016C4 :                     ; 		mov	r1,@(mdl_animspd,r12)
-(1) 2882/ 60016C4 :                     ; 		mov	@r13+,r1
-(1) 2883/ 60016C4 :                     ; 		mov	r1,@(mdl_option,r12)
-(1) 2884/ 60016C4 :                     ; 		xor	r0,r0
-(1) 2885/ 60016C4 :                     ; 		mov	r0,@(mdl_x_pos,r12)
-(1) 2886/ 60016C4 :                     ; 		mov	r0,@(mdl_y_pos,r12)
-(1) 2887/ 60016C4 :                     ; 		mov	r0,@(mdl_z_pos,r12)
-(1) 2888/ 60016C4 :                     ; 		mov	r0,@(mdl_x_rot,r12)
-(1) 2889/ 60016C4 :                     ; 		mov	r0,@(mdl_y_rot,r12)
-(1) 2890/ 60016C4 :                     ; 		mov	r0,@(mdl_z_rot,r12)
-(1) 2891/ 60016C4 :                     ; 		mov	r0,@(mdl_animframe,r12)
-(1) 2892/ 60016C4 :                     ; 		mov	r0,@(mdl_animtimer,r12)
-(1) 2893/ 60016C4 :                     ; 		rts
-(1) 2894/ 60016C4 :                     ; 		nop
-(1) 2895/ 60016C4 :                     ; 		align 4
-(1) 2896/ 60016C4 :                     ;
-(1) 2897/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2898/ 60016C4 :                     ; ; Move/Rotate object from slot
-(1) 2899/ 60016C4 :                     ; ;
-(1) 2900/ 60016C4 :                     ; ; @($04,r14) - Object slot
-(1) 2901/ 60016C4 :                     ; ; @($08,r14) - Object X pos
-(1) 2902/ 60016C4 :                     ; ; @($0C,r14) - Object Y pos
-(1) 2903/ 60016C4 :                     ; ; @($10,r14) - Object Z pos
-(1) 2904/ 60016C4 :                     ; ; @($14,r14) - Object X rot
-(1) 2905/ 60016C4 :                     ; ; @($18,r14) - Object Y rot
-(1) 2906/ 60016C4 :                     ; ; @($1C,r14) - Object Z rot
-(1) 2907/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2908/ 60016C4 :                     ;
-(1) 2909/ 60016C4 :                     ; CmdTaskMd_ObjectPos:
-(1) 2910/ 60016C4 :                     ; 		mov	#RAM_Mars_Objects+(sizeof_mdlobj*9),r12
-(1) 2911/ 60016C4 :                     ; 		mov	r14,r13
-(1) 2912/ 60016C4 :                     ; 		add	#4,r13
-(1) 2913/ 60016C4 :                     ; 		mov	@r13+,r0
-(1) 2914/ 60016C4 :                     ; 		mov	#sizeof_mdlobj,r1
-(1) 2915/ 60016C4 :                     ; 		mulu	r1,r0
-(1) 2916/ 60016C4 :                     ; 		sts	macl,r0
-(1) 2917/ 60016C4 :                     ; 		add	r0,r12
-(1) 2918/ 60016C4 :                     ; 		mov	@r13+,r1
-(1) 2919/ 60016C4 :                     ; 		mov	@r13+,r2
-(1) 2920/ 60016C4 :                     ; 		mov	@r13+,r3
-(1) 2921/ 60016C4 :                     ; 		mov	@r13+,r4
-(1) 2922/ 60016C4 :                     ; 		mov	@r13+,r5
-(1) 2923/ 60016C4 :                     ; 		mov	@r13+,r6
-(1) 2924/ 60016C4 :                     ; 		mov	r1,@(mdl_x_pos,r12)
-(1) 2925/ 60016C4 :                     ; 		mov	r2,@(mdl_y_pos,r12)
-(1) 2926/ 60016C4 :                     ; 		mov	r3,@(mdl_z_pos,r12)
-(1) 2927/ 60016C4 :                     ; 		mov	r4,@(mdl_x_rot,r12)
-(1) 2928/ 60016C4 :                     ; 		mov	r5,@(mdl_y_rot,r12)
-(1) 2929/ 60016C4 :                     ; 		mov	r6,@(mdl_z_rot,r12)
-(1) 2930/ 60016C4 :                     ; 		rts
-(1) 2931/ 60016C4 :                     ; 		nop
-(1) 2932/ 60016C4 :                     ; 		align 4
-(1) 2933/ 60016C4 :                     ;
-(1) 2934/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2935/ 60016C4 :                     ; ; Clear ALL objects, including layout
-(1) 2936/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2937/ 60016C4 :                     ;
-(1) 2938/ 60016C4 :                     ; CmdTaskMd_ObjectClrAll:
-(1) 2939/ 60016C4 :                     ; 		sts	pr,@-r15
-(1) 2940/ 60016C4 :                     ; 		mov	#MarsMdl_Init,r0
-(1) 2941/ 60016C4 :                     ; 		jsr	@r0
+(1) 2517/ 6001676 :                     
+(1) 2518/ 6001676 :                     		align 4
+(1) 2519/ 6001678 :                     this_polygon:
+(1) 2520/ 6001678 : 8000                		dc.w $8000
+(1) 2521/ 600167A : 0140                		dc.w 320
+(1) 2522/ 600167C : 0205 1470           		dc.l TESTMARS_BG
+(1) 2523/ 6001680 : 0020 FFE0           dest_data:	dc.w  32,-32
+(1) 2524/ 6001684 : FFE0 FFE0           		dc.w -32,-32
+(1) 2525/ 6001688 : FFE0 0020           		dc.w -32, 32
+(1) 2526/ 600168C : 0020 0020           		dc.w  32, 32
+(1) 2527/ 6001690 : 0112 004F           		dc.w 274, 79
+(1) 2528/ 6001694 : 00C7 004F           		dc.w 199, 79
+(1) 2529/ 6001698 : 00C7 008D           		dc.w 199,142-1
+(1) 2530/ 600169C : 0112 008D           		dc.w 274,142-1
+(1) 2531/ 60016A0 :                     ; rot_angle	dc.l 0
+(1) 2532/ 60016A0 :                     ;
+(1) 2533/ 60016A0 :                     ;
+(1) 2534/ 60016A0 :                     ; 	; Polygon interaction
+(1) 2535/ 60016A0 :                     ; 	mov	#60*65536,r5
+(1) 2536/ 60016A0 :                     ; 	mov	#-60*65536,r6
+(1) 2537/ 60016A0 :                     ; 	mov	#rot_angle,r7
+(1) 2538/ 60016A0 :                     ; 	bsr	Rotate_Point
+(1) 2539/ 60016A0 :                     ; 	mov	@r7,r7
+(1) 2540/ 60016A0 :                     ; 	mov	#dest_data,r2
+(1) 2541/ 60016A0 :                     ; 	shlr16	r0
+(1) 2542/ 60016A0 :                     ; 	exts.w	r0,r0
+(1) 2543/ 60016A0 :                     ; 	mov.w	r0,@r2
+(1) 2544/ 60016A0 :                     ; 	shlr16	r1
+(1) 2545/ 60016A0 :                     ; 	exts.w	r1,r1
+(1) 2546/ 60016A0 :                     ; 	mov	r1,r0
+(1) 2547/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
+(1) 2548/ 60016A0 :                     ;
+(1) 2549/ 60016A0 :                     ; 	mov	#-60*65536,r5
+(1) 2550/ 60016A0 :                     ; 	mov	#-60*65536,r6
+(1) 2551/ 60016A0 :                     ; 	mov	#rot_angle,r7
+(1) 2552/ 60016A0 :                     ; 	bsr	Rotate_Point
+(1) 2553/ 60016A0 :                     ; 	mov	@r7,r7
+(1) 2554/ 60016A0 :                     ; 	mov	#dest_data+4,r2
+(1) 2555/ 60016A0 :                     ; 	shlr16	r0
+(1) 2556/ 60016A0 :                     ; 	exts.w	r0,r0
+(1) 2557/ 60016A0 :                     ; 	mov.w	r0,@r2
+(1) 2558/ 60016A0 :                     ; 	shlr16	r1
+(1) 2559/ 60016A0 :                     ; 	exts.w	r1,r1
+(1) 2560/ 60016A0 :                     ; 	mov	r1,r0
+(1) 2561/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
+(1) 2562/ 60016A0 :                     ;
+(1) 2563/ 60016A0 :                     ; 	mov	#-60*65536,r5
+(1) 2564/ 60016A0 :                     ; 	mov	#60*65536,r6
+(1) 2565/ 60016A0 :                     ; 	mov	#rot_angle,r7
+(1) 2566/ 60016A0 :                     ; 	bsr	Rotate_Point
+(1) 2567/ 60016A0 :                     ; 	mov	@r7,r7
+(1) 2568/ 60016A0 :                     ; 	mov	#dest_data+8,r2
+(1) 2569/ 60016A0 :                     ; 	shlr16	r0
+(1) 2570/ 60016A0 :                     ; 	exts.w	r0,r0
+(1) 2571/ 60016A0 :                     ; 	mov.w	r0,@r2
+(1) 2572/ 60016A0 :                     ; 	shlr16	r1
+(1) 2573/ 60016A0 :                     ; 	exts.w	r1,r1
+(1) 2574/ 60016A0 :                     ; 	mov	r1,r0
+(1) 2575/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
+(1) 2576/ 60016A0 :                     ;
+(1) 2577/ 60016A0 :                     ; 	mov	#60*65536,r5
+(1) 2578/ 60016A0 :                     ; 	mov	#60*65536,r6
+(1) 2579/ 60016A0 :                     ; 	mov	#rot_angle,r7
+(1) 2580/ 60016A0 :                     ; 	bsr	Rotate_Point
+(1) 2581/ 60016A0 :                     ; 	mov	@r7,r7
+(1) 2582/ 60016A0 :                     ; 	mov	#dest_data+$C,r2
+(1) 2583/ 60016A0 :                     ; 	shlr16	r0
+(1) 2584/ 60016A0 :                     ; 	exts.w	r0,r0
+(1) 2585/ 60016A0 :                     ; 	mov.w	r0,@r2
+(1) 2586/ 60016A0 :                     ; 	shlr16	r1
+(1) 2587/ 60016A0 :                     ; 	exts.w	r1,r1
+(1) 2588/ 60016A0 :                     ; 	mov	r1,r0
+(1) 2589/ 60016A0 :                     ; 	mov.w	r0,@(2,r2)
+(1) 2590/ 60016A0 :                     ;
+(1) 2591/ 60016A0 :                     ; 	mov	#rot_angle,r0
+(1) 2592/ 60016A0 :                     ; 	mov	@r0,r1
+(1) 2593/ 60016A0 :                     ; 	add	#4,r1
+(1) 2594/ 60016A0 :                     ; 	mov	#2047,r2
+(1) 2595/ 60016A0 :                     ; 	and	r2,r1
+(1) 2596/ 60016A0 :                     ; 	mov	r1,@r0
+(1) 2597/ 60016A0 :                     ;
+(1) 2598/ 60016A0 :                     ; Rotate_Point
+(1) 2599/ 60016A0 :                     ;
+(1) 2600/ 60016A0 :                     ; 	shll2	r7
+(1) 2601/ 60016A0 :                     ; 	mov	r7,r0
+(1) 2602/ 60016A0 :                     ; 	mov	#sin_table,r1
+(1) 2603/ 60016A0 :                     ; 	mov	#sin_table+$800,r2
+(1) 2604/ 60016A0 :                     ; 	mov	@(r0,r1),r3
+(1) 2605/ 60016A0 :                     ; 	mov	@(r0,r2),r4
+(1) 2606/ 60016A0 :                     ;
+(1) 2607/ 60016A0 :                     ; 	dmuls.l	r5,r4		; x cos @
+(1) 2608/ 60016A0 :                     ; 	sts	macl,r0
+(1) 2609/ 60016A0 :                     ; 	sts	mach,r1
+(1) 2610/ 60016A0 :                     ; 	xtrct	r1,r0
+(1) 2611/ 60016A0 :                     ; 	dmuls.l	r6,r3		; y sin @
+(1) 2612/ 60016A0 :                     ; 	sts	macl,r1
+(1) 2613/ 60016A0 :                     ; 	sts	mach,r2
+(1) 2614/ 60016A0 :                     ; 	xtrct	r2,r1
+(1) 2615/ 60016A0 :                     ; 	add	r1,r0
+(1) 2616/ 60016A0 :                     ;
+(1) 2617/ 60016A0 :                     ; 	neg	r3,r3
+(1) 2618/ 60016A0 :                     ; 	dmuls.l	r5,r3		; x -sin @
+(1) 2619/ 60016A0 :                     ; 	sts	macl,r1
+(1) 2620/ 60016A0 :                     ; 	sts	mach,r2
+(1) 2621/ 60016A0 :                     ; 	xtrct	r2,r1
+(1) 2622/ 60016A0 :                     ; 	dmuls.l	r6,r4		; y cos @
+(1) 2623/ 60016A0 :                     ; 	sts	macl,r2
+(1) 2624/ 60016A0 :                     ; 	sts	mach,r3
+(1) 2625/ 60016A0 :                     ; 	xtrct	r3,r2
+(1) 2626/ 60016A0 :                     ; 	add	r2,r1
+(1) 2627/ 60016A0 :                     ;
+(1) 2628/ 60016A0 :                     ; 	rts
+(1) 2629/ 60016A0 :                     ; 	nop
+(1) 2630/ 60016A0 :                     	align 4
+(1) 2631/ 60016A0 :                     	ltorg
+(1) 2632/ 60016A0 :                     
+(1) 2633/ 60016A0 :                     ; ; ------------------------------------------------
+(1) 2634/ 60016A0 :                     ; ; Process task requests from Genesis
+(1) 2635/ 60016A0 :                     ; ; ------------------------------------------------
+(1) 2636/ 60016A0 :                     ;
+(1) 2637/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
+(1) 2638/ 60016A0 :                     ; 		mov.b	@r1,r0
+(1) 2639/ 60016A0 :                     ; 		and	#$80,r0
+(1) 2640/ 60016A0 :                     ; 		cmp/eq	#0,r0
+(1) 2641/ 60016A0 :                     ; 		bt	.no_req
+(1) 2642/ 60016A0 :                     ; 		mov	#MAX_MDTASKS,r13
+(1) 2643/ 60016A0 :                     ; 		mov	#RAM_Mars_MdTasksFifo_S,r14
+(1) 2644/ 60016A0 :                     ; .next_req:
+(1) 2645/ 60016A0 :                     ; 		mov	r13,@-r15
+(1) 2646/ 60016A0 :                     ; 		mov	@r14,r0
+(1) 2647/ 60016A0 :                     ; 		cmp/eq	#0,r0
+(1) 2648/ 60016A0 :                     ; 		bt	.no_task
+(1) 2649/ 60016A0 :                     ; 		jsr	@r0
+(1) 2650/ 60016A0 :                     ; 		nop
+(1) 2651/ 60016A0 :                     ; 		xor	r0,r0
+(1) 2652/ 60016A0 :                     ; 		mov	r0,@r14
+(1) 2653/ 60016A0 :                     ; .no_task:
+(1) 2654/ 60016A0 :                     ; 		mov	#MAX_MDTSKARG*4,r0
+(1) 2655/ 60016A0 :                     ; 		mov	@r15+,r13
+(1) 2656/ 60016A0 :                     ; 		dt	r13
+(1) 2657/ 60016A0 :                     ; 		bf/s	.next_req
+(1) 2658/ 60016A0 :                     ; 		add	r0,r14
+(1) 2659/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
+(1) 2660/ 60016A0 :                     ; 		mov.b	@r1,r0
+(1) 2661/ 60016A0 :                     ; 		and	#$7F,r0
+(1) 2662/ 60016A0 :                     ; 		mov.b	r0,@r1
+(1) 2663/ 60016A0 :                     ; .no_req:
+(1) 2664/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
+(1) 2665/ 60016A0 :                     ; 		mov.b	@r1,r0
+(1) 2666/ 60016A0 :                     ; 		and	#$7F,r0
+(1) 2667/ 60016A0 :                     ; 		cmp/eq	#1,r0
+(1) 2668/ 60016A0 :                     ; 		bf	slave_loop
+(1) 2669/ 60016A0 :                     
+(1) 2670/ 60016A0 :                     ; --------------------------------------------------------
+(1) 2671/ 60016A0 :                     ; Start building polygons from models
+(1) 2672/ 60016A0 :                     ;
+(1) 2673/ 60016A0 :                     ; *** CAMERA ANIMATION IS DONE ON THE 68K ***
+(1) 2674/ 60016A0 :                     ; --------------------------------------------------------
+(1) 2675/ 60016A0 :                     
+(1) 2676/ 60016A0 :                     ; 		mov	#0,r0
+(1) 2677/ 60016A0 :                     ; 		mov.w	r0,@(marsGbl_MdlFacesCntr,gbr)
+(1) 2678/ 60016A0 :                     ; 		mov 	#RAM_Mars_Polygons_0,r1
+(1) 2679/ 60016A0 :                     ; 		mov	#RAM_Mars_Plgn_ZList_0,r2
+(1) 2680/ 60016A0 :                     ; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
+(1) 2681/ 60016A0 :                     ; 		tst     #1,r0
+(1) 2682/ 60016A0 :                     ; 		bt	.go_mdl
+(1) 2683/ 60016A0 :                     ; 		mov 	#RAM_Mars_Polygons_1,r1
+(1) 2684/ 60016A0 :                     ; 		mov	#RAM_Mars_Plgn_ZList_1,r2
+(1) 2685/ 60016A0 :                     ; .go_mdl:
+(1) 2686/ 60016A0 :                     ; 		mov	r1,r0
+(1) 2687/ 60016A0 :                     ; 		mov	r0,@(marsGbl_CurrFacePos,gbr)
+(1) 2688/ 60016A0 :                     ; 		mov	r2,r0
+(1) 2689/ 60016A0 :                     ; 		mov	r0,@(marsGbl_CurrZList,gbr)
+(1) 2690/ 60016A0 :                     ; 		mov	#$FFFFFE80,r1
+(1) 2691/ 60016A0 :                     ; 		mov.w	#$5A7F,r0			; Watchdog wait timer
+(1) 2692/ 60016A0 :                     ; 		mov.w	r0,@r1
+(1) 2693/ 60016A0 :                     ; 		mov.w	#$A538,r0			; Watchdog ON
+(1) 2694/ 60016A0 :                     ; 		mov.w	r0,@r1
+(1) 2695/ 60016A0 :                     ;
+(1) 2696/ 60016A0 :                     ; ; ----------------------------------------
+(1) 2697/ 60016A0 :                     ;
+(1) 2698/ 60016A0 :                     ; 		mov	#_CCR,r1			; <-- Required for Watchdog
+(1) 2699/ 60016A0 :                     ; 		mov	#%00001000,r0			; Two-way mode
+(1) 2700/ 60016A0 :                     ; 		mov.w	r0,@r1
+(1) 2701/ 60016A0 :                     ; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+(1) 2702/ 60016A0 :                     ; 		mov.w	r0,@r1
+(1) 2703/ 60016A0 :                     ; 		mov	#MarsLay_Read,r0		; Build layout inside camera
+(1) 2704/ 60016A0 :                     ; 		jsr	@r0				; takes 9 object slots
+(1) 2705/ 60016A0 :                     ; 		nop
+(1) 2706/ 60016A0 :                     ; 		mov	#RAM_Mars_Objects,r14		; Build all objects
+(1) 2707/ 60016A0 :                     ; 		mov	#MAX_MODELS,r13
+(1) 2708/ 60016A0 :                     ; .loop:
+(1) 2709/ 60016A0 :                     ; 		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
+(1) 2710/ 60016A0 :                     ; 		cmp/pl	r0
+(1) 2711/ 60016A0 :                     ; 		bf	.invlid
+(1) 2712/ 60016A0 :                     ; 		mov	#MarsMdl_ReadModel,r0
+(1) 2713/ 60016A0 :                     ; 		jsr	@r0
+(1) 2714/ 60016A0 :                     ; 		mov	r13,@-r15
+(1) 2715/ 60016A0 :                     ; 		mov	@r15+,r13
+(1) 2716/ 60016A0 :                     ; 		mov	#0,r0
+(1) 2717/ 60016A0 :                     ; 		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0	; Ran out of space to store faces?
+(1) 2718/ 60016A0 :                     ; 		mov	#MAX_MPLGN,r1
+(1) 2719/ 60016A0 :                     ; 		cmp/ge	r1,r0
+(1) 2720/ 60016A0 :                     ; 		bt	.skip
+(1) 2721/ 60016A0 :                     ; .invlid:
+(1) 2722/ 60016A0 :                     ; 		dt	r13
+(1) 2723/ 60016A0 :                     ; 		bf/s	.loop
+(1) 2724/ 60016A0 :                     ; 		add	#sizeof_mdlobj,r14
+(1) 2725/ 60016A0 :                     ; .skip:
+(1) 2726/ 60016A0 :                     ; 		mov	#1,r0
+(1) 2727/ 60016A0 :                     ; 		mov.w	r0,@(marsGbl_ZSortReq,gbr)
+(1) 2728/ 60016A0 :                     ;
+(1) 2729/ 60016A0 :                     ; ; ----------------------------------------
+(1) 2730/ 60016A0 :                     ;
+(1) 2731/ 60016A0 :                     ; .wait_z:
+(1) 2732/ 60016A0 :                     ; 		mov.w	@(marsGbl_ZSortReq,gbr),r0
+(1) 2733/ 60016A0 :                     ; 		cmp/eq	#1,r0
+(1) 2734/ 60016A0 :                     ; 		bt	.wait_z
+(1) 2735/ 60016A0 :                     ; 		mov.l   #$FFFFFE80,r1			; Stop watchdog
+(1) 2736/ 60016A0 :                     ; 		mov.w   #$A518,r0
+(1) 2737/ 60016A0 :                     ; 		mov.w   r0,@r1
+(1) 2738/ 60016A0 :                     ;
+(1) 2739/ 60016A0 :                     ; ; ----------------------------------------
+(1) 2740/ 60016A0 :                     ;
+(1) 2741/ 60016A0 :                     ; ; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
+(1) 2742/ 60016A0 :                     ; 		mov 	#RAM_Mars_PlgnNum_0,r13
+(1) 2743/ 60016A0 :                     ; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
+(1) 2744/ 60016A0 :                     ; 		tst     #1,r0
+(1) 2745/ 60016A0 :                     ; 		bt	.page_2
+(1) 2746/ 60016A0 :                     ; ; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
+(1) 2747/ 60016A0 :                     ; 		mov 	#RAM_Mars_PlgnNum_1,r13
+(1) 2748/ 60016A0 :                     ; .page_2:
+(1) 2749/ 60016A0 :                     ; 		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0
+(1) 2750/ 60016A0 :                     ; 		mov.w	r0,@r13
+(1) 2751/ 60016A0 :                     ;
+(1) 2752/ 60016A0 :                     ; 		mov	#_sysreg+comm2,r4		; DEBUG COUNTER
+(1) 2753/ 60016A0 :                     ; ; 		mov	#0,r0
+(1) 2754/ 60016A0 :                     ; 		mov.w	r0,@r4
+(1) 2755/ 60016A0 :                     ; 		mov	#_sysreg+comm14,r2
+(1) 2756/ 60016A0 :                     ; .mstr_busy:
+(1) 2757/ 60016A0 :                     ; 		mov.b	@r2,r0
+(1) 2758/ 60016A0 :                     ; 		and	#$7F,r0
+(1) 2759/ 60016A0 :                     ; 		cmp/eq	#0,r0
+(1) 2760/ 60016A0 :                     ; 		bf	.mstr_busy			; Skip frame
+(1) 2761/ 60016A0 :                     ; 		mov.w	@(marsGbl_PlgnBuffNum,gbr),r0	; Swap polygon buffer
+(1) 2762/ 60016A0 :                     ;  		xor	#1,r0
+(1) 2763/ 60016A0 :                     ;  		mov.w	r0,@(marsGbl_PlgnBuffNum,gbr)
+(1) 2764/ 60016A0 :                     ;  		mov	#1,r1				; Set task $01 to Master
+(1) 2765/ 60016A0 :                     ; 		mov.b	@r2,r0
+(1) 2766/ 60016A0 :                     ; 		and	#$80,r0
+(1) 2767/ 60016A0 :                     ; 		or	r1,r0
+(1) 2768/ 60016A0 :                     ; 		mov.b	r0,@r2
+(1) 2769/ 60016A0 :                     ;
+(1) 2770/ 60016A0 :                     ; 		mov	#_sysreg+comm15,r1
+(1) 2771/ 60016A0 :                     ; 		mov.b	@r1,r0
+(1) 2772/ 60016A0 :                     ; 		and	#$80,r0
+(1) 2773/ 60016A0 :                     ; 		mov.b	r0,@r1
+(1) 2774/ 60016A0 :                     
+(1) 2775/ 60016A0 :                     ; ====================================================================
+(1) 2776/ 60016A0 :                     ; --------------------------------------------------------
+(1) 2777/ 60016A0 :                     ; Task list for MD-to-MARS tasks, call these 68k side
+(1) 2778/ 60016A0 :                     ; with the respective arguments
+(1) 2779/ 60016A0 :                     ; 
+(1) 2780/ 60016A0 :                     ; *** 68k EXAMPLES ***
+(1) 2781/ 60016A0 :                     ; 
+(1) 2782/ 60016A0 :                     ; Single task:
+(1) 2783/ 60016A0 :                     ; 	move.l	#CmdTaskMd_SetBitmap,d0		; 32X display ON
+(1) 2784/ 60016A0 :                     ; 	moveq	#1,d1
+(1) 2785/ 60016A0 :                     ; 	bsr	System_MdMars_MstAddTask
+(1) 2786/ 60016A0 :                     ; 	
+(1) 2787/ 60016A0 :                     ; Queued task:
+(1) 2788/ 60016A0 :                     ; 	move.l	#Palette_Intro,d1
+(1) 2789/ 60016A0 :                     ; 	moveq	#0,d2
+(1) 2790/ 60016A0 :                     ; 	mov.w	#16,d3
+(1) 2791/ 60016A0 :                     ; 	moveq	#0,d4
+(1) 2792/ 60016A0 :                     ; 	move.l	#CmdTaskMd_LoadSPal,d0		; Load palette
+(1) 2793/ 60016A0 :                     ; 	bsr	System_MdMars_MstAddTask
+(1) 2794/ 60016A0 :                     ;	; then add more requests
+(1) 2795/ 60016A0 :                     ; 	bsr	System_MdMars_MstSendAll	; <-- Send all and wait
+(1) 2796/ 60016A0 :                     ; 	; or
+(1) 2797/ 60016A0 :                     ; 	bsr	System_MdMars_MstSendDrop	; <-- Send all but skip if busy
+(1) 2798/ 60016A0 :                     ;
+(1) 2799/ 60016A0 :                     ; Mst: for Master, processes until all draw-tasks finished
+(1) 2800/ 60016A0 :                     ; Slv: for Slave, processes after sorting model faces
+(1) 2801/ 60016A0 :                     ; --------------------------------------------------------
+(1) 2802/ 60016A0 :                     
+(1) 2803/ 60016A0 :                     		align 4
+(1) 2804/ 60016A0 :                     
+(1) 2805/ 60016A0 :                     ; ------------------------------------------------
+(1) 2806/ 60016A0 :                     ; CALLS EXCLUSIVE TO MASTER CPU
+(1) 2807/ 60016A0 :                     ; ------------------------------------------------
+(1) 2808/ 60016A0 :                     
+(1) 2809/ 60016A0 :                     ; ------------------------------------------------
+(1) 2810/ 60016A0 :                     ; Set SuperVDP bitmap value
+(1) 2811/ 60016A0 :                     ;
+(1) 2812/ 60016A0 :                     ; @($04,r14) - SuperVDP bitmap number (0-3)
+(1) 2813/ 60016A0 :                     ; ------------------------------------------------
+(1) 2814/ 60016A0 :                     
+(1) 2815/ 60016A0 :                     CmdTaskMd_SetBitmap:
+(1) 2816/ 60016A0 : D108                		mov 	#_vdpreg,r1
+(1) 2817/ 60016A2 : 8515                .wait_fb:	mov.w   @($A,r1),r0
+(1) 2818/ 60016A4 : C802                		tst     #2,r0
+(1) 2819/ 60016A6 : 8BFC                		bf      .wait_fb
+(1) 2820/ 60016A8 : 50E1                		mov	@($04,r14),r0
+(1) 2821/ 60016AA : 8011                		mov.b	r0,@(bitmapmd,r1)
+(1) 2822/ 60016AC : 000B                		rts
+(1) 2823/ 60016AE : 0009                		nop
+(1) 2824/ 60016B0 :                     		align 4
+(1) 2825/ 60016B0 :                     
+(1) 2826/ 60016B0 :                     ; ------------------------------------------------
+(1) 2827/ 60016B0 :                     ; Load palette to SuperVDP from MD
+(1) 2828/ 60016B0 :                     ;
+(1) 2829/ 60016B0 :                     ; @($04,r14) - Palette data
+(1) 2830/ 60016B0 :                     ; @($08,r14) - Start from
+(1) 2831/ 60016B0 :                     ; @($0C,r14) - Number of colors
+(1) 2832/ 60016B0 :                     ; @($10,r14) - OR value
+(1) 2833/ 60016B0 :                     ; ------------------------------------------------
+(1) 2834/ 60016B0 :                     
+(1) 2835/ 60016B0 :                     CmdTaskMd_LoadSPal:
+(1) 2836/ 60016B0 : 6DE3                		mov	r14,r13
+(1) 2837/ 60016B2 : 7D04                		add	#4,r13
+(1) 2838/ 60016B4 : 61D6                		mov	@r13+,r1
+(1) 2839/ 60016B6 : 62D6                		mov	@r13+,r2
+(1) 2840/ 60016B8 : 63D6                		mov	@r13+,r3
+(1) 2841/ 60016BA : 64D6                		mov	@r13+,r4
+(1) 2842/ 60016BC : D002                		mov	#MarsVideo_LoadPal,r0
+(1) 2843/ 60016BE : 402B                		jmp	@r0
+(1) 2844/ 60016C0 : 0009                		nop
+(1) 2845/ 60016C2 :                     		align 4
+(1) 2846/ 60016C4 :                     
+(1) 2847/ 60016C4 :                     ; ------------------------------------------------
+(1) 2848/ 60016C4 :                     ; CALLS EXCLUSIVE TO SLAVE CPU
+(1) 2849/ 60016C4 :                     ; ------------------------------------------------
+(1) 2850/ 60016C4 :                     
+(1) 2851/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2852/ 60016C4 :                     ; ; Make new object and insert it to specific slot
+(1) 2853/ 60016C4 :                     ; ;
+(1) 2854/ 60016C4 :                     ; ; @($04,r14) - Object slot
+(1) 2855/ 60016C4 :                     ; ; @($08,r14) - Object data
+(1) 2856/ 60016C4 :                     ; ; @($0C,r14) - Object animation data
+(1) 2857/ 60016C4 :                     ; ; @($10,r14) - Object animation speed
+(1) 2858/ 60016C4 :                     ; ; @($14,r14) - Object options:
+(1) 2859/ 60016C4 :                     ; ;	       %????????????????????????pppppppp
+(1) 2860/ 60016C4 :                     ; ;		p - index pixel increment value
+(1) 2861/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2862/ 60016C4 :                     ;
+(1) 2863/ 60016C4 :                     ; CmdTaskMd_ObjectSet:
+(1) 2864/ 60016C4 :                     ; 		mov	#RAM_Mars_Objects+(sizeof_mdlobj*9),r12
+(1) 2865/ 60016C4 :                     ; 		mov	r14,r13
+(1) 2866/ 60016C4 :                     ; 		add	#4,r13
+(1) 2867/ 60016C4 :                     ; 		mov	@r13+,r0
+(1) 2868/ 60016C4 :                     ; 		mov	#sizeof_mdlobj,r1
+(1) 2869/ 60016C4 :                     ; 		mulu	r1,r0
+(1) 2870/ 60016C4 :                     ; 		sts	macl,r0
+(1) 2871/ 60016C4 :                     ; 		add	r0,r12
+(1) 2872/ 60016C4 :                     ; 		xor	r0,r0
+(1) 2873/ 60016C4 :                     ; 		mov	@r13+,r1
+(1) 2874/ 60016C4 :                     ; 		mov	r1,@(mdl_data,r12)
+(1) 2875/ 60016C4 :                     ; 		mov	@r13+,r1
+(1) 2876/ 60016C4 :                     ; 		mov	r1,@(mdl_animdata,r12)
+(1) 2877/ 60016C4 :                     ; 		mov	@r13+,r1
+(1) 2878/ 60016C4 :                     ; 		mov	r1,@(mdl_animspd,r12)
+(1) 2879/ 60016C4 :                     ; 		mov	@r13+,r1
+(1) 2880/ 60016C4 :                     ; 		mov	r1,@(mdl_option,r12)
+(1) 2881/ 60016C4 :                     ; 		xor	r0,r0
+(1) 2882/ 60016C4 :                     ; 		mov	r0,@(mdl_x_pos,r12)
+(1) 2883/ 60016C4 :                     ; 		mov	r0,@(mdl_y_pos,r12)
+(1) 2884/ 60016C4 :                     ; 		mov	r0,@(mdl_z_pos,r12)
+(1) 2885/ 60016C4 :                     ; 		mov	r0,@(mdl_x_rot,r12)
+(1) 2886/ 60016C4 :                     ; 		mov	r0,@(mdl_y_rot,r12)
+(1) 2887/ 60016C4 :                     ; 		mov	r0,@(mdl_z_rot,r12)
+(1) 2888/ 60016C4 :                     ; 		mov	r0,@(mdl_animframe,r12)
+(1) 2889/ 60016C4 :                     ; 		mov	r0,@(mdl_animtimer,r12)
+(1) 2890/ 60016C4 :                     ; 		rts
+(1) 2891/ 60016C4 :                     ; 		nop
+(1) 2892/ 60016C4 :                     ; 		align 4
+(1) 2893/ 60016C4 :                     ;
+(1) 2894/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2895/ 60016C4 :                     ; ; Move/Rotate object from slot
+(1) 2896/ 60016C4 :                     ; ;
+(1) 2897/ 60016C4 :                     ; ; @($04,r14) - Object slot
+(1) 2898/ 60016C4 :                     ; ; @($08,r14) - Object X pos
+(1) 2899/ 60016C4 :                     ; ; @($0C,r14) - Object Y pos
+(1) 2900/ 60016C4 :                     ; ; @($10,r14) - Object Z pos
+(1) 2901/ 60016C4 :                     ; ; @($14,r14) - Object X rot
+(1) 2902/ 60016C4 :                     ; ; @($18,r14) - Object Y rot
+(1) 2903/ 60016C4 :                     ; ; @($1C,r14) - Object Z rot
+(1) 2904/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2905/ 60016C4 :                     ;
+(1) 2906/ 60016C4 :                     ; CmdTaskMd_ObjectPos:
+(1) 2907/ 60016C4 :                     ; 		mov	#RAM_Mars_Objects+(sizeof_mdlobj*9),r12
+(1) 2908/ 60016C4 :                     ; 		mov	r14,r13
+(1) 2909/ 60016C4 :                     ; 		add	#4,r13
+(1) 2910/ 60016C4 :                     ; 		mov	@r13+,r0
+(1) 2911/ 60016C4 :                     ; 		mov	#sizeof_mdlobj,r1
+(1) 2912/ 60016C4 :                     ; 		mulu	r1,r0
+(1) 2913/ 60016C4 :                     ; 		sts	macl,r0
+(1) 2914/ 60016C4 :                     ; 		add	r0,r12
+(1) 2915/ 60016C4 :                     ; 		mov	@r13+,r1
+(1) 2916/ 60016C4 :                     ; 		mov	@r13+,r2
+(1) 2917/ 60016C4 :                     ; 		mov	@r13+,r3
+(1) 2918/ 60016C4 :                     ; 		mov	@r13+,r4
+(1) 2919/ 60016C4 :                     ; 		mov	@r13+,r5
+(1) 2920/ 60016C4 :                     ; 		mov	@r13+,r6
+(1) 2921/ 60016C4 :                     ; 		mov	r1,@(mdl_x_pos,r12)
+(1) 2922/ 60016C4 :                     ; 		mov	r2,@(mdl_y_pos,r12)
+(1) 2923/ 60016C4 :                     ; 		mov	r3,@(mdl_z_pos,r12)
+(1) 2924/ 60016C4 :                     ; 		mov	r4,@(mdl_x_rot,r12)
+(1) 2925/ 60016C4 :                     ; 		mov	r5,@(mdl_y_rot,r12)
+(1) 2926/ 60016C4 :                     ; 		mov	r6,@(mdl_z_rot,r12)
+(1) 2927/ 60016C4 :                     ; 		rts
+(1) 2928/ 60016C4 :                     ; 		nop
+(1) 2929/ 60016C4 :                     ; 		align 4
+(1) 2930/ 60016C4 :                     ;
+(1) 2931/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2932/ 60016C4 :                     ; ; Clear ALL objects, including layout
+(1) 2933/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2934/ 60016C4 :                     ;
+(1) 2935/ 60016C4 :                     ; CmdTaskMd_ObjectClrAll:
+(1) 2936/ 60016C4 :                     ; 		sts	pr,@-r15
+(1) 2937/ 60016C4 :                     ; 		mov	#MarsMdl_Init,r0
+(1) 2938/ 60016C4 :                     ; 		jsr	@r0
+(1) 2939/ 60016C4 :                     ; 		nop
+(1) 2940/ 60016C4 :                     ; 		lds	@r15+,pr
+(1) 2941/ 60016C4 :                     ; 		rts
 (1) 2942/ 60016C4 :                     ; 		nop
-(1) 2943/ 60016C4 :                     ; 		lds	@r15+,pr
-(1) 2944/ 60016C4 :                     ; 		rts
-(1) 2945/ 60016C4 :                     ; 		nop
-(1) 2946/ 60016C4 :                     ; 		align 4
-(1) 2947/ 60016C4 :                     ;
-(1) 2948/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2949/ 60016C4 :                     ; ; Set new map data
-(1) 2950/ 60016C4 :                     ; ;
-(1) 2951/ 60016C4 :                     ; ; @($04,r14) - layout data (set to 0 to clear)
-(1) 2952/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2953/ 60016C4 :                     ;
-(1) 2954/ 60016C4 :                     ; CmdTaskMd_MakeMap:
-(1) 2955/ 60016C4 :                     ; 		sts	pr,@-r15
-(1) 2956/ 60016C4 :                     ; ; 		bsr	MarsVideo_ClearFrame
-(1) 2957/ 60016C4 :                     ; ; 		nop
-(1) 2958/ 60016C4 :                     ; 		mov	@(4,r14),r1
-(1) 2959/ 60016C4 :                     ; 		mov	#MarsLay_Make,r0
-(1) 2960/ 60016C4 :                     ; 		jsr	@r0
-(1) 2961/ 60016C4 :                     ; 		mov	r14,@-r15
-(1) 2962/ 60016C4 :                     ; 		mov	@r15+,r14
-(1) 2963/ 60016C4 :                     ; 		lds	@r15+,pr
-(1) 2964/ 60016C4 :                     ; 		rts
-(1) 2965/ 60016C4 :                     ; 		nop
-(1) 2966/ 60016C4 :                     ; 		align 4
-(1) 2967/ 60016C4 :                     ;
-(1) 2968/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2969/ 60016C4 :                     ; ; Set camera position
-(1) 2970/ 60016C4 :                     ; ;
-(1) 2971/ 60016C4 :                     ; ; @($04,r14) - Camera slot (TODO)
-(1) 2972/ 60016C4 :                     ; ; @($08,r14) - Camera X pos
-(1) 2973/ 60016C4 :                     ; ; @($0C,r14) - Camera Y pos
-(1) 2974/ 60016C4 :                     ; ; @($10,r14) - Camera Z pos
-(1) 2975/ 60016C4 :                     ; ; @($14,r14) - Camera X rot
-(1) 2976/ 60016C4 :                     ; ; @($18,r14) - Camera Y rot
-(1) 2977/ 60016C4 :                     ; ; @($1C,r14) - Camera Z rot
-(1) 2978/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 2979/ 60016C4 :                     ;
-(1) 2980/ 60016C4 :                     ; CmdTaskMd_CameraPos:
-(1) 2981/ 60016C4 :                     ; 		mov	#RAM_Mars_ObjCamera,r12
-(1) 2982/ 60016C4 :                     ; 		mov	r14,r13
-(1) 2983/ 60016C4 :                     ; 		add	#8,r13
-(1) 2984/ 60016C4 :                     ; 		mov	@r13+,r1
-(1) 2985/ 60016C4 :                     ; 		mov	@r13+,r2
-(1) 2986/ 60016C4 :                     ; 		mov	@r13+,r3
-(1) 2987/ 60016C4 :                     ; 		mov	@r13+,r4
-(1) 2988/ 60016C4 :                     ; 		mov	@r13+,r5
-(1) 2989/ 60016C4 :                     ; 		mov	@r13+,r6
-(1) 2990/ 60016C4 :                     ; 		mov	r1,@(cam_x_pos,r12)
-(1) 2991/ 60016C4 :                     ; 		mov	r2,@(cam_y_pos,r12)
-(1) 2992/ 60016C4 :                     ; 		mov	r3,@(cam_z_pos,r12)
-(1) 2993/ 60016C4 :                     ; 		mov	r4,@(cam_x_rot,r12)
-(1) 2994/ 60016C4 :                     ; 		mov	r5,@(cam_y_rot,r12)
-(1) 2995/ 60016C4 :                     ; 		mov	r6,@(cam_z_rot,r12)
-(1) 2996/ 60016C4 :                     ; 		rts
-(1) 2997/ 60016C4 :                     ; 		nop
-(1) 2998/ 60016C4 :                     ; 		align 4
-(1) 2999/ 60016C4 :                     ;
-(1) 3000/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3001/ 60016C4 :                     ; ; Set camera position
-(1) 3002/ 60016C4 :                     ; ;
-(1) 3003/ 60016C4 :                     ; ; @($04,r14) - Camera slot (TODO)
-(1) 3004/ 60016C4 :                     ; ; @($08,r14) - Camera X pos
-(1) 3005/ 60016C4 :                     ; ; @($0C,r14) - Camera Y pos
-(1) 3006/ 60016C4 :                     ; ; @($10,r14) - Camera Z pos
-(1) 3007/ 60016C4 :                     ; ; @($14,r14) - Camera X rot
-(1) 3008/ 60016C4 :                     ; ; @($18,r14) - Camera Y rot
-(1) 3009/ 60016C4 :                     ; ; @($1C,r14) - Camera Z rot
-(1) 3010/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3011/ 60016C4 :                     ;
-(1) 3012/ 60016C4 :                     ; CmdTaskMd_UpdModels:
-(1) 3013/ 60016C4 :                     ; 		mov	#_sysreg+comm15,r1
-(1) 3014/ 60016C4 :                     ; 		mov	#1,r2
-(1) 3015/ 60016C4 :                     ; 		mov.b	@r1,r0
-(1) 3016/ 60016C4 :                     ; 		and	#$80,r0
-(1) 3017/ 60016C4 :                     ; 		or	r2,r0
-(1) 3018/ 60016C4 :                     ; 		mov.b	r0,@r1
-(1) 3019/ 60016C4 :                     ; 		rts
-(1) 3020/ 60016C4 :                     ; 		nop
-(1) 3021/ 60016C4 :                     ; 		align 4
-(1) 3022/ 60016C4 :                     ;
-(1) 3023/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3024/ 60016C4 :                     ; ; Set PWM to play
-(1) 3025/ 60016C4 :                     ; ;
-(1) 3026/ 60016C4 :                     ; ; @($04,r14) - Channel slot
-(1) 3027/ 60016C4 :                     ; ; @($08,r14) - Start point
-(1) 3028/ 60016C4 :                     ; ; @($0C,r14) - End point
-(1) 3029/ 60016C4 :                     ; ; @($10,r14) - Loop point
-(1) 3030/ 60016C4 :                     ; ; @($14,r14) - Pitch
-(1) 3031/ 60016C4 :                     ; ; @($18,r14) - Volume
-(1) 3032/ 60016C4 :                     ; ; @($1C,r14) - Settings: %00000000 00000000LR | LR - output bits
-(1) 3033/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3034/ 60016C4 :                     ;
-(1) 3035/ 60016C4 :                     ; CmdTaskMd_PWM_SetChnl:
-(1) 3036/ 60016C4 :                     ; 		sts	pr,@-r15
-(1) 3037/ 60016C4 :                     ; 		mov	@($04,r14),r1
-(1) 3038/ 60016C4 :                     ; 		mov	@($08,r14),r2
-(1) 3039/ 60016C4 :                     ; 		mov	@($0C,r14),r3
-(1) 3040/ 60016C4 :                     ; 		mov	@($10,r14),r4
-(1) 3041/ 60016C4 :                     ; 		mov	@($14,r14),r5
-(1) 3042/ 60016C4 :                     ; 		mov	@($18,r14),r6
-(1) 3043/ 60016C4 :                     ; 		mov	@($1C,r14),r7
-(1) 3044/ 60016C4 :                     ; 		bsr	MarsSound_SetPwm
+(1) 2943/ 60016C4 :                     ; 		align 4
+(1) 2944/ 60016C4 :                     ;
+(1) 2945/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2946/ 60016C4 :                     ; ; Set new map data
+(1) 2947/ 60016C4 :                     ; ;
+(1) 2948/ 60016C4 :                     ; ; @($04,r14) - layout data (set to 0 to clear)
+(1) 2949/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2950/ 60016C4 :                     ;
+(1) 2951/ 60016C4 :                     ; CmdTaskMd_MakeMap:
+(1) 2952/ 60016C4 :                     ; 		sts	pr,@-r15
+(1) 2953/ 60016C4 :                     ; ; 		bsr	MarsVideo_ClearFrame
+(1) 2954/ 60016C4 :                     ; ; 		nop
+(1) 2955/ 60016C4 :                     ; 		mov	@(4,r14),r1
+(1) 2956/ 60016C4 :                     ; 		mov	#MarsLay_Make,r0
+(1) 2957/ 60016C4 :                     ; 		jsr	@r0
+(1) 2958/ 60016C4 :                     ; 		mov	r14,@-r15
+(1) 2959/ 60016C4 :                     ; 		mov	@r15+,r14
+(1) 2960/ 60016C4 :                     ; 		lds	@r15+,pr
+(1) 2961/ 60016C4 :                     ; 		rts
+(1) 2962/ 60016C4 :                     ; 		nop
+(1) 2963/ 60016C4 :                     ; 		align 4
+(1) 2964/ 60016C4 :                     ;
+(1) 2965/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2966/ 60016C4 :                     ; ; Set camera position
+(1) 2967/ 60016C4 :                     ; ;
+(1) 2968/ 60016C4 :                     ; ; @($04,r14) - Camera slot (TODO)
+(1) 2969/ 60016C4 :                     ; ; @($08,r14) - Camera X pos
+(1) 2970/ 60016C4 :                     ; ; @($0C,r14) - Camera Y pos
+(1) 2971/ 60016C4 :                     ; ; @($10,r14) - Camera Z pos
+(1) 2972/ 60016C4 :                     ; ; @($14,r14) - Camera X rot
+(1) 2973/ 60016C4 :                     ; ; @($18,r14) - Camera Y rot
+(1) 2974/ 60016C4 :                     ; ; @($1C,r14) - Camera Z rot
+(1) 2975/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2976/ 60016C4 :                     ;
+(1) 2977/ 60016C4 :                     ; CmdTaskMd_CameraPos:
+(1) 2978/ 60016C4 :                     ; 		mov	#RAM_Mars_ObjCamera,r12
+(1) 2979/ 60016C4 :                     ; 		mov	r14,r13
+(1) 2980/ 60016C4 :                     ; 		add	#8,r13
+(1) 2981/ 60016C4 :                     ; 		mov	@r13+,r1
+(1) 2982/ 60016C4 :                     ; 		mov	@r13+,r2
+(1) 2983/ 60016C4 :                     ; 		mov	@r13+,r3
+(1) 2984/ 60016C4 :                     ; 		mov	@r13+,r4
+(1) 2985/ 60016C4 :                     ; 		mov	@r13+,r5
+(1) 2986/ 60016C4 :                     ; 		mov	@r13+,r6
+(1) 2987/ 60016C4 :                     ; 		mov	r1,@(cam_x_pos,r12)
+(1) 2988/ 60016C4 :                     ; 		mov	r2,@(cam_y_pos,r12)
+(1) 2989/ 60016C4 :                     ; 		mov	r3,@(cam_z_pos,r12)
+(1) 2990/ 60016C4 :                     ; 		mov	r4,@(cam_x_rot,r12)
+(1) 2991/ 60016C4 :                     ; 		mov	r5,@(cam_y_rot,r12)
+(1) 2992/ 60016C4 :                     ; 		mov	r6,@(cam_z_rot,r12)
+(1) 2993/ 60016C4 :                     ; 		rts
+(1) 2994/ 60016C4 :                     ; 		nop
+(1) 2995/ 60016C4 :                     ; 		align 4
+(1) 2996/ 60016C4 :                     ;
+(1) 2997/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 2998/ 60016C4 :                     ; ; Set camera position
+(1) 2999/ 60016C4 :                     ; ;
+(1) 3000/ 60016C4 :                     ; ; @($04,r14) - Camera slot (TODO)
+(1) 3001/ 60016C4 :                     ; ; @($08,r14) - Camera X pos
+(1) 3002/ 60016C4 :                     ; ; @($0C,r14) - Camera Y pos
+(1) 3003/ 60016C4 :                     ; ; @($10,r14) - Camera Z pos
+(1) 3004/ 60016C4 :                     ; ; @($14,r14) - Camera X rot
+(1) 3005/ 60016C4 :                     ; ; @($18,r14) - Camera Y rot
+(1) 3006/ 60016C4 :                     ; ; @($1C,r14) - Camera Z rot
+(1) 3007/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3008/ 60016C4 :                     ;
+(1) 3009/ 60016C4 :                     ; CmdTaskMd_UpdModels:
+(1) 3010/ 60016C4 :                     ; 		mov	#_sysreg+comm15,r1
+(1) 3011/ 60016C4 :                     ; 		mov	#1,r2
+(1) 3012/ 60016C4 :                     ; 		mov.b	@r1,r0
+(1) 3013/ 60016C4 :                     ; 		and	#$80,r0
+(1) 3014/ 60016C4 :                     ; 		or	r2,r0
+(1) 3015/ 60016C4 :                     ; 		mov.b	r0,@r1
+(1) 3016/ 60016C4 :                     ; 		rts
+(1) 3017/ 60016C4 :                     ; 		nop
+(1) 3018/ 60016C4 :                     ; 		align 4
+(1) 3019/ 60016C4 :                     ;
+(1) 3020/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3021/ 60016C4 :                     ; ; Set PWM to play
+(1) 3022/ 60016C4 :                     ; ;
+(1) 3023/ 60016C4 :                     ; ; @($04,r14) - Channel slot
+(1) 3024/ 60016C4 :                     ; ; @($08,r14) - Start point
+(1) 3025/ 60016C4 :                     ; ; @($0C,r14) - End point
+(1) 3026/ 60016C4 :                     ; ; @($10,r14) - Loop point
+(1) 3027/ 60016C4 :                     ; ; @($14,r14) - Pitch
+(1) 3028/ 60016C4 :                     ; ; @($18,r14) - Volume
+(1) 3029/ 60016C4 :                     ; ; @($1C,r14) - Settings: %00000000 00000000LR | LR - output bits
+(1) 3030/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3031/ 60016C4 :                     ;
+(1) 3032/ 60016C4 :                     ; CmdTaskMd_PWM_SetChnl:
+(1) 3033/ 60016C4 :                     ; 		sts	pr,@-r15
+(1) 3034/ 60016C4 :                     ; 		mov	@($04,r14),r1
+(1) 3035/ 60016C4 :                     ; 		mov	@($08,r14),r2
+(1) 3036/ 60016C4 :                     ; 		mov	@($0C,r14),r3
+(1) 3037/ 60016C4 :                     ; 		mov	@($10,r14),r4
+(1) 3038/ 60016C4 :                     ; 		mov	@($14,r14),r5
+(1) 3039/ 60016C4 :                     ; 		mov	@($18,r14),r6
+(1) 3040/ 60016C4 :                     ; 		mov	@($1C,r14),r7
+(1) 3041/ 60016C4 :                     ; 		bsr	MarsSound_SetPwm
+(1) 3042/ 60016C4 :                     ; 		nop
+(1) 3043/ 60016C4 :                     ; 		lds	@r15+,pr
+(1) 3044/ 60016C4 :                     ; 		rts
 (1) 3045/ 60016C4 :                     ; 		nop
-(1) 3046/ 60016C4 :                     ; 		lds	@r15+,pr
-(1) 3047/ 60016C4 :                     ; 		rts
-(1) 3048/ 60016C4 :                     ; 		nop
-(1) 3049/ 60016C4 :                     ; 		align 4
-(1) 3050/ 60016C4 :                     ;
-(1) 3051/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3052/ 60016C4 :                     ; ; Set PWM pitch to multiple channels
-(1) 3053/ 60016C4 :                     ; ;
-(1) 3054/ 60016C4 :                     ; ; @($04,r14) - Channel 0 pitch
-(1) 3055/ 60016C4 :                     ; ; @($08,r14) - Channel 1 pitch
-(1) 3056/ 60016C4 :                     ; ; @($0C,r14) - Channel 2 pitch
-(1) 3057/ 60016C4 :                     ; ; @($10,r14) - Channel 3 pitch
-(1) 3058/ 60016C4 :                     ; ; @($14,r14) - Channel 4 pitch
-(1) 3059/ 60016C4 :                     ; ; @($18,r14) - Channel 5 pitch
-(1) 3060/ 60016C4 :                     ; ; @($1C,r14) - Channel 6 pitch
-(1) 3061/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3062/ 60016C4 :                     ;
-(1) 3063/ 60016C4 :                     ; CmdTaskMd_PWM_MultPitch:
-(1) 3064/ 60016C4 :                     ; 		sts	pr,@-r15
-(1) 3065/ 60016C4 :                     ; 		mov	#$FFFF,r7
-(1) 3066/ 60016C4 :                     ; 		mov	r14,r13
-(1) 3067/ 60016C4 :                     ; 		add	#4,r13
-(1) 3068/ 60016C4 :                     ; 		mov	#0,r1
-(1) 3069/ 60016C4 :                     ; 	rept MAX_PWMCHNL		; MAX: 7
-(1) 3070/ 60016C4 :                     ; 		mov	@r13+,r2
-(1) 3071/ 60016C4 :                     ; 		and	r7,r2
-(1) 3072/ 60016C4 :                     ; 		bsr	MarsSound_SetPwmPitch
-(1) 3073/ 60016C4 :                     ; 		nop
-(1) 3074/ 60016C4 :                     ; 		add	#1,r1
-(1) 3075/ 60016C4 :                     ; 	endm
-(1) 3076/ 60016C4 :                     ; 		lds	@r15+,pr
-(1) 3077/ 60016C4 :                     ; 		rts
-(1) 3078/ 60016C4 :                     ; 		nop
-(1) 3079/ 60016C4 :                     ; 		align 4
-(1) 3080/ 60016C4 :                     ;
-(1) 3081/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3082/ 60016C4 :                     ; ; Enable/Disable PWM channels from playing
-(1) 3083/ 60016C4 :                     ; ;
-(1) 3084/ 60016C4 :                     ; ; @($04,r14) - Channel slot
-(1) 3085/ 60016C4 :                     ; ; @($08,r14) - Enable/Disable/Restart
-(1) 3086/ 60016C4 :                     ; ; ------------------------------------------------
-(1) 3087/ 60016C4 :                     ;
-(1) 3088/ 60016C4 :                     ; CmdTaskMd_PWM_Enable:
-(1) 3089/ 60016C4 :                     ; 		sts	pr,@-r15
-(1) 3090/ 60016C4 :                     ; 		mov	@($04,r14),r1
-(1) 3091/ 60016C4 :                     ; 		mov	@($08,r14),r2
-(1) 3092/ 60016C4 :                     ; 		bsr	MarsSound_PwmEnable
+(1) 3046/ 60016C4 :                     ; 		align 4
+(1) 3047/ 60016C4 :                     ;
+(1) 3048/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3049/ 60016C4 :                     ; ; Set PWM pitch to multiple channels
+(1) 3050/ 60016C4 :                     ; ;
+(1) 3051/ 60016C4 :                     ; ; @($04,r14) - Channel 0 pitch
+(1) 3052/ 60016C4 :                     ; ; @($08,r14) - Channel 1 pitch
+(1) 3053/ 60016C4 :                     ; ; @($0C,r14) - Channel 2 pitch
+(1) 3054/ 60016C4 :                     ; ; @($10,r14) - Channel 3 pitch
+(1) 3055/ 60016C4 :                     ; ; @($14,r14) - Channel 4 pitch
+(1) 3056/ 60016C4 :                     ; ; @($18,r14) - Channel 5 pitch
+(1) 3057/ 60016C4 :                     ; ; @($1C,r14) - Channel 6 pitch
+(1) 3058/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3059/ 60016C4 :                     ;
+(1) 3060/ 60016C4 :                     ; CmdTaskMd_PWM_MultPitch:
+(1) 3061/ 60016C4 :                     ; 		sts	pr,@-r15
+(1) 3062/ 60016C4 :                     ; 		mov	#$FFFF,r7
+(1) 3063/ 60016C4 :                     ; 		mov	r14,r13
+(1) 3064/ 60016C4 :                     ; 		add	#4,r13
+(1) 3065/ 60016C4 :                     ; 		mov	#0,r1
+(1) 3066/ 60016C4 :                     ; 	rept MAX_PWMCHNL		; MAX: 7
+(1) 3067/ 60016C4 :                     ; 		mov	@r13+,r2
+(1) 3068/ 60016C4 :                     ; 		and	r7,r2
+(1) 3069/ 60016C4 :                     ; 		bsr	MarsSound_SetPwmPitch
+(1) 3070/ 60016C4 :                     ; 		nop
+(1) 3071/ 60016C4 :                     ; 		add	#1,r1
+(1) 3072/ 60016C4 :                     ; 	endm
+(1) 3073/ 60016C4 :                     ; 		lds	@r15+,pr
+(1) 3074/ 60016C4 :                     ; 		rts
+(1) 3075/ 60016C4 :                     ; 		nop
+(1) 3076/ 60016C4 :                     ; 		align 4
+(1) 3077/ 60016C4 :                     ;
+(1) 3078/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3079/ 60016C4 :                     ; ; Enable/Disable PWM channels from playing
+(1) 3080/ 60016C4 :                     ; ;
+(1) 3081/ 60016C4 :                     ; ; @($04,r14) - Channel slot
+(1) 3082/ 60016C4 :                     ; ; @($08,r14) - Enable/Disable/Restart
+(1) 3083/ 60016C4 :                     ; ; ------------------------------------------------
+(1) 3084/ 60016C4 :                     ;
+(1) 3085/ 60016C4 :                     ; CmdTaskMd_PWM_Enable:
+(1) 3086/ 60016C4 :                     ; 		sts	pr,@-r15
+(1) 3087/ 60016C4 :                     ; 		mov	@($04,r14),r1
+(1) 3088/ 60016C4 :                     ; 		mov	@($08,r14),r2
+(1) 3089/ 60016C4 :                     ; 		bsr	MarsSound_PwmEnable
+(1) 3090/ 60016C4 :                     ; 		nop
+(1) 3091/ 60016C4 :                     ; 		lds	@r15+,pr
+(1) 3092/ 60016C4 :                     ; 		rts
 (1) 3093/ 60016C4 :                     ; 		nop
-(1) 3094/ 60016C4 :                     ; 		lds	@r15+,pr
-(1) 3095/ 60016C4 :                     ; 		rts
-(1) 3096/ 60016C4 :                     ; 		nop
-(1) 3097/ 60016C4 :                     ; 		align 4
-(1) 3098/ 60016C4 :                     
-(1) 3099/ 60016C4 :                     ; ----------------------------------------
-(1) 3100/ 60016C4 :                     
-(1) 3101/ 60016C4 : 2000 4100 0600 09C4 		ltorg
-(1) 3102/ 60016CC :                     
-(1) 3103/ 60016CC :                     ; =================================================================
-(1) 3104/ 60016CC :                     ; ------------------------------------------------
-(1) 3105/ 60016CC :                     ; Slave | Watchdog interrupt
-(1) 3106/ 60016CC :                     ; ------------------------------------------------
-(1) 3107/ 60016CC :                     
-(1) 3108/ 60016CC :                     s_irq_custom:
-(1) 3109/ 60016CC : 2F26                		mov	r2,@-r15
-(1) 3110/ 60016CE : 2F36                		mov	r3,@-r15
-(1) 3111/ 60016D0 : 2F46                		mov	r4,@-r15
-(1) 3112/ 60016D2 : 2F56                		mov	r5,@-r15
-(1) 3113/ 60016D4 : 2F66                		mov	r6,@-r15
-(1) 3114/ 60016D6 : 2F76                		mov	r7,@-r15
-(1) 3115/ 60016D8 : 9138                		mov	#_FRT,r1
-(1) 3116/ 60016DA : 8417                		mov.b   @(7,r1),r0
-(1) 3117/ 60016DC : CA02                		xor     #2,r0
-(1) 3118/ 60016DE : 8017                		mov.b   r0,@(7,r1)
-(1) 3119/ 60016E0 : C535                		mov.w	@(marsGbl_ZSortReq,gbr),r0
-(1) 3120/ 60016E2 : 8801                		cmp/eq	#1,r0
-(1) 3121/ 60016E4 : 8B1C                		bf	.no_req
-(1) 3122/ 60016E6 :                     
-(1) 3123/ 60016E6 :                     	; DONT CALL THIS
-(1) 3124/ 60016E6 :                     	; IF NUMOF FACES < 2
-(1) 3125/ 60016E6 : C52B                		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0
-(1) 3126/ 60016E8 : 6203                		mov	r0,r2
-(1) 3127/ 60016EA : E103                		mov	#3,r1
-(1) 3128/ 60016EC : 3217                		cmp/gt	r1,r2
-(1) 3129/ 60016EE : 8B15                		bf	.no_faces
-(1) 3130/ 60016F0 : D314                		mov	#RAM_Mars_Plgn_ZList_0,r3
-(1) 3131/ 60016F2 : C52C                		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
-(1) 3132/ 60016F4 : C801                		tst     #1,r0
-(1) 3133/ 60016F6 : 8900                		bt	.page_2
-(1) 3134/ 60016F8 : D313                		mov	#RAM_Mars_Plgn_ZList_1,r3
-(1) 3135/ 60016FA :                     .page_2:
-(1) 3136/ 60016FA : 6423                		mov	r2,r4
-(1) 3137/ 60016FC : 74FE                		add	#-2,r4
-(1) 3138/ 60016FE : 4411                		cmp/pz	r4
-(1) 3139/ 6001700 : 8B0E                		bf	.no_req
-(1) 3140/ 6001702 :                     .z_next:
-(1) 3141/ 6001702 : 6032                		mov	@r3,r0
-(1) 3142/ 6001704 : 5132                		mov	@(8,r3),r1
-(1) 3143/ 6001706 : 3017                		cmp/gt	r1,r0
-(1) 3144/ 6001708 : 8B05                		bf	.z_keep
-(1) 3145/ 600170A : 2312                		mov	r1,@r3
-(1) 3146/ 600170C : 1302                		mov	r0,@(8,r3)
-(1) 3147/ 600170E : 5031                		mov	@(4,r3),r0
-(1) 3148/ 6001710 : 5133                		mov	@($C,r3),r1
-(1) 3149/ 6001712 : 1311                		mov	r1,@(4,r3)
-(1) 3150/ 6001714 : 1303                		mov	r0,@($C,r3)
-(1) 3151/ 6001716 :                     .z_keep:
-(1) 3152/ 6001716 : 4410                		dt	r4
-(1) 3153/ 6001718 : 8FF3                		bf/s	.z_next
-(1) 3154/ 600171A : 7308                		add	#8,r3
-(1) 3155/ 600171C :                     .no_faces:
-(1) 3156/ 600171C : E000                		mov	#0,r0
-(1) 3157/ 600171E : C135                		mov.w	r0,@(marsGbl_ZSortReq,gbr)
-(1) 3158/ 6001720 :                     
-(1) 3159/ 6001720 :                     .no_req:
-(1) 3160/ 6001720 : 9115                		mov	#$FFFFFE80,r1
-(1) 3161/ 6001722 : 9015                		mov.w   #$A518,r0		; Watchdog OFF
-(1) 3162/ 6001724 : 2101                		mov.w   r0,@r1
-(1) 3163/ 6001726 : CB20                		or      #$20,r0			; ON again
-(1) 3164/ 6001728 : 2101                		mov.w   r0,@r1
-(1) 3165/ 600172A : E201                		mov	#1,r2
-(1) 3166/ 600172C : 9011                		mov.w   #$5A00,r0		; Timer for the next one
-(1) 3167/ 600172E : 202B                		or	r2,r0
-(1) 3168/ 6001730 : 2101                		mov.w	r0,@r1
-(1) 3169/ 6001732 :                     
-(1) 3170/ 6001732 : 67F6                		mov	@r15+,r7
-(1) 3171/ 6001734 : 66F6                		mov	@r15+,r6
-(1) 3172/ 6001736 : 65F6                		mov	@r15+,r5
-(1) 3173/ 6001738 : 64F6                		mov	@r15+,r4
-(1) 3174/ 600173A : 63F6                		mov	@r15+,r3
-(1) 3175/ 600173C : 62F6                		mov	@r15+,r2
-(1) 3176/ 600173E : 000B                		rts
-(1) 3177/ 6001740 : 0009                		nop
-(1) 3178/ 6001742 :                     		align 4
-(1) 3179/ 6001744 : 0600 A33C 0600 A73C 		ltorg
+(1) 3094/ 60016C4 :                     ; 		align 4
+(1) 3095/ 60016C4 :                     
+(1) 3096/ 60016C4 :                     ; ----------------------------------------
+(1) 3097/ 60016C4 :                     
+(1) 3098/ 60016C4 : 2000 4100 0600 09C4 		ltorg
+(1) 3099/ 60016CC :                     
+(1) 3100/ 60016CC :                     ; =================================================================
+(1) 3101/ 60016CC :                     ; ------------------------------------------------
+(1) 3102/ 60016CC :                     ; Slave | Watchdog interrupt
+(1) 3103/ 60016CC :                     ; ------------------------------------------------
+(1) 3104/ 60016CC :                     
+(1) 3105/ 60016CC :                     s_irq_custom:
+(1) 3106/ 60016CC : 2F26                		mov	r2,@-r15
+(1) 3107/ 60016CE : 2F36                		mov	r3,@-r15
+(1) 3108/ 60016D0 : 2F46                		mov	r4,@-r15
+(1) 3109/ 60016D2 : 2F56                		mov	r5,@-r15
+(1) 3110/ 60016D4 : 2F66                		mov	r6,@-r15
+(1) 3111/ 60016D6 : 2F76                		mov	r7,@-r15
+(1) 3112/ 60016D8 : 9138                		mov	#_FRT,r1
+(1) 3113/ 60016DA : 8417                		mov.b   @(7,r1),r0
+(1) 3114/ 60016DC : CA02                		xor     #2,r0
+(1) 3115/ 60016DE : 8017                		mov.b   r0,@(7,r1)
+(1) 3116/ 60016E0 : C535                		mov.w	@(marsGbl_ZSortReq,gbr),r0
+(1) 3117/ 60016E2 : 8801                		cmp/eq	#1,r0
+(1) 3118/ 60016E4 : 8B1C                		bf	.no_req
+(1) 3119/ 60016E6 :                     
+(1) 3120/ 60016E6 :                     	; DONT CALL THIS
+(1) 3121/ 60016E6 :                     	; IF NUMOF FACES < 2
+(1) 3122/ 60016E6 : C52B                		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0
+(1) 3123/ 60016E8 : 6203                		mov	r0,r2
+(1) 3124/ 60016EA : E103                		mov	#3,r1
+(1) 3125/ 60016EC : 3217                		cmp/gt	r1,r2
+(1) 3126/ 60016EE : 8B15                		bf	.no_faces
+(1) 3127/ 60016F0 : D314                		mov	#RAM_Mars_Plgn_ZList_0,r3
+(1) 3128/ 60016F2 : C52C                		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0
+(1) 3129/ 60016F4 : C801                		tst     #1,r0
+(1) 3130/ 60016F6 : 8900                		bt	.page_2
+(1) 3131/ 60016F8 : D313                		mov	#RAM_Mars_Plgn_ZList_1,r3
+(1) 3132/ 60016FA :                     .page_2:
+(1) 3133/ 60016FA : 6423                		mov	r2,r4
+(1) 3134/ 60016FC : 74FE                		add	#-2,r4
+(1) 3135/ 60016FE : 4411                		cmp/pz	r4
+(1) 3136/ 6001700 : 8B0E                		bf	.no_req
+(1) 3137/ 6001702 :                     .z_next:
+(1) 3138/ 6001702 : 6032                		mov	@r3,r0
+(1) 3139/ 6001704 : 5132                		mov	@(8,r3),r1
+(1) 3140/ 6001706 : 3017                		cmp/gt	r1,r0
+(1) 3141/ 6001708 : 8B05                		bf	.z_keep
+(1) 3142/ 600170A : 2312                		mov	r1,@r3
+(1) 3143/ 600170C : 1302                		mov	r0,@(8,r3)
+(1) 3144/ 600170E : 5031                		mov	@(4,r3),r0
+(1) 3145/ 6001710 : 5133                		mov	@($C,r3),r1
+(1) 3146/ 6001712 : 1311                		mov	r1,@(4,r3)
+(1) 3147/ 6001714 : 1303                		mov	r0,@($C,r3)
+(1) 3148/ 6001716 :                     .z_keep:
+(1) 3149/ 6001716 : 4410                		dt	r4
+(1) 3150/ 6001718 : 8FF3                		bf/s	.z_next
+(1) 3151/ 600171A : 7308                		add	#8,r3
+(1) 3152/ 600171C :                     .no_faces:
+(1) 3153/ 600171C : E000                		mov	#0,r0
+(1) 3154/ 600171E : C135                		mov.w	r0,@(marsGbl_ZSortReq,gbr)
+(1) 3155/ 6001720 :                     
+(1) 3156/ 6001720 :                     .no_req:
+(1) 3157/ 6001720 : 9115                		mov	#$FFFFFE80,r1
+(1) 3158/ 6001722 : 9015                		mov.w   #$A518,r0		; Watchdog OFF
+(1) 3159/ 6001724 : 2101                		mov.w   r0,@r1
+(1) 3160/ 6001726 : CB20                		or      #$20,r0			; ON again
+(1) 3161/ 6001728 : 2101                		mov.w   r0,@r1
+(1) 3162/ 600172A : E201                		mov	#1,r2
+(1) 3163/ 600172C : 9011                		mov.w   #$5A00,r0		; Timer for the next one
+(1) 3164/ 600172E : 202B                		or	r2,r0
+(1) 3165/ 6001730 : 2101                		mov.w	r0,@r1
+(1) 3166/ 6001732 :                     
+(1) 3167/ 6001732 : 67F6                		mov	@r15+,r7
+(1) 3168/ 6001734 : 66F6                		mov	@r15+,r6
+(1) 3169/ 6001736 : 65F6                		mov	@r15+,r5
+(1) 3170/ 6001738 : 64F6                		mov	@r15+,r4
+(1) 3171/ 600173A : 63F6                		mov	@r15+,r3
+(1) 3172/ 600173C : 62F6                		mov	@r15+,r2
+(1) 3173/ 600173E : 000B                		rts
+(1) 3174/ 6001740 : 0009                		nop
+(1) 3175/ 6001742 :                     		align 4
+(1) 3176/ 6001744 : 0600 A33C 0600 A73C 		ltorg
                     FE10 FE80 A518 5A00 
-(1) 3180/ 6001754 :                     
-(1) 3181/ 6001754 :                     ; ====================================================================
-(1) 3182/ 6001754 :                     ; ----------------------------------------------------------------
-(1) 3183/ 6001754 :                     ; Cache routines
-(1) 3184/ 6001754 :                     ; ----------------------------------------------------------------
-(1) 3185/ 6001754 :                     
-(1) 3186/ 6001754 :                     		include "system/mars/cache.asm"
+(1) 3177/ 6001754 :                     
+(1) 3178/ 6001754 :                     ; ====================================================================
+(1) 3179/ 6001754 :                     ; ----------------------------------------------------------------
+(1) 3180/ 6001754 :                     ; Cache routines
+(1) 3181/ 6001754 :                     ; ----------------------------------------------------------------
+(1) 3182/ 6001754 :                     
+(1) 3183/ 6001754 :                     		include "system/mars/cache.asm"
 (2)    1/ 6001754 :                     ; ====================================================================
 (2)    2/ 6001754 :                     ; ----------------------------------------------------------------
 (2)    3/ 6001754 :                     ; CACHE code for Master CPU
@@ -13613,16 +13603,16 @@
 (2)  831/ 6001D48 :                     CACHE_SLAVE_E:
 (2)  832/ 6001D48 :                     		align 4
 (2)  836/ 6001D48 :                     
-(1) 3187/ 6001D48 :                     		
-(1) 3188/ 6001D48 :                     ; ====================================================================
-(1) 3189/ 6001D48 :                     ; ----------------------------------------------------------------
-(1) 3190/ 6001D48 :                     ; Data
-(1) 3191/ 6001D48 :                     ; ----------------------------------------------------------------
-(1) 3192/ 6001D48 :                     
-(1) 3193/ 6001D48 :                     		align 4
-(1) 3194/ 6001D48 :                     sin_table	binclude "system/mars/data/sinedata.bin"
-(1) 3195/ 6004548 :                     		align 4
-(1) 3196/ 6004548 :                     		include "data/mars_sdram.asm"
+(1) 3184/ 6001D48 :                     		
+(1) 3185/ 6001D48 :                     ; ====================================================================
+(1) 3186/ 6001D48 :                     ; ----------------------------------------------------------------
+(1) 3187/ 6001D48 :                     ; Data
+(1) 3188/ 6001D48 :                     ; ----------------------------------------------------------------
+(1) 3189/ 6001D48 :                     
+(1) 3190/ 6001D48 :                     		align 4
+(1) 3191/ 6001D48 :                     sin_table	binclude "system/mars/data/sinedata.bin"
+(1) 3192/ 6004548 :                     		align 4
+(1) 3193/ 6004548 :                     		include "data/mars_sdram.asm"
 (2)    1/ 6004548 :                     ; ====================================================================
 (2)    2/ 6004548 :                     ; ----------------------------------------------------------------
 (2)    3/ 6004548 :                     ; SH2 SDRAM user data
@@ -13701,92 +13691,92 @@
 (2)   76/ 6004548 :                     ; 		dc.l -1
 (2)   77/ 6004548 :                     ; 		dc.l 0
 (2)   78/ 6004548 :                     
-(1) 3197/ 6004548 :                     
-(1) 3198/ 6004548 :                     ; ====================================================================
-(1) 3199/ 6004548 :                     ; ----------------------------------------------------------------
-(1) 3200/ 6004548 :                     ; MARS SH2 RAM
-(1) 3201/ 6004548 :                     ; ----------------------------------------------------------------
-(1) 3202/ 6004548 :                     
-(1) 3203/ 6004548 :                     		align $10
-(1) 3204/ 6004550 :                     SH2_RAM:
-(1) 3205/ 6004550 : (MACRO)             		struct SH2_RAM
-(1) 3205/ 6004550 : =$6004550           GLBL_LASTPC     set *
-(1) 3205/   51470 :                                     dephase
-(1) 3205/   51470 : =$51470             GLBL_LASTORG    set *
-(1) 3205/ 6004550 :                                     phase SH2_RAM
-(1) 3212/ 6004550 :                     MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
-(1) 3213/ 6004634 :                     MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
-(1) 3214/ 600AB40 :                     MarsRam_Sound	ds.b (sizeof_marssnd-MarsRam_Sound)
-(1) 3215/ 600AC58 :                     sizeof_marsram	ds.l 0
-(1) 3217/ 600AC58 :                     
-(1) 3218/ 600AC58 :                     .here:
-(1) 3222/ 600AC58 : (MACRO)             		finish
-(1) 3222/ 6004550 :                                     !org GLBL_LASTORG
-(1) 3222/ 6004550 :                                     phase GLBL_LASTPC
-(1) 3223/ 6004550 :                     
-(1) 3224/ 6004550 :                     ; ====================================================================
-(1) 3225/ 6004550 :                     ; ----------------------------------------------------------------
-(1) 3226/ 6004550 :                     ; MARS Sound RAM
-(1) 3227/ 6004550 :                     ; ----------------------------------------------------------------
-(1) 3228/ 6004550 :                     
-(1) 3229/ 6004550 : (MACRO)             			struct MarsRam_Sound
-(1) 3229/ 6004550 : =$6004550           GLBL_LASTPC     set *
-(1) 3229/   51470 :                                     dephase
-(1) 3229/   51470 : =$51470             GLBL_LASTORG    set *
-(1) 3229/ 600AB40 :                                     phase MARSRAM_SOUND
-(1) 3230/ 600AB40 :                     MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-(1) 3231/ 600AC3C :                     ; MarsSnd_PwmTrkData	ds.b $80*2
-(1) 3232/ 600AC3C :                     MarsSnd_PwmPlyData	ds.l 7
-(1) 3233/ 600AC58 :                     sizeof_marssnd		ds.l 0
-(1) 3234/ 600AC58 : (MACRO)             			finish
-(1) 3234/ 600AB40 :                                     !org GLBL_LASTORG
-(1) 3234/ 6004550 :                                     phase GLBL_LASTPC
-(1) 3235/ 6004550 :                     
-(1) 3236/ 6004550 :                     ; ====================================================================
-(1) 3237/ 6004550 :                     ; ----------------------------------------------------------------
-(1) 3238/ 6004550 :                     ; MARS Video RAM
-(1) 3239/ 6004550 :                     ; ----------------------------------------------------------------
-(1) 3240/ 6004550 :                     
-(1) 3241/ 6004550 : (MACRO)             			struct MarsRam_Video
-(1) 3241/ 6004550 : =$6004550           GLBL_LASTPC     set *
-(1) 3241/   51470 :                                     dephase
-(1) 3241/   51470 : =$51470             GLBL_LASTORG    set *
-(1) 3241/ 6004634 :                                     phase MARSRAM_VIDEO
-(1) 3242/ 6004634 :                     RAM_Mars_Linescroll	ds.l 240			; Each lines' framebuffer position
-(1) 3243/ 60049F4 :                     RAM_Mars_Palette	ds.w 256			; Indexed palette
-(1) 3244/ 6004BF4 :                     RAM_Mars_DREQ		ds.w 256			; 256 WORDS of MD communication
-(1) 3245/ 6004DF4 :                     RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
-(1) 3246/ 6004E1C :                     RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
-(1) 3247/ 6004E3C :                     ; RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
-(1) 3248/ 6004E3C :                     RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 0
-(1) 3249/ 600623C :                     RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 1
-(1) 3250/ 600763C :                     RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Pieces list
-(1) 3251/ 600A33C :                     RAM_Mars_VdpDrwList_e	ds.l 0				; (end-of-list label)
-(1) 3252/ 600A33C :                     RAM_Mars_Plgn_ZList_0	ds.l MAX_MPLGN*2		; Z value / foward faces
-(1) 3253/ 600A73C :                     RAM_Mars_Plgn_ZList_1	ds.l MAX_MPLGN*2		; Z value / foward faces
-(1) 3254/ 600AB3C :                     RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
-(1) 3255/ 600AB3E :                     RAM_Mars_PlgnNum_1	ds.w 1				;
-(1) 3256/ 600AB40 :                     sizeof_marsvid		ds.l 0
-(1) 3257/ 600AB40 : (MACRO)             			finish
-(1) 3257/ 6004634 :                                     !org GLBL_LASTORG
-(1) 3257/ 6004550 :                                     phase GLBL_LASTPC
-(1) 3258/ 6004550 :                     
-(1) 3259/ 6004550 :                     ; ====================================================================
-(1) 3260/ 6004550 :                     ; ----------------------------------------------------------------
-(1) 3261/ 6004550 :                     ; MARS System RAM
-(1) 3262/ 6004550 :                     ; ----------------------------------------------------------------
-(1) 3263/ 6004550 :                     
-(1) 3264/ 6004550 : (MACRO)             			struct MarsRam_System
-(1) 3264/ 6004550 : =$6004550           GLBL_LASTPC     set *
-(1) 3264/   51470 :                                     dephase
-(1) 3264/   51470 : =$51470             GLBL_LASTORG    set *
-(1) 3264/ 6004550 :                                     phase MARSRAM_SYSTEM
-(1) 3265/ 6004550 :                     RAM_Mars_Global		ds.w sizeof_MarsGbl		; keep it as a word
-(1) 3266/ 6004634 :                     sizeof_marssys		ds.l 0
-(1) 3267/ 6004634 : (MACRO)             			finish
-(1) 3267/ 6004550 :                                     !org GLBL_LASTORG
-(1) 3267/ 6004550 :                                     phase GLBL_LASTPC
-(1) 3268/ 6004550 :                     
+(1) 3194/ 6004548 :                     
+(1) 3195/ 6004548 :                     ; ====================================================================
+(1) 3196/ 6004548 :                     ; ----------------------------------------------------------------
+(1) 3197/ 6004548 :                     ; MARS SH2 RAM
+(1) 3198/ 6004548 :                     ; ----------------------------------------------------------------
+(1) 3199/ 6004548 :                     
+(1) 3200/ 6004548 :                     		align $10
+(1) 3201/ 6004550 :                     SH2_RAM:
+(1) 3202/ 6004550 : (MACRO)             		struct SH2_RAM
+(1) 3202/ 6004550 : =$6004550           GLBL_LASTPC     set *
+(1) 3202/   51470 :                                     dephase
+(1) 3202/   51470 : =$51470             GLBL_LASTORG    set *
+(1) 3202/ 6004550 :                                     phase SH2_RAM
+(1) 3209/ 6004550 :                     MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
+(1) 3210/ 6004634 :                     MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
+(1) 3211/ 600AB40 :                     MarsRam_Sound	ds.b (sizeof_marssnd-MarsRam_Sound)
+(1) 3212/ 600AC58 :                     sizeof_marsram	ds.l 0
+(1) 3214/ 600AC58 :                     
+(1) 3215/ 600AC58 :                     .here:
+(1) 3219/ 600AC58 : (MACRO)             		finish
+(1) 3219/ 6004550 :                                     !org GLBL_LASTORG
+(1) 3219/ 6004550 :                                     phase GLBL_LASTPC
+(1) 3220/ 6004550 :                     
+(1) 3221/ 6004550 :                     ; ====================================================================
+(1) 3222/ 6004550 :                     ; ----------------------------------------------------------------
+(1) 3223/ 6004550 :                     ; MARS Sound RAM
+(1) 3224/ 6004550 :                     ; ----------------------------------------------------------------
+(1) 3225/ 6004550 :                     
+(1) 3226/ 6004550 : (MACRO)             			struct MarsRam_Sound
+(1) 3226/ 6004550 : =$6004550           GLBL_LASTPC     set *
+(1) 3226/   51470 :                                     dephase
+(1) 3226/   51470 : =$51470             GLBL_LASTORG    set *
+(1) 3226/ 600AB40 :                                     phase MARSRAM_SOUND
+(1) 3227/ 600AB40 :                     MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+(1) 3228/ 600AC3C :                     ; MarsSnd_PwmTrkData	ds.b $80*2
+(1) 3229/ 600AC3C :                     MarsSnd_PwmPlyData	ds.l 7
+(1) 3230/ 600AC58 :                     sizeof_marssnd		ds.l 0
+(1) 3231/ 600AC58 : (MACRO)             			finish
+(1) 3231/ 600AB40 :                                     !org GLBL_LASTORG
+(1) 3231/ 6004550 :                                     phase GLBL_LASTPC
+(1) 3232/ 6004550 :                     
+(1) 3233/ 6004550 :                     ; ====================================================================
+(1) 3234/ 6004550 :                     ; ----------------------------------------------------------------
+(1) 3235/ 6004550 :                     ; MARS Video RAM
+(1) 3236/ 6004550 :                     ; ----------------------------------------------------------------
+(1) 3237/ 6004550 :                     
+(1) 3238/ 6004550 : (MACRO)             			struct MarsRam_Video
+(1) 3238/ 6004550 : =$6004550           GLBL_LASTPC     set *
+(1) 3238/   51470 :                                     dephase
+(1) 3238/   51470 : =$51470             GLBL_LASTORG    set *
+(1) 3238/ 6004634 :                                     phase MARSRAM_VIDEO
+(1) 3239/ 6004634 :                     RAM_Mars_Linescroll	ds.l 240			; Each lines' framebuffer position
+(1) 3240/ 60049F4 :                     RAM_Mars_Palette	ds.w 256			; Indexed palette
+(1) 3241/ 6004BF4 :                     RAM_Mars_DREQ		ds.w 256			; 256 WORDS of MD communication
+(1) 3242/ 6004DF4 :                     RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
+(1) 3243/ 6004E1C :                     RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
+(1) 3244/ 6004E3C :                     ; RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
+(1) 3245/ 6004E3C :                     RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 0
+(1) 3246/ 600623C :                     RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 1
+(1) 3247/ 600763C :                     RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Pieces list
+(1) 3248/ 600A33C :                     RAM_Mars_VdpDrwList_e	ds.l 0				; (end-of-list label)
+(1) 3249/ 600A33C :                     RAM_Mars_Plgn_ZList_0	ds.l MAX_MPLGN*2		; Z value / foward faces
+(1) 3250/ 600A73C :                     RAM_Mars_Plgn_ZList_1	ds.l MAX_MPLGN*2		; Z value / foward faces
+(1) 3251/ 600AB3C :                     RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
+(1) 3252/ 600AB3E :                     RAM_Mars_PlgnNum_1	ds.w 1				;
+(1) 3253/ 600AB40 :                     sizeof_marsvid		ds.l 0
+(1) 3254/ 600AB40 : (MACRO)             			finish
+(1) 3254/ 6004634 :                                     !org GLBL_LASTORG
+(1) 3254/ 6004550 :                                     phase GLBL_LASTPC
+(1) 3255/ 6004550 :                     
+(1) 3256/ 6004550 :                     ; ====================================================================
+(1) 3257/ 6004550 :                     ; ----------------------------------------------------------------
+(1) 3258/ 6004550 :                     ; MARS System RAM
+(1) 3259/ 6004550 :                     ; ----------------------------------------------------------------
+(1) 3260/ 6004550 :                     
+(1) 3261/ 6004550 : (MACRO)             			struct MarsRam_System
+(1) 3261/ 6004550 : =$6004550           GLBL_LASTPC     set *
+(1) 3261/   51470 :                                     dephase
+(1) 3261/   51470 : =$51470             GLBL_LASTORG    set *
+(1) 3261/ 6004550 :                                     phase MARSRAM_SYSTEM
+(1) 3262/ 6004550 :                     RAM_Mars_Global		ds.w sizeof_MarsGbl		; keep it as a word
+(1) 3263/ 6004634 :                     sizeof_marssys		ds.l 0
+(1) 3264/ 6004634 : (MACRO)             			finish
+(1) 3264/ 6004550 :                                     !org GLBL_LASTORG
+(1) 3264/ 6004550 :                                     phase GLBL_LASTPC
+(1) 3265/ 6004550 :                     
      113/ 6004550 :                     		cpu 68000
      114/ 6004550 :                     		padding off
      115/   51470 :                     		dephase
@@ -13885,7 +13875,7 @@
      134/   64270 :                     ROM_END:
      135/   64270 :                     		align $8000
      136/   68000 :                     
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 2 - 9/8/2021 3:31:38
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 2 - 9/8/2021 3:36:14
 
 
   symbol table (* = unused):
@@ -14315,8 +14305,8 @@
 *MDL_Y_POS :                      C C | *MDL_Y_ROT :                     18 C |
 *MDL_Z_POS :                     10 C | *MDL_Z_ROT :                     1C C |
 *MDMAP_BGTESTB :             9082A4 C | *MDMAP_BGTESTT :             9092A4 C |
-*MDMDL_SETNEWCAMERA :        FF1C28 C | *MDPAL_BGTESTB :             FF1D76 C |
-*MDPAL_BGTESTB.END :         FF1DB6 C |  MDRAMCODE :                    94A C |
+*MDMDL_SETNEWCAMERA :        FF1C28 C | *MDPAL_BGTESTB :             FF1D4E C |
+*MDPAL_BGTESTB.END :         FF1D8E C |  MDRAMCODE :                    94A C |
  MDRAMCODE_END :               249E C |  MDRAM_START :             FFFF8800 - |
  MD_BANK_SRAM :              A130F1 - |  MD_ERRADDR :                   948 C |
  MD_ERRBUS :                    948 C |  MD_ERRCHK :                    948 C |
@@ -14572,7 +14562,7 @@
  THISCODE_TOP.LIST :         FF1BDC C |  THISCODE_TOP.LOOP :         FF1B70 C |
  THISCODE_TOP.MODE0 :        FF1BE8 C |  THISCODE_TOP.MODE0_LOOP :   FF1C1C C |
  THIS_POLYGON :             6001678 C |  TICKCNT :                       1C C |
- TICKFLAG :                      1A C | *TIME :                     3:31:38 - |
+ TICKFLAG :                      1A C | *TIME :                     3:36:14 - |
  TIMERCTL :                      30 - | *TMR :                           2C - |
  TRANSFERROM :                  BFB C |  TRANSFERROM.DOUBLE :           C1C C |
  TRANSFERROM.TRANSFER :         C45 C |  TRANSFERROM.X68KLAST :         C88 C |
@@ -14676,7 +14666,7 @@
    1431 symbols
     272 unused symbols
 
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 3 - 9/8/2021 3:31:38
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 3 - 9/8/2021 3:36:14
 
 
   defined macros:
@@ -14690,7 +14680,7 @@ STRUCT                                | ZSMPL
 
      10 macros
 
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 4 - 9/8/2021 3:31:38
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 4 - 9/8/2021 3:36:14
 
 
   defined functions:
@@ -14699,7 +14689,7 @@ STRUCT                                | ZSMPL
 NOTZ80                                | LOCATE                               
 MAPSIZE                               |
 
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 5 - 9/8/2021 3:31:38
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 5 - 9/8/2021 3:36:14
 
 
   codepages:
@@ -14710,8 +14700,8 @@ STANDARD (0 changed characters)
 
 0.23 seconds assembly time
 
-  13390 lines source file
-  13860 lines incl. macro expansions
+  13384 lines source file
+  13854 lines incl. macro expansions
       8 passes
       0 errors
       0 warnings

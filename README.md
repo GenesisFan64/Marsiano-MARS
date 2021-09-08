@@ -17,21 +17,7 @@ Please note that current 32X emulators ignore some hardware restrictions and bug
 - BUS fighting on SH2: If any of the SH2 CPUs read/write the same location you will get bad results, mostly a freeze. (Note: Only encountered this on SDRAM area, other locations like the registers should be fine)
 - SH2's DMA locks Palette (HW bug I found, or probably did something wrong): If transfering indexed-palette data to SuperVDP's Palette using DMA, the first transfer will work, then the DMA will get locked, both Source and Destination areas can't be rewritten
 - PWM's sound limit (for each channel: Left and Right) is $3FF, not $FFF mentioned in the docs
-- Writing to a register in a delayed jump/call crashes. (TODO: more testing)
-
-Example:
-		mov	#_vdpreg+shift,r4	; r4 - Xshift register
-		mov	r3,r0			; r3 - Copy of X position
-		and	#1,r0			; r0 - Xpos & 1
-		bsr	mstr_movebg		; Move background
-		mov.w	r0,@r4			; Write to Xshift register (CRASHES on Real Hardware)
-		; More code
-
-Solution:
-		mov.w	r0,@r4			; Write to Xshift register here
-		bsr	mstr_movebg		; Move background
-		nop				; Do NOPting before calling _movebg
-		; More code
+- Writing to a register in a delayed jump/call crashes oh hardware (TODO: more testing)
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X already inserted, If it doesn't boot or freezes: I probably broke something without testing on HW
 ROM is for NTSC systems, can be played on PAL but with slowdown.

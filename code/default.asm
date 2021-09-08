@@ -552,7 +552,7 @@ MD_FifoMars:
 .wait_cmd:	move.w	standby(a5),d0		; interrupt is ready?
 		btst    #1,d0
 		bne.s   .wait_cmd
-.wait_dma:	move.b	comm14(a5),d0
+.wait_dma:	move.b	comm14(a5),d0		; Another flag to check
 		beq.s	.wait_dma
 		move.b	#1,d0
 		move.b	d0,comm14(a5)
@@ -605,10 +605,7 @@ MD_FifoMars:
 ; ------------------------------------------------------
 
 str_Status:
-		dc.b "Xpos Ypos Xdx  Ydx",$A
 		dc.b "\\w \\w \\w \\w",$A
-		dc.b $A
-		dc.b "Xshf ---- ---- MODE",$A
 		dc.b "\\w \\w \\w \\w",0
 		dc.l sysmars_reg+comm0
 		dc.l sysmars_reg+comm2
