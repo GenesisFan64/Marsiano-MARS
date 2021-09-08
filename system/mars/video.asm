@@ -833,35 +833,20 @@ MarsVideo_SetBg:
 		mov.w	r0,@(marsGbl_BgWidth,gbr)
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_BgHeight,gbr)
-; 		mov	r4,r0
-; 		mov	r0,@(marsGbl_Bg_Xinc,gbr)
-; 		mov	r5,r0
-; 		mov	r0,@(marsGbl_Bg_Yinc,gbr)
 
 	; Scroll setup values
 	; TODO: very basic setup
 	; needs extra checks for drawing from
 	; specific X/Y point
-		mov	#0,r0;@(marsGbl_Bg_Xpos,gbr),r0
+		mov	#0,r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_L,gbr)
-		mov	#320,r1
-		mov	#0,r0;@(marsGbl_Bg_Xpos,gbr),r0
-		add	r1,r0
+		mov.w	r0,@(marsGbl_Bg_FbBase,gbr)
+		mov	#MSCRL_WIDTH-MSCRL_BLKSIZE,r0
 		mov.w	r0,@(marsGbl_Bg_XbgInc_R,gbr)
-
-		mov	#-MSCRL_BLKSIZE,r2
-		mov	#0,r0;@(marsGbl_Bg_Ypos,gbr),r0
-		mov.w	r0,@(marsGbl_Bg_YbgInc_LR,gbr)
-		mov.w	r0,@(marsGbl_Bg_YFbPos_LR,gbr)
-		mov	#0,r0;@(marsGbl_Bg_Ypos,gbr),r0
-		mov	#0,r1
-		add	r1,r0
-		and	r2,r0
+		mov	#0,r0
 		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
-		mov	#0,r0;@(marsGbl_Bg_Ypos,gbr),r0
-		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r1
-		add	r1,r0
-		and	r2,r0
+		mov.w	r0,@(marsGbl_Bg_YFbPos_U,gbr)
+		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r0
 		mov.w	r0,@(marsGbl_Bg_YbgInc_D,gbr)
 		mov.w	r0,@(marsGbl_Bg_YFbPos_D,gbr)
 		rts
@@ -921,40 +906,8 @@ MarsVideo_SetWatchdog:
 	; X draw settings
 		mov	@(marsGbl_BgData,gbr),r0
 		mov	r0,@(marsGbl_BgData_R,gbr)
-		mov	#MSCRL_WIDTH,r4				; Set Top-Left framebuffer position
-		mov	#-MSCRL_BLKSIZE,r2			; for L/R drawing
-		mov	#Cach_XHead_L,r1			; X draw heads
-		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
-		and	r2,r0
-		mov	r0,@r1
-		mov	#Cach_XHead_R,r1
-		mov.w	@(marsGbl_Bg_XbgInc_R,gbr),r0
-		and	r2,r0
-		mov	r0,@r1
 
-		mov	#MSCRL_WIDTH,r4				; Set Top-Left framebuffer position
-		mov	#Cach_BgFbPosLR,r1
-		mov	@(marsGbl_Bg_FbBase,gbr),r0
-		and	r2,r0
-		mov	r0,r3
-		mov.w	@(marsGbl_Bg_YFbPos_LR,gbr),r0
-		and	r2,r0
-		mulu	r0,r4
-		sts	macl,r0
-		add	r3,r0
-		mov	r0,@r1
 
-		mov.w	@(marsGbl_BgWidth,gbr),r0		; Y add for L/R
-		mov	r0,r3
-		mov	#Cach_YRead_LR,r1
-		mov.w	@(marsGbl_Bg_YbgInc_LR,gbr),r0
-		and	r2,r0
-		mov	r0,@r1
-		and	r2,r0
-		mulu	r3,r0
-		sts	macl,r0
-		mov	#Cach_YHead_LR,r1
-		mov	r0,@r1
 
 	; Y draw settings
 		mov	#1,r0				; Set first task $01

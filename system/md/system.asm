@@ -495,7 +495,27 @@ Mode_Init:
 		move.w	d4,(a4)+
 		dbf	d5,.clr
 		rts
-		
+
+; MdMars_FIFO:
+; 		move.w	#$100,d4
+; 		move.w	d4,($A15110).l
+; 		move.b	#%100,($A15107).l
+; loc_0_28E2:
+; 		btst	#1,(sysmars_reg+comm14).l
+; 		beq.s	loc_0_28E2
+; 		bclr	#1,(sysmars_reg+comm14).l
+; 		lea	($FF0000).l,a4
+; 		lea	($A15112).l,a5
+; 		lsr.w	#2,d4
+; 		beq.s	.exit
+; .fifo_blast:
+; 		btst	#7,($A15107).l
+; 		bne.s	.fifo_blast
+; 		move.w	(a4)+,(a5)
+; 		dbf	d4,.fifo_blast
+; .exit:
+; 		rts
+
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Default interrupts

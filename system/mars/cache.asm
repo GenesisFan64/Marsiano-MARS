@@ -404,9 +404,9 @@ drwsld_nxtline_tex:
 		add	r0,r7
 		xor	r11,r11			; And reset XL to 0
 .tl_fix:
-		mov	#-2,r0
-		and	r0,r11
-		and	r0,r12
+; 		mov	#-2,r0
+; 		and	r0,r11
+; 		and	r0,r12
 
 	; X right - X left
 		sub 	r11,r12
@@ -478,7 +478,6 @@ drwsld_nxtline_tex:
 		mov	@(plypz_type,r14),r4		;  r4 - texture palinc|width
 		mov	r4,r13
 		shlr16	r13
-; 		and	r2,r4
 		and	r0,r13
 
 	; r5 - X curr
@@ -778,22 +777,19 @@ drwtask_exit:
 ; ------------------------------------------------
 
 		align 4
-Cach_Xpos	ds.l 1
-Cach_Xadd	ds.l 1
-Cach_Yadd	ds.l 1
-Cach_Ycurr	ds.l 1
+Cach_Xpos	ds.l 1			; Mode2 X position
+Cach_Xadd	ds.l 1			; Mode2 XDX (xxxx.xxxx)
+Cach_Yadd	ds.l 1			; Mode2 YDX (xxxx.xxxx)
+Cach_Ycurr	ds.l 1			; Mode2 Y current pos (updates)
 Cach_XHead_L	ds.l 1			; Left draw beam
 Cach_XHead_R	ds.l 1			; Right draw beam
 Cach_YHead_D	ds.l 1			; Bottom draw beam
 Cach_YHead_U	ds.l 1			; Top draw beam
-Cach_YHead_LR	ds.l 1			; (L/R) Top Y position (updates)
-Cach_YRead_LR	ds.l 1			; (L/R) Current Y (updates)
-Cach_XHead_UD	ds.l 1
-Cach_BgFbPosLR	ds.l 1			; (L/R) Current Y FB position (updates)
-Cach_BgFbPos_U	ds.l 1			; (U/D) Upper Y FB pos
-Cach_BgFbPos_D	ds.l 1			; (U/D) Lower Y FB pos
+Cach_BgFbPos_U	ds.l 1			; Upper Y FB pos
+Cach_BgFbPos_D	ds.l 1			; Lower Y FB pos
+Cach_BgFbPos_LR	ds.l 1			; Left/Right FB pos
 Cach_LR_Lines	ds.l 1			; (L/R) X Lines to process
-Cach_UD_Lines	ds.l 1			; (U/D) Y Lines to process
+
 Cach_Md2_Lines	ds.l 1
 Cach_DDA_Top	ds.l 2*2		; First 2 points
 Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)

@@ -86,12 +86,12 @@ thisCode_Top:
 		btst	#bitVint,d4
 		beq.s	.loop
 		bsr	System_Input
+		add.l	#1,(RAM_Framecount).l
+		bsr	MD_FifoMars
 .inside:	move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
 		bne.s	.inside
-; 		rts
 
-; 		bsr	System_VSync
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
 		neg.w	d0
@@ -177,6 +177,9 @@ thisCode_Top:
 
 ; Mode 0 mainloop
 .mode0_loop:
+		move.w	(Controller_1+on_hold),d7
+		move.w	d7,(sysmars_reg+comm12)
+
 ; 		moveq	#0,d0
 ; 		move.w	(Controller_1+on_hold),d7
 ; 		move.w	d7,d6
@@ -193,70 +196,70 @@ thisCode_Top:
 ; 		add	d0,d4
 ; 		move.w	d4,(sysmars_reg+comm0).l
 
-		moveq	#0,d0
-		moveq	#0,d1
-		move.w	(Controller_2+on_hold),d7
-		btst	#bitJoyUp,d7
-		beq.s	.no_up
-		move.l	#-1,d1
-.no_up:
-		btst	#bitJoyDown,d7
-		beq.s	.no_dw
-		move.l	#1,d1
-.no_dw:
-		btst	#bitJoyLeft,d7
-		beq.s	.no_lf
-		move.l	#-1,d0
-.no_lf:
-		btst	#bitJoyRight,d7
-		beq.s	.no_rf
-		move.l	#1,d0
-.no_rf:
-		move.w	(sysmars_reg+comm4).l,d4
-		add	d0,d4
-		move.w	d4,(sysmars_reg+comm4).l
-		move.w	(sysmars_reg+comm6).l,d4
-		add	d1,d4
-		move.w	d4,(sysmars_reg+comm6).l
-
-		moveq	#0,d0
-		moveq	#0,d1
-
-		move.w	(Controller_1+on_press),d7
-		move.w	d7,d6
-		and.w	#JoyY,d6
-		beq.s	.no_x
-		move.w	#-1,d0
-.no_x:
-		move.w	d7,d6
-		and.w	#JoyZ,d6
-		beq.s	.no_y
-		move.w	#1,d0
-.no_y:
-
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyUp,d7
-		beq.s	.no2_up
-		move.l	#-7,d1
-.no2_up:
-		btst	#bitJoyDown,d7
-		beq.s	.no2_dw
-		move.l	#7,d1
-.no2_dw:
-		btst	#bitJoyLeft,d7
-		beq.s	.no2_lf
-		move.l	#-7,d0
-.no2_lf:
-		btst	#bitJoyRight,d7
-		beq.s	.no2_rf
-		move.l	#7,d0
-.no2_rf:
-		move.w	(sysmars_reg+comm0).l,d4
-		add	d0,d4
-		move.w	d4,(sysmars_reg+comm0).l
-		move.w	(sysmars_reg+comm2).l,d4
-		add	d1,d4
-		move.w	d4,(sysmars_reg+comm2).l
+; 		moveq	#0,d0
+; 		moveq	#0,d1
+; 		move.w	(Controller_2+on_hold),d7
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.no_up
+; 		move.l	#-1,d1
+; .no_up:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.no_dw
+; 		move.l	#1,d1
+; .no_dw:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.no_lf
+; 		move.l	#-1,d0
+; .no_lf:
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.no_rf
+; 		move.l	#1,d0
+; .no_rf:
+; 		move.w	(sysmars_reg+comm4).l,d4
+; 		add	d0,d4
+; 		move.w	d4,(sysmars_reg+comm4).l
+; 		move.w	(sysmars_reg+comm6).l,d4
+; 		add	d1,d4
+; 		move.w	d4,(sysmars_reg+comm6).l
+;
+; 		moveq	#0,d0
+; 		moveq	#0,d1
+;
+; 		move.w	(Controller_1+on_press),d7
+; 		move.w	d7,d6
+; 		and.w	#JoyY,d6
+; 		beq.s	.no_x
+; 		move.w	#-1,d0
+; .no_x:
+; 		move.w	d7,d6
+; 		and.w	#JoyZ,d6
+; 		beq.s	.no_y
+; 		move.w	#1,d0
+; .no_y:
+;
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.no2_up
+; 		move.l	#-4,d1
+; .no2_up:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.no2_dw
+; 		move.l	#4,d1
+; .no2_dw:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.no2_lf
+; 		move.l	#-4,d0
+; .no2_lf:
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.no2_rf
+; 		move.l	#4,d0
+; .no2_rf:
+; 		move.w	(sysmars_reg+comm0).l,d4
+; 		add	d0,d4
+; 		move.w	d4,(sysmars_reg+comm0).l
+; 		move.w	(sysmars_reg+comm2).l,d4
+; 		add	d1,d4
+; 		move.w	d4,(sysmars_reg+comm2).l
 
 ; 		move.w	(Controller_2+on_hold),d7
 ; 		btst	#bitJoyUp,d7
@@ -279,7 +282,7 @@ thisCode_Top:
 
 ; 		move.l	#CmdTaskMd_UpdModels,d0
 ; 		bsr	System_MdMars_SlvTask
-.busy_mstr:
+; .busy_mstr:
 		rts
 
 ; ====================================================================
@@ -519,6 +522,71 @@ MdMdl_SetNewCamera:
 ; ; 		tst.w	d6
 ; ; 		beq.s	.nel
 ; .first_draw:
+
+MD_FifoMars:
+		lea	(RAM_FrameCount),a6
+		move.w	#$100,d6
+
+		lea	(sysmars_reg),a5
+		move.w	sr,d7			; Backup current SR
+		move.w	#$2700,sr		; Disable interrupts
+		move.w	#$00E,d5
+.retry:
+		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG ENTER
+		move.w	d5,(vdp_data).l
+		move.b	#%000,($A15107).l	; 68S bit
+		move.w	d6,($A15110).l		; DREQ len
+		move.b	#%100,($A15107).l	; 68S bit
+		lea	($A15112).l,a4
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		move.w	standby(a5),d0		; Request SLAVE CMD interrupt
+		bset	#1,d0
+		move.w	d0,standby(a5)
+.wait_cmd:	move.w	standby(a5),d0		; interrupt is ready?
+		btst    #1,d0
+		bne.s   .wait_cmd
+.wait_dma:	move.b	comm14(a5),d0
+		beq.s	.wait_dma
+		move.b	#1,d0
+		move.b	d0,comm14(a5)
+
+; 	; blast
+; 	rept $200/128
+; 		bsr.s	.blast
+; 	endm
+; 		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG EXIT
+; 		move.w	#$000,(vdp_data).l
+; 		move.w	d7,sr			; Restore SR
+; 		rts
+; .blast:
+; 	rept 128
+; 		move.w	(a6)+,(a4)
+; 	endm
+; 		rts
+
+; 	safer
+.l0:		move.w	(a6)+,(a4)		; Data Transfer
+		move.w	(a6)+,(a4)		;
+		move.w	(a6)+,(a4)		;
+		move.w	(a6)+,(a4)		;
+.l1:		btst	#7,dreqctl+1(a5)	; FIFO Full ?
+		bne.s	.l1
+		subq	#4,d6
+		bcc.s	.l0
+		move.w	#$E00,d5
+		btst	#2,dreqctl(a5)		; DMA All OK ?
+		bne.s	.retry
+		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG EXIT
+		move.w	#$000,(vdp_data).l
+		move.w	d7,sr			; Restore SR
+		rts
 
 ; ====================================================================
 ; ------------------------------------------------------
