@@ -14,7 +14,6 @@ SCREEN_HEIGHT	equ	224
 ; MSB
 PLGN_TEXURE	equ	%10000000
 PLGN_TRI	equ	%01000000
-; PLGN_SPRITE	equ	%00100000	; TODO: leftover.
 
 ; ----------------------------------------
 ; Structs
@@ -84,10 +83,10 @@ sizeof_plypz	ds.l 0
 		finish
 
 		struct 0
-polygn_type	ds.l 1		; %MST00000 iiiiiiii wwwwwwww wwwwwwww | Type and Material option (palinc|width)
-polygn_mtrl	ds.l 1		; Material Type: Color (0-255) or Texture data address
-polygn_points	ds.w 4*2	; X/Y positions
-polygn_srcpnts	ds.w 4*2	; X/Y texture points (16-bit), ignored on solidcolor
+polygn_type	ds.l 1	; %MST00000 iiiiiiii wwwwwwww wwwwwwww | Type and Material option (palinc|width)
+polygn_mtrl	ds.l 1	; Material Type: Color (0-255) or Texture data address
+polygn_points	ds.w 4*2; X/Y positions
+polygn_srcpnts	ds.w 4*2; X/Y texture points (16-bit), ignored on solidcolor
 sizeof_polygn	ds.l 0
 		finish
 

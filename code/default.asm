@@ -87,7 +87,7 @@ thisCode_Top:
 		beq.s	.loop
 		bsr	System_Input
 		add.l	#1,(RAM_Framecount).l
-		bsr	MD_FifoMars
+; 		bsr	MD_FifoMars
 .inside:	move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
 		bne.s	.inside
@@ -169,16 +169,14 @@ thisCode_Top:
 ; 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable MD display
 ; 		bsr	Video_Update
 
-		move.w	#$0000,(sysmars_reg+comm0)
-		move.w	#$0000,(sysmars_reg+comm2)
-		move.w	#$0100,(sysmars_reg+comm4)
-		move.w	#$0100,(sysmars_reg+comm6)
 		move.w	#"GO",(sysmars_reg+comm14)
 
 ; Mode 0 mainloop
 .mode0_loop:
 		move.w	(Controller_1+on_hold),d7
 		move.w	d7,(sysmars_reg+comm12)
+		move.w	(Controller_1+on_press),d7
+		move.w	d7,(sysmars_reg+comm10)
 
 ; 		moveq	#0,d0
 ; 		move.w	(Controller_1+on_hold),d7
@@ -552,10 +550,11 @@ MD_FifoMars:
 .wait_cmd:	move.w	standby(a5),d0		; interrupt is ready?
 		btst    #1,d0
 		bne.s   .wait_cmd
-.wait_dma:	move.b	comm14(a5),d0		; Another flag to check
-		beq.s	.wait_dma
-		move.b	#1,d0
-		move.b	d0,comm14(a5)
+; .wait_dma:	move.b	comm15(a5),d0		; Another flag to check
+; 		btst	#6,d0
+; 		beq.s	.wait_dma
+; 		move.b	#1,d0
+; 		move.b	d0,comm15(a5)
 
 ; 	; blast
 ; 	rept $200/128
