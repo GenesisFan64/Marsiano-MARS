@@ -125,16 +125,16 @@ System_Input:
 		move.b	(a4),d4
 		lsl.w	#2,d4
 		and.w	#%11000000,d4
-		move.b	#$40,(a4)	; Show CB|RLDU
 		or.w	d5,d4
+		move.b	#$40,(a4)	; Show CB|RLDU
 		not.w	d4
 		move.b	on_hold+1(a5),d5
-		move.b	#$00,(a4)	; Show SA|RLDU
 		eor.b	d4,d5
+		move.b	#$00,(a4)	; Show SA|RLDU
 		move.b	d4,on_hold+1(a5)
 		and.b	d4,d5
-		move.b	#$40,(a4)	; 6 button responds
 		move.b	d5,on_press+1(a5)
+		move.b	#$40,(a4)	; 6 button responds
 		nop
 		nop
 		move.b	(a4),d4		; Grab ??|MXYZ
@@ -169,7 +169,7 @@ System_Input:
 		move.b	#%01110000,(a4)		; TH=1,TR=1,TL=1
 		nop
 		nop
-		bsr.s	.read
+		bsr	.read
 		move.b	#%00110000,(a4)		; TH=0,TR=1,TL=1
 		nop
 		nop

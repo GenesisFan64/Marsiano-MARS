@@ -19,7 +19,7 @@ m_irq_custom:
 		mov.b	@(7,r1), r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov.w	@(marsGbl_DrwTask,gbr),r0
+		mov.w	@(marsGbl_WdDrwTask,gbr),r0
 		and	#$FF,r0
 		shll2	r0
 		mov	#.list,r1
@@ -52,120 +52,7 @@ drwtsk_01:
 		mov	r9,@-r15
 		sts	macl,@-r15
 
-		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
-		and	#$7F,r0
-		cmp/eq	#1,r0
-		bt	drtsk_gm1
-		cmp/eq	#2,r0
-		bt	drtsk_gm2
-		mov	#_vdpreg,r1
-.wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
-		tst     #2,r0
-		bf      .wait_fb
-		mov.w   @(6,r1),r0		; SVDP-fill address
-		add     #$5F,r0			; Preincrement
-		mov.w   r0,@(6,r1)
-		mov.w   #320/2,r0		; SVDP-fill size (320 pixels)
-		mov.w   r0,@(4,r1)
-		mov.w	#$0000,r0		; SVDP-fill pixel data and start filling
-		mov.w   r0,@(8,r1)		; After finishing, SVDP-address got updated
-		bra	dtsk01_exit
-		nop
-		align 4
-		ltorg
 
-; Mode1 draw routine
-; Left/Right scroll
-drtsk_gm1:
-		bra	dtsk01_exit
-		nop
-		align 4
-
-; Mode2 draw routine
-; Full scaling
-drtsk_gm2:
-		mov	#Cach_Ycurr,r1
-		mov	@r1,r1
-		shlr16	r1
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		muls	r1,r0
-		sts	macl,r1
-		mov	@(marsGbl_Bg_FbCurrR,gbr),r0
-		mov	r0,r9
-		mov	@(marsGbl_BgData,gbr),r0
-		mov	r0,r8
-		add	r1,r8
-		mov	#Cach_Xpos,r1
-		mov 	@r1,r7
-		mov.w	@(marsGbl_BgWidth,gbr),r0
-		mov	r0,r6
-		mov	#-2,r0		; pixel size
-		and	r0,r7
-		and	r0,r6
-		shll16	r7
-		shll16	r6
-		mov	#Cach_Xadd,r4
-		mov	@r4,r4
-		shll	r4
-		mov	r4,r0
-		xor	r5,r5
-		mov	#20,r2
-.x_next:
-	rept 8
-		cmp/ge	r6,r7
-		bf	.lowr
-		sub	r6,r7
-.lowr:
-		mov	r7,r1
-		shlr16	r1
-		mov	#-2,r0
-		and	r0,r1
-		add	r8,r1
-
-; 		mov.b	@r1,r0
-; 		and	#$FF,r0
-; 		mov	r0,r5
-; 		shll8	r5
-; 		or	r0,r5
-; 		shll8	r5
-; 		or	r0,r5
-; 		shll8	r5
-; 		or	r0,r5
-; 		mov	r5,@r9
-		mov.w	@r1,r0
-		mov.w	r0,@r9
-		add	#2,r9
-		add	r4,r7
-	endm
-		dt	r2
-		bt	.x_ex
-		bra	.x_next
-		nop
-.x_ex:
-		mov	#$200,r1
-		mov	@(marsGbl_Bg_FbCurrR,gbr),r0
-		add	r1,r0
-		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
-
-		mov.w	@(marsGbl_BgHeight,gbr),r0
-		mov	r0,r3
-		shll16	r3
-		mov	#Cach_Yadd,r2
-		mov	@r2,r2
-; 		shll	r2
-		mov	#Cach_Ycurr,r1
-		mov	@r1,r0
-		add	r2,r0
-		cmp/ge	r3,r0
-		bf	.ylarge
-		sub	r3,r0
-.ylarge:
-		mov	r0,@r1
-		bra	dtsk01_exit
-		nop
-		align 4
-
-dtsk01_exit:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
 		mov.w   r0,@r1
@@ -192,7 +79,7 @@ dtsk01_exit:
 ; 		mov.w	r0,@(marsGbl_Bg_DrwReqL,gbr)
 tsk00_gonext:
 		mov	#2,r0			; If finished: Set task $02
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 tsk00_exit:
 		lds	@r15+,macl
 		mov	@r15+,r9
@@ -208,6 +95,121 @@ tsk00_exit:
 		align 4
 		ltorg
 
+; 		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+; 		and	#$7F,r0
+; 		cmp/eq	#1,r0
+; 		bt	drtsk_gm1
+; 		cmp/eq	#2,r0
+; 		bt	drtsk_gm2
+; 		mov	#_vdpreg,r1
+; .wait_fb:	mov.w   @($A,r1),r0		; Framebuffer free?
+; 		tst     #2,r0
+; 		bf      .wait_fb
+; 		mov.w   @(6,r1),r0		; SVDP-fill address
+; 		add     #$5F,r0			; Preincrement
+; 		mov.w   r0,@(6,r1)
+; 		mov.w   #320/2,r0		; SVDP-fill size (320 pixels)
+; 		mov.w   r0,@(4,r1)
+; 		mov.w	#$0000,r0		; SVDP-fill pixel data and start filling
+; 		mov.w   r0,@(8,r1)		; After finishing, SVDP-address got updated
+; 		bra	dtsk01_exit
+; 		nop
+; 		align 4
+; 		ltorg
+;
+; ; Mode1 draw routine
+; ; Left/Right scroll
+; drtsk_gm1:
+; 		bra	dtsk01_exit
+; 		nop
+; 		align 4
+;
+; ; Mode2 draw routine
+; ; Full scaling
+; drtsk_gm2:
+; 		mov	#Cach_Ycurr,r1
+; 		mov	@r1,r1
+; 		shlr16	r1
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		muls	r1,r0
+; 		sts	macl,r1
+; 		mov	@(marsGbl_Bg_FbCurrR,gbr),r0
+; 		mov	r0,r9
+; 		mov	@(marsGbl_BgData,gbr),r0
+; 		mov	r0,r8
+; 		add	r1,r8
+; 		mov	#Cach_Xpos,r1
+; 		mov 	@r1,r7
+; 		mov.w	@(marsGbl_BgWidth,gbr),r0
+; 		mov	r0,r6
+; 		mov	#-2,r0		; pixel size
+; 		and	r0,r7
+; 		and	r0,r6
+; 		shll16	r7
+; 		shll16	r6
+; 		mov	#Cach_Xadd,r4
+; 		mov	@r4,r4
+; 		shll	r4
+; 		mov	r4,r0
+; 		xor	r5,r5
+; 		mov	#20,r2
+; .x_next:
+; 	rept 8
+; 		cmp/ge	r6,r7
+; 		bf	.lowr
+; 		sub	r6,r7
+; .lowr:
+; 		mov	r7,r1
+; 		shlr16	r1
+; 		mov	#-2,r0
+; 		and	r0,r1
+; 		add	r8,r1
+;
+; ; 		mov.b	@r1,r0
+; ; 		and	#$FF,r0
+; ; 		mov	r0,r5
+; ; 		shll8	r5
+; ; 		or	r0,r5
+; ; 		shll8	r5
+; ; 		or	r0,r5
+; ; 		shll8	r5
+; ; 		or	r0,r5
+; ; 		mov	r5,@r9
+; 		mov.w	@r1,r0
+; 		mov.w	r0,@r9
+; 		add	#2,r9
+; 		add	r4,r7
+; 	endm
+; 		dt	r2
+; 		bt	.x_ex
+; 		bra	.x_next
+; 		nop
+; .x_ex:
+; 		mov	#$200,r1
+; 		mov	@(marsGbl_Bg_FbCurrR,gbr),r0
+; 		add	r1,r0
+; 		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
+;
+; 		mov.w	@(marsGbl_BgHeight,gbr),r0
+; 		mov	r0,r3
+; 		shll16	r3
+; 		mov	#Cach_Yadd,r2
+; 		mov	@r2,r2
+; ; 		shll	r2
+; 		mov	#Cach_Ycurr,r1
+; 		mov	@r1,r0
+; 		add	r2,r0
+; 		cmp/ge	r3,r0
+; 		bf	.ylarge
+; 		sub	r3,r0
+; .ylarge:
+; 		mov	r0,@r1
+; 		bra	dtsk01_exit
+; 		nop
+; 		align 4
+;
+; dtsk01_exit:
+
 ; --------------------------------
 ; Task $02
 ; --------------------------------
@@ -217,14 +219,14 @@ tsk00_exit:
 ; enters-and-exits until marsGbl_PzListCntr != 0
 drwtsk_02:
 		mov	r2,@-r15
-		mov.w	@(marsGbl_DrwPause,gbr),r0
+		mov.w	@(marsGbl_WdDrwPause,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
@@ -634,7 +636,7 @@ drwsld_nxtline:
 		cmp/gt	r0,r12
 		bf	drwsld_updline
 		mov	#3,r0
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 		mov	#Cach_LnDrw_S,r0
 		mov	r1,@-r0
 		mov	r2,@-r0
@@ -680,7 +682,7 @@ drwsld_nextpz:
 ; 		nop
 .finish_it:
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 .activ:
 		bra	drwtask_return
 		mov	#$10,r2			; Timer for next watchdog
@@ -692,7 +694,7 @@ drwsld_nextpz:
 drwtsk_00:
 		mov	r2,@-r15
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 		bra	drwtask_exit
 		mov	#$10,r2
 
@@ -734,7 +736,7 @@ drwtask_exit:
 ;
 ; drwtsk_03:
 ; 		mov	r2,@-r15
-; 		mov.w	@(marsGbl_DrwPause,gbr),r0
+; 		mov.w	@(marsGbl_WdDrwPause,gbr),r0
 ; 		cmp/eq	#1,r0
 ; 		bt	.exit
 ; 		mov	r3,@-r15
@@ -767,7 +769,7 @@ drwtask_exit:
 ; 		mov	@r0+,r2
 ; 		mov	@r0+,r1
 ; 		mov	#1,r0
-; 		mov.w	r0,@(marsGbl_DrwTask,gbr)
+; 		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 ; 		bra	drwsld_updline
 ; 		nop
 ; .exit:		bra	drwtask_exit

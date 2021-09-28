@@ -19,20 +19,25 @@
 ; MdMap_Bg:
 ; 		binclude "data/md/bg/bg_map.bin"
 ; 		align 2
-MdMap_BgTestB:
-		binclude "data/md/bg/bg_b_map.bin"
-		align 2
-MdMap_BgTestT:
-		binclude "data/md/bg/bg_t_map.bin"
-		align 2
+; MdMap_BgTestB:
+; 		binclude "data/md/bg/bg_b_map.bin"
+; 		align 2
+; MdMap_BgTestT:
+; 		binclude "data/md/bg/bg_t_map.bin"
+; 		align 2
+;
+;
+Sampl_KickSpinb:
+		binclude "data/sound/instr/smpl/spinb_kick.wav",$2C
+Sampl_KickSpinb_End:
 
+Sampl_Kick:	binclude "data/sound/instr/smpl/stKick.wav",$2C
+Sampl_Kick_End:
+Sampl_Snare:	binclude "data/sound/instr/smpl/snare.wav",$2C
+Sampl_Snare_End:
 
-Sampl_Magic1:	binclude "data/sound/instr/smpl/magic_1.wav",$2C
-Sampl_Magic1_End:
-Sampl_Magic2:	binclude "data/sound/instr/smpl/magic_2.wav",$2C
-Sampl_Magic2_End:
-Sampl_MyTime:	binclude "data/sound/instr/smpl/mytime.wav",$2C
-Sampl_MyTime_End:
+; Sampl_MyTime:	binclude "data/sound/instr/smpl/mytime.wav",$2C
+; Sampl_MyTime_End:
 
-; PWM_START:	binclude "data/sound/pwm_m.wav",$2C,$05FFFF
-; PWM_END:
+PCM_START:	binclude "data/sound/test_md.wav",$2C,$06FFFF
+PCM_END:

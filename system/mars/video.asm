@@ -348,11 +348,11 @@ MarsVideo_SlicePlgn:
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
 .dontreset:
 		mov	#1,r0
-		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Tell watchdog we are mid-write
+		mov.w	r0,@(marsGbl_WdDrwPause,gbr)	; Tell watchdog we are mid-write
 		bsr	put_piece
 		nop
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Unlock.
+		mov.w	r0,@(marsGbl_WdDrwPause,gbr)	; Unlock.
 
 	; X direction update
 		cmp/gt	r9,r8				; Left width > Right width?
@@ -910,7 +910,7 @@ MarsVideo_SetWatchdog:
 
 	; Y draw settings
 		mov	#1,r0				; Set first task $01
-		mov.w	r0,@(marsGbl_DrwTask,gbr)
+		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
 		ldc	@r15+,sr			; Restore interrupts
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A20,r0			; Watchdog timer

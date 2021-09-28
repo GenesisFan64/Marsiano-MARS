@@ -83,14 +83,14 @@ TMR		equ	44
 
 ; --------------------------------------------------------
 
-wave_Start	dw 0;TEST_WAV&0FFFFh	; START: 68k direct pointer ($00xxxxxx)
-		db 0;TEST_WAV>>16&0FFh
-wave_Len	dw 0;(TEST_WAV_E-TEST_WAV)&0FFFFh
-		db 0;(TEST_WAV_E-TEST_WAV)>>16
-wave_Loop	dw 0
+wave_Start	dw 0			; START: 68k direct pointer ($00xxxxxx)
 		db 0
-wave_Pitch	dw 100h			; 01.00h
-wave_Flags	db 100b			; WAVE playback flags (%10x: 1 loop / 0 no loop)
+wave_Len	dw 0			; LENGTH
+		db 0
+wave_Loop	dw 0			; LOOP POINT
+		db 0
+wave_Pitch	dw 0100h		; 01.00h
+wave_Flags	db 0100b		; WAVE playback flags (%10x: 1 loop / 0 no loop)
 currTrkBlkHd	dw 0
 currTrkData	dw 0
 currInsData	dw 0
@@ -172,6 +172,8 @@ drv_loop:
 		call	check_tick
 .neither:
 ; 		call	mars_scomm
+; 		nop
+; 		nop
 ; 		call	dac_me
 
 .next_cmd:
@@ -244,7 +246,7 @@ drv_loop:
 		jp	.next_cmd
 
 ; --------------------------------------------------------
-; $01 - change current wave pitch
+; $01 - Set NEW track
 ; --------------------------------------------------------
 
 ; Slot
@@ -281,7 +283,7 @@ drv_loop:
 		ld	a,1
 		ld	(iy+trk_tickTmr),a
 		ld	a,(iy+trk_status)
-		or	0C0h			; Set Enable + REFILL flags
+		or	11000000b		; Set Enable + REFILL flags
 		ld	(iy+trk_status),a
 		jp	.next_cmd
 
@@ -363,9 +365,7 @@ drv_loop:
 playonchip
 		call	dac_fill
 		call	dac_me
-
-	; Play new notes
-		ld	c,MAX_TRKS
+		ld	c,MAX_TRKS		; Play new notes
 		ld	hl,insDataC
 		ld	(currInsData),hl
 		ld	iy,trkBuff+20h		; Point to channels
@@ -387,15 +387,13 @@ playonchip
 		pop	iy
 		ld	de,100h
 		add	iy,de
-
-		ld	de,80h
-		ld	hl,(currInsData)
+		ld	de,80h			; Next instrument
+		ld	hl,(currInsData)	; data
 		add	hl,de
 		ld	(currInsData),hl
 		dec	c
 		jp	nz,.nxt_track
-
-		ld	a,(reqSampl)
+		ld	a,(reqSampl)		; Reset sample request
 		or	a
 		ret	z
 		xor	a
@@ -443,8 +441,8 @@ playonchip
 		jp	z,.fm_eff
 		cp	4
 		ret	z
-; 		cp	5
-; 		jp	z,.pwm_eff
+		cp	5
+		jp	z,.pwm_eff
 		ret
 .fm_eff:
 		ld	a,(iy+chnl_EffId)	; Eff X?
@@ -477,12 +475,12 @@ playonchip
 		db 00000000b	; 080h
 		db 10000000b	; 0C0h
 
-; .pwm_eff:
-; 		ld	a,(iy+chnl_EffId)	; Eff X?
-; 		cp	24
-; 		jp	z,.eff_X_pwm
-; 		ret
-; .eff_X_pwm:
+.pwm_eff:
+		ld	a,(iy+chnl_EffId)	; Eff X?
+		cp	24
+		jp	z,.eff_X_pwm
+		ret
+.eff_X_pwm:
 ; 		call	.srch_pwm
 ; 		cp	-1
 ; 		ret	z
@@ -498,13 +496,7 @@ playonchip
 ; 		add	hl,de
 ; 		ld	a,(hl)
 ; 		ld	(ix+7),a
-; 		ret
-;
-; .pwmpan_list:
-; 		db 001h		; 000h
-; 		db 001h		; 040h
-; 		db 003h		; 080h
-; 		db 002h		; 0C0h
+		ret
 
 ; ----------------------------------------
 ; Set new instrument
@@ -665,7 +657,6 @@ playonchip
 		ld	a,(hl)
 		or	100b
 		ld	(wave_Flags),a
-
 		ld	h,b
 		ld	l,c
 		ld	de,wave_Start
@@ -681,10 +672,8 @@ playonchip
 		djnz	.copybytes
 		ret
 
-; 		jr	$
-
 ; Type 5
-; .pwm_ins:
+.pwm_ins:
 ; 		push	hl
 ; 		call	.srch_pwm
 ; 		cp	-1
@@ -696,7 +685,7 @@ playonchip
 ;  		ld	a,(iy+chnl_Ins)
 ;  		dec	a
 ;  		ld	(ix+5),a		; put ins number
-; 		ret
+		ret
 
 ; ----------------------------------------
 ; Volume request
@@ -1153,41 +1142,6 @@ playonchip
 ; ----------------------------------------
 
 .note_pwm:
-; 		push	hl
-; 		call	.srch_pwm
-; 		push	hl
-; 		pop	ix
-; 		pop	hl
-; 		inc	hl
-;
-; 		call	dac_me
-; 		ld	a,(iy+chnl_Note)
-; 		cp	-1
-; 		jr	z,.pwm_stop
-; 		cp	-2
-; 		jr	z,.pwm_stop
-; 		ld	l,(hl)
-; 		call	dac_me
-; 		add	a,l
-; 		add	a,a
-; 		ld	de,0
-; 		ld	e,a
-; 		ld	hl,wavFreq_Pwm
-; 		add	hl,de
-; 		ld	a,(hl)
-; 		ld	(ix+3),a	; NOTE: big endian
-; 		inc	hl
-; 		ld	a,(hl)
-; 		ld	(ix+4),a
-;
-; 		ld	a,(ix)		; Tell SH2 we want to play channel
-; 		or	01000000b
-; 		ld	(ix),a
-; 		ret
-; .pwm_stop:
-; 		ld	a,(ix)		; Tell SH2 to stop this channel
-; 		or	00100000b
-; 		ld	(ix),a
 		ret
 
 ; ----------------------------------------
@@ -1250,34 +1204,34 @@ playonchip
 
 ; ----------------------------------------
 
-.psgvoltbl:
-		db 0F0h
-		db 0F0h
-		db 0E0h
-		db 0D0h
-		db 0C0h
-		db 0B0h
-		db 0A0h
-		db 090h
-		db 080h
-		db 070h
-		db 060h
-		db 050h
-		db 040h
-		db 030h
-		db 020h
-		db 010h
-		db 000h
+; .psgvoltbl:
+; 		db 0F0h
+; 		db 0F0h
+; 		db 0E0h
+; 		db 0D0h
+; 		db 0C0h
+; 		db 0B0h
+; 		db 0A0h
+; 		db 090h
+; 		db 080h
+; 		db 070h
+; 		db 060h
+; 		db 050h
+; 		db 040h
+; 		db 030h
+; 		db 020h
+; 		db 010h
+; 		db 000h
 
 ; ----------------------------------------
-; iy - track channel data
+; iy - Track channel data
 ; de - Slot incrm
-; hl - table
+; hl - Table
 ;
-; Returns
-; a  - Status: -1: error
-;               0: ok
-; hl - slot
+; Returns:
+; a  - Status -1: error
+;              0: ok
+; hl - Slot found
 ; ----------------------------------------
 
 .srch_chnltbl:
@@ -1361,8 +1315,7 @@ updtrack:
 		pop	bc
 		call	dac_me
 
-	; Next blocks
-		ld	de,100h
+		ld	de,100h			; Next blocks
 		add	iy,de
 		ld	hl,(currTrkData)
 		add	hl,de
@@ -1717,7 +1670,7 @@ updtrack:
 	; Stop last used sound chips
 		push	iy
 		pop	ix
-		ld	de,20h
+		ld	de,20h			; go to channel data
 		add	ix,de
 		ld	de,8
 		ld	b,MAX_TRKCHN
@@ -2431,7 +2384,7 @@ psg_env:
 ; ----------------------------
 
 .envproc:
-		call	dac_me
+; 		call	dac_me
 		ld	a,(iy+MODE)
 		or	a			; no modes
 		jp	z,.vedlp
@@ -2453,49 +2406,49 @@ psg_env:
 		ld	(iy+MODE),2		; set to decay mode
 		jp	.vedlp
 .chk2:
-
-		cp	010b			; Decay mode
-		jp	nz,.chk4
-.dectmr:
-		ld	(iy+FLG),1		; psg update flag
-		ld	a,(iy+LEV)		; a - Level
-		ld	b,(iy+SLV)		; b - Sustain
-		cp	b
-		jr	c,.dkadd		; if carry: add
-		jr	z,.dkyend		; if zero:  finish
-		sub	(iy+DKY)		; substract decay rate
-		jr	c,.dkyend		; finish if wraped.
-		cp	b			; compare level
-		jr	c,.dkyend		; and finish
-		jr	.dksav
-.dkadd:
-		add	a,(iy+DKY)		;  (level) + (decay rate)
-		jr	c,.dkyend		; finish if wraped.
-		cp	b			; compare level
-		jr	nc,.dkyend
-.dksav:
-		ld	(iy+LEV),a		; save new level
-		jr	.vedlp
-.dkyend:
-		ld	(iy+LEV),b		; save last attack
-		ld	(iy+MODE),100b		; and set to sustain
-		jr	.vedlp
-
-.chk4:
-		cp	100b			; Sustain phase
-		jr	nz,.vedlp
-		ld	(iy+FLG),1		; psg update flag
-		ld	a,(iy+LEV)		; a - Level
-		add 	a,(iy+RRT)		; add Release Rate
-		jr	c,.killenv		; release done
-		ld	(iy+LEV),a		; set new Level
-		jr	.vedlp
-.killenv:
-		ld	(iy+LEV),-1		; Silence this channel
-		ld	(iy+MODE),0		; Reset mode
-		ld	a,4			; PSG Channel 3?
-		cp	e
-		jr	nz,.vedlp
+;
+; 		cp	010b			; Decay mode
+; 		jp	nz,.chk4
+; .dectmr:
+; 		ld	(iy+FLG),1		; psg update flag
+; 		ld	a,(iy+LEV)		; a - Level
+; 		ld	b,(iy+SLV)		; b - Sustain
+; 		cp	b
+; 		jr	c,.dkadd		; if carry: add
+; 		jr	z,.dkyend		; if zero:  finish
+; 		sub	(iy+DKY)		; substract decay rate
+; 		jr	c,.dkyend		; finish if wraped.
+; 		cp	b			; compare level
+; 		jr	c,.dkyend		; and finish
+; 		jr	.dksav
+; .dkadd:
+; 		add	a,(iy+DKY)		;  (level) + (decay rate)
+; 		jr	c,.dkyend		; finish if wraped.
+; 		cp	b			; compare level
+; 		jr	nc,.dkyend
+; .dksav:
+; 		ld	(iy+LEV),a		; save new level
+; 		jr	.vedlp
+; .dkyend:
+; 		ld	(iy+LEV),b		; save last attack
+; 		ld	(iy+MODE),100b		; and set to sustain
+; 		jr	.vedlp
+;
+; .chk4:
+; 		cp	100b			; Sustain phase
+; 		jr	nz,.vedlp
+; 		ld	(iy+FLG),1		; psg update flag
+; 		ld	a,(iy+LEV)		; a - Level
+; 		add 	a,(iy+RRT)		; add Release Rate
+; 		jr	c,.killenv		; release done
+; 		ld	(iy+LEV),a		; set new Level
+; 		jr	.vedlp
+; .killenv:
+; 		ld	(iy+LEV),-1		; Silence this channel
+; 		ld	(iy+MODE),0		; Reset mode
+; 		ld	a,4			; PSG Channel 3?
+; 		cp	e
+; 		jr	nz,.vedlp
 ; 		res	5,(ix)			; Unlock PSG3
 .vedlp:
 		dec	iy			; next COM to check
@@ -2530,77 +2483,6 @@ psg_env:
 		djnz	.nextpsg
 		call	dac_me
 		ret
-
-; ; --------------------------------------------------------
-; ; Communicate to 32X from here
-; ; hl - Data to transfer
-; ; b - WORDS to transfer
-; ; c - Task id
-; ;
-; ; Uses comm4/comm6
-; ; --------------------------------------------------------
-;
-; mars_zcomm:
-; 		call	dac_me
-; 		push	hl
-; 		ld	hl,6000h		; Set bank
-; 		ld	(hl),0
-; 		ld	(hl),1
-; 		ld	(hl),0
-; 		ld	(hl),0
-; 		ld	(hl),0
-; 		ld	(hl),0
-; 		ld	(hl),1
-; 		call	dac_me
-; 		ld	(hl),0
-; 		ld	(hl),1
-; 		pop	hl
-; 		ld	ix,5100h|8000h		; ix - mars sysreg
-; .wait_md:	ld	a,(ix+comm8)		; 68k got it first?
-; 		or	a
-; 		jp	nz,.wait_md
-; .wait_md2:	ld	a,(ix+comm4+1)		; busy?
-; 		or	a
-; 		jp	m,.wait_md2
-; 		call	dac_me
-; 		ld	(ix+comm4),c		; Z80 ready
-; 		ld	(ix+(comm4+1)),1	; SH busy
-; 		ld	(ix+3),01b		; Master CMD interrupt
-; .wait_cmd:	bit	0,(ix+3)		; CMD clear?
-; 		jp	nz,.wait_cmd
-; 		call	dac_me
-; .loop:
-; 		call	dac_me
-; 		ld	a,(ix+(comm4+1))	; SH ready?
-; 		cp	2
-; 		jr	nz,.loop
-; 		ld	a,(ix+(comm4+1))	; SH ready?
-; 		cp	2
-; 		jr	nz,.loop
-; 		ld	a,c			; Z80 is busy
-; 		or	80h
-; 		ld	(ix+comm4),a
-; 		call	dac_me
-; 		ld	a,b			; check b
-; 		or	a
-; 		jr	z,.exit
-; 		jp	m,.exit
-; 		ld	a,(hl)
-; 		ld	(ix+comm6),a
-; 		call	dac_me
-; 		inc	hl
-; 		ld	a,(hl)
-; 		ld	(ix+comm6+1),a
-; 		inc	hl
-; 		call	dac_me
-; 		ld	a,c			; Z80 is ready
-; 		or	40h
-; 		ld	(ix+comm4),a
-; 		dec	b
-; 		jr	.loop
-; .exit:
-; 		ld	(ix+comm4),0		; Z80 finished
-; 		ret
 
 ; ---------------------------------------------
 ; FM send registers
@@ -3265,14 +3147,11 @@ psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-; Buffers
-; --------------------------------------------------------
-
-		align 100h
+		org 1400h
 dWaveBuff	ds 100h			; WAVE data buffer: updated every 80h bytes *LSB must be 00h*
 trkDataC	ds 100h*MAX_TRKS	; Track data cache: 100h bytes each
 trkBuff		ds 100h*MAX_TRKS	; Track control (20h) + channels (8h each)
 blkHeadC	ds 100h*MAX_TRKS	; Track blocks and heads: 80h each
 insDataC	ds 80h*MAX_TRKS		; Instrument pointers cache: 80h each
 commZfifo	ds 40h			; Buffer for command requests from 68k
+

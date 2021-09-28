@@ -9,6 +9,7 @@
 ; ------------------------------------------------------
 
 var_MoveSpd	equ	$4000
+MAX_TSTTRKS	equ	1
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -26,23 +27,24 @@ var_MoveSpd	equ	$4000
 ; ------------------------------------------------------
 
 		struct RAM_ModeBuff
-RAM_MarsPal	ds.w 256
-RAM_MarsFade	ds.w 256
-RAM_Cam_Xpos	ds.l 1
-RAM_Cam_Ypos	ds.l 1
-RAM_Cam_Zpos	ds.l 1
-RAM_Cam_Xrot	ds.l 1
-RAM_Cam_Yrot	ds.l 1
-RAM_Cam_Zrot	ds.l 1
-RAM_CamData	ds.l 1
-RAM_CamFrame	ds.l 1
-RAM_CamTimer	ds.l 1
-RAM_CamSpeed	ds.l 1
+; RAM_MarsPal	ds.w 256
+; RAM_MarsFade	ds.w 256
+; RAM_Cam_Xpos	ds.l 1
+; RAM_Cam_Ypos	ds.l 1
+; RAM_Cam_Zpos	ds.l 1
+; RAM_Cam_Xrot	ds.l 1
+; RAM_Cam_Yrot	ds.l 1
+; RAM_Cam_Zrot	ds.l 1
+; RAM_CamData	ds.l 1
+; RAM_CamFrame	ds.l 1
+; RAM_CamTimer	ds.l 1
+; RAM_CamSpeed	ds.l 1
 RAM_MdlCurrMd	ds.w 1
 RAM_BgCamera	ds.w 1
 RAM_BgCamCurr	ds.w 1
-RAM_Layout_X	ds.w 1
-RAM_Layout_Y	ds.w 1
+; RAM_Layout_X	ds.w 1
+; RAM_Layout_Y	ds.w 1
+RAM_CurrSong	ds.w 1
 sizeof_mdglbl	ds.l 0
 		finish
 
@@ -56,12 +58,6 @@ thisCode_Top:
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 		move.w	#0,(RAM_MdlCurrMd).w
-; 		move.l	#GemaTrk_Demo_patt,d0
-; 		move.l	#GemaTrk_Demo_blk,d1
-; 		move.l	#GemaTrk_Demo_ins,d2
-; 		moveq	#4,d3
-; 		moveq	#0,d4
-; 		bsr	SoundReq_SetTrack
 
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l		; Enable display
 		bsr	Video_Update
@@ -99,9 +95,6 @@ thisCode_Top:
 		move.w	d0,(vdp_data).l
 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
-		lea	str_Status(pc),a0
-		move.l	#locate(0,2,2),d0
-		bsr	Video_Print
 		move.w	(RAM_MdlCurrMd).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -128,55 +121,73 @@ thisCode_Top:
 		bmi	.mode0_loop
 		or.w	#$8000,(RAM_MdlCurrMd).w
 
-; 		lea	MdPal_BgTestB(pc),a0
-; 		move.w	#0,d0
-; 		move.w	#32-1,d1
-; 		bsr	Video_LoadPal
-; 		lea	(MdMap_BgTestB),a0
-; 		move.l	#locate(1,0,0),d0
-; 		move.l	#mapsize(512,224),d1
-; 		move.w	#1,d2
-; 		bsr	Video_LoadMap
-; 		move.l	#MdGfx_BgTestB,d0
-; 		move.w	#(MdGfx_BgTestB_e-MdGfx_BgTestB),d1
-; 		move.w	#1,d2
-; 		bsr	Video_LoadArt
-;
-; 		lea	(MdMap_BgTestT),a0
-; 		move.l	#locate(0,0,0),d0
-; 		move.l	#mapsize(512,224),d1
-; 		move.w	#$180,d2
-; 		bsr	Video_LoadMap
-; 		move.l	#MdGfx_BgTestT,d0
-; 		move.w	#(MdGfx_BgTestT_e-MdGfx_BgTestT),d1
-; 		move.w	#$180,d2
-; 		bsr	Video_LoadArt
+		lea	str_Title(pc),a0
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
 
-; 		move.l	#CmdTaskMd_SetBitmap,d0		; 32X display OFF
-; 		moveq	#0,d1
-; 		bsr	System_MdMars_MstTask		; Wait until it finishes.
-; 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l	; Disable MD display
-; 		bsr	Video_Update
-; 		move.l	#TESTMARS_BG_PAL,d1			; Load palette
+; 		move.l	#PCM_START,d0
+; 		move.l	#PCM_END-PCM_START,d1
 ; 		moveq	#0,d2
-; 		move.l	#256,d3
-; 		move.l	#$0000,d4
-; 		move.l	#CmdTaskMd_LoadSPal,d0
-; 		bsr	System_MdMars_MstTask
-; 		move.l	#CmdTaskMd_SetBitmap,d0		; 32X display ON
-; 		moveq	#1,d1
-; 		bsr	System_MdMars_MstTask
-; 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable MD display
-; 		bsr	Video_Update
-
-		move.w	#"GO",(sysmars_reg+comm14)
+; 		move.w	#$100,d3
+; 		moveq	#1,d4
+; 		bsr	SoundReq_SetSample
+		move.w	#$8080,(sysmars_reg+comm14)
 
 ; Mode 0 mainloop
 .mode0_loop:
-		move.w	(Controller_1+on_hold),d7
-		move.w	d7,(sysmars_reg+comm12)
+		lea	str_Status(pc),a0
+		move.l	#locate(0,8,4),d0
+		bsr	Video_Print
+
 		move.w	(Controller_1+on_press),d7
-		move.w	d7,(sysmars_reg+comm10)
+		btst	#bitJoyA,d7
+		beq.s	.noc_up
+		move.w	#1,d0
+		move.w	d0,(sysmars_reg+comm0)
+.noc_up:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyB,d7
+		beq.s	.noc_d
+		move.l	#PCM_START,d0
+		move.l	#PCM_END-PCM_START,d1
+		moveq	#0,d2
+		move.w	#$100,d3
+		moveq	#1,d4
+		bsr	SoundReq_SetSample
+.noc_d:
+
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyC,d7
+		beq.s	.noc_c
+		move.w	(RAM_CurrSong).w,d0
+		lsl.l	#4,d0
+		lea	.playlist(pc,d0.w),a0
+		move.l	(a0)+,d0
+		move.l	(a0)+,d1
+		move.l	(a0)+,d2
+		move.l	(a0)+,d3
+		moveq	#0,d4
+		bsr	SoundReq_SetTrack
+.noc_c:
+
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyLeft,d7
+		beq.s	.nol
+		tst.w	(RAM_CurrSong).w
+		beq.s	.nol
+		sub.w	#1,(RAM_CurrSong).w
+.nol:
+		btst	#bitJoyRight,d7
+		beq.s	.nor
+		cmp.w	#MAX_TSTTRKS,(RAM_CurrSong).w
+		bge.s	.nor
+		add.w	#1,(RAM_CurrSong).w
+.nor:
+
+; 		move.w	(Controller_1+on_hold),d7
+; 		move.w	d7,(sysmars_reg+comm12)
+; 		move.w	(Controller_1+on_press),d7
+; 		move.w	d7,(sysmars_reg+comm10)
 
 ; 		moveq	#0,d0
 ; 		move.w	(Controller_1+on_hold),d7
@@ -283,24 +294,34 @@ thisCode_Top:
 ; .busy_mstr:
 		rts
 
+
+; test playlist
+
+.playlist:
+	dc.l GemaTrk_brinstr_patt,GemaTrk_brinstr_blk,GemaTrk_brinstr_ins
+	dc.l 3
+	dc.l GemaTrk_yuki_patt,GemaTrk_yuki_blk,GemaTrk_yuki_ins
+	dc.l 2
+	align 2
+
 ; ====================================================================
 ; ------------------------------------------------------
 ; Subroutines
 ; ------------------------------------------------------
 
-MdMdl_SetNewCamera:
-		clr.l	(RAM_Cam_Xpos).l
-		clr.l	(RAM_Cam_Ypos).l
-		clr.l	(RAM_Cam_Zpos).l
-		clr.l	(RAM_Cam_Xrot).l
-		clr.l	(RAM_Cam_Yrot).l
-		clr.l	(RAM_Cam_Zrot).l
-		moveq	#0,d4
-		move.l	d4,(RAM_CamFrame).l
-		move.l	d4,(RAM_CamTimer).l
-		move.l	d1,(RAM_CamSpeed).l
-		move.l	d0,(RAM_CamData).l
-		rts
+; MdMdl_SetNewCamera:
+; 		clr.l	(RAM_Cam_Xpos).l
+; 		clr.l	(RAM_Cam_Ypos).l
+; 		clr.l	(RAM_Cam_Zpos).l
+; 		clr.l	(RAM_Cam_Xrot).l
+; 		clr.l	(RAM_Cam_Yrot).l
+; 		clr.l	(RAM_Cam_Zrot).l
+; 		moveq	#0,d4
+; 		move.l	d4,(RAM_CamFrame).l
+; 		move.l	d4,(RAM_CamTimer).l
+; 		move.l	d1,(RAM_CamSpeed).l
+; 		move.l	d0,(RAM_CamData).l
+; 		rts
 
 ; d7 - Move to this mode after
 ;      animation ends.
@@ -604,22 +625,30 @@ MD_FifoMars:
 ; ------------------------------------------------------
 
 str_Status:
-		dc.b "\\w \\w \\w \\w",$A
-		dc.b "\\w \\w \\w \\w",0
-		dc.l sysmars_reg+comm0
-		dc.l sysmars_reg+comm2
-		dc.l sysmars_reg+comm4
-		dc.l sysmars_reg+comm6
-		dc.l sysmars_reg+comm8
-		dc.l sysmars_reg+comm10
-		dc.l sysmars_reg+comm12
-		dc.l sysmars_reg+comm14
+		dc.b "\\w",0
+		dc.l RAM_CurrSong
+		align 2
 
+str_Title:
+		dc.b "Marsiano sound driver (Genesis+32X)",$A
+		dc.b $A
+		dc.b "Song: ????",$A
+		dc.b $A
+		dc.b "[FM1 ] ???? ???? ????  [PWM1] ????",$A,$A
+		dc.b "[FM2 ] ???? ???? ????  [PWM2] ????",$A,$A
+		dc.b "[FM4 ] ???? ???? ????  [PWM3] ????",$A,$A
+		dc.b "[FM5 ] ???? ???? ????  [PWM4] ????",$A,$A
+		dc.b "[FM3*] ???? ???? ????  [PWM5] ????",$A,$A
+		dc.b "[FM6*] ???? ???? ????  [PWM6] ????",$A,$A
+		dc.b "[PSG1] ???? ???? ????  [PWM7] ????",$A,$A
+		dc.b "[PSG2] ???? ???? ????",$A,$A
+		dc.b "[PSG3] ???? ???? ????",$A,$A
+		dc.b "[PSGN] ???? ???? ????",$A,$A
 		align 2
-MdPal_BgTestB:
-		binclude "data/md/bg/bg_b_pal.bin"
-		binclude "data/md/bg/bg_t_pal.bin"
-		align 2
+; MdPal_BgTestB:
+; 		binclude "data/md/bg/bg_b_pal.bin"
+; 		binclude "data/md/bg/bg_t_pal.bin"
+; 		align 2
 
 ; ====================================================================
 
