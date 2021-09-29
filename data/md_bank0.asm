@@ -36,8 +36,5 @@ Sampl_Kick_End:
 Sampl_Snare:	binclude "data/sound/instr/smpl/snare.wav",$2C
 Sampl_Snare_End:
 
-; Sampl_MyTime:	binclude "data/sound/instr/smpl/mytime.wav",$2C
-; Sampl_MyTime_End:
-
-PCM_START:	binclude "data/sound/test_md.wav",$2C,$06FFFF
+PCM_START:	binclude "data/sound/test_md.wav",$2C,$0BFFFF
 PCM_END:

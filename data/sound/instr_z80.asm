@@ -1,35 +1,20 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; PSG, FM, FM3, DAC instruments go here.
-; Stored on Z80's RAM space
-; 
-; NOTE: Very low storage space
+; FM instruments go here, stored on Z80's RAM
+;
+; PSG instruments are set in the track's instrument list
+; and DAC samples are stored in ROM
 ; ----------------------------------------------------------------
 
-; zSmpl
-zSmpl 		macro start,end,loop,flags
-		db start&0FFh,((start>>8)&0FFh),((start>>16)&0FFh)
-		db ((end-start)&0FFh),(((end-start)>>8)&0FFh),(((end-start)>>16)&0FFh)
-		db loop&0FFh,((loop>>8)&0FFh),((loop>>16)&0FFh)
-		db 0
-		endm
+; PsgIns_00:	db 00h,0FFh,40h,00h, 80h
+; PsgIns_01:	db 00h,0FFh,00h,03h, 03h
+; PsgIns_02:	db 00h,0FFh,80h,04h, 04h
+; PsgIns_03:	db 30h,0FFh, -1,00h, 04h
+; PsgIns_Bass:	db 00h,0FFh, -1,01h, 01h
+; PsgIns_Snare:	db 00h,0FFh,00h,0F0h,0F0h
 
-DacIns_KickSpnb:
-		zSmpl Sampl_KickSpinb,Sampl_KickSpinb_End,0
-DacIns_Kick:	zSmpl Sampl_Kick,Sampl_Kick_End,0
-DacIns_Snare:	zSmpl Sampl_Snare,Sampl_Snare_End,0
-; DacIns_MyTime:	zSmpl Sampl_MyTime,Sampl_MyTime_End,0
-
-;
-PsgIns_00:	db 00h,0FFh,40h,00h, 80h
-PsgIns_01:	db 00h,0FFh,00h,03h, 03h
-PsgIns_02:	db 00h,0FFh,80h,04h, 04h
-PsgIns_03:	db 30h,0FFh, -1,00h, 04h
-PsgIns_Bass:	db 00h,0FFh, -1,01h, 01h
-PsgIns_Snare:	db 00h,0FFh,00h,0F0h,0F0h
-;
-; Fmins_Guitar_Heavy:
-; 		binclude "data/sound/instr/fm/guitar_heavy.gsx",2478h,28h
+Fmins_Guitar_Heavy:
+		binclude "data/sound/instr/fm/guitar_heavy.gsx",2478h,28h
 ; FmIns_Fm3_OpenHat:
 ; 		binclude "data/sound/instr/fm/fm3_openhat.gsx",2478h,28h
 ; FmIns_Fm3_ClosedHat:

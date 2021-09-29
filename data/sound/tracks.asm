@@ -5,60 +5,63 @@
 ; SOUND
 ; ------------------------------------------------------------
 
-gemaInsPsg	macro pitch,psgins
-		dc.b 0,pitch
-		dc.b psgins&$FF,((psgins>>8)&$FF)
-		dc.b 0,0
-		dc.b 0,0
+; Null instrument
+gemaInsNull	macro
+		dc.b  -1,$00,$00,$00
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
 		endm
 
-gemaInsPsgN	macro pitch,psgins,type
-		dc.b 1,pitch
-		dc.b psgins&$FF,((psgins>>8)&$FF)
-		dc.b type,0
-		dc.b 0,0
+; alv: attack level
+; atk: attack rate
+; slv: sustain
+; dky: decay rate
+; rrt: release rate
+gemaInsPsg	macro pitch,alv,atk,slv,dky,rrt
+		dc.b $00,pitch,alv,atk
+		dc.b slv,dky,rrt,$00
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
+		endm
+
+; mode: noise mode (PSGN only)
+gemaInsPsgN	macro pitch,alv,atk,slv,dky,rrt,mode
+		dc.b $01,pitch,alv,atk
+		dc.b slv,dky,rrt,mode
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
 		endm
 
 gemaInsFm	macro pitch,fmins
-		dc.b 2,pitch
-		dc.b fmins&$FF,((fmins>>8)&$FF)
-		dc.b 0,0
-		dc.b 0,0
+		dc.b $02,pitch,fmins&$FF,((fmins>>8)&$FF)
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
 		endm
 
 gemaInsFm3	macro pitch,fmins,freq1,freq2,freq3
-		dc.b 3,pitch
-		dc.b fmins&$FF,((fmins>>8)&$FF)
-		dc.b 0,0
-		dc.b 0,0		
+		dc.b $03,pitch,fmins&$FF,((fmins>>8)&$FF)
+		dc.b freq1&$FF,((freq1>>8)&$FF)
+		dc.b freq2&$FF,((freq2>>8)&$FF)
+		dc.b freq3&$FF,((freq3>>8)&$FF)
+		dc.b $00,$00,$00,$00
 		endm
 
-; Dac samples:
-; first dacins points to a zSmpl stored on Z80
-; (see instr_z80.asm)
-; then in your zSmpl, it will have the
-; ROM pointers for START, ENDING and LOOP
-; (LEN is automaticly set in the macro)
-gemaInsDac	macro pitch,dacins,flags
+gemaInsFm6	macro pitch,start,end,loop
 		dc.b 4,pitch
-		dc.b dacins&$FF,((dacins>>8)&$FF)
-		dc.b flags,0		; flags: 0-dont loop, 1-loop
-		dc.b 0,0
+		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
+		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
+		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
+		dc.b 0,0,0,0
 		endm
 
-; TODO: rework on this
-; gemaInsPwm	macro pitch,pointer
-; 		dc.b 5,pitch
-; 		dc.b 0,0		; filler
-; 		dc.b ((pointer>>24)&$FF),((pointer>>16)&$FF)
-; 		dc.b ((pointer>>8)&$FF),pointer&$FF
-; 		endm
-
-gemaInsNull	macro
-		dc.b -1,0
-		dc.b  0,0
-		dc.b  0,0
-		dc.b  0,0
+gemaInsPwm	macro pitch,start,end,loop
+		dc.b 5,pitch
+		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
+		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
+		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
+		dc.b 0,0,0,0
 		endm
 
 ; ------------------------------------------------------------
@@ -69,34 +72,20 @@ gemaInsNull	macro
 ; 		gemaInsPsg  0,PsgIns_01
 ; 		gemaInsPsg  0,PsgIns_01
 ; 		gemaInsPsgN 0,PsgIns_Snare,%101
-; 
-; TEST_BLOCKS_2	binclude "data/sound/tracks/kraid_blk.bin"
-; TEST_PATTERN_2	binclude "data/sound/tracks/kraid_patt.bin"
-; TEST_INSTR_2
-; 		gemaInsPsgN 0,PsgIns_Bass,%011
-; 		gemaInsPsg  0,PsgIns_03
 
 GemaTrk_brinstr_blk:
 		binclude "data/sound/tracks/brinstr_blk.bin"
 GemaTrk_brinstr_patt:
 		binclude "data/sound/tracks/brinstr_patt.bin"
 GemaTrk_brinstr_ins:
-		gemaInsPsg  0,PsgIns_03
-		gemaInsPsgN 0,PsgIns_Bass,%011
+		gemaInsPsg    0,$40,$FF,$FF,$01,$01
+		gemaInsPsgN -12,$00,$FF,$FF,$02,$04,%011
 
-GemaTrk_yuki_blk:
-		binclude "data/sound/tracks/yuki_blk.bin"
-GemaTrk_yuki_patt:
-		binclude "data/sound/tracks/yuki_patt.bin"
-GemaTrk_yuki_ins:
-		gemaInsDac 0,DacIns_Snare,0
-		gemaInsNull
-		gemaInsFm  0,FmIns_Bass_4,0
-		gemaInsDac 0,DacIns_KickSpnb,0
-		gemaInsNull
-		gemaInsFm  0,FmIns_PianoM1,0
-		gemaInsPsg  0,PsgIns_03
-		gemaInsPsgN 0,PsgIns_03,%100
+GemaTrk_mars_blk:
+		binclude "data/sound/tracks/mars_blk.bin"
+GemaTrk_mars_patt:
+		binclude "data/sound/tracks/mars_patt.bin"
+GemaTrk_mars_ins:
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
@@ -108,29 +97,3 @@ GemaTrk_yuki_ins:
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-
-; 		gemaInsPwm -17,PwmIns_TECHNOBASSD
-; 		gemaInsFm    0,FmIns_Bass_metal
-; 		gemaInsPwm -17,PwmIns_WHODSNARE
-; 		gemaInsPsgN  0,PsgIns_00,%100
-; 		gemaInsFm    0,FmIns_Bass_2
-; 		gemaInsPwm -17,PwmIns_TECHNOBASSD
-; 		gemaInsPwm -17,PwmIns_SPHEAVY1
-; 		gemaInsPwm -17,PwmIns_MCLSTRNG

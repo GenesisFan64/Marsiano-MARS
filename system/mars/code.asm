@@ -2144,9 +2144,7 @@ slave_loop:
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
-.no_wav:
-
-; 		mov	#1,r1
+; 		mov	#1,r1			; EMUS only.
 ; 		mov	#PWM_STEREO,r2
 ; 		mov	#PWM_STEREO_e,r3
 ; 		mov	#0,r4
@@ -2156,6 +2154,9 @@ slave_loop:
 ; 		mov	#MarsSound_SetPwm,r0
 ; 		jsr	@r0
 ; 		nop
+.no_wav:
+
+
 
 		bra	slave_loop
 		nop
