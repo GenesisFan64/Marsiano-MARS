@@ -13,9 +13,9 @@ gemaInsNull	macro
 		dc.b $00,$00,$00,$00
 		endm
 
-; alv: attack level
+; alv: attack level (00=high)
 ; atk: attack rate
-; slv: sustain
+; slv: sustain (00=high)
 ; dky: decay rate
 ; rrt: release rate
 gemaInsPsg	macro pitch,alv,atk,slv,dky,rrt
@@ -78,8 +78,19 @@ GemaTrk_brinstr_blk:
 GemaTrk_brinstr_patt:
 		binclude "data/sound/tracks/brinstr_patt.bin"
 GemaTrk_brinstr_ins:
-		gemaInsPsg    0,$40,$FF,$FF,$01,$01
-		gemaInsPsgN -12,$00,$FF,$FF,$02,$04,%011
+		gemaInsPsg    0,$30,$80,$10,$00,$01
+		gemaInsPsgN -12,$00,$FF,$00,$00,$01,%011
+
+GemaTrk_gigalo_blk:
+		binclude "data/sound/tracks/gigalo_blk.bin"
+GemaTrk_gigalo_patt:
+		binclude "data/sound/tracks/gigalo_patt.bin"
+GemaTrk_gigalo_ins:
+		gemaInsPsg   0,$10,$FF,$10,$08,$08
+		gemaInsPsgN  0,$00,$FF,$00,$20,$10,%100
+		gemaInsPsgN  0,$00,$FF,$00,$20,$10,%101
+		gemaInsPsgN  0,$00,$FF,$00,$20,$10,%110
+		gemaInsNull
 
 GemaTrk_mars_blk:
 		binclude "data/sound/tracks/mars_blk.bin"
@@ -88,7 +99,31 @@ GemaTrk_mars_patt:
 GemaTrk_mars_ins:
 		gemaInsNull
 		gemaInsNull
+		gemaInsPsgN  0,$00,$FF,$00,$10,$10,%100
 		gemaInsNull
+		gemaInsPsg   0,$20,$FF,$40,$01,$00
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+
+GemaTrk_jackrab_blk:
+		binclude "data/sound/tracks/jackrab_blk.bin"
+GemaTrk_jackrab_patt:
+		binclude "data/sound/tracks/jackrab_patt.bin"
+GemaTrk_jackrab_ins:
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsPsgN  0,$00,$FF,$00,$10,$10,%100
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsPsg   0,$30,$FF,$30,$04,$01
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull

@@ -34,7 +34,7 @@ trk_tickSet	equ 21			; Ticks set for this track
 ; chnBuff
 ; 8 bytes (fixed size)
 chnl_Chip	equ 0			; Channel chip: etti iiii | e-enable t-type i-chip channel
-chnl_Type	equ 1			; Current type
+chnl_Type	equ 1			; Impulse note bits
 chnl_Note	equ 2
 chnl_Ins	equ 3
 chnl_Vol	equ 4
@@ -728,28 +728,32 @@ updtrack:
 ; TODO: fix the sample slowdown
 
 .first_fill:
+		call	dac_fill
 		call	dac_me
 		res	6,b			; Reset FILL flag
 		ld	(iy+trk_status),b
 
 	; CODE that shuts last used
 	; channels go here
-; 		push	iy
-; 		pop	ix
-; 		ld	de,20h			; go to channel data
-; 		add	ix,de
-; 		ld	de,8
-; 		ld	b,MAX_TRKCHN
-; .clrf:
-; 		push	de
-; 		ld	a,(ix+chnl_Chip)
-; 		or	a
-; 		call	nz,.silnc_chip
-; 		ld	(ix+chnl_Note),-2
-; 		ld	(ix+chnl_Status),11b
-; 		pop	de
-; 		add	ix,de
-; 		djnz	.clrf
+		push	iy
+		pop	ix
+		ld	de,20h			; go to channel data
+		add	ix,de
+		call	dac_me
+		ld	bc,0
+		ld	de,8
+		ld	b,MAX_TRKCHN
+.clrf:
+		push	de
+		ld	a,(ix+chnl_Chip)
+		or	a
+		call	nz,.silnc_chip
+		call	dac_me
+		ld	(ix+chnl_Note),-2
+		ld	(ix+chnl_Status),001b
+		pop	de
+		add	ix,de
+		djnz	.clrf
 ; 		xor	a	; TODO: psgHat lock check
 ; 		ld	hl,psgHatMode+1
 ; 		ld	e,(hl)
@@ -810,13 +814,13 @@ updtrack:
 		push	de
 		call	transferRom
 		pop	de
-		call	dac_fill
 		call	dac_me
 		ld	a,e
 		add	a,80h
 		ld	e,a
 		ld	l,(iy+trk_romPatt)	; Recieve 80h of header data
 		ld	h,(iy+(trk_romPatt+1))
+		call	dac_me
 		ld	a,(iy+(trk_romPatt+2))
 		ld	bc,80h
 		call	transferRom
@@ -826,6 +830,7 @@ updtrack:
 		ld	de,0
 		ld	e,a
 		add	hl,de
+		call	dac_me
 		ld	a,(hl)			; a - block
 		cp	-1
 		jp	z,.track_end
@@ -837,11 +842,13 @@ updtrack:
 		add	a,a
 		add	a,a
 		ld	e,a			; block * 4
+		call	dac_me
 		add	hl,de
 		ld	c,(hl)
 		inc	hl
 		ld	b,(hl)			; bc - numof Rows
 		inc	hl
+		call	dac_me
 		ld	e,(hl)
 		inc	hl
 		ld	d,(hl)			; de - pointer (base+increment by this)
@@ -853,30 +860,80 @@ updtrack:
 		ld	a,(iy+(trk_romPatt+2))
 		add	hl,de			; increment to get new pointer
 		adc	a,0			; and it's LSB
+		call	dac_me
 		ld	(iy+trk_romPattRd),l	; Save copy of the pointer
 		ld	(iy+(trk_romPattRd+1)),h
 		ld	(iy+(trk_romPattRd+2)),a
 		ld	de,(currTrkData)	; de - Output data
 		ld	b,a
+		call	dac_me
 		ld	a,e
 		add	a,80h
 		ld	e,a
 		ld	a,b
 		ld	(iy+trk_Read),e
 		ld	(iy+((trk_Read+1))),d
-		ld	bc,080h			; fill sections 2,3,4
 		call	dac_fill
 		call	dac_me
+		ld	bc,080h			; fill sections 2,3,4
 		call	transferRom
 		ret
 
-; c - Chip
 ; PSG: 80h
-; FM:  A0h + fm key
+; FM:  A0h | FM keys
 ; PWM: C0h
-
 .silnc_chip:
+		ld	c,a
+		and	11100000b
+		cp	10000000b
+		jp	z,.is_psg
 		ret
+.is_psg:
+		ld	a,c
+		and	111b
+		cp	3		; PSGN later
+		jr	z,.is_psgn
+		call	dac_me
+		ld	c,a
+		add	a,a		; manually add 20h
+		add	a,a
+		add	a,a
+		add	a,a
+		add	a,a
+		call	dac_me
+		ld	de,0
+		ld	e,a
+		ld	hl,tblPSG
+		add	hl,de
+		ld	(hl),0		; delete Link
+		inc	hl
+		ld	(hl),0
+		call	dac_me
+		dec	hl
+		dec	hl
+	; link equal check goes here
+		ld	hl,psgcom
+		ld	de,0
+		ld	e,c
+		add	hl,de
+		ld	(hl),100b	; KEY STOP
+		ret
+.is_psgn:
+		call	dac_me
+		ld	hl,tblPSGN
+		ld	(hl),0		; delete Link
+		inc	hl
+		ld	(hl),0
+		dec	hl
+		dec	hl
+		call	dac_me
+	; link equal check goes here
+		xor	a
+		ld	(psgHatMode),a
+		ld	hl,psgcom+3	; KEY STOP
+		ld	(hl),100b
+		ret
+
 ; 		ld	c,a
 ; 		and	01100000b	; Get curr used chip
 ; 		cp	00100000b	; FM?
@@ -1145,6 +1202,16 @@ playonchip
 
 ; --------------------------------
 ; PSG1-3,PSGN
+.ins_psgn:
+		call	.pick_psgn	; Search PSGN
+		cp	-1
+		ret	z
+		call	dac_me
+		call	.getins_psg	; same thing as normal PSG
+		inc	hl		; one more for hatMode
+		ld	a,(hl)
+		ld	(psgHatMode),a
+		ret
 .ins_psg:
 		call	dac_me
 		call	.pick_psg	; Search PSG
@@ -1175,16 +1242,6 @@ playonchip
 		call	dac_me
 		ld	(ix+8),a	; RRT
 		ret
-.ins_psgn:
-		call	.pick_psgn	; Search PSG
-		cp	-1
-		ret	z
-		call	dac_me
-		call	.getins_psg	; same thing as normal PSG
-		inc	hl		; one more for hatMode
-		ld	a,(hl)
-		ld	(psgHatMode),a
-		ret
 
 ; --------------------------------
 ; FM,FM3,FM6
@@ -1196,6 +1253,52 @@ playonchip
 ; ----------------------------------------
 
 .req_vol:
+		call	.check_ins
+		cp	-1		; Null
+		ret	z
+		cp	0		; PSG normal
+		jr	z,.vol_psg
+		cp	1		; PSG noise
+		jr	z,.vol_psgn
+; 		cp	2		; FM normal
+; 		jr	z,.fm_ins
+; 		cp	3		; FM special
+; 		ret	z
+; 		cp	4		; DAC
+; 		jp	z,.dac_ins
+; 		cp	5		; PWM
+; 		jp	z,.pwm_ins
+		ret
+
+; --------------------------------
+; PSG1-3,PSGN
+.vol_psgn:
+		call	.pick_psgn	; Search PSGN
+		cp	-1
+		ret	z
+		jr	.getvol_psg	; same thing as normal PSG
+.vol_psg:
+		call	dac_me
+		call	.pick_psg	; Search PSG
+		cp	-1
+		ret	z
+.getvol_psg:
+		call	dac_me
+		ld	a,(iy+chnl_Vol)
+		sub	a,40h
+		ld	e,a
+		ld	a,(ix+4)	; ALV
+		sub	a,e
+; 		jp	c,.c_alv
+; 		xor	a
+; .c_alv:
+		ld	(ix+4),a
+		ld	a,(ix+6)	; SLV
+		sub	a,e
+; 		jp	c,.c_slv
+; 		xor	a
+; .c_slv:
+		ld	(ix+6),a
 		ret
 
 ; ----------------------------------------
@@ -1210,6 +1313,7 @@ playonchip
 ; ----------------------------------------
 
 .req_note:
+		call	dac_fill
 		call	.check_ins
 		cp	-1		; Null
 		ret	z
@@ -1222,6 +1326,9 @@ playonchip
 ; --------------------------------
 ; PSG1-3,PSGN
 .pstop:
+		ld	(ix),0
+		ld	(ix+1),0
+		call	dac_me
 		ld	de,0
 		ld	e,(ix+2)
 		ld 	hl,psgcom
@@ -1229,6 +1336,9 @@ playonchip
 		ld	(hl),100b	; Full stop
 		ret
 .poff:
+		ld	(ix),0
+		ld	(ix+1),0
+		call	dac_me
 		ld	de,0
 		ld	e,(ix+2)
 		ld 	hl,psgcom
@@ -1247,12 +1357,13 @@ playonchip
 		cp	-1
 		ret	z
 		ld	a,(ix+2)	; Check if PSGN is in
-		cp	02h
+		cp	02h		; Tone3 mode
 		jp	nz,.no_p3
 		ld	a,(psgHatMode)
 		and	011b
 		cp	011b
-		ret	z
+		jr	nz,.no_p3
+		jr	.pstop
 .no_p3:
 		call	dac_me
 		ld	a,(iy+chnl_Note)
@@ -1274,8 +1385,11 @@ playonchip
 		ld	d,(hl)
 		ld	bc,0
 		ld	c,(ix+2)
+		ld	a,c
+		or	80h		; Add 80h for PSG
+		ld	(iy+chnl_Chip),a
 		call	dac_me
-		push	ix		; move ix to hl
+		push	ix		; swap ix to hl
 		pop	hl
 		inc	hl		; skip link
 		inc	hl
@@ -1284,9 +1398,7 @@ playonchip
 		ld 	ix,psgcom
 		add	ix,bc
 		call	dac_me
-
-	; Copy instrument to pseudo psg
-		ld	a,(hl)
+		ld	a,(hl)		; Copy instrument to pseudo psg
 		ld	(ix+ALV),a	; ALV
 		inc	hl
 		ld	a,(hl)
@@ -1382,23 +1494,42 @@ playonchip
 ; ix - Free or Used table slot
 
 .chk_srch:
+		push	ix
+		pop	bc
+.next:
 		ld	a,(ix)		; LSB of link (MSB not needed)
 		cp	-1		; End of list?
-		ret	z
+		jr	z,.chk_z
 		call	dac_me
 		push	iy
 		pop	de		; de - Copy of curr track-channel
-		or	a
+		cp	e
 		jp	nz,.same
-		ld	(ix),e		; Found free slot, pick it.
-		ld	(ix+1),d
-		ret
+		ld	a,(ix+1)
+		cp	d
+		ret	z
 .same:
-		cp	e		; Link is same as de? (LSB ONLY)
-		ret	z		; Return if yes
 		ld	de,20h		; Next channel table
 		add	ix,de
-		jp	.chk_srch
+		jp	.next
+.chk_z:
+		push	bc
+		pop	ix
+		ld	bc,20h
+.next_f:
+		ld	a,(ix)
+		cp	-1
+		ret	z
+		or	a
+		jp	nz,.same_f
+		push	iy
+		pop	de
+		ld	(ix),e
+		ld	(ix+1),d
+		ret
+.same_f:
+		add	ix,bc
+		jp	.next_f
 
 ; --------------------------------------------
 ; Same thing but doesn't increment
@@ -1408,16 +1539,23 @@ playonchip
 		push	iy
 		pop	de		; de - Copy of curr track-channel
 		call	dac_me
-		ld	a,(ix)
+		ld	a,(ix)		; get link LSB
+		cp	e
+		jp	nz,.same_s
+		call	dac_me
+		ld	a,(ix+1)
+		cp	d
+		ret	z
+.same_s:
+		call	dac_me
 		or	a
-		jr	nz,.busy
+		jr	nz,.busy_s
 		xor	a		; Found free slot, pick it.
 		ld	(ix),e
 		ld	(ix+1),d
+		call	dac_me
 		ret
-.busy:
-		cp	e		; Same link? (LSB)
-		ret	z		; Yes
+.busy_s:
 		ld	a,-1
 		ret
 
@@ -2025,7 +2163,7 @@ dac_play:
 ; *** self-modifiable code ***
 ; --------------------------------------------------------
 
-dac_me:		exx				; <-- code changes between EXX(play) and RET(stop)
+dac_me:		exx			; <-- code changes between EXX(to play) and RET(to stop)
 		ex	af,af'
 		ld	b,l
 		ld	a,2Ah
@@ -2049,10 +2187,10 @@ dac_me:		exx				; <-- code changes between EXX(play) and RET(stop)
 ; *** self-modifiable code ***
 ; --------------------------------------------------------
 
-dac_fill:	push	af			; <-- code changes between PUSH AF(play) and RET(stop)
+dac_fill:	push	af		; <-- code changes between PUSH AF(playing) and RET(stopped)
 		ld	a,(dDacFifoMid)
 		exx
-		xor	h			; xx.00
+		xor	h		; xx.00
 		exx
 		and	80h
 		jp	nz,dac_refill
@@ -2517,7 +2655,6 @@ tblFM6:		db 00h,00h,06h,00h,00h,00h,00h,00h	; Channel 6 (If DAC is enabled:
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db -1	; autosearch end point
 
-	; TODO: Use this for SCD if needed...
 tblPWM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,00h,00h,00h,00h,00h,00h
@@ -2577,7 +2714,7 @@ psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
-		org 1400h
+		org 1300h
 dWaveBuff	ds 100h			; WAVE data buffer: updated every 80h bytes *LSB must be 00h*
 trkDataC	ds 100h*MAX_TRKS	; Track data cache: 100h bytes each
 blkHeadC	ds 100h*MAX_TRKS	; Track blocks and heads: 80h each
