@@ -20,10 +20,10 @@ Fmins_Guitar_Heavy:
 ; FmIns_Fm3_ClosedHat:
 ; 		binclude "data/sound/instr/fm/fm3_closedhat.gsx",2478h,28h
 ;
-FmIns_DrumKick:
-		binclude "data/sound/instr/fm/drum_kick.gsx",2478h,20h
-FmIns_DrumSnare:
-		binclude "data/sound/instr/fm/drum_snare.gsx",2478h,20h
+; FmIns_DrumKick:
+; 		binclude "data/sound/instr/fm/drum_kick.gsx",2478h,20h
+; FmIns_DrumSnare:
+; 		binclude "data/sound/instr/fm/drum_snare.gsx",2478h,20h
 ; ; FmIns_DrumCloseHat:
 ; ; 		binclude "data/sound/instr/fm/drum_closehat.gsx",2478h,20h
 FmIns_PianoM1:
@@ -41,20 +41,20 @@ FmIns_PianoM1:
 ; ; 		binclude "data/sound/instr/fm/brass_gummy.gsx",2478h,20h
 ; ; FmIns_Flaute_1:
 ; ; 		binclude "data/sound/instr/fm/flaute_1.gsx",2478h,20h
-FmIns_Bass_1:
-		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
-FmIns_Bass_2:
-		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
+; FmIns_Bass_1:
+; 		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
+; FmIns_Bass_2:
+; 		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
 FmIns_Bass_3:
 		binclude "data/sound/instr/fm/bass_3.gsx",2478h,20h
-FmIns_Bass_4:
-		binclude "data/sound/instr/fm/bass_4.gsx",2478h,20h
-FmIns_Bass_5:
-		binclude "data/sound/instr/fm/bass_5.gsx",2478h,20h
-FmIns_Bass_6:
-		binclude "data/sound/instr/fm/bass_6.gsx",2478h,20h
-FmIns_Bass_7:
-		binclude "data/sound/instr/fm/bass_7.gsx",2478h,20h
+; FmIns_Bass_4:
+; 		binclude "data/sound/instr/fm/bass_4.gsx",2478h,20h
+; FmIns_Bass_5:
+; 		binclude "data/sound/instr/fm/bass_5.gsx",2478h,20h
+; FmIns_Bass_6:
+; 		binclude "data/sound/instr/fm/bass_6.gsx",2478h,20h
+; FmIns_Bass_7:
+; 		binclude "data/sound/instr/fm/bass_7.gsx",2478h,20h
 ; ; FmIns_Bass_heavy:
 ; ; 		binclude "data/sound/instr/fm/bass_heavy.gsx",2478h,20h
 ; ; FmIns_Bass_metal:
@@ -91,5 +91,5 @@ FmIns_Bass_7:
 ; 		binclude "data/sound/instr/fm/ambient_spook.gsx",2478h,20h
 ; FmIns_Ambient_3:
 ; 		binclude "data/sound/instr/fm/ambient_3.gsx",2478h,20h
-; ; FmIns_Ding_toy:
-; ; 		binclude "data/sound/instr/fm/ding_toy.gsx",2478h,20h
+FmIns_Ding_toy:
+		binclude "data/sound/instr/fm/ding_toy.gsx",2478h,20h

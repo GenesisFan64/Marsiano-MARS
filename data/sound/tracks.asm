@@ -100,14 +100,14 @@ GemaTrk_mars_ins:
 		gemaInsNull
 		gemaInsNull
 		gemaInsPsgN  0,$00,$FF,$00,$10,$10,%100
-		gemaInsNull
-		gemaInsPsg   0,$20,$FF,$40,$01,$00
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
+		gemaInsFm    0,FmIns_PianoM1,0
+		gemaInsPsg   0,$40,$FF,$40,$00,$00
+		gemaInsFm    0,FmIns_Bass_3,0
 		gemaInsNull
 		gemaInsNull
+		gemaInsFm    0,FmIns_Guitar_heavy,0
 		gemaInsNull
+		gemaInsFm    0,FmIns_ding_toy,0
 
 GemaTrk_jackrab_blk:
 		binclude "data/sound/tracks/jackrab_blk.bin"
@@ -117,13 +117,13 @@ GemaTrk_jackrab_ins:
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
-		gemaInsPsgN  0,$00,$FF,$00,$10,$10,%100
+		gemaInsPsgN  0,$00,$FF,$00,$08,$08,%100
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
-		gemaInsPsg   0,$30,$FF,$30,$04,$01
+		gemaInsPsg   0,$10,$FF,$40,$04,$04
 		gemaInsNull
 		gemaInsNull
 		gemaInsNull
