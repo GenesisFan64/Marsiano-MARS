@@ -42,11 +42,15 @@ gemaInsFm	macro pitch,fmins
 
 gemaInsFm3	macro pitch,fmins,freq1,freq2,freq3
 		dc.b $03,pitch,fmins&$FF,((fmins>>8)&$FF)
-		dc.b freq1&$FF,((freq1>>8)&$FF)
-		dc.b freq2&$FF,((freq2>>8)&$FF)
-		dc.b freq3&$FF,((freq3>>8)&$FF)
+		dc.b $00,$00,$00,$00
+		dc.b $00,$00,$00,$00
 		dc.b $00,$00,$00,$00
 		endm
+
+; 		dc.b freq1&$FF,((freq1>>8)&$FF)
+; 		dc.b freq2&$FF,((freq2>>8)&$FF)
+; 		dc.b freq3&$FF,((freq3>>8)&$FF)
+; 		dc.b $00,$00,$00,$00
 
 gemaInsFm6	macro pitch,start,end,loop
 		dc.b 4,pitch
