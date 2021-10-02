@@ -87,9 +87,9 @@ GemaTrk_gigalo_patt:
 		binclude "data/sound/tracks/gigalo_patt.bin"
 GemaTrk_gigalo_ins:
 		gemaInsPsg   0,$10,$FF,$10,$08,$08
-		gemaInsPsgN  0,$00,$FF,$00,$20,$10,%100
-		gemaInsPsgN  0,$00,$FF,$00,$20,$10,%101
-		gemaInsPsgN  0,$00,$FF,$00,$20,$10,%110
+		gemaInsPsgN  0,$00,$FF,$00,$04,$08,%100
+		gemaInsPsgN  0,$00,$FF,$00,$04,$08,%101
+		gemaInsPsgN  0,$00,$FF,$00,$04,$04,%110
 		gemaInsNull
 
 GemaTrk_mars_blk:
