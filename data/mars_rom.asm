@@ -40,6 +40,7 @@ TESTMARS_BG_PAL:
 ; 		binclude "data/mars/objects/anim/logo_1_anim.bin"
 ; 		align 4
 
+
 PWM_STEREO:	binclude "data/sound/test_mars.wav",$2C,$300000
 PWM_STEREO_e:
 		align 4

@@ -27,14 +27,27 @@
 ; 		align 2
 ;
 ;
-Sampl_KickSpinb:
-		binclude "data/sound/instr/smpl/spinb_kick.wav",$2C
-Sampl_KickSpinb_End:
 
-Sampl_Kick:	binclude "data/sound/instr/smpl/stKick.wav",$2C
-Sampl_Kick_End:
-Sampl_Snare:	binclude "data/sound/instr/smpl/snare.wav",$2C
-Sampl_Snare_End:
+; --------------------------------------------------------
+; DAC/PWM samples
+; --------------------------------------------------------
+
+DacIns_CdSnare:
+		binclude "data/sound/instr/smpl/cd_snare.wav",$2C
+DacIns_CdSnare_e:
+
+DacIns_Kick:
+		binclude "data/sound/instr/smpl/kick.wav",$2C
+DacIns_Kick_e:
+
+; Sampl_KickSpinb:
+; 		binclude "data/sound/instr/smpl/spinb_kick.wav",$2C
+; Sampl_KickSpinb_End:
+;
+; Sampl_Kick:	binclude "data/sound/instr/smpl/stKick.wav",$2C
+; Sampl_Kick_End:
+; Sampl_Snare:	binclude "data/sound/instr/smpl/snare.wav",$2C
+; Sampl_Snare_End:
 
 PCM_START:	binclude "data/sound/test_md.wav",$2C,$0BFFFF
 PCM_END:

@@ -52,12 +52,12 @@ gemaInsFm3	macro pitch,fmins,freq1,freq2,freq3
 ; 		dc.b freq3&$FF,((freq3>>8)&$FF)
 ; 		dc.b $00,$00,$00,$00
 
-gemaInsFm6	macro pitch,start,end,loop
+gemaInsDac	macro pitch,start,end,loop,flags
 		dc.b 4,pitch
 		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
 		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
 		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
-		dc.b 0,0,0,0
+		dc.b flags,0,0,0,0
 		endm
 
 gemaInsPwm	macro pitch,start,end,loop
@@ -101,11 +101,11 @@ GemaTrk_mars_blk:
 GemaTrk_mars_patt:
 		binclude "data/sound/tracks/mars_patt.bin"
 GemaTrk_mars_ins:
-		gemaInsNull
-		gemaInsNull
-		gemaInsPsgN  0,$00,$FF,$00,$10,$10,%100
+		gemaInsNull   ;gemaInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,$123456,0
+		gemaInsNull   ;gemaInsDac   0,DacIns_Kick,DacIns_Kick_e,$123456,0
+		gemaInsPsgN  0,$00,$FF,$00,$20,$20,%100
 		gemaInsFm    0,FmIns_PianoM1,0
-		gemaInsPsg   0,$40,$FF,$40,$00,$00
+		gemaInsPsg   0,$40,$20,$20,$00,$00
 		gemaInsFm    0,FmIns_Bass_3,0
 		gemaInsNull
 		gemaInsNull

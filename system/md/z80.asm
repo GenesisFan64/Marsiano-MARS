@@ -74,6 +74,13 @@ ALV		equ	36
 FLG		equ	40
 TMR		equ	44
 
+;FMCOM		equ	0
+REGKEYS		equ	1
+REGA4		equ	2
+REGA0		equ	4
+REGB0		equ	6
+REGB4		equ	8
+
 ; ====================================================================
 ; --------------------------------------------------------
 ; Code starts here
@@ -1185,12 +1192,13 @@ setupchip
 		jr	z,.ins_psg
 		cp	1		; PSG noise
 		jr	z,.ins_psgn
+		rst	8
 		cp	2		; FM normal
 		jr	z,.ins_fm
 ; 		cp	3		; FM special
 ; 		ret	z
-; 		cp	4		; DAC
-; 		jp	z,.ins_dac
+		cp	4		; DAC
+		jp	z,.ins_dac
 ; 		cp	5		; PWM
 ; 		jp	z,.ins_pwm
 		ret
@@ -1239,6 +1247,37 @@ setupchip
 ; FM,FM3,FM6
 
 ; TODO: freq scratches
+.ins_dac:
+		call	.pick_dac	; Check if FM6 is busy
+		cp	-1
+		ret	z
+
+		inc	hl		; skip ID and pitch
+		inc	hl
+		ld	de,wave_Start
+
+	; TODO: rushed code
+	; copypastes START,END,LOOP and FLAGS
+		ld	b,4
+.copypas1:
+		ld	a,(hl)
+		ld	(de),a
+		inc	hl
+		inc	de
+		rst	8
+		ld	a,(hl)
+		ld	(de),a
+		inc	hl
+		inc	de
+		rst	8
+		djnz	.copypas1
+		ld	a,(hl)
+		inc	hl
+		ld	(de),a
+		ld	a,(hl)		; flag
+		ld	(wave_Flags),a
+		ret
+
 .ins_fm:
 		call	.pick_fm	; Search FM
 		cp	-1
@@ -1268,39 +1307,49 @@ setupchip
 		ld	(ix+9),h
 		rst	8
 		ld	a,(ix+2)	; Prepare first FM reg
+		ld	e,a
 		and	11b
-		or	30h
+		or	30h		; First out reg
 		ld	d,a
-		ld	b,4*7
+		ld	b,4*7		; Numof_regs to process
+		bit	2,e
+		jr	nz,.setlv_2
 .setlv:
 		ld	e,(hl)
-		call	fm_autoset
+		call	fm_send_1
+		inc 	d		; Next reg +4
 		inc 	d
+		inc 	d
+		rst	8
+		inc 	d
+		inc	hl
+		djnz	.setlv
+		jp	.fmins_c
+.setlv_2:
+		ld	e,(hl)
+		call	fm_send_2
 		inc 	d
 		inc 	d
 		inc 	d
 		rst	8
+		inc 	d
 		inc	hl
-		djnz	.setlv
-
-		ld	a,d
-		and	11b
-		or	0B0h
+		djnz	.setlv_2
+.fmins_c:
+		ld	a,(ix+2)
+		and	111b
 		ld	d,a
 		ld	e,(hl)
 		ld	(ix+4),e	; Save 0B0h
 		inc 	hl
 		rst	8
-		ld	a,(hl)
-		and	00111111b
-		ld	b,a
-		ld	a,(ix+5)
-		and	11000000b
-		or	b
+		ld	a,(hl)		; Get 0B4h
+		or	11000000b	; default panning
 		ld	(ix+5),a	; Save 0B4h
 		inc	hl		; FM3 enable bit is here
 		inc	hl
-		ld	a,(hl)		; Keys (xxxx0000b)
+		ld	a,(hl)		; keys (xxxx0000b)
+		or	d		; and channel
 		ld	(ix+6),a
 		rst	8
 .insfm_same:
@@ -1318,6 +1367,7 @@ setupchip
 		jr	z,.vol_psg
 		cp	1		; PSG noise
 		jr	z,.vol_psgn
+		rst	8
 		cp	2		; FM normal
 		jr	z,.vol_fm
 ; 		cp	3		; FM special
@@ -1355,7 +1405,8 @@ setupchip
 ; --------------------------------
 ; FM,FM3,FM6
 
-; TODO: freq scratches
+; TODO: might scratch the wave sample
+;
 ; and this code is horrible.
 .vol_fm:
 		call	.pick_fm	; Search FM
@@ -1466,7 +1517,50 @@ setupchip
 ; ----------------------------------------
 
 .req_eff:
+		call	.check_ins
+		cp	-1		; Null
+		ret	z
+		;cp	0		; PSG normal
+		;jr	z,.note_psg
+		;cp	1		; PSG noise
+		;jp	z,.note_psgn
+		cp	2
+		jp	z,.eff_fm
 		ret
+
+.eff_fm:
+		call	.pick_fm	; Search FM
+		cp	-1
+		ret	z
+		rst	8
+		ld	e,(iy+chnl_EffArg)
+		ld	a,(iy+chnl_EffId)
+		cp	24		; Effect X?
+		jr	z,.effFm_X
+		ret
+.effFm_X:
+		rst	8
+		ld	a,e
+		rlca
+		rlca
+		and	00000011b
+		ld	hl,.fmpan_list
+		ld	de,0
+		rst	8
+		ld	e,a
+		add	hl,de
+		ld	b,(hl)
+		ld	a,(ix+5)
+		and	00111111b
+		or	b
+		ld	(ix+5),a
+		rst	8
+		ret
+.fmpan_list:
+		db 10000000b	; 000h
+		db 10000000b	; 040h
+		db 11000000b	; 080h
+		db 01000000b	; 0C0h
 
 ; ----------------------------------------
 ; bit 0
@@ -1478,10 +1572,13 @@ setupchip
 		ret	z
 		cp	0		; PSG normal
 		jr	z,.note_psg
+		rst	8
 		cp	1		; PSG noise
 		jp	z,.note_psgn
 		cp	2
 		jp	z,.note_fm
+		cp	4
+		jp	z,.note_dac
 		ret
 
 ; --------------------------------
@@ -1604,6 +1701,34 @@ setupchip
 ; --------------------------------
 ; FM,FM3,FM6
 
+.note_dac:
+		call	.pick_dac	; Check if FM6 is busy
+		cp	-1
+		ret	z
+		ld	a,(iy+chnl_Note)
+		cp	-1
+		jp	z,.doff
+		cp	-2
+		jp	z,.dcut
+		;ret
+
+		;ld	a,(ix+2)
+		;and	10000111b
+		;or	0B0h		; Mark as DAC (0B0h)
+		ld	(iy+chnl_Chip),0B0h
+
+		ld	de,100h		; default pitch
+		ld	(wave_Pitch),de
+		ld	a,0
+		ld	(wave_Flags),a
+		jp	dac_play
+.dcut:
+		call	dac_off
+.doff:
+		ld	hl,0
+		ld	(tblFM6),hl
+		ret
+
 ; TODO: this may cause wav scretching
 ; freq and other reg writes
 ; are done outside of here.
@@ -1612,8 +1737,8 @@ setupchip
 		cp	-1
 		ret	z
 		ld	a,(ix+2)
-		and	10000111b
-		or	00100000b	; Mark as FM
+		and	00000111b
+		or	90h		; Mark as FM (90h)
 		rst	8
 		ld	(iy+chnl_Chip),a
 		ld	a,(iy+chnl_Note)
@@ -1623,10 +1748,16 @@ setupchip
 		add	a,e
 		ld	c,a		; c - temporal
 		ld	a,(ix+2)
+		rst	8
 		ld	hl,fmcom1
 		bit	2,a
 		jr	z,.fmlist1
 		ld	hl,fmcom2
+		;cp	6		; FM6?
+		;jp	nz,.fmlist1
+		;push 	af		; Force DAC off
+		;call	dac_off
+		;pop	af
 .fmlist1:
 		ld	de,0
 		and	11b
@@ -1637,20 +1768,24 @@ setupchip
 		rst	8
 		ld	e,a
 		add	hl,de
-		ld	a,d
+		ld	a,(iy+chnl_Note)
 		cp	-1
 		jp	z,.fm_keyoff
 		cp	-2
 		jp	z,.fm_keycut
+		rst	8
 		ld	a,c
 		ld	e,(ix+7)
 		cp	e
 		jp	nz,.newnote
-	if ZSET_TESTWAV=0
-		ld	(hl),001b
-	endif
 		call	dac_fill
-		ret
+		ld	d,(ix+5)	; d - tbl 0B4h (and panning)
+		ld	e,(ix+6)	; e - tbl keys
+		push	de
+		ld	e,(ix+4)	; e - tbl 0B0h
+		push	hl
+		pop	ix
+		jp	.fmsame_note
 .newnote:
 		ld	(ix+7),c
 		ld	b,0		; b - octave
@@ -1658,8 +1793,8 @@ setupchip
 .get_oct:
 		ld	c,a
 		sub	12
+		rst	8		; TODO: ver si aun necesito esto
 		or	a
-		rst	8		; TODO: checar si necesito esto
 		jp	m,.fnd_oct
 		inc	b
 		dec	e
@@ -1673,10 +1808,10 @@ setupchip
 		;call	fm_autoset
 		;rst	8
 
-		ld	d,(ix+5)
-		ld	e,(ix+6)
+		ld	d,(ix+5)	; d - tbl 0B4h (and panning)
+		ld	e,(ix+6)	; e - tbl keys
 		push	de
-		ld	e,(ix+4)
+		ld	e,(ix+4)	; e - tbl 0B0h
 		push	hl
 		pop	ix
 	; ix - current fmcom
@@ -1696,33 +1831,29 @@ setupchip
 		ld	c,a		; c - octave << 3
 		ld	a,(hl)		; Note MSB
 		or	c		; add octave
-		ld	(ix+2),a	; Save freq MSB
+		ld	(ix+REGA4),a	; Save freq MSB
 		dec	hl
 		ld	a,(hl)
-		ld	(ix+4),a	; Save freq LSB
-
-		ld	(ix+6),e	; Set 0B0h data
+		ld	(ix+REGA0),a	; Save freq LSB
+.fmsame_note:
+		ld	(ix+REGB0),e	; Set 0B0h data
 		pop	de
-		ld	a,d
-		or	11000000b	; TODO: panning
-		rst	8
-		ld	(ix+8),a	; Set 0B4h data
-		and	11110000b
-		ld	e,a
-		ld	a,(ix+1)
-		or	e
-		ld	(ix+1),a
-
-	if ZSET_TESTWAV=0
+		ld	(ix+REGB4),d	; Set 0B4h data
+		ld	(ix+REGKEYS),e
+	;if ZSET_TESTWAV=0
 		ld	(ix),001b
-	endif
+	;endif
 		call	dac_fill
 		ret
 .fm_keyoff:
 		ld	(hl),010b
+		ld	(ix),0
+		ld	(ix+1),0
 		ret
 .fm_keycut:
 		ld	(hl),100b
+		ld	(ix),0
+		ld	(ix+1),0
 		ret
 
 ; ----------------------------------------
@@ -1768,6 +1899,9 @@ setupchip
 .pick_fm:
 		ld	ix,tblFM		; FM
 		jr	.chk_srch
+.pick_dac:
+		ld	ix,tblFM6		; PSGN
+		jr	.chk_only
 .pick_psgn:
 		ld	ix,tblPSGN		; PSGN
 		jr	.chk_only
@@ -1775,48 +1909,67 @@ setupchip
 ; --------------------------------------------
 ; iy - Current channel
 ; ix - Channel table to read
+;
 ; Returns:
-; ix - Free or Used table slot
-
+; ix - Free or Current table slot
+;
+; Uses:
+; bc
 .chk_srch:
+		;ld	b,
+		ld	c,(iy+chnl_Ins)
 		push	ix
-		pop	bc
+
+	; Pass 1: Check if same link
 .next:
 		ld	a,(ix)		; LSB of link (MSB not needed)
+		ld	c,a
 		cp	-1		; End of list?
-		jr	z,.chk_z
-		rst	8
+		jr	z,.pass2
 		push	iy
 		pop	de		; de - Copy of curr track-channel
-		cp	e
-		jp	nz,.same
 		ld	a,(ix+1)
 		cp	d
-		ret	z
+		jr	nz,.same
+		rst	8
+		ld	a,c
+		cp	e
+		jp	nz,.same
+		pop	bc		; trash pop
+		xor	a
+		ret
 .same:
 		rst	8
 		ld	de,20h		; Next channel table
 		add	ix,de
 		jp	.next
-.chk_z:
-		push	bc
+
+	;
+.pass2:
+		;ld	a,(ix)
+
+	; Pass 3: Check if table is available
+	; to use
+.pass3:
 		pop	ix
-		ld	bc,20h
-.next_f:
+.next3:
 		ld	a,(ix)
 		cp	-1
 		ret	z
-		or	a
+		ld	c,(ix+1)
+		or	c
 		jp	nz,.same_f
 		rst	8
 		push	iy
 		pop	de
 		ld	(ix),e
 		ld	(ix+1),d
+		xor	a
 		ret
 .same_f:
-		add	ix,bc
-		jp	.next_f
+		ld	de,20h
+		add	ix,de
+		jp	.next3
 
 ; --------------------------------------------
 ; Same thing but doesn't increment
@@ -1826,21 +1979,23 @@ setupchip
 		push	iy
 		pop	de		; de - Copy of curr track-channel
 		rst	8
-		ld	a,(ix)		; get link LSB
-		cp	e
-		jp	nz,.same_s
-		rst	8
+		ld	c,(ix)
 		ld	a,(ix+1)
 		cp	d
-		ret	z
+		jp	nz,.same_s
+		ld	a,c
+		cp	e
+		jp	nz,.same_s
+		xor	a
+		ret
 .same_s:
 		rst	8
+		ld	a,c
 		or	a
 		jr	nz,.busy_s
 		xor	a		; Found free slot, pick it.
 		ld	(ix),e
 		ld	(ix+1),d
-		rst	8
 		ret
 .busy_s:
 		ld	a,-1
@@ -2393,8 +2548,8 @@ chip_env:
 		ld	(iy),0
 		bit	2,a
 		call	nz,.fm_keycut
-		bit	1,a
 		rst	8
+		bit	1,a
 		call	nz,.fm_keyoff
 		bit	0,a
 		call	nz,.fm_send2
@@ -2406,18 +2561,18 @@ chip_env:
 		ret
 
 .fm_send1:
-		ld	d,(iy+3)	; A4h+
+		ld	d,(iy+3)	; 0A4h+
 		ld	e,(iy+2)
 		call	fm_send_1
 		rst	8
-		ld	d,(iy+5)	; A0h+
+		ld	d,(iy+5)	; 0A0h+
 		ld	e,(iy+4)
 		call	fm_send_1
-		ld	d,(iy+7)	; B0h+
+		ld	d,(iy+7)	; 0B0h+
 		ld	e,(iy+6)
 		call	fm_send_1
-		ld	d,(iy+7)	; B4h+
-		ld	e,(iy+6)
+		ld	d,(iy+9)	; 0B4h+
+		ld	e,(iy+8)
 		call	fm_send_1
 		rst	8
 		ld	d,28h		; Keys + chnl
@@ -2426,18 +2581,18 @@ chip_env:
 		ld	e,a
 		jp	fm_send_1
 .fm_send2:
-		ld	d,(iy+3)	; A4h+
+		ld	d,(iy+3)	; 0A4h+
 		ld	e,(iy+2)
 		call	fm_send_2
 		rst	8
-		ld	d,(iy+5)	; A0h+
+		ld	d,(iy+5)	; 0A0h+
 		ld	e,(iy+4)
 		call	fm_send_2
-		ld	d,(iy+7)	; B0h+
+		ld	d,(iy+7)	; 0B0h+
 		ld	e,(iy+6)
 		call	fm_send_2
-		ld	d,(iy+7)	; B4h+
-		ld	e,(iy+6)
+		ld	d,(iy+9)	; 0B4h+
+		ld	e,(iy+8)
 		call	fm_send_2
 		rst	8
 		ld	d,28h		; Keys + chnl
@@ -2962,9 +3117,10 @@ tblPSGN:	db 00h,00h,03h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 
 	; FM 4+
 	;  4 - 0B0h register data
-	;  5 - 0B4h register data (panning too.)
+	;  5 - 0B4h register data (incl. panning: %LRxxxxxx)
 	;  6 - FM disable keys
 	;  7 - Last Impulse Note used
+		align 10h
 tblFM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,00h,00h,00h,00h,00h,00h
@@ -3036,9 +3192,10 @@ psgalv		db 00h,00h,00h,00h	; 36 attack level attenuation
 whdflg		db 00h,00h,00h,00h	; 40 flags to indicate hardware should be updated
 psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
 
-	; FM external control
-	; Flags|Keys+FM,FreqMSB,FreqLSB,Panning
-	; Flags: 00000skp
+	; FM external control:
+	; Flags (00000skp)| Keys+FM, FreqMSB, FreqLSB, Type,
+	; Panning+Effects
+	;
 	; p-play k-keyoff s-stop
 fmcom1		dw  0000h,0A400h,0A000h,0B000h	; First FM set (write to port 1)
 		dw 0B400h, 0000h, 0000h,00000h
