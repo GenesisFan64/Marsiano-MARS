@@ -49,5 +49,5 @@ DacIns_Kick_e:
 ; Sampl_Snare:	binclude "data/sound/instr/smpl/snare.wav",$2C
 ; Sampl_Snare_End:
 
-PCM_START:	binclude "data/sound/test_md.wav",$2C,$0BFFFF
+PCM_START:	binclude "data/sound/test_md.wav",$2C,$04FFFF
 PCM_END:

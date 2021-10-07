@@ -55,6 +55,8 @@ FmIns_Bass_3:
 ; 		binclude "data/sound/instr/fm/bass_6.gsx",2478h,20h
 ; FmIns_Bass_7:
 ; 		binclude "data/sound/instr/fm/bass_7.gsx",2478h,20h
+FmIns_Bass_8:
+		binclude "data/sound/instr/fm/bass_7.gsx",2478h,20h
 ; ; FmIns_Bass_heavy:
 ; ; 		binclude "data/sound/instr/fm/bass_heavy.gsx",2478h,20h
 ; ; FmIns_Bass_metal:
