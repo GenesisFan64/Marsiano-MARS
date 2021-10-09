@@ -6,13 +6,6 @@
 ; and DAC samples are stored in ROM
 ; ----------------------------------------------------------------
 
-; PsgIns_00:	db 00h,0FFh,40h,00h, 80h
-; PsgIns_01:	db 00h,0FFh,00h,03h, 03h
-; PsgIns_02:	db 00h,0FFh,80h,04h, 04h
-; PsgIns_03:	db 30h,0FFh, -1,00h, 04h
-; PsgIns_Bass:	db 00h,0FFh, -1,01h, 01h
-; PsgIns_Snare:	db 00h,0FFh,00h,0F0h,0F0h
-
 Fmins_Guitar_Heavy:
 		binclude "data/sound/instr/fm/guitar_heavy.gsx",2478h,28h
 ; FmIns_Fm3_OpenHat:
@@ -81,16 +74,16 @@ FmIns_Bass_8:
 ; 		binclude "data/sound/instr/fm/piano_small.gsx",2478h,20h
 ; FmIns_Piano:
 ; 		binclude "data/sound/instr/fm/piano_m1.gsx",2478h,20h
-; FmIns_Trumpet_2:
-; 		binclude "data/sound/instr/fm/trumpet_2.gsx",2478h,20h
+FmIns_Trumpet_2:
+		binclude "data/sound/instr/fm/trumpet_2.gsx",2478h,20h
 ; ; FmIns_Bell_Glass:
 ; ; 		binclude "data/sound/instr/fm/bell_glass.gsx",2478h,20h
 ; ; FmIns_Marimba_1:
 ; ; 		binclude "data/sound/instr/fm/marimba_1.gsx",2478h,20h
-; FmIns_Ambient_dark:
-; 		binclude "data/sound/instr/fm/ambient_dark.gsx",2478h,20h
-; FmIns_Ambient_spook:
-; 		binclude "data/sound/instr/fm/ambient_spook.gsx",2478h,20h
+FmIns_Ambient_dark:
+		binclude "data/sound/instr/fm/ambient_dark.gsx",2478h,20h
+FmIns_Ambient_spook:
+		binclude "data/sound/instr/fm/ambient_spook.gsx",2478h,20h
 ; FmIns_Ambient_3:
 ; 		binclude "data/sound/instr/fm/ambient_3.gsx",2478h,20h
 FmIns_Ding_toy:

@@ -47,33 +47,35 @@ gemaInsFm3	macro pitch,fmins,freq1,freq2,freq3
 		dc.b $00,$00,$00,$00
 		endm
 
-; 		dc.b freq1&$FF,((freq1>>8)&$FF)
-; 		dc.b freq2&$FF,((freq2>>8)&$FF)
-; 		dc.b freq3&$FF,((freq3>>8)&$FF)
-; 		dc.b $00,$00,$00,$00
-
 gemaInsDac	macro pitch,start,end,loop,flags
-		dc.b 4,pitch
+		dc.b $04,pitch
 		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
 		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
 		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
 		dc.b flags,0,0,0,0
 		endm
 
-gemaInsPwm	macro pitch,start,end,loop
-		dc.b 5,pitch
+gemaInsPwm	macro pitch,start,end,loop,flags
+		dc.b $05,pitch
 		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
 		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
 		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
-		dc.b 0,0,0,0
+		dc.b flags,0,0,0,0
 		endm
 
 ; ------------------------------------------------------------
 
+; OLD:
+; PsgIns_00:	db 00h,0FFh,40h,00h, 80h
+; PsgIns_01:	db 00h,0FFh,00h,03h, 03h
+; PsgIns_02:	db 00h,0FFh,80h,04h, 04h
+; PsgIns_03:	db 30h,0FFh, -1,00h, 04h
+; PsgIns_Bass:	db 00h,0FFh, -1,01h, 01h
+; PsgIns_Snare:	db 00h,0FFh,00h,0F0h,0F0h
+
 ; TEST_BLOCKS	binclude "data/sound/tracks/temple_blk.bin"
 ; TEST_PATTERN	binclude "data/sound/tracks/temple_patt.bin"
 ; TEST_INSTR
-; 		gemaInsPsg  0,PsgIns_01
 ; 		gemaInsPsg  0,PsgIns_01
 ; 		gemaInsPsgN 0,PsgIns_Snare,%101
 
@@ -82,7 +84,7 @@ GemaTrk_brinstr_blk:
 GemaTrk_brinstr_patt:
 		binclude "data/sound/tracks/brinstr_patt.bin"
 GemaTrk_brinstr_ins:
-		gemaInsPsg    0,$40,$60,$30,$10,$00
+		gemaInsPsg    0,$30,$FF,$10,$01,$01
 		gemaInsPsgN -12,$00,$FF,$00,$00,$01,%011
 
 GemaTrk_gigalo_blk:
@@ -101,38 +103,36 @@ GemaTrk_mars_blk:
 GemaTrk_mars_patt:
 		binclude "data/sound/tracks/mars_patt.bin"
 GemaTrk_mars_ins:
-		gemaInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,$123456,0
-		gemaInsDac   0,DacIns_Kick,DacIns_Kick_e,$123456,0
-		gemaInsPsgN  0,$00,$FF,$00,$20,$20,%100
+		gemaInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+		gemaInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+		gemaInsPsgN  0,$20,$FF,$00,$30,$30,%100
 		gemaInsFm    0,FmIns_PianoM1,0
-		gemaInsPsg   0,$40,$20,$20,$00,$00
+		gemaInsPsg   0,$50,$20,$30,$00,$00
 		gemaInsFm    0,FmIns_Bass_8,0
 		gemaInsNull
 		gemaInsNull
 		gemaInsFm    0,FmIns_Guitar_heavy,0
 		gemaInsNull
-		gemaInsNull;gemaInsFm    0,FmIns_ding_toy,0
+		gemaInsNull
 
 GemaTrk_jackrab_blk:
 		binclude "data/sound/tracks/jackrab_blk.bin"
 GemaTrk_jackrab_patt:
 		binclude "data/sound/tracks/jackrab_patt.bin"
 GemaTrk_jackrab_ins:
+		gemaInsFm    0,FmIns_Ambient_Spook,0
 		gemaInsNull
 		gemaInsNull
-		gemaInsNull
-		gemaInsPsgN  0,$00,$FF,$00,$08,$08,%100
-		gemaInsNull
+		gemaInsPsgN  0,$20,$FF,$10,$10,$10,%100
 		gemaInsNull
 		gemaInsNull
+		gemaInsFm    0,FmIns_PianoM1,0
 		gemaInsNull
 		gemaInsNull
-		gemaInsPsg   0,$30,$FF,$30,$10,$04
+		gemaInsPsg   0,$30,$FF,$20,$08,$08
+		gemaInsFm    0,FmIns_Ambient_Dark,0
 		gemaInsNull
+		gemaInsFm    0,FmIns_Ding_Toy,0
 		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
-		gemaInsNull
+		gemaInsFm    0,FmIns_Trumpet_2,0
 		gemaInsNull

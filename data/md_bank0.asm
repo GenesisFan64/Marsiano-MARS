@@ -36,9 +36,9 @@ DacIns_CdSnare:
 		binclude "data/sound/instr/smpl/cd_snare.wav",$2C
 DacIns_CdSnare_e:
 
-DacIns_Kick:
-		binclude "data/sound/instr/smpl/kick.wav",$2C
-DacIns_Kick_e:
+DacIns_SaurKick:
+		binclude "data/sound/instr/smpl/sauron_kick.wav",$2C
+DacIns_SaurKick_e:
 
 ; Sampl_KickSpinb:
 ; 		binclude "data/sound/instr/smpl/spinb_kick.wav",$2C
@@ -49,5 +49,5 @@ DacIns_Kick_e:
 ; Sampl_Snare:	binclude "data/sound/instr/smpl/snare.wav",$2C
 ; Sampl_Snare_End:
 
-PCM_START:	binclude "data/sound/test_md.wav",$2C,$04FFFF
+PCM_START:	binclude "data/sound/test_md.wav",$2C,$03FFFF
 PCM_END:

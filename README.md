@@ -1,15 +1,14 @@
 # Marsiano-MARS
-A video+sound driver/handler for the 32X.
+A video+sound "driver" for the 32X.
 
 Things working:
 - Draw an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
-- Polygons system from Shinrinx-MARS
 - Sound: FM+PSG+DAC
 
 Notes/Issues:
 - Polygon rendering broken.
 - SVDP FILL can't be used anymore because of the new internal width (384, only works if 512 is used), solidcolor polygons need reworking
-- PWM not done yet
+- PWM working but it's not supported yet on the sound driver
 
 Please note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers
@@ -20,7 +19,8 @@ Please note that current 32X emulators ignore some hardware restrictions and bug
 - PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs
 
 
-A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X already inserted, If it doesn't boot or freezes: I probably broke something without testing on HW
+A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
+If it doesn't boot or freezes: I probably broke something without testing on HW
 ROM is for NTSC systems, can be played on PAL but with slowdown.
 
 For more info check the official hardware manual (32X Hardware Manual.pdf)

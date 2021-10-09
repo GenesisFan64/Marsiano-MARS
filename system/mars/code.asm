@@ -2129,6 +2129,7 @@ SH2_S_HotStart:
 slave_loop:
 		mov	#_sysreg+comm0,r14
 		mov.w	@r14,r0
+		nop
 		cmp/pl	r0
 		bf	.no_wav
 		xor	r0,r0
@@ -2144,20 +2145,7 @@ slave_loop:
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
-; 		mov	#1,r1			; EMUS only.
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%11|%10000000,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
 .no_wav:
-
-
-
 		bra	slave_loop
 		nop
 		align 4
