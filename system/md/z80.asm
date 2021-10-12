@@ -601,10 +601,22 @@ updtrack:
 		or	a			; Any status change?
 		jp	z,.no_updst
 		ld	a,(ix+chnl_EffId)
+		cp	1
+		call	z,.eff_A
 		cp	2			; Effect B: position jump?
 		call	z,.eff_B
 .no_updst:
 		jp	.next_note
+
+; ----------------------------------------
+; Effect A: Set ticks
+; ----------------------------------------
+
+.eff_A:
+		ld	e,(ix+chnl_EffArg)
+		ld	(iy+trk_tickSet),e
+		ld	(iy+trk_tickTmr),e
+		ret
 
 ; ----------------------------------------
 ; Effect B: jump to a new block
@@ -1324,6 +1336,7 @@ setupchip:
 .getvol_psg:
 		ld	a,(iy+chnl_Vol)
 		sub	a,40h
+		add	a,a
 		ld	e,a
 		ld	a,(ix+4)	; ALV
 		rst	8
@@ -1361,7 +1374,6 @@ setupchip:
 		ld	a,(iy+chnl_Vol)
 		sub	a,40h
 		neg	a
-		srl	a		; >> 2
 		srl	a
 		rst	8
 		ld	c,a
@@ -1426,7 +1438,7 @@ setupchip:
 		ld	e,a
 		or	a
 		jp	p,.tlv_lv3
-		ld	a,7Fh
+		ld	e,7Fh
 .tlv_lv3:
 		call	fm_autoset
 		inc 	hl
@@ -1437,11 +1449,11 @@ setupchip:
 		inc 	d
 		ld	a,(hl)
 		add 	a,c
+		ld	e,a
 		or	a
 		jp	p,.tlv_lv4
-		ld	a,7Fh
+		ld	e,7Fh
 .tlv_lv4:
-		ld	e,a
 		inc 	hl
 		jp	fm_autoset
 
@@ -1654,14 +1666,15 @@ setupchip:
 		ld	a,0
 		ld	(wave_Flags),a
 	if ZSET_TESTWAV=0
-		jp	dac_play
-	else
-		ret
+		ld	a,001b		; Request DAC play
+		ld	(daccom),a
 	endif
+		ret
 
 .dcut:
 	if ZSET_TESTWAV=0
-		call	dac_off
+		ld	a,010b		; Request DAC stop
+		ld	(daccom),a
 	endif
 .doff:
 		ld	hl,0
@@ -2418,12 +2431,23 @@ chip_env:
 		inc	c
 		rst	8
 		call	.fm_set_2
-		ld	de,10h		; FM6 check goes here
+		ld	hl,daccom
+		ld	a,(daccom)
+		bit	0,a
+		call	nz,dac_play
+		bit	1,a
+		call	nz,dac_off
+		xor	a
+		ld	(daccom),a
+		ld	a,(dac_me)	; Direct check for FM6/DAC
+		cp	zopcExx		;
+		ret	z
+		ld	de,10h
 		add	iy,de
 		inc	c
 		rst	8
-		call	.fm_set_2
-		ret
+		jp	.fm_set_2
+
 .fm_set_1:
 		ld	a,(iy)
 		or	a
@@ -2849,126 +2873,126 @@ psgFreq_List:
  		dw 8h
 		dw 0
 
-wavFreq_Pwm:	dw 100h		; C-0
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h		; C-1
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h		; C-2
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 03Bh
-		dw 03Eh		; C-3 5512
-		dw 043h		; C#3
-		dw 046h		; D-3
-		dw 049h		; D#3
-		dw 04Eh		; E-3
-		dw 054h		; F-3
-		dw 058h		; F#3
-		dw 05Eh		; G-3 8363 -17
-		dw 063h		; G#3
-		dw 068h		; A-3
-		dw 070h		; A#3
-		dw 075h		; B-3
-		dw 07Fh		; C-4 11025 -12
-		dw 088h		; C#4
-		dw 08Fh		; D-4
-		dw 097h		; D#4
-		dw 0A0h		; E-4
-		dw 0ADh		; F-4
-		dw 0B5h		; F#4
-		dw 0C0h		; G-4
-		dw 0CCh		; G#4
-		dw 0D7h		; A-4
-		dw 0E7h		; A#4
-		dw 0F0h		; B-4
-		dw 100h		; C-5 22050
-		dw 110h		; C#5
-		dw 120h		; D-5
-		dw 12Ch		; D#5
-		dw 142h		; E-5
-		dw 158h		; F-5
-		dw 16Ah		; F#5 32000 +6
-		dw 17Eh		; G-5
-		dw 190h		; G#5
-		dw 1ACh		; A-5
-		dw 1C2h		; A#5
-		dw 1E0h		; B-5
-		dw 1F8h		; C-6 44100 +12
-		dw 210h		; C#6
-		dw 240h		; D-6
-		dw 260h		; D#6
-		dw 280h		; E-6
-		dw 2A0h		; F-6
-		dw 2D0h		; F#6
-		dw 2F8h		; G-6
-		dw 320h		; G#6
-		dw 350h		; A-6
-		dw 380h		; A#6
-		dw 3C0h		; B-6
-		dw 400h		; C-7 88200
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h		; C-8
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h		; C-9
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
-		dw 100h
+;wavFreq_Pwm:	dw 100h		; C-0
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h		; C-1
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h		; C-2
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 03Bh
+		;dw 03Eh		; C-3 5512
+		;dw 043h		; C#3
+		;dw 046h		; D-3
+		;dw 049h		; D#3
+		;dw 04Eh		; E-3
+		;dw 054h		; F-3
+		;dw 058h		; F#3
+		;dw 05Eh		; G-3 8363 -17
+		;dw 063h		; G#3
+		;dw 068h		; A-3
+		;dw 070h		; A#3
+		;dw 075h		; B-3
+		;dw 07Fh		; C-4 11025 -12
+		;dw 088h		; C#4
+		;dw 08Fh		; D-4
+		;dw 097h		; D#4
+		;dw 0A0h		; E-4
+		;dw 0ADh		; F-4
+		;dw 0B5h		; F#4
+		;dw 0C0h		; G-4
+		;dw 0CCh		; G#4
+		;dw 0D7h		; A-4
+		;dw 0E7h		; A#4
+		;dw 0F0h		; B-4
+		;dw 100h		; C-5 22050
+		;dw 110h		; C#5
+		;dw 120h		; D-5
+		;dw 12Ch		; D#5
+		;dw 142h		; E-5
+		;dw 158h		; F-5
+		;dw 16Ah		; F#5 32000 +6
+		;dw 17Eh		; G-5
+		;dw 190h		; G#5
+		;dw 1ACh		; A-5
+		;dw 1C2h		; A#5
+		;dw 1E0h		; B-5
+		;dw 1F8h		; C-6 44100 +12
+		;dw 210h		; C#6
+		;dw 240h		; D-6
+		;dw 260h		; D#6
+		;dw 280h		; E-6
+		;dw 2A0h		; F-6
+		;dw 2D0h		; F#6
+		;dw 2F8h		; G-6
+		;dw 320h		; G#6
+		;dw 350h		; A-6
+		;dw 380h		; A#6
+		;dw 3C0h		; B-6
+		;dw 400h		; C-7 88200
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h		; C-8
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h		; C-9
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
+		;dw 100h
 
 ; --------------------------------------------------------
 
@@ -3059,15 +3083,16 @@ fmcom1		dw  0000h,0A400h,0A000h,0B000h	; First FM set (write to port 1)
 		dw 0B400h, 0000h, 0000h,00000h
 		dw  0100h,0A500h,0A100h,0B100h
 		dw 0B500h, 0000h, 0000h,00000h
-fmcom1ex	dw  0200h,0A600h,0A200h,0B200h
+		dw  0200h,0A600h,0A200h,0B200h	; TODO: add ex freqs
 		dw 0B600h, 0000h, 0000h,00000h
 
 fmcom2		dw  0000h,0A400h,0A000h,0B000h	; Second FM set (write to port 2)
 		dw 0B400h, 0000h, 0000h,00000h
 		dw  0000h,0A500h,0A100h,0B100h
 		dw 0B500h, 0000h, 0000h,00000h
-fmcom2ex	dw  0000h,0A600h,0A200h,0B200h
+		dw  0000h,0A600h,0A200h,0B200h
 		dw 0B600h, 0000h, 0000h,00000h
+daccom		db 0,0,0			; Flag, Pitch
 
 ; ====================================================================
 ; ----------------------------------------------------------------

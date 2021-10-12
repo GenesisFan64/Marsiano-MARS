@@ -34,21 +34,19 @@ FmIns_PianoM1:
 ; ; 		binclude "data/sound/instr/fm/brass_gummy.gsx",2478h,20h
 ; ; FmIns_Flaute_1:
 ; ; 		binclude "data/sound/instr/fm/flaute_1.gsx",2478h,20h
-; FmIns_Bass_1:
-; 		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
-; FmIns_Bass_2:
-; 		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
+FmIns_Bass_1:
+		binclude "data/sound/instr/fm/bass_1.gsx",2478h,20h
+FmIns_Bass_2:
+		binclude "data/sound/instr/fm/bass_2.gsx",2478h,20h
 FmIns_Bass_3:
 		binclude "data/sound/instr/fm/bass_3.gsx",2478h,20h
-; FmIns_Bass_4:
-; 		binclude "data/sound/instr/fm/bass_4.gsx",2478h,20h
-; FmIns_Bass_5:
-; 		binclude "data/sound/instr/fm/bass_5.gsx",2478h,20h
-; FmIns_Bass_6:
-; 		binclude "data/sound/instr/fm/bass_6.gsx",2478h,20h
-; FmIns_Bass_7:
-; 		binclude "data/sound/instr/fm/bass_7.gsx",2478h,20h
-FmIns_Bass_8:
+FmIns_Bass_4:
+		binclude "data/sound/instr/fm/bass_4.gsx",2478h,20h
+FmIns_Bass_5:
+		binclude "data/sound/instr/fm/bass_5.gsx",2478h,20h
+FmIns_Bass_6:
+		binclude "data/sound/instr/fm/bass_6.gsx",2478h,20h
+FmIns_Bass_7:
 		binclude "data/sound/instr/fm/bass_7.gsx",2478h,20h
 ; ; FmIns_Bass_heavy:
 ; ; 		binclude "data/sound/instr/fm/bass_heavy.gsx",2478h,20h

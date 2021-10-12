@@ -84,7 +84,7 @@ GemaTrk_brinstr_blk:
 GemaTrk_brinstr_patt:
 		binclude "data/sound/tracks/brinstr_patt.bin"
 GemaTrk_brinstr_ins:
-		gemaInsPsg    0,$30,$FF,$10,$01,$01
+		gemaInsPsg   0,$30,$FF,$20,$01,$01
 		gemaInsPsgN -12,$00,$FF,$00,$00,$01,%011
 
 GemaTrk_gigalo_blk:
@@ -98,6 +98,28 @@ GemaTrk_gigalo_ins:
 		gemaInsPsgN  0,$00,$FF,$00,$04,$04,%110
 		gemaInsNull
 
+GemaTrk_mecano_blk:
+		binclude "data/sound/tracks/mecano_blk.bin"
+GemaTrk_mecano_patt:
+		binclude "data/sound/tracks/mecano_patt.bin"
+GemaTrk_mecano_ins:
+		gemaInsPsgN  0,$00,$FF,$00,$08,$08,%100
+		gemaInsPsgN  0,$00,$FF,$00,$10,$10,%100
+		gemaInsFm    0,FmIns_PianoM1,0
+		gemaInsPsg   0,$10,$FF,$10,$04,$02
+		gemaInsFm    0,FmIns_Bass_3,0
+		gemaInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+		gemaInsNull
+		gemaInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsNull
+		gemaInsFm    0,FmIns_Bass_6,0
+		gemaInsFm    0,FmIns_Trumpet_2,0
+		gemaInsNull
+
 GemaTrk_mars_blk:
 		binclude "data/sound/tracks/mars_blk.bin"
 GemaTrk_mars_patt:
@@ -108,7 +130,7 @@ GemaTrk_mars_ins:
 		gemaInsPsgN  0,$20,$FF,$00,$30,$30,%100
 		gemaInsFm    0,FmIns_PianoM1,0
 		gemaInsPsg   0,$50,$20,$30,$00,$00
-		gemaInsFm    0,FmIns_Bass_8,0
+		gemaInsFm    0,FmIns_Bass_7,0
 		gemaInsNull
 		gemaInsNull
 		gemaInsFm    0,FmIns_Guitar_heavy,0
