@@ -84,18 +84,18 @@ GemaTrk_brinstr_blk:
 GemaTrk_brinstr_patt:
 		binclude "data/sound/tracks/brinstr_patt.bin"
 GemaTrk_brinstr_ins:
-		trkInsPsg   0,$30,$FF,$20,$01,$01
-		trkInsPsgN -12,$00,$FF,$00,$00,$01,%011
+		trkInsPsg   0,$40,$10,$10,$01,$01
+		trkInsPsgN -12,$00,$FF,$00,$01,$01,%011
 
 GemaTrk_gigalo_blk:
 		binclude "data/sound/tracks/gigalo_blk.bin"
 GemaTrk_gigalo_patt:
 		binclude "data/sound/tracks/gigalo_patt.bin"
 GemaTrk_gigalo_ins:
-		trkInsPsg   0,$30,$FF,$30,$08,$08
-		trkInsPsgN  0,$00,$FF,$00,$04,$04,%100
-		trkInsPsgN  0,$00,$FF,$00,$04,$04,%101
-		trkInsPsgN  0,$00,$FF,$00,$04,$04,%110
+		trkInsPsg   0,$20,$80,$40,$08,$08
+		trkInsPsgN  0,$00,$FF,$00,$10,$10,%100
+		trkInsPsgN  0,$00,$FF,$00,$10,$10,%101
+		trkInsPsgN  0,$00,$FF,$00,$10,$10,%110
 		trkInsNull
 
 GemaTrk_mecano_blk:
@@ -106,7 +106,7 @@ GemaTrk_mecano_ins:
 	trkInsPsgN  0,$00,$00,$00,$08,$08,%100
 	trkInsPsgN  0,$00,$00,$00,$10,$10,%100
 	trkInsFm    0,FmIns_PianoM1,0
-	trkInsPsg   0,$20,$00,$20,$08,$01
+	trkInsPsg   0,$10,$00,$40,$01,$01
 	trkInsFm    0,FmIns_Bass_3,0
 	trkInsNull ;trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 	trkInsNull
