@@ -9,7 +9,7 @@
 ; ------------------------------------------------------
 
 var_MoveSpd	equ	$4000
-MAX_TSTTRKS	equ	4
+MAX_TSTTRKS	equ	5
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -183,6 +183,25 @@ thisCode_Top:
 		bge.s	.nor
 		add.w	#1,(RAM_CurrSong).w
 .nor:
+		rts
+
+
+; test playlist
+
+.playlist:
+	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
+	dc.l 4
+	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
+	dc.l 2
+	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
+	dc.l 3
+	dc.l GemaTrk_jackrab_patt,GemaTrk_jackrab_blk,GemaTrk_jackrab_ins
+	dc.l 5
+	dc.l GemaTrk_gigalo_patt,GemaTrk_gigalo_blk,GemaTrk_gigalo_ins
+	dc.l 3
+	dc.l GemaTrk_brinstr_patt,GemaTrk_brinstr_blk,GemaTrk_brinstr_ins
+	dc.l 3
+	align 2
 
 ; 		move.w	(Controller_1+on_hold),d7
 ; 		move.w	d7,(sysmars_reg+comm12)
@@ -292,23 +311,6 @@ thisCode_Top:
 ; 		move.l	#CmdTaskMd_UpdModels,d0
 ; 		bsr	System_MdMars_SlvTask
 ; .busy_mstr:
-		rts
-
-
-; test playlist
-
-.playlist:
-	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
-	dc.l 2
-	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
-	dc.l 3
-	dc.l GemaTrk_jackrab_patt,GemaTrk_jackrab_blk,GemaTrk_jackrab_ins
-	dc.l 5
-	dc.l GemaTrk_gigalo_patt,GemaTrk_gigalo_blk,GemaTrk_gigalo_ins
-	dc.l 3
-	dc.l GemaTrk_brinstr_patt,GemaTrk_brinstr_blk,GemaTrk_brinstr_ins
-	dc.l 3
-	align 2
 
 ; ====================================================================
 ; ------------------------------------------------------

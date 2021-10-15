@@ -210,7 +210,7 @@ drv_loop:
 		rst	8
 
 .next_cmd:
-		call	dac_fill		; sync
+		call	dac_fill		; Critical for syncing wave
 		rst	8
 		ld	a,(commZWrite)
 		ld	b,a
@@ -326,42 +326,12 @@ drv_loop:
 
 .cmnd_wav_set:
 		ld	iy,wave_Start
-		call	get_cmdbyte		; Start address
-		ld	(iy),a
-		inc	iy
+		ld	b,3+3+3+3	; Start/End/Loop/Len+Flags(2+1)
+.loop:
 		call	get_cmdbyte
 		ld	(iy),a
 		inc	iy
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte		; Length
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte		; Loop point
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte		; Pitch
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		call	get_cmdbyte		; Flags
-		ld	(iy),a
-		inc	iy
+		djnz	.loop
 		call	dac_play
 		jp	.next_cmd
 
@@ -659,6 +629,8 @@ updtrack:
 		inc	ix
 		djnz	.clrf2
 		rst	8
+		ld	a,(iy+trk_tickSet)
+		ld	(iy+trk_tickTmr),a
 		ld	a,(iy+trk_currBlk)
 		jr	.set_track
 

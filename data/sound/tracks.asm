@@ -79,6 +79,19 @@ trkInsPwm	macro pitch,start,end,loop,flags
 ; 		trkInsPsg  0,PsgIns_01
 ; 		trkInsPsgN 0,PsgIns_Snare,%101
 
+GemaTrk_moon_blk:
+		binclude "data/sound/tracks/moon_blk.bin"
+GemaTrk_moon_patt:
+		binclude "data/sound/tracks/moon_patt.bin"
+GemaTrk_moon_ins:
+		trkInsFm  -24,FmIns_Bass_calm,0
+		trkInsPsg   0,$10,$80,$10,$20,$04
+		trkInsFm  -12,FmIns_Brass_Eur,0
+		trkInsPsg   0,$10,$80,$10,$F0,$01
+		trkInsDac -12,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+		trkInsPsgN  0,$00,$FF,$00,$08,$08,%100
+
+
 GemaTrk_brinstr_blk:
 		binclude "data/sound/tracks/brinstr_blk.bin"
 GemaTrk_brinstr_patt:
@@ -106,7 +119,7 @@ GemaTrk_mecano_ins:
 	trkInsPsgN  0,$00,$00,$00,$08,$08,%100
 	trkInsPsgN  0,$00,$00,$00,$10,$10,%100
 	trkInsFm    0,FmIns_PianoM1,0
-	trkInsPsg   0,$20,$00,$10,$01,$01
+	trkInsPsg   0,$10,$00,$10,$02,$02
 	trkInsFm    0,FmIns_Bass_mecan,0
 	trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 	trkInsNull
@@ -151,7 +164,7 @@ GemaTrk_jackrab_ins:
 		trkInsFm    0,FmIns_PianoM1,0
 		trkInsNull
 		trkInsNull
-		trkInsPsg   0,$30,$FF,$20,$08,$08
+		trkInsPsg   0,$20,$FF,$20,$06,$06
 		trkInsFm    0,FmIns_Ambient_Dark,0
 		trkInsNull
 		trkInsFm    0,FmIns_Ding_Toy,0
