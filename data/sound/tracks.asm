@@ -106,17 +106,17 @@ GemaTrk_mecano_ins:
 	trkInsPsgN  0,$00,$00,$00,$08,$08,%100
 	trkInsPsgN  0,$00,$00,$00,$10,$10,%100
 	trkInsFm    0,FmIns_PianoM1,0
-	trkInsPsg   0,$10,$00,$40,$01,$01
-	trkInsFm    0,FmIns_Bass_3,0
-	trkInsNull ;trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+	trkInsPsg   0,$10,$00,$20,$01,$01
+	trkInsFm    0,FmIns_Bass_mecan,0
+	trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 	trkInsNull
-	trkInsNull ;trkInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-	trkInsNull
-	trkInsNull
+	trkInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
 	trkInsNull
 	trkInsNull
 	trkInsNull
-	trkInsFm    0,FmIns_Bass_6,0
+	trkInsNull
+	trkInsNull
+	trkInsNull
 	trkInsFm    0,FmIns_Trumpet_2,0
 	trkInsNull
 
@@ -144,7 +144,7 @@ GemaTrk_jackrab_patt:
 GemaTrk_jackrab_ins:
 		trkInsFm    0,FmIns_Ambient_Spook,0
 		trkInsNull
-		trkInsNull
+		trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 		trkInsPsgN  0,$20,$FF,$10,$10,$10,%100
 		trkInsNull
 		trkInsNull
@@ -155,6 +155,6 @@ GemaTrk_jackrab_ins:
 		trkInsFm    0,FmIns_Ambient_Dark,0
 		trkInsNull
 		trkInsFm    0,FmIns_Ding_Toy,0
-		trkInsNull
+		trkInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
 		trkInsFm    0,FmIns_Trumpet_2,0
 		trkInsNull

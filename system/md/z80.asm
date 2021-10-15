@@ -73,14 +73,11 @@ ALV		equ	36
 FLG		equ	40
 TMR		equ	44
 
-;FMCOM		equ	0
 FMKEYS		equ	6
 FMVOL		equ	12
 FMPAN 		equ	18
 FMRG_A4		equ	24
 FMRG_A0		equ	30
-; FMRG_B0		equ	30
-; FMRG_B4		equ	36
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -200,7 +197,7 @@ drv_loop:
 		rst	8
 
 .next_cmd:
-		call	dac_fill
+		call	dac_fill		; sync
 		rst	8
 		ld	a,(commZWrite)
 		ld	b,a
@@ -438,7 +435,7 @@ updtrack:
 		ld	hl,(currInsData)
 		add	hl,de
 		ld	(currInsData),hl
-		ld	de,80h			; Next track points
+		ld	de,100h			; Next track points
 		ld	hl,(currTrkBlkHd)
 		add	hl,de
 		rst	8
@@ -598,13 +595,14 @@ updtrack:
 		rst	8
 		pop	bc			; Restore rowcount
 
-	; Effects that manipulate internal playback
+	; Effects that manipulate
+	; internal playback (jump, tempo, etc.)
 		or	a			; Any status change?
 		jp	z,.no_updst
 		ld	a,(ix+chnl_EffId)
-		cp	1
+		cp	1			; Effect A: Tick set
 		call	z,.eff_A
-		cp	2			; Effect B: position jump?
+		cp	2			; Effect B: Position Jump
 		call	z,.eff_B
 .no_updst:
 		jp	.next_note
@@ -621,6 +619,8 @@ updtrack:
 
 ; ----------------------------------------
 ; Effect B: jump to a new block
+;
+; Note: kills A
 ; ----------------------------------------
 
 ; TODO: add auto-silence
@@ -698,7 +698,7 @@ updtrack:
 		inc	a
 		ld 	(iy+trk_currBlk),a
 .set_track:
-		call 	dac_fill
+; 		call 	dac_fill
 		rst	8
 		ld	l,80h			; Set LSB as 40h
 		ld	(iy+trk_Read),l
@@ -716,7 +716,7 @@ updtrack:
 		jp	z,.track_end
 		ld	hl,(currTrkBlkHd)	; Read block again
 		rst	8
-		ld	de,40h
+		ld	de,80h
 		add	hl,de			; +80h, point to heads
 		add	a,a
 		add	a,a
@@ -744,7 +744,7 @@ updtrack:
 		ld	e,(iy+trk_Read)
 		ld	bc,080h			; bc - 080h
 		call	transferRom
-		call	dac_fill
+; 		call	dac_fill
 		ld	h,(iy+(trk_Read+1))
 		ld	l,(iy+trk_Read)
 		ld	c,(iy+trk_Rows)
@@ -812,19 +812,18 @@ updtrack:
 		ld	h,(iy+(trk_romBlk+1))
 		ld	a,(iy+(trk_romBlk+2))
 		ld	de,(currTrkBlkHd)
-		ld	bc,40h
+		ld	bc,80h
 		push	de
 		call	transferRom
 		pop	de
 		rst	8
 		ld	a,e
-		add	a,40h
+		add	a,80h
 		ld	e,a
 		ld	l,(iy+trk_romPatt)	; Recieve 40h of header data
 		ld	h,(iy+(trk_romPatt+1))
-		call	dac_fill
 		ld	a,(iy+(trk_romPatt+2))
-		ld	bc,40h
+		ld	bc,80h
 		call	transferRom
 		ld	a,0
 
@@ -838,7 +837,7 @@ updtrack:
 		jp	z,.track_end
 		call	dac_fill
 		ld	hl,(currTrkBlkHd)	; hl - Header section
-		ld	de,40h			;
+		ld	de,80h			;
 		add	hl,de
 		add	a,a
 		add	a,a
@@ -1070,6 +1069,7 @@ setupchip:
 		ld	(currInsData),hl
 		ld	iy,trkBuff+20h		; iy - Tracker channels
 .nxt_track:
+		rst	8
 		push	iy			; Save iy
 		ld	b,MAX_TRKCHN		; Pass 1
 .nxt_chnl:
@@ -1123,6 +1123,7 @@ setupchip:
 		call	.check_chnl
 		cp	-1
 		ret	z
+		rst	8
 		ld	a,(hl)
 		cp	-1		; Null
 		ret	z
@@ -1244,13 +1245,16 @@ setupchip:
 		cp	l
 		jr	z,.fmsame_ins
 .confm_rd:
-		ld	(ix+8),l	; Register current instrument
+		ld	(ix+8),l		; Register current instrument
 		ld	(ix+9),h
 		ld	(ix+10),c
 		rst	8
 		ld	a,c
 		ld	bc,020h
 		call	transferRom
+		ld	(ix+5),11000000b	; Default panning
+		ld	(ix+6),11110000b	; Temporal keys (TODO)
+.fmsame_ins:
 		ld	hl,fmcom
 		ld	bc,0
 		rst	8
@@ -1258,16 +1262,13 @@ setupchip:
 		and	00000111b
 		ld	c,a
 		add	hl,bc
-		ld	a,(hl)		; instrument update
-		or	10h		; flag
+		ld	a,(hl)			; instrument update
+		or	10h			; flag
 		ld	(hl),a
 		ld	de,FMVOL
 		add	hl,de
 		ld	(hl),0
-.fmsame_ins:
 		pop	hl
-		ld	(ix+5),11000000b	; Default panning
-		ld	(ix+6),11110000b	; Temporal keys (TODO)
 		ret
 
 ; ----------------------------------------
@@ -1278,6 +1279,7 @@ setupchip:
 		call	.check_chnl
 		cp	-1
 		ret	z
+		rst	8
 		ld	a,(hl)
 		cp	-1		; Null
 		ret	z
@@ -1343,6 +1345,7 @@ setupchip:
 		call	.check_chnl
 		cp	-1
 		ret	z
+		rst	8
 		ld	a,(hl)
 		cp	-1		; Null
 		ret	z
@@ -1392,6 +1395,7 @@ setupchip:
 
 .req_note:
 		call	.check_chnl
+		rst	8
 		cp	-1
 		ret	z
 		ld	a,(hl)
@@ -1421,6 +1425,7 @@ setupchip:
 		ld 	hl,psgcom
 		add	hl,de
 		ld	(hl),100b	; Full stop
+		rst	8
 		ld	(iy+chnl_Chip),0
 		ret
 .poff:
@@ -1434,6 +1439,7 @@ setupchip:
 		ld 	hl,psgcom
 		add	hl,de
 		ld	(hl),010b	; Key off ===
+		rst	8
 		ld	(iy+chnl_Chip),0
 		ret
 .note_psg:
@@ -1485,6 +1491,7 @@ setupchip:
 		ld	a,(hl)
 		ld	(ix+ATK),a	; ATK
 		inc	hl
+		rst	8
 		ld	a,(hl)
 		ld	(ix+SLV),a	; SLV
 		inc	hl
@@ -1518,6 +1525,7 @@ setupchip:
 		and	0F0h
 		or	b
 		ld	(ix+DTH),a
+		rst	8
 		ld	(ix+COM),001b	; Key ON
 ; 		call	dac_fill
 		ret
@@ -1560,7 +1568,7 @@ setupchip:
 		inc	hl
 		ld	e,(hl)		; Add pitch
 		add	a,e
-		ld	c,a		; c - temporal
+		ld	c,a		; c - Note+pitch
 		ld	a,(ix+2)
 		and	00000111b
 		rst	8
@@ -1575,12 +1583,11 @@ setupchip:
 		jr	z,.fm_keyoff
 		cp	-2
 		jr	z,.fm_keycut
-		rst	8
 		ld	a,c
 		ld	e,(ix+7)
 		cp	e
 		jr	nz,.newnote
-	; same note...
+		rst	8
 		ld	d,(ix+5)	; d - tbl panning
 		ld	e,(ix+6)	; e - tbl keys
 		push	de
@@ -1588,7 +1595,27 @@ setupchip:
 		pop	ix
 		jr	.fmsame_note
 .newnote:
-		ld	(ix+7),c
+; 	; LIST
+; 		ld	b,0
+; 		ld	(ix+7),c
+; 		push	hl
+; 		ld	hl,fmNote_List
+; 		add	hl,bc
+; 		rst	8
+; 		ld	a,(hl)
+; 		ld	b,a
+; 		and	1111b
+; 		ld	c,a
+; 		ld	a,b
+; 		rrca
+; 		rrca
+; 		rst	8
+; 		rrca
+; 		rrca
+; 		and	1111b
+; 		ld	b,a
+; 		pop	hl
+	; AUTO-SEARCH
 		ld	b,0		; b - octave
 		ld	e,7
 .get_oct:
@@ -1600,6 +1627,9 @@ setupchip:
 		dec	e
 		jr	nz,.get_oct
 .fnd_oct:
+
+	; b - octave
+	; c - note
 		ld	d,(ix+5)	; d - tbl 0B4h (and panning)
 		ld	e,(ix+6)	; e - tbl keys
 		push	de
@@ -1639,12 +1669,14 @@ setupchip:
 		ld	(hl),010b
 		ld	(ix),0
 		ld	(ix+1),0
+		rst	8
 		ld	(iy+chnl_Chip),0
 		ret
 .fm_keycut:
 		ld	(hl),100b
 		ld	(ix),0
 		ld	(ix+1),0
+		rst	8
 		ld	(iy+chnl_Chip),0
 		ret
 
@@ -1721,20 +1753,9 @@ setupchip:
 		push	iy
 		pop	de		; de - Copy of curr track-channel
 		rst	8
-		ld	c,(ix)
-		ld	a,(ix+1)
-		cp	d
-		jr	nz,.same_s
-		ld	a,c
-		cp	e
-		jr	nz,.same_s
-		xor	a		; Same channel found
-		ret
-.same_s:
-		rst	8
-		ld	a,c
-		or	a
-		jr	nz,.busy_s
+; 		ld	a,(ix+1)	; Priority MSB check goes here
+; 		cp	d
+; 		jr	nz,.busy_s
 		ld	(ix),e		; NEW slot
 		ld	(ix+1),d
 		xor	a		; Found free slot, pick it.
@@ -1753,7 +1774,7 @@ setupchip:
 .next:
 		ld	a,(ix+1)	; Check MSB first
 		cp	-1		; End of list? (0FFxxh)
-		jr	z,.chk_free
+		jr	z,.chkfree
 		push	iy
 		pop	de		; de - Copy of curr track-channel
 		rst	8
@@ -1764,7 +1785,25 @@ setupchip:
 		jr	nz,.diffr
 		xor	a		; return 0
 		ret
-.chk_free:
+.diffr:
+		ld	a,c		; already found link?
+		or	b
+		jr	nz,.alrdfnd
+		rst	8
+		ld	e,(ix+1)	; Check if this link == 0
+		ld	a,(ix)
+		or	e
+		jr	nz,.alrdfnd
+		push	ix		; bc - got free link
+		pop	bc
+		rst	8
+.alrdfnd:
+		ld	de,10h		; Next channel table
+		add	ix,de
+		jr	.next
+
+; free link slot
+.chkfree:
 		ld	a,c		; found free link?
 		or	b
 		jr	nz,.fndslot
@@ -1782,23 +1821,8 @@ setupchip:
 		ld	a,d
 		ld	(bc),a
 		xor	a
+		rst	8
 		ret
-.diffr:
-		ld	a,c		; already found link?
-		or	b
-		jr	nz,.alrdfnd
-		rst	8
-		ld	e,(ix+1)	; Check MSB first
-		ld	a,(ix)
-		or	e
-		jr	nz,.alrdfnd
-		push	ix		; bc - got free link
-		pop	bc
-		rst	8
-.alrdfnd:
-		ld	de,10h		; Next channel table
-		add	ix,de
-		jr	.next
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1868,7 +1892,7 @@ check_tick:
 		add	hl,de
 		ld	(sbeatAcc),hl
 		pop	de
-		call	dac_fill
+; 		call	dac_fill
 .ctnotick:
 		pop	hl
 		pop	af
@@ -1932,14 +1956,14 @@ transferRom:
 		rst	8
 		push	ix
 		ld	ix,commZRomBlk
-		ld	(x68ksrclsb),hl
+		ld	(x68ksrclsb),hl	; save copy
 		res	7,h
 		ld	b,0
 		dec	bc
 		add	hl,bc
 		bit	7,h
 		jr	nz,.double
-		ld	hl,(x68ksrclsb)		; single transfer
+		ld	hl,(x68ksrclsb)	; single transfer
 		inc	c
 		ld	b,a
 		call	.transfer
@@ -1947,7 +1971,7 @@ transferRom:
 		ret
 .double:
 		rst	8
-		ld	b,a			; double transfer
+		ld	b,a		; double transfer
 		push	bc
 		push	hl
 		ld	a,c
@@ -1974,7 +1998,7 @@ transferRom:
 
 ; b  - Source ROM xx0000
 ;  c - Bytes to transfer (00h not allowed)
-; hl - Source ROM 00xxxx
+; hl - Source ROM 00xxxx (OR'd with 8000h)
 ; de - Destination address
 ;
 ; Uses:
@@ -2008,31 +2032,42 @@ transferRom:
 		pop	de
 		set	7,h
 
-	; Transfer data in parts of 3bytes
+	; Transfer data in packs of 3bytes
 	; while playing cache WAV in the process
+	; CRITICAL PROCESS FOR WAV PLAYBACK
+	;
+	; pseudo-ref for ldir:
+	; ld (de),(hl)
+	; inc de
+	; inc hl
+	; dec bc
+	;
 		ld	a,c
 		ld	b,0
 		set	0,(ix+1)	; Tell to 68k that we are reading from ROM
-		sub	3
+		sub	9
 		jr	c,.x68klast
 .x68kloop:
-		ld	c,3-1
+		ld	c,9-1
 		bit	0,(ix)		; If 68k requested ROM block from here
 		jr	nz,.x68klpwt
 .x68klpcont:
-		ldir
+		ldir			; (de) to (hl) until bc==0
 		rst	8
-		sub	a,3-1
+		nop
+		sub	a,9-1
+		rst	8
 		jp	nc,.x68kloop
 ; last block
 .x68klast:
-		add	a,3
+		add	a,9
 		ld	c,a
 		bit	0,(ix)		; If 68k requested ROM block from here
 		jp	nz,.x68klstwt
 .x68klstcont:
 		ldir
 		rst	8
+		nop
 		res	0,(ix+1)
 		ret
 
@@ -2041,7 +2076,7 @@ transferRom:
 .x68klpwt:
 		res	0,(ix+1)		; Not reading ROM
 .x68kpwtlp:
-		rst	8
+; 		rst	8
 		bit	0,(ix)			; Is ROM free from 68K?
 		jr	nz,.x68kpwtlp
 		set	0,(ix+1)		; Reading ROM again.
@@ -2051,7 +2086,7 @@ transferRom:
 .x68klstwt:
 		res	0,(ix+1)		; Not reading ROM
 .x68klstwtlp:
-		rst	8
+; 		rst	8
 		bit	0,(ix)			; Is ROM free from 68K?
 		jr	nz,.x68klstwtlp
 		set	0,(ix+1)		; Reading ROM again.
@@ -2095,6 +2130,7 @@ dac_off:
 ; --------------------------------------------------------
 
 chip_env:
+
 	; NOTE: this reads the channels backwards
 	; so it automutes PSG3 if NOISE is in
 	; Tone3 mode (psgHatMode)
@@ -2272,29 +2308,29 @@ chip_env:
 		ld	iy,fmcom
 		ld	ix,fmins_com
 		ld	bc,0
-		call	.fm_set_1
+		call	.fm_set
 		ld	de,20h
 		add	ix,de
 		inc	iy
 		inc	c
 		rst	8
-		call	.fm_set_1
+		call	.fm_set
 		ld	de,20h
 		add	ix,de
 		inc	iy
 		inc	c
-		call	.fm_set_1
+		call	.fm_set
 		ld	de,20h		; FM set 2
 		add	ix,de
 		inc	iy
 		ld	bc,4
 		rst	8
-		call	.fm_set_1
+		call	.fm_set
 		ld	de,20h
 		add	ix,de
 		inc	iy
 		inc	c
-		call	.fm_set_1
+		call	.fm_set
 		ld	a,(daccom)
 		or	a
 		jp	nz,.req_dac
@@ -2303,7 +2339,7 @@ chip_env:
 		inc	iy
 		inc	c
 		rst	8
-		jp	.fm_set_1
+		jp	.fm_set
 .req_dac:
 		bit	1,a
 		call	nz,dac_off
@@ -2311,7 +2347,7 @@ chip_env:
 		ld	(daccom),a
 		jp	dac_play
 
-.fm_set_1:
+.fm_set:
 		ld	a,(iy)
 		or	a
 		ret	z
@@ -2323,7 +2359,6 @@ chip_env:
 		call	nz,.fm_keyoff
 		bit	0,a
 		ret	z
-
 		ld	b,a
 		ld	d,28h		; Keys off
 		ld	e,c
@@ -2365,6 +2400,7 @@ chip_env:
 		inc	d
 		ld	e,(ix+1Dh)
 		ld	a,(iy+FMPAN)
+		and	11000000b
 		or	a
 		ld	e,a
 		bit	2,c
@@ -2399,25 +2435,36 @@ chip_env:
 		jp	nz,fm_send_2
 		jp	fm_send_1
 .fm_insupd:
-		call	dac_fill
 		push	ix
 		ld	a,c
 		and	011b
 		or	30h
 		ld	d,a
 		ld	b,4*7
-.copy:
-		ld	e,(ix)
 		bit	2,c
-		call	z,fm_send_1
-		call	nz,fm_send_2
-		rst	8
+		jr	nz,.copy_2
+.copy_1:
+		ld	e,(ix)
+		call	fm_send_1
 		inc	ix
 		inc	d
+		rst	8
 		inc	d
 		inc	d
 		inc	d
-		djnz	.copy
+		djnz	.copy_1
+		pop	ix
+		ret
+.copy_2:
+		ld	e,(ix)
+		call	fm_send_2
+		inc	ix
+		inc	d
+		rst	8
+		inc	d
+		inc	d
+		inc	d
+		djnz	.copy_2
 		pop	ix
 		ret
 
@@ -2553,8 +2600,8 @@ dac_firstfill:
 		push	af
 
 ; Auto-fill
-; Got this from GEMS, but i changed it to play
-; longer samples (7FFFFFh maximum)
+; Got this from GEMS, but I changed it to play
+; larger samples (7FFFFFh maximum)
 
 dac_refill:
 		rst	8
@@ -2594,7 +2641,7 @@ dac_refill:
 		ld	(dDacPntr+2),a
 		jp	.FDFreturn
 
-; if wav's timer finished:
+; if wav's len-timer finished:
 .dac_over:
 		ld	d,dWaveBuff>>8
 		ld	a,(wave_Flags)
@@ -2671,7 +2718,20 @@ dac_refill:
 ; Tables
 ; ----------------------------------------------------------------
 
-fmFreq_List:	dw 644		; C-0
+	; oooo nnnn
+	; o-octave
+	; n-freq entry (*2)
+; fmNote_List:	db 00h,01h,02h,03h,04h,05h,06h,07h,08h,09h,0Ah,0Bh
+; 		db 10h,11h,12h,13h,14h,15h,16h,17h,18h,19h,1Ah,1Bh
+; 		db 20h,21h,22h,23h,24h,25h,26h,27h,28h,29h,2Ah,2Bh
+; 		db 30h,31h,32h,33h,34h,35h,36h,37h,38h,39h,3Ah,3Bh
+; 		db 40h,41h,42h,43h,44h,45h,46h,47h,48h,49h,4Ah,4Bh
+; 		db 50h,51h,52h,53h,54h,55h,56h,57h,58h,59h,5Ah,5Bh
+; 		db 60h,61h,62h,63h,64h,65h,66h,67h,68h,69h,6Ah,6Bh
+; 		db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh
+; 		db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh
+; 		db 70h,71h,72h,73h,74h,75h,76h,77h,78h,79h,7Ah,7Bh
+fmFreq_List:	dw 644
 		dw 681
 		dw 722
 		dw 765
@@ -2683,6 +2743,7 @@ fmFreq_List:	dw 644		; C-0
 		dw 1081
 		dw 1146
 		dw 1214
+
 psgFreq_List:
 		dw -1		; C-0 $0
 		dw -1
@@ -2806,130 +2867,128 @@ psgFreq_List:
  		dw 8h
 		dw 0
 
-;wavFreq_Pwm:	dw 100h		; C-0
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h		; C-1
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h		; C-2
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 03Bh
-		;dw 03Eh		; C-3 5512
-		;dw 043h		; C#3
-		;dw 046h		; D-3
-		;dw 049h		; D#3
-		;dw 04Eh		; E-3
-		;dw 054h		; F-3
-		;dw 058h		; F#3
-		;dw 05Eh		; G-3 8363 -17
-		;dw 063h		; G#3
-		;dw 068h		; A-3
-		;dw 070h		; A#3
-		;dw 075h		; B-3
-		;dw 07Fh		; C-4 11025 -12
-		;dw 088h		; C#4
-		;dw 08Fh		; D-4
-		;dw 097h		; D#4
-		;dw 0A0h		; E-4
-		;dw 0ADh		; F-4
-		;dw 0B5h		; F#4
-		;dw 0C0h		; G-4
-		;dw 0CCh		; G#4
-		;dw 0D7h		; A-4
-		;dw 0E7h		; A#4
-		;dw 0F0h		; B-4
-		;dw 100h		; C-5 22050
-		;dw 110h		; C#5
-		;dw 120h		; D-5
-		;dw 12Ch		; D#5
-		;dw 142h		; E-5
-		;dw 158h		; F-5
-		;dw 16Ah		; F#5 32000 +6
-		;dw 17Eh		; G-5
-		;dw 190h		; G#5
-		;dw 1ACh		; A-5
-		;dw 1C2h		; A#5
-		;dw 1E0h		; B-5
-		;dw 1F8h		; C-6 44100 +12
-		;dw 210h		; C#6
-		;dw 240h		; D-6
-		;dw 260h		; D#6
-		;dw 280h		; E-6
-		;dw 2A0h		; F-6
-		;dw 2D0h		; F#6
-		;dw 2F8h		; G-6
-		;dw 320h		; G#6
-		;dw 350h		; A-6
-		;dw 380h		; A#6
-		;dw 3C0h		; B-6
-		;dw 400h		; C-7 88200
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h		; C-8
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h		; C-9
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
-		;dw 100h
+wavFreq_Pwm:	dw 100h		; C-0
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h		; C-1
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h		; C-2
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 03Bh
+		dw 03Eh		; C-3 5512
+		dw 043h		; C#3
+		dw 046h		; D-3
+		dw 049h		; D#3
+		dw 04Eh		; E-3
+		dw 054h		; F-3
+		dw 058h		; F#3
+		dw 05Eh		; G-3 8363 -17
+		dw 063h		; G#3
+		dw 068h		; A-3
+		dw 070h		; A#3
+		dw 075h		; B-3
+		dw 07Fh		; C-4 11025 -12
+		dw 088h		; C#4
+		dw 08Fh		; D-4
+		dw 097h		; D#4
+		dw 0A0h		; E-4
+		dw 0ADh		; F-4
+		dw 0B5h		; F#4
+		dw 0C0h		; G-4
+		dw 0CCh		; G#4
+		dw 0D7h		; A-4
+		dw 0E7h		; A#4
+		dw 0F0h		; B-4
+		dw 100h		; C-5 22050
+		dw 110h		; C#5
+		dw 120h		; D-5
+		dw 12Ch		; D#5
+		dw 142h		; E-5
+		dw 158h		; F-5
+		dw 16Ah		; F#5 32000 +6
+		dw 17Eh		; G-5
+		dw 190h		; G#5
+		dw 1ACh		; A-5
+		dw 1C2h		; A#5
+		dw 1E0h		; B-5
+		dw 1F8h		; C-6 44100 +12
+		dw 210h		; C#6
+		dw 240h		; D-6
+		dw 260h		; D#6
+		dw 280h		; E-6
+		dw 2A0h		; F-6
+		dw 2D0h		; F#6
+		dw 2F8h		; G-6
+		dw 320h		; G#6
+		dw 350h		; A-6
+		dw 380h		; A#6
+		dw 3C0h		; B-6
+		dw 400h		; C-7 88200
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h		; C-8
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h		; C-9
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
+		dw 100h
 
 ; --------------------------------------------------------
-
-		;align 10h
 
 	; Channel tables: size 20h
 	; TODO: shrink to 10h to save space
@@ -2962,6 +3021,7 @@ tblPSGN:	db 00h,00h,83h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 	;  5 - 0B4h register data (incl. panning: %LRxxxxxx)
 	;  6 - FM keys
 	;  7 - Last ImpulseNote used
+		align 10h
 tblFM:		db 00h,00h,90h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,91h,00h,00h,00h,00h,00h	; Channel 2
@@ -3013,13 +3073,13 @@ fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
 		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
 		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
 		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
-fmins_com:	ds 020h				; Instrument data for each FM
+fmins_com:	ds 020h			; Current instrument data for each FM
 		ds 020h
 		ds 020h
 		ds 020h
 		ds 020h
 		ds 020h
-daccom:		db 0		; single byte for key on, off, cut
+daccom:		db 0			; single byte for key on, off, cut
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -3062,4 +3122,4 @@ dWaveBuff	ds 100h			; WAVE data READ buffer: updated every 80h bytes *LSB must b
 trkDataC	ds 100h*MAX_TRKS	; Track data READ buffer: 100h bytes each, updates every 80h
 trkBuff		ds 100h*MAX_TRKS	; Track control (20h bytes) + channels (8h each)
 insDataC	ds 100h*MAX_TRKS	; Instrument data+pointers for current track: 100h bytes
-blkHeadC	ds 80h*MAX_TRKS		; Track blocks and heads: divided by 80h bytes
+blkHeadC	ds 100h*MAX_TRKS	; Track blocks and heads: divided by 80h bytes

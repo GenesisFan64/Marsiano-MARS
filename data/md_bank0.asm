@@ -78,6 +78,11 @@ FmIns_Bass_6:
 		binclude "data/sound/instr/fm/bass_6.gsx",$2478,$20
 FmIns_Bass_7:
 		binclude "data/sound/instr/fm/bass_7.gsx",$2478,$20
+FmIns_Bass_italo:
+		binclude "data/sound/instr/fm/bass_italo.gsx",$2478,$20
+FmIns_Bass_mecan:
+		binclude "data/sound/instr/fm/bass_mecan.gsx",$2478,$20
+
 ; ; FmIns_Bass_heavy:
 ; ; 		binclude "data/sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; ; FmIns_Bass_metal:
