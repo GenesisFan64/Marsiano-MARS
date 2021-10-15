@@ -133,13 +133,26 @@ dac_me:		exx	; <-- code changes between EXX(play) and RET(stop)
 		exx
 		ret
 
+wave_Start	dw 0			; START: 68k direct pointer ($00xxxxxx)
+		db 0
+wave_Len	dw 0			; LENGTH
+		db 0
+wave_Loop	dw 0			; LOOP POINT
+		db 0
+wave_Pitch	dw 0100h		; 01.00h
+wave_Flags	db 0100b		; WAVE playback flags (%10x: 1 loop / 0 no loop)
+commZRead	db 0			; read pointer (here)
+commZWrite	db 0			; cmd fifo wptr (from 68k)
+commZRomBlk	db 0			; 68k ROM block flag
+commZRomRd	db 0			; Z80 ROM reading flag
+
 ; --------------------------------------------------------
 ; Z80 Interrupt at 0038h
 ;
 ; Sets the TICK flag
 ; --------------------------------------------------------
 
-		org 0038h		; Align to 0038h
+		org 38h		; Align to 0038h
 		ld	(tickFlag),sp	; Use sp to set TICK flag (xx1F, check for tickFlag+1)
 		di			; Disable interrupt until next request
 		ret
@@ -698,7 +711,7 @@ updtrack:
 		inc	a
 		ld 	(iy+trk_currBlk),a
 .set_track:
-; 		call 	dac_fill
+		call 	dac_fill
 		rst	8
 		ld	l,80h			; Set LSB as 40h
 		ld	(iy+trk_Read),l
@@ -744,7 +757,7 @@ updtrack:
 		ld	e,(iy+trk_Read)
 		ld	bc,080h			; bc - 080h
 		call	transferRom
-; 		call	dac_fill
+		call	dac_fill
 		ld	h,(iy+(trk_Read+1))
 		ld	l,(iy+trk_Read)
 		ld	c,(iy+trk_Rows)
@@ -1542,8 +1555,19 @@ setupchip:
 		cp	-2
 		jr	z,.dcut
 		ld	(iy+chnl_Chip),95h	; Set as FM6
-		ld	de,100h			; TEMPORAL
-		ld	(wave_Pitch),de
+		inc	hl
+		ld	de,0
+		ld	e,(hl)			; Get pitch
+		add	a,e
+		add	a,a
+		ld	e,a
+		ld	hl,wavFreq_List
+		add	hl,de
+		ld	a,(hl)
+		inc	hl
+		ld	h,(hl)
+		ld	l,a
+		ld	(wave_Pitch),hl
 		ld	a,0			; No loop
 		ld	(wave_Flags),a
 		ld	a,001b			; Request DAC play
@@ -1753,9 +1777,13 @@ setupchip:
 		push	iy
 		pop	de		; de - Copy of curr track-channel
 		rst	8
-; 		ld	a,(ix+1)	; Priority MSB check goes here
-; 		cp	d
-; 		jr	nz,.busy_s
+		ld	a,(ix+1)	; Priority MSB check goes here
+		or	a
+		jr	z,.new
+		cp	d
+		jr	nz,.busy_s
+.new:
+		rst	8
 		ld	(ix),e		; NEW slot
 		ld	(ix+1),d
 		xor	a		; Found free slot, pick it.
@@ -1900,39 +1928,6 @@ check_tick:
 		ret
 
 ; --------------------------------------------------------
-; set_tempo
-;
-; Input:
-; a - Beats per minute
-;
-; Uses:
-; de,hl
-; --------------------------------------------------------
-
-;set_tempo:
-		;ld	de,218
-		;call	do_multiply
-		;xor	a
-		;sla	l
-		;rl	h
-		;rla			; AH <- sbpt, 8 fracs
-		;ld	l,h
-		;ld	h,a		; HL <- AH
-		;ld	(sbeatPtck),hl
-		;ret
-;do_multiply:
-		;ld	hl,0
-;.mul_add:
-		;srl	a
-		;jr	nc,.mulbitclr
-		;add	hl,de
-;.mulbitclr:
-		;ret	z
-		;sla	e		; if more bits still set in A, DE*=2 and loop
-		;rl	d
-		;jr	.mul_add
-
-; --------------------------------------------------------
 ; transferRom
 ;
 ; Transfer bytes from ROM to Z80, this also tells
@@ -2045,22 +2040,23 @@ transferRom:
 		ld	a,c
 		ld	b,0
 		set	0,(ix+1)	; Tell to 68k that we are reading from ROM
-		sub	9
+		sub	8
 		jr	c,.x68klast
 .x68kloop:
-		ld	c,9-1
+		ld	c,8-1
 		bit	0,(ix)		; If 68k requested ROM block from here
 		jr	nz,.x68klpwt
 .x68klpcont:
 		ldir			; (de) to (hl) until bc==0
 		rst	8
 		nop
-		sub	a,9-1
+		nop
+		sub	a,8-1
 		rst	8
 		jp	nc,.x68kloop
 ; last block
 .x68klast:
-		add	a,9
+		add	a,8
 		ld	c,a
 		bit	0,(ix)		; If 68k requested ROM block from here
 		jp	nz,.x68klstwt
@@ -2071,8 +2067,7 @@ transferRom:
 		res	0,(ix+1)
 		ret
 
-; If Genesis wants to do a DMA job...
-; This MIGHT cause the DAC to ran out of sample data
+; If Genesis wants to do a DMA, loop indef until it finishes.
 .x68klpwt:
 		res	0,(ix+1)		; Not reading ROM
 .x68kpwtlp:
@@ -2081,8 +2076,7 @@ transferRom:
 		jr	nz,.x68kpwtlp
 		set	0,(ix+1)		; Reading ROM again.
 		jr	.x68klpcont
-
-; For last write
+; last pack
 .x68klstwt:
 		res	0,(ix+1)		; Not reading ROM
 .x68klstwtlp:
@@ -2353,10 +2347,10 @@ chip_env:
 		ret	z
 		ld	(iy),0
 		bit	2,a
-		call	nz,.fm_keycut
+		jr	nz,.fm_keycut
 		rst	8
 		bit	1,a
-		call	nz,.fm_keyoff
+		jr	nz,.fm_keyoff
 		bit	0,a
 		ret	z
 		ld	b,a
@@ -2867,7 +2861,7 @@ psgFreq_List:
  		dw 8h
 		dw 0
 
-wavFreq_Pwm:	dw 100h		; C-0
+wavFreq_List:	dw 100h		; C-0
 		dw 100h
 		dw 100h
 		dw 100h
@@ -3017,11 +3011,11 @@ tblPSGN:	db 00h,00h,83h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 
 	; FM: 90h+ FM3: 0A0h DAC: 0B0h
-	;  4 - 0B0h register data
-	;  5 - 0B4h register data (incl. panning: %LRxxxxxx)
+	;  4 - ??? TODO
+	;  5 - Panning (%LR000000)
 	;  6 - FM keys
 	;  7 - Last ImpulseNote used
-		align 10h
+	;  8 - Last FM instrument location (24-bit)
 tblFM:		db 00h,00h,90h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,91h,00h,00h,00h,00h,00h	; Channel 2
@@ -3066,19 +3060,21 @@ psgalv		db 00h,00h,00h,00h	; 36 attack level attenuation
 whdflg		db 00h,00h,00h,00h	; 40 flags to indicate hardware should be updated
 psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
 
-
 fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
 		db 00h,00h,00h,00h,00h,00h	;  6 - keys xxxx0000b
 		db 00h,00h,00h,00h,00h,00h	; 12 - volume (for 40h+)
 		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
 		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
 		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
-fmins_com:	ds 020h			; Current instrument data for each FM
+fmins_com:	ds 020h				; Current instrument data for each FM
 		ds 020h
 		ds 020h
 		ds 020h
 		ds 020h
 		ds 020h
+fm3reg:		dw 0AD00h,0A900h	; S1-S3, S4 is A4+/A0+ TODO: checar bien el orden de esto.
+		dw 0AE00h,0AA00h
+		dw 0AC00h,0A800h
 daccom:		db 0			; single byte for key on, off, cut
 
 ; ====================================================================
@@ -3087,14 +3083,6 @@ daccom:		db 0			; single byte for key on, off, cut
 ; ----------------------------------------------------------------
 
 	; non-aligned values
-wave_Start	dw 0			; START: 68k direct pointer ($00xxxxxx)
-		db 0
-wave_Len	dw 0			; LENGTH
-		db 0
-wave_Loop	dw 0			; LOOP POINT
-		db 0
-wave_Pitch	dw 0100h		; 01.00h
-wave_Flags	db 0100b		; WAVE playback flags (%10x: 1 loop / 0 no loop)
 currTrkBlkHd	dw 0
 currTrkData	dw 0
 currInsData	dw 0
@@ -3108,13 +3096,9 @@ dDacCntr	db 0,0,0		; WAVE play length counter
 dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
 x68ksrclsb	db 0			; transferRom temporal LSB
 x68ksrcmid	db 0			; transferRom temporal MID
-commZRead	db 0			; read pointer (here)
-commZWrite	db 0			; cmd fifo wptr (from 68k)
-commZRomBlk	db 0			; 68k ROM block flag
-commZRomRd	db 0			; Z80 ROM reading flag
 psgHatMode	db 0
+; ymTimerReg	db 0
 commZfifo	ds 40h			; Buffer for command requests from 68k
-fmInsCach	ds 20h			; FM instrument cache for reading
 
 	; aligned buffers
 		org 1400h

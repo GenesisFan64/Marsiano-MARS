@@ -106,7 +106,7 @@ GemaTrk_mecano_ins:
 	trkInsPsgN  0,$00,$00,$00,$08,$08,%100
 	trkInsPsgN  0,$00,$00,$00,$10,$10,%100
 	trkInsFm    0,FmIns_PianoM1,0
-	trkInsPsg   0,$10,$00,$20,$01,$01
+	trkInsPsg   0,$20,$00,$10,$01,$01
 	trkInsFm    0,FmIns_Bass_mecan,0
 	trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 	trkInsNull
