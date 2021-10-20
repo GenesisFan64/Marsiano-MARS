@@ -8,10 +8,10 @@ Fmins_Guitar_Heavy:
 FmIns_Brass_Eur:
 		binclude "data/sound/instr/fm/brass_eur.gsx",$2478,$20
 
-; FmIns_Fm3_OpenHat:
-; 		binclude "data/sound/instr/fm/fm3_openhat.gsx",$2478,28h
-; FmIns_Fm3_ClosedHat:
-; 		binclude "data/sound/instr/fm/fm3_closedhat.gsx",$2478,28h
+FmIns_Fm3_OpenHat:
+		binclude "data/sound/instr/fm/fm3_openhat.gsx",$2478,$28
+FmIns_Fm3_ClosedHat:
+		binclude "data/sound/instr/fm/fm3_closedhat.gsx",$2478,$28
 
 FmIns_DrumKick:
 		binclude "data/sound/instr/fm/drum_kick.gsx",$2478,$20
@@ -26,8 +26,8 @@ FmIns_PianoM1:
 ; ; 		binclude "data/sound/instr/fm/bass_gum.gsx",$2478,$20
 FmIns_Bass_calm:
 		binclude "data/sound/instr/fm/bass_calm.gsx",$2478,$20
-; ; FmIns_Bass_heavy:
-; ; 		binclude "data/sound/instr/fm/bass_heavy.gsx",$2478,$20
+FmIns_Bass_heavy:
+		binclude "data/sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; ; FmIns_Bass_ambient:
 ; ; 		binclude "data/sound/instr/fm/bass_ambient.gsx",$2478,$20
 ; ; FmIns_Brass_gummy:
@@ -59,8 +59,8 @@ FmIns_Bass_mecan:
 ; ; 		binclude "data/sound/instr/fm/bass_metal.gsx",$2478,$20
 ; ; FmIns_Bass_synth:
 ; ; 		binclude "data/sound/instr/fm/bass_synth_1.gsx",$2478,$20
-; ; FmIns_Guitar_1:
-; ; 		binclude "data/sound/instr/fm/guitar_1.gsx",$2478,$20
+FmIns_Guitar_1:
+		binclude "data/sound/instr/fm/guitar_1.gsx",$2478,$20
 ; ; FmIns_Horn_1:
 ; ; 		binclude "data/sound/instr/fm/horn_1.gsx",$2478,$20
 ; ; FmIns_Organ_M1:

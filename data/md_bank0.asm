@@ -31,5 +31,5 @@
 ;
 ;
 
-PCM_START:	binclude "data/sound/test_md.wav",$2C,$03FFFF
+PCM_START:	binclude "data/sound/test_md.wav",$2C,$05FFFF
 PCM_END:

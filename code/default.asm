@@ -9,7 +9,8 @@
 ; ------------------------------------------------------
 
 var_MoveSpd	equ	$4000
-MAX_TSTTRKS	equ	5
+MAX_TSTTRKS	equ	6
+MAX_TSTENTRY	equ	3
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -44,7 +45,8 @@ RAM_BgCamera	ds.w 1
 RAM_BgCamCurr	ds.w 1
 ; RAM_Layout_X	ds.w 1
 ; RAM_Layout_Y	ds.w 1
-RAM_CurrSong	ds.w 1
+RAM_CurrTrack	ds.w 1
+RAM_CurrSelc	ds.w 1
 sizeof_mdglbl	ds.l 0
 		finish
 
@@ -83,7 +85,6 @@ thisCode_Top:
 		beq.s	.loop
 		bsr	System_Input
 		add.l	#1,(RAM_Framecount).l
-; 		bsr	MD_FifoMars
 .inside:	move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
 		bne.s	.inside
@@ -132,13 +133,10 @@ thisCode_Top:
 ; 		moveq	#1,d4
 ; 		bsr	SoundReq_SetSample
 		move.w	#$8080,(sysmars_reg+comm14)
+		bsr	.print_cursor
 
 ; Mode 0 mainloop
 .mode0_loop:
-		lea	str_Status(pc),a0
-		move.l	#locate(0,8,4),d0
-		bsr	Video_Print
-
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyA,d7
 		beq.s	.noc_up
@@ -155,11 +153,10 @@ thisCode_Top:
 		moveq	#1,d4
 		bsr	SoundReq_SetSample
 .noc_d:
-
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
 		beq.s	.noc_c
-		move.w	(RAM_CurrSong).w,d0
+		move.w	(RAM_CurrTrack).w,d0
 		lsl.l	#4,d0
 		lea	.playlist(pc,d0.w),a0
 		move.l	(a0)+,d0
@@ -173,22 +170,44 @@ thisCode_Top:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyLeft,d7
 		beq.s	.nol
-		tst.w	(RAM_CurrSong).w
+		tst.w	(RAM_CurrTrack).w
 		beq.s	.nol
-		sub.w	#1,(RAM_CurrSong).w
+		sub.w	#1,(RAM_CurrTrack).w
+		bsr	.print_cursor
 .nol:
+		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor
-		cmp.w	#MAX_TSTTRKS,(RAM_CurrSong).w
+		cmp.w	#MAX_TSTTRKS,(RAM_CurrTrack).w
 		bge.s	.nor
-		add.w	#1,(RAM_CurrSong).w
+		add.w	#1,(RAM_CurrTrack).w
+		bsr	.print_cursor
 .nor:
+
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyUp,d7
+		beq.s	.nou
+		tst.w	(RAM_CurrSelc).w
+		beq.s	.nou
+		sub.w	#1,(RAM_CurrSelc).w
+		bsr	.print_cursor
+.nou:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyDown,d7
+		beq.s	.nod
+		cmp.w	#MAX_TSTENTRY,(RAM_CurrSelc).w
+		bge.s	.nod
+		add.w	#1,(RAM_CurrSelc).w
+		bsr	.print_cursor
+.nod:
+
+
 		rts
 
-
 ; test playlist
-
 .playlist:
+	dc.l GemaTrk_doom_patt,GemaTrk_doom_blk,GemaTrk_doom_ins
+	dc.l 4
 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
 	dc.l 4
 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
@@ -202,6 +221,18 @@ thisCode_Top:
 	dc.l GemaTrk_brinstr_patt,GemaTrk_brinstr_blk,GemaTrk_brinstr_ins
 	dc.l 3
 	align 2
+
+.print_cursor:
+		lea	str_Status(pc),a0
+		move.l	#locate(0,13,4),d0
+		bsr	Video_Print
+
+		lea	str_Cursor(pc),a0
+		moveq	#0,d0
+		move.w	(RAM_CurrSelc).w,d0
+		add.l	#locate(0,2,3),d0
+		bsr	Video_Print
+		rts
 
 ; 		move.w	(Controller_1+on_hold),d7
 ; 		move.w	d7,(sysmars_reg+comm12)
@@ -632,33 +663,23 @@ MD_FifoMars:
 ; Small stuff goes here
 ; ------------------------------------------------------
 
+str_Cursor:	dc.b " ",$A
+		dc.b ">",$A
+		dc.b " ",0
+
 str_Status:
 		dc.b "\\w",0
-		dc.l RAM_CurrSong
+		dc.l RAM_CurrTrack
 		align 2
 
 str_Title:
 		dc.b "Marsiano sound driver (Genesis+32X)",$A
 		dc.b $A
-		dc.b "Song: ????",0;$A
-		dc.b $A
-		dc.b "TK01 ?-? ?? ?? ??",$A
-		dc.b "TK02 ?-? ?? ?? ??",$A
-		dc.b "TK03 ?-? ?? ?? ??",$A
-		dc.b "TK04 ?-? ?? ?? ??",$A
-		dc.b "TK05 ?-? ?? ?? ??",$A
-		dc.b "TK06 ?-? ?? ?? ??",$A
-		dc.b "TK07 ?-? ?? ?? ??",$A
-		dc.b "TK08 ?-? ?? ?? ??",$A
-		dc.b "TK09 ?-? ?? ?? ??",$A
-		dc.b "TK10 ?-? ?? ?? ??",$A
-		dc.b "TK11 ?-? ?? ?? ??",$A
-		dc.b "TK12 ?-? ?? ?? ??",$A
-		dc.b "TK13 ?-? ?? ?? ??",$A
-		dc.b "TK14 ?-? ?? ?? ??",$A
-		dc.b "TK15 ?-? ?? ?? ??",$A
-		dc.b "TK16 ?-? ?? ?? ??",$A
-		dc.b "TK17 ?-? ?? ?? ??",0
+		dc.b "  Track 0: ",$A
+		dc.b "  Track 1: ----",$A
+		dc.b "  Track 2: ----",$A
+		dc.b "  Track 3: ----",0
+		dc.b 0
 		align 2
 
 ; ====================================================================

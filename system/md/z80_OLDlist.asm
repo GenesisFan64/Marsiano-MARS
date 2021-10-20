@@ -1,9 +1,5 @@
 ; --------------------------------------------------------
-; Marsiano/GEMA sound driver, inspired by GEMS
-;
-; WARNING: The sample playback has to be sync'd manually
-; on any code change, DAC sample rate is in
-; the 16000hz range
+; OLD Z80 CODE
 ; --------------------------------------------------------
 
 		cpu Z80			; Set Z80 here

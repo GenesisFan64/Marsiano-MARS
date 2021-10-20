@@ -2,13 +2,12 @@
 A video+sound "driver" for the 32X.
 
 Things working:
-- Draw an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
 - Sound: FM+PSG+DAC
+- Draw an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
 
 Notes/Issues:
-- Polygon rendering broken.
-- SVDP FILL can't be used anymore because of the new internal width (384, only works if 512 is used), solidcolor polygons need reworking
-- PWM working but it's not supported yet on the sound driver
+- Polygon rendering broken. Will have to rewrite it entirely
+- PWM IS working but it's not being used YET by the sound driver
 
 Please note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers
@@ -17,7 +16,6 @@ Please note that current 32X emulators ignore some hardware restrictions and bug
 - BUS fighting on SH2 (TODO: keep testing this): If any of the SH2 CPUs WRITE the same location at the same time it will crash the add-on. (Note: Only encountered this on SDRAM area, other locations like the registers should be fine)
 - SH2's DMA locks Palette (HW bug I found, or probably did something wrong): If transfering indexed-palette data to SuperVDP's Palette using DMA, the first transfer will work, then the DMA will get stuck, both Source and Destination areas can't be rewritten
 - PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs
-
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
 If it doesn't boot or freezes: I probably broke something without testing on HW
