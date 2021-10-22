@@ -80,6 +80,62 @@ trkInsPwm	macro pitch,start,end,loop,flags
 ; 		trkInsPsg  0,PsgIns_01
 ; 		trkInsPsgN 0,PsgIns_Snare,%101
 
+; GemaTrk_base_blk:
+; 	binclude "data/sound/tracks/base_blk.bin"
+; GemaTrk_base_patt:
+; 	binclude "data/sound/tracks/base_patt.bin"
+; GemaTrk_base_ins:
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+
+GemaTrk_cirno_blk:
+	binclude "data/sound/tracks/feellove_blk.bin"
+GemaTrk_cirno_patt:
+	binclude "data/sound/tracks/feellove_patt.bin"
+GemaTrk_cirno_ins:
+	trkInsFm  -12,FmIns_Brass_Eur,0
+	trkInsFm  0,FmIns_Bass_synth,0
+	trkInsPsgN  0,$20,$FF,$20,$40,$40,%100
+	trkInsNull
+	trkInsNull
+	trkInsNull
+	trkInsNull
+	trkInsFm -12,FmIns_Bass_3,0
+	trkInsFm  -12,FmIns_Brass_Eur,0
+	trkInsPsg   0,$00,$FF,$00,$00,$01
+
+
+; 	trkInsFm    0,FmIns_PianoM1,0
+; 	trkInsFm    0,FmIns_Bass_mecan,0
+; 	trkInsNull
+; 	trkInsPsgN  0,$00,$FF,$00,$08,$08,%101
+; 	trkInsNull;trkInsDac -12,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+; 	trkInsNull;trkInsDac -12,DacIns_SaurTom,DacIns_SaurTom_e,0,0
+; 	trkInsPsgN  0,$00,$FF,$00,$08,$08,%110
+; 	trkInsPsgN  0,$00,$FF,$00,$04,$04,%100
+; 	trkInsNull;trkInsDac  -12,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+; 	trkInsFm    0,FmIns_Trumpet_2,0
+; 	trkInsPsg   0,$00,$FF,$00,$00,$01
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+
 GemaTrk_doom_blk:
 	binclude "data/sound/tracks/doom_blk.bin"
 GemaTrk_doom_patt:
@@ -157,7 +213,7 @@ GemaTrk_mars_ins:
 	trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 	trkInsPsgN  0,$20,$FF,$00,$30,$30,%100
 	trkInsFm    0,FmIns_PianoM1,0
-	trkInsPsg   0,$20,$20,$10,$00,$00
+	trkInsPsg   0,$40,$20,$20,$00,$00
 	trkInsFm    0,FmIns_Bass_7,0
 	trkInsNull
 	trkInsNull

@@ -9,7 +9,7 @@
 ; ------------------------------------------------------
 
 var_MoveSpd	equ	$4000
-MAX_TSTTRKS	equ	6
+MAX_TSTTRKS	equ	7
 MAX_TSTENTRY	equ	3
 
 ; ====================================================================
@@ -206,6 +206,8 @@ thisCode_Top:
 
 ; test playlist
 .playlist:
+	dc.l GemaTrk_cirno_patt,GemaTrk_cirno_blk,GemaTrk_cirno_ins
+	dc.l 4
 	dc.l GemaTrk_doom_patt,GemaTrk_doom_blk,GemaTrk_doom_ins
 	dc.l 4
 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins

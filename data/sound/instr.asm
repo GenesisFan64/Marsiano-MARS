@@ -57,8 +57,8 @@ FmIns_Bass_mecan:
 ; ; 		binclude "data/sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; ; FmIns_Bass_metal:
 ; ; 		binclude "data/sound/instr/fm/bass_metal.gsx",$2478,$20
-; ; FmIns_Bass_synth:
-; ; 		binclude "data/sound/instr/fm/bass_synth_1.gsx",$2478,$20
+FmIns_Bass_synth:
+		binclude "data/sound/instr/fm/bass_synth_1.gsx",$2478,$20
 FmIns_Guitar_1:
 		binclude "data/sound/instr/fm/guitar_1.gsx",$2478,$20
 ; ; FmIns_Horn_1:
@@ -106,6 +106,9 @@ DacIns_SaurKick_e:
 DacIns_SaurSnare:
 		binclude "data/sound/instr/smpl/sauron_snare.wav",$2C
 DacIns_SaurSnare_e:
+DacIns_SaurTom:
+		binclude "data/sound/instr/smpl/sauron_tom.wav",$2C
+DacIns_SaurTom_e:
 
 ; Sampl_KickSpinb:
 ; 		binclude "data/sound/instr/smpl/spinb_kick.wav",$2C
