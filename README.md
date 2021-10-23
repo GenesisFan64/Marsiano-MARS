@@ -7,7 +7,7 @@ Things working:
 
 Notes/Issues:
 - Polygon rendering broken. Will have to rewrite it entirely
-- PWM IS working but it's not being used YET by the sound driver
+- PWM IS working but it's not being used by the sound driver YET
 
 Please note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers

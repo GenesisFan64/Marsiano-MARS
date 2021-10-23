@@ -7,9 +7,5 @@
 ; ----------------------------------------------------------------
 
 		align $8000
-		include "data/sound/tracks.asm"
-		align 2
-		include "data/sound/instr.asm"
-		align 2
-PCM_START:	binclude "data/sound/test_md.wav",$2C,$05FFFF
-PCM_END:
+; PCM_START:	binclude "sound/test_md.wav",$2C,$05FFFF
+; PCM_END:

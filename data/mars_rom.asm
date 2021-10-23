@@ -35,15 +35,9 @@ TESTMARS_BG:
 TESTMARS_BG_PAL:
 		binclude "data/mars/test_pal.bin"
 		align 4
-
-; MARSANI_INTRO_1:
-; 		binclude "data/mars/objects/anim/logo_1_anim.bin"
+; PWM_STEREO:	binclude "sound/test_mars.wav",$2C,$200000
+; PWM_STEREO_e:
 ; 		align 4
-
-
-PWM_STEREO:	binclude "data/sound/test_mars.wav",$2C,$200000
-PWM_STEREO_e:
-		align 4
 ; PwmInsWav_SPHEAVY1:
 ; 		binclude "data/sound/instr/smpl/SPHEAVY1.wav",$2C
 ; PwmInsWav_SPHEAVY1_e:

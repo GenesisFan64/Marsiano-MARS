@@ -2104,8 +2104,10 @@ SH2_S_HotStart:
 		add 	#4,r2
 		dt	r3
 		bf	.copy
-		bsr	MarsSound_Init			; Init Sound
-		nop
+
+	; TODO: Disabled temporally
+; 		bsr	MarsSound_Init			; Init Sound
+; 		nop
 ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
 ; 		jsr	@r0
 ; 		nop
@@ -2135,16 +2137,21 @@ slave_loop:
 		xor	r0,r0
 		mov.w	r0,@r14
 
-		mov	#0,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%11|%10000000,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
 		nop
+		nop
+		nop
+		nop
+
+; 		mov	#0,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%11|%10000000,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
 .no_wav:
 		bra	slave_loop
 		nop

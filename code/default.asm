@@ -143,16 +143,16 @@ thisCode_Top:
 		move.w	#1,d0
 		move.w	d0,(sysmars_reg+comm0)
 .noc_up:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyB,d7
-		beq.s	.noc_d
-		move.l	#PCM_START,d0
-		move.l	#PCM_END-PCM_START,d1
-		moveq	#0,d2
-		move.w	#$100,d3
-		moveq	#1,d4
-		bsr	SoundReq_SetSample
-.noc_d:
+; 		move.w	(Controller_1+on_press),d7
+; 		btst	#bitJoyB,d7
+; 		beq.s	.noc_d
+; 		move.l	#PCM_START,d0
+; 		move.l	#PCM_END-PCM_START,d1
+; 		moveq	#0,d2
+; 		move.w	#$100,d3
+; 		moveq	#1,d4
+; 		bsr	SoundReq_SetSample
+; .noc_d:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
 		beq.s	.noc_c

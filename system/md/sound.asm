@@ -5,7 +5,7 @@
 
 ; --------------------------------------------------------
 ; Init Sound
-; 
+;
 ; Uses:
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
@@ -30,9 +30,9 @@ Sound_Init:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copy
 		move.b	#1,(z80_reset).l		; Reset
-		nop 
-		nop 
-		nop 
+		nop
+		nop
+		nop
 		move.w	#0,(z80_bus).l
 		rts
 
@@ -43,7 +43,7 @@ Sound_Init:
 
 ; --------------------------------------------------------
 ; Sound_DMA_Pause
-; 
+;
 ; Call this before doing any DMA task
 ; --------------------------------------------------------
 
@@ -69,7 +69,7 @@ Sound_DMA_Pause:
 
 ; --------------------------------------------------------
 ; Sound_DMA_Resume
-; 
+;
 ; Call this after finishing DMA
 ; --------------------------------------------------------
 
@@ -84,7 +84,7 @@ Sound_DMA_Resume:
 
 ; --------------------------------------------------------
 ; Sound_Request_Word
-; 
+;
 ; d0    - request id
 ; d1    - argument
 ; --------------------------------------------------------
@@ -99,7 +99,7 @@ Sound_Request:
 
 ; --------------------------------------------------------
 ; SoundReq_SetTrack
-; 
+;
 ; d0 - Pattern data pointer
 ; d1 - Block data pointer
 ; d2 - Instrument data pointer
@@ -122,10 +122,10 @@ SoundReq_SetTrack:
 		move.l	d2,d7			; d2 - Intrument data
 		bsr	sndReq_saddr
 		bra 	sndReq_Exit
-		
+
 ; --------------------------------------------------------
 ; SoundReq_SetSample
-; 
+;
 ; d0 - Sample pointer
 ; d1 - length
 ; d2 - loop point
@@ -159,7 +159,7 @@ sndLockZ80:
 		btst	#0,(z80_bus).l			; Wait for it
 		bne.s	.wait
 		rts
-		
+
 ; ------------------------------------------------
 ; Unlock Z80, return bus
 ; ------------------------------------------------
@@ -195,7 +195,7 @@ sndReq_Exit:
 		move.w	d6,sr
 		movem.l	(RAM_SndSaveReg).l,d6-d7/a5-a6
 		rts
-		
+
 ; ------------------------------------------------
 ; Send request id and arguments
 ;
@@ -204,7 +204,7 @@ sndReq_Exit:
 ; d6 - index pointer
 ; a5 - commZWrite, update index
 ; a6 - commZfifo command list
-; 
+;
 ; *** CALL sndReq_Enter FIRST ***
 ; ------------------------------------------------
 

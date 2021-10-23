@@ -43,7 +43,7 @@ MdRamCode_end:
 
 		align $80
 Z80_CODE:
-		include "system/md/z80.asm"
+		include "system/md/z_driver.asm"
 		cpu 68000
 		padding off
 		phase Z80_CODE+*
@@ -69,6 +69,8 @@ Default_Boot:
 
 	; First one is smaller than the rest...
 		phase $900000+*				; Only one currently
+		include "sound/tracks.asm"
+		include "sound/instr.asm"
 		include "data/md_bank0.asm"
 		dephase
 ; 		org $100000-4				; Fill this bank and
