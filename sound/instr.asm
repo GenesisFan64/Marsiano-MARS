@@ -13,6 +13,9 @@ FmIns_Fm3_OpenHat:
 FmIns_Fm3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
 
+FmIns_DrumKick_gem:
+		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
+
 FmIns_DrumKick:
 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
 FmIns_DrumSnare:
@@ -95,6 +98,10 @@ FmIns_Ding_toy:
 ; --------------------------------------------------------
 ; DAC samples
 ; --------------------------------------------------------
+
+DacIns_Snare_Gem:
+		binclude "sound/instr/smpl/snare_lobo.wav",$2C
+DacIns_Snare_Gem_e:
 
 DacIns_CdSnare:
 		binclude "sound/instr/smpl/cd_snare.wav",$2C

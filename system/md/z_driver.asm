@@ -740,6 +740,9 @@ updtrack:
 		call	dac_fill
 		res	6,b			; Reset FILL flag
 		ld	(iy+trk_status),b
+
+	; TODO: mejor checar TODOS los links
+	; en vez de ver cuales se quedaron activos
 		push	iy
 		pop	ix			; copy iy to ix
 		ld	de,20h			; go to channel data
@@ -754,14 +757,14 @@ updtrack:
 		or	a
 		jp	z,.dntslnce
 		call	.silnc_chip
-		ld	(ix+chnl_Note),-2	; Force NOTECUT
-		ld	(ix+chnl_Flags),001b
-		ld	(ix+chnl_Chip),0
+		ld	(ix+chnl_Flags),0
 		rst	8
 .dntslnce:
 		pop	de
 		add	ix,de
 		djnz	.clrf
+
+
 		ld	(iy+trk_RowPause),0	; Reset row timer
 		ld	a,(iy+trk_setBlk)	; Set current block
 		ld 	(iy+trk_currBlk),a	;
@@ -823,7 +826,6 @@ updtrack:
 ; DAC: A0h
 ; PWM: B0h
 
-; TODO: luego checar bien esto.
 .silnc_chip:
 		ld	c,a
 		and	11110000b
@@ -1153,7 +1155,14 @@ setupchip:
 ; Read FM reg data
 .ins_fm:
 		ld	a,(ix+2)
-		and	00000111b	; *20h
+		and	00000111b
+		cp	5		; Check if we are on FM6
+		jp	nz,.not_prdac
+		ld	e,a
+		ld	a,010b		; FORCE DAC STOP
+		ld	(daccom),a
+		ld	a,e
+.not_prdac:
 		cp	2		; Check for FM3
 		jr	nz,.ins_fm_3
 		ld	e,a
@@ -1205,7 +1214,7 @@ setupchip:
 ; 		ld	a,c
 		ld	bc,020h
 		call	transferRom
-		ld	(ix+6),11110000b	; Temporal keys (TODO)
+; 		ld	(ix+6),11110000b	; Temporal keys (TODO)
 ; 		ld	a,(iy+chnl_Flags)
 ; 		and	11001111b
 ; 		ld	(iy+chnl_Flags),a
@@ -1434,7 +1443,7 @@ setupchip:
 		ld	d,(hl)
 		ld	bc,0
 		ld	a,(ix+2)
-		ld	(iy+chnl_Chip),a
+		ld	(iy+chnl_Chip),a; Mark as PSG
 		and	11b
 		ld	c,a
 		push	ix		; swap ix to hl
@@ -1492,8 +1501,6 @@ setupchip:
 
 ; --------------------------------
 ; FM,FM3,FM6
-; TODO: change the play/stop as flags
-; instead of direct
 
 .note_dac:
 		ld	a,(iy+chnl_Note)
@@ -1545,7 +1552,7 @@ setupchip:
 		cpl
 		and	11000000b
 		ld	(ix+FMPAN),a	; Set panning data
-		ld	e,11110000b	; TODO: TEMPORAL KEYS
+		ld	e,11110000b
 		ld	(ix+FMKEYS),e
 		ld	a,(ix)		; key on | ins update flag
 		or	001b
@@ -1554,16 +1561,15 @@ setupchip:
 
 ; Normal FM
 .note_fm:
-		ld	a,(ix+2)
-		rst	8
-		ld	(iy+chnl_Chip),a
 		ld	a,(iy+chnl_Note)
 		ld	d,a
 		inc	hl
+		rst	8
 		ld	e,(hl)		; Add pitch
 		add	a,e
 		ld	c,a		; c - Note+pitch
 		ld	a,(ix+2)
+		ld	b,a
 		and	00000111b
 		rst	8
 		ld	hl,fmcom	; hl - fmcom list
@@ -1571,18 +1577,19 @@ setupchip:
 		and	111b
 		ld	e,a
 		add	hl,de
-		rst	8
 		ld	a,(iy+chnl_Note)
 		cp	-1
 		jr	z,.fm_keyoff
 		cp	-2
 		jr	z,.fm_keycut
+		rst	8
+		ld	(iy+chnl_Chip),b
 		ld	a,c
 		ld	e,(ix+7)
 		cp	e
 		jr	nz,.newnote
 		rst	8
-		ld	e,(ix+6)	; e - tbl keys
+; 		ld	e,(ix+6)	; e - tbl keys
 		push	hl
 		pop	ix
 		jr	.fmsame_note
@@ -1619,7 +1626,7 @@ setupchip:
 		jr	nz,.get_oct
 .fnd_oct:
 	; b - octave / c - note
-		ld	e,(ix+6)	; e - tbl keys
+; 		ld	e,(ix+6)	; e - tbl keys
 		push	de
 		ld	e,(ix+4)	; e - tbl 0B0h
 		push	hl
@@ -1653,7 +1660,8 @@ setupchip:
 		cpl			; reverse bits
 		and	11000000b
 		ld	(ix+FMPAN),a	; Set panning data
-		ld	(ix+FMKEYS),e
+		ld	a,11110000b
+		ld	(ix+FMKEYS),a
 		ld	a,(ix)
 		and	11110000b
 		ld	c,a
@@ -2339,8 +2347,7 @@ chip_env:
 ; FM section
 ; ----------------------------
 
-	; TODO: rewrite this entire
-	; section, it's horrible
+	; TODO: rewrite this part, it's bad.
 		ld	a,(fmSpcMode)
 		ld	e,a
 		ld	c,0		; TIMER BITS go here
@@ -2389,45 +2396,46 @@ chip_env:
 		inc	iy
 		inc	c
 		call	.fm_set		; Channel 5
+
+
 		ld	a,(daccom)
-		or	a
-		jp	nz,.req_dac
+		ld	e,a
+		xor	a
+		ld	(daccom),a
+		bit	0,e			; WAVE sample request
+		jr	nz,.req_dac
+		bit	1,e
+		call	nz,dac_off		; DAC OFF but keep going
 		ld	de,20h
 		add	ix,de
 		inc	iy
 		inc	c
 		rst	8
-		jp	.fm_set		; Channel 6 (normal)
+		jp	.fm_set			; Channel 6 (normal)
 .req_dac:
-		ld	e,a
-		xor	a
-		ld	(daccom),a
-		bit	1,e			; DAC keyoff?
-		jp	nz,dac_off		; disable now.
 		ld	d,0B6h			; Panning for DAC
 		ld	a,((fmcom+5)+FMPAN)	; Reuse FM6's panning
 		ld	e,11000000b
 		call	fm_send_2
 		jp	dac_play		; Set playback
 .fm_set:
-		ld	a,(iy)		; Get comm bits
+		ld	a,(iy)			; Get comm bits
 		or	a
 		ret	z
 		ld	(iy),0		; Reset
 		bit	2,a		; Key-cut bit?
 		jp	nz,.fm_keycut
 		rst	8
-		bit	1,a		; Key-off bit?
+		bit	1,a		; Key-off ONLY?
 		jp	nz,.fm_keyoff
 		bit	0,a
 		ret	z
 		ld	b,a
-		ld	d,28h		; Keys off first
-		ld	e,c		; TODO: check if I still need
-		call	fm_send_1	; this.
+		call	.fm_keyoff	; Do key-off anyway.
 		bit	4,b		; Instrument-update bit?
 		call	nz,.fm_insupd
 		call	.fm_volupd	; Update volume ALWAYS
+	; other effect-calls go here
 		rst	8
 		ld	a,c
 		and	11b
@@ -2490,8 +2498,9 @@ chip_env:
 .notfm3:
 		rst	8
 		ld	d,28h		; Keys
-		ld	a,(iy+FMKEYS)
-		and	11110000b
+		ld	a,(ix+01Fh)	; a - Read this ins' keys
+		ld	b,(iy+FMKEYS)	; b - ALLOW bits
+		and	b
 		or	c
 		ld	e,a
 		jp	fm_send_1
@@ -2573,26 +2582,35 @@ chip_env:
 		ld	a,h		; Check 40h
 		cp	7		; Algorithm == 07h?
 		call	z,.do_vol
-		inc	d		; Next...
-		inc	d
-		inc	d
-		inc	d
+		ld	a,d
+		add	a,4
+		ld	d,a
+; 		inc	d		; Next...
+; 		inc	d
+; 		inc	d
+; 		inc	d
 		inc	ix
 		ld	a,h		; Check 44h
 		cp	4		; Algorithm > 04h?
 		call	nc,.do_vol
-		inc	d		; Next...
-		inc	d
-		inc	d
-		inc	d
+		ld	a,d
+		add	a,4
+		ld	d,a
+; 		inc	d		; Next...
+; 		inc	d
+; 		inc	d
+; 		inc	d
 		inc	ix
 		ld	a,h		; Check 48h
 		cp	5		; Algorithm > 05h?
 		call	nc,.do_vol
-		inc	d		; Next...
-		inc	d
-		inc	d
-		inc	d
+		ld	a,d
+		add	a,4
+		ld	d,a
+; 		inc	d		; Next...
+; 		inc	d
+; 		inc	d
+; 		inc	d
 		inc	ix
 		call	.do_vol		; Do 4Ch
 		pop	ix
@@ -2600,6 +2618,11 @@ chip_env:
 .do_vol:
 		ld	a,(ix)
 		add	a,b
+	; TODO: > 7Fh check
+	;	cp	7Fh
+	;	jr	c,.vmuch
+	;	ld	e,7Fh
+.vmuch:
 		ld	e,a
 		bit	2,c
 		call	z,fm_send_1

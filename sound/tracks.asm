@@ -123,13 +123,13 @@ GemaTrk_doom_blk:
 GemaTrk_doom_patt:
 	binclude "sound/tracks/doom_patt.bin"
 GemaTrk_doom_ins:
-	trkInsFm  0,FmIns_Bass_3,0
-	trkInsDac 0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-	trkInsDac 0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-	trkInsDac 0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-	trkInsFm  0,FmIns_Bass_heavy,0
-	trkInsFm  0,FmIns_Guitar_1,0
-	trkInsFm3 0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
+	trkInsFm    0,FmIns_Bass_3,0
+	trkInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
+	trkInsFm  -36,FmIns_DrumKick_gem,0
+	trkInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
+	trkInsFm    0,FmIns_Bass_heavy,0
+	trkInsFm    0,FmIns_Guitar_1,0
+	trkInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
 
 
 GemaTrk_moon_blk:

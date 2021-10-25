@@ -66,8 +66,8 @@ marsGbl_Plgn_Read	ds.l 1
 marsGbl_Plgn_Write	ds.l 1
 marsGbl_Bg_FbBase	ds.l 1		; X base position for Up/Down draw
 marsGbl_Bg_FbCurrR	ds.l 1
-marsGbl_Bg_Xpos		ds.w 1
-marsGbl_Bg_Ypos		ds.w 1
+marsGbl_Bg_Xpos		ds.l 1		; 00.00
+marsGbl_Bg_Ypos		ds.l 1		; 00.00
 marsGbl_Bg_Xpos_old	ds.w 1
 marsGbl_Bg_Ypos_old	ds.w 1
 marsGbl_Bg_XShift	ds.w 1
@@ -882,8 +882,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#320,r2
-		mov	#224,r3
+		mov	#384,r2
+		mov	#368,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1019,6 +1019,15 @@ mstr_gfx1_loop:
 ;  		xor	#1,r0
 ;  		mov.w	r0,@(marsGbl_PlgnBuffNum,gbr)
 ; .no_req:
+
+		mov	#$8000,r8
+		mov	@(marsGbl_Bg_Xpos,gbr),r0
+		add	r8,r0
+		mov	r0,@(marsGbl_Bg_Xpos,gbr)
+		mov	#$8000,r8
+		mov	@(marsGbl_Bg_Ypos,gbr),r0
+		add	r8,r0
+		mov	r0,@(marsGbl_Bg_Ypos,gbr)
 
 	; ---------------------------------------
 	; Read 3rd-layer scroll values
@@ -1704,7 +1713,9 @@ mstr_movebg:
 
 		mov	#0,r1			; Zero scroll
 		mov	#0,r2
-		mov.w	@(marsGbl_Bg_Xpos,gbr),r0
+		mov.l	@(marsGbl_Bg_Xpos,gbr),r0
+		shlr16	r0
+		exts.w	r0,r0
 		mov	r0,r3
 		mov.w	@(marsGbl_Bg_Xpos_old,gbr),r0
 		cmp/eq	r0,r3
@@ -1714,7 +1725,9 @@ mstr_movebg:
 .xequ:
 		mov	r3,r0
 		mov.w	r0,@(marsGbl_Bg_Xpos_old,gbr)
-		mov.w	@(marsGbl_Bg_Ypos,gbr),r0
+		mov.l	@(marsGbl_Bg_Ypos,gbr),r0
+		shlr16	r0
+		exts.w	r0,r0
 		mov	r0,r3
 		mov.w	@(marsGbl_Bg_Ypos_old,gbr),r0
 		cmp/eq	r0,r3
