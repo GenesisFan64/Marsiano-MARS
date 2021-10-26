@@ -1024,7 +1024,6 @@ mstr_gfx1_loop:
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r8,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
-		mov	#$8000,r8
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r8,r0
 		mov	r0,@(marsGbl_Bg_Ypos,gbr)

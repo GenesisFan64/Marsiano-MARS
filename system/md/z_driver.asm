@@ -44,7 +44,7 @@ trk_CachHeads	equ 27			; Buff'd Track heads
 trk_CachIns	equ 29
 
 ; Track data: 8 bytes only
-chnl_Chip	equ 0			; Channel chip CUSTOM ID
+chnl_Chip	equ 0			; MUST BE 0 or else modify .can_silnc
 chnl_Type	equ 1			; Impulse note bits
 chnl_Note	equ 2
 chnl_Ins	equ 3
@@ -140,7 +140,7 @@ commZRomBlk	db 0			; 68k ROM block flag
 commZRomRd	db 0			; Z80 ROM reading flag
 commZRead	db 0			; cmd read pointer (here)
 commZWrite	db 0			; cmd fifo wptr (from 68k)
-sbeatPtck	dw 204			; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 208-40			; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0			; Accumulates ^^ each tick to track sub beats
 
 ; small variables stored here before 0038h
@@ -198,7 +198,7 @@ drv_loop:
 .noticks:
 		rst	8
 	; TODO: here i'll use the YM TIMER feature instead
-	; of this... hopefully
+	; of this... or not
 		ld	a,(sbeatAcc+1)	; check beat counter (scaled by tempo)
 		sub	1
 		jr	c,.nobeats
@@ -413,6 +413,7 @@ updtrack:
 		ld	hl,trkHeads_0
 		ld	de,insDataC_0
 		call	.read_track
+
 	; TODO more tracks (one more for SFX)
 		ret
 
@@ -431,6 +432,8 @@ updtrack:
 		bit	7,b			; Active?
 		ret	z
 		ld	a,(currTickBits)	; a - Tick/Beat bits
+
+	; TODO implementar bien esto
 ; 		bit	5,b			; This track uses Beats?
 ; 		jp	nz,.sfxmd		; Nope
 ; 		bit	1,a			; BEAT passed?
@@ -740,9 +743,6 @@ updtrack:
 		call	dac_fill
 		res	6,b			; Reset FILL flag
 		ld	(iy+trk_status),b
-
-	; TODO: mejor checar TODOS los links
-	; en vez de ver cuales se quedaron activos
 		push	iy
 		pop	ix			; copy iy to ix
 		ld	de,20h			; go to channel data
@@ -756,14 +756,36 @@ updtrack:
 		ld	a,(ix+chnl_Chip)
 		or	a
 		jp	z,.dntslnce
-		call	.silnc_chip
-		ld	(ix+chnl_Flags),0
+		ld	(ix+chnl_Flags),00000001b
+		ld	(ix+chnl_Note),-2
+		ld	(ix+chnl_EffId),0
 		rst	8
 .dntslnce:
 		pop	de
 		add	ix,de
 		djnz	.clrf
-
+	; auto-silence channels
+		ld	hl,tblPSGN	; PSGN
+		call	.chktbl_sl
+		ld	hl,tblPSG	; PSG1-3
+		ld	b,3
+.psglp:
+		push	hl
+		call	.chktbl_sl
+		pop	hl
+		ld	de,10h
+		add	hl,de
+		djnz	.psglp
+		ld	hl,tblFM	; FM1-6
+		ld	b,6
+.fmlp:
+		push	hl
+		call	.chktbl_sl
+		pop	hl
+		ld	de,10h
+		add	hl,de
+		djnz	.fmlp
+	; TODO: autosilence PWM too.
 
 		ld	(iy+trk_RowPause),0	; Reset row timer
 		ld	a,(iy+trk_setBlk)	; Set current block
@@ -817,88 +839,84 @@ updtrack:
 		ret
 
 ; ----------------------------------------
-; Silence unused channels before playing
-; new track
+; Check table for auto-silence
 ; ----------------------------------------
 
-; PSG: 80h
-; FM:  90h (incld FM3 special)
-; DAC: A0h
-; PWM: B0h
-
-.silnc_chip:
+.chktbl_sl:
+		ld	e,(hl)		; Get link
+		inc	hl
+		ld	d,(hl)
+		ld	a,e		; If link == 0, exit
+		or	d
+		ret	z
+.can_silnc:	; note: hl is at +1
+		push	de
+		pop	ix
+		ld	a,(ix+chnl_Note); Check for noteoff/notecut
+		cp	-2
+		jr	z,.vlid
+		cp	-1
+		ret	nz
+.vlid:
+		ld	a,(ix+chnl_Chip)
 		ld	c,a
+		ld	(ix+chnl_Chip),0
 		and	11110000b
 		cp	80h
-		jp	z,.is_psg
+		jr	z,.is_psg
 		cp	090h		; Includes FM3
-		jp	z,.is_fm
+		jr	z,.is_fm
 		cp	0A0h
-		jp	z,.is_dac
+		jr	z,.is_dac
 ; 		cp	0B0h
 ; 		jp	z,.is_pwm
 		ret
 .is_fm:
-		ld	a,c
-		and	0111b
-		ld	c,a
-		add	a,a		; * 10h
-		add	a,a
-		add	a,a
-		add	a,a
 		rst	8
-		ld	de,0
-		ld	e,a
-		ld	hl,tblFM
-		add	hl,de
-		ld	(hl),0		; delete Link
-		inc	hl
+		ld	(hl),0
+		dec	hl
 		ld	(hl),0
 		rst	8
 		ld	hl,fmcom
 		ld	de,0
-		ld	e,c
+		ld	a,c
+		and	111b
+		ld	e,a
 		add	hl,de
 		ld	(hl),100b	; KEY STOP
 		ret
 ; FM6
 .is_dac:
-		ld	hl,0
-		ld	(tblFM6),hl	; delete Link
+		ld	(hl),0
+		dec	hl
+		ld	(hl),0
 		ld	hl,daccom
 		ld	(hl),010b
 		ret
 ; PSG
 .is_psg:
 		ld	a,c
-		and	111b
+		and	11b
 		cp	3		; PSGN later
 		jr	z,.is_psgn
 		rst	8
-		ld	c,a
-		add	a,a		; * 10h
-		add	a,a
-		add	a,a
-		add	a,a
-		rst	8
-		ld	de,0
-		ld	e,a
-		ld	hl,tblPSG
-		add	hl,de
-		ld	(hl),0		; delete Link
-		inc	hl
+		ld	(hl),0
+		dec	hl
 		ld	(hl),0
 		rst	8
 		ld	hl,psgcom
 		ld	de,0
-		ld	e,c
+		ld	a,c
+		and	111b
+		ld	e,a
 		add	hl,de
 		ld	(hl),100b	; KEY STOP
 		ret
 .is_psgn:
 		rst	8
-		ld	hl,0
-		ld	(tblPSGN),hl	; delete Link
+		ld	(hl),0
+		dec	hl
+		ld	(hl),0
 		rst	8
 		xor	a
 		ld	(psgHatMode),a
@@ -1073,8 +1091,8 @@ setupchip:
 		ret
 .ins_psg:
 		inc	hl		; Skip ID
-		ld	e,(hl)
-		ld	(ix+3),a	; Get Pitch
+		ld	a,(hl)
+		ld	(ix+3),a	; Save pitch
 		inc	hl
 		ld	a,(hl)
 		ld	(ix+4),a	; ALV
@@ -1214,7 +1232,7 @@ setupchip:
 ; 		ld	a,c
 		ld	bc,020h
 		call	transferRom
-; 		ld	(ix+6),11110000b	; Temporal keys (TODO)
+; 		ld	(ix+6),11110000b
 ; 		ld	a,(iy+chnl_Flags)
 ; 		and	11001111b
 ; 		ld	(iy+chnl_Flags),a
@@ -1331,6 +1349,8 @@ setupchip:
 		rst	8
 		ld	e,(iy+chnl_EffArg)
 		ld	a,(iy+chnl_EffId)
+		or	a
+		ret	z
 		cp	24		; Effect X?
 		jr	z,.effFm_X
 		ret
@@ -1417,25 +1437,29 @@ setupchip:
 		ld	a,(ix+2)	; Check if PSGN is in
 		and	11b
 		cp	02h		; Tone3 mode
-		jr	nz,.note_psgn
+		jr	nz,.note_psg_c
 		ld	a,(psgHatMode)
 		and	011b
 		cp	011b
-		jr	nz,.note_psgn
+		jr	nz,.note_psg_c
 		jr	.pstop
 .note_psgn:
+
+
+; hl - psgFreq_List
+.note_psg_c:
 		rst	8
 		ld	a,(iy+chnl_Note)
 		cp	-2
 		jr	z,.pstop
 		cp	-1
 		jr	z,.poff
+		ld	hl,psgFreq_List
 		ld	c,(ix+3)
 		add	a,c
 		add	a,a
 		ld	de,0
 		ld	e,a
-		ld	hl,psgFreq_List
 		rst	8
 		add	hl,de
 		ld	e,(hl)
@@ -1585,7 +1609,7 @@ setupchip:
 		rst	8
 		ld	(iy+chnl_Chip),b
 		ld	a,c
-		ld	e,(ix+7)
+		ld	e,(ix+4)
 		cp	e
 		jr	nz,.newnote
 		rst	8
@@ -1613,7 +1637,7 @@ setupchip:
 ; 		and	1111b
 ; 		ld	b,a
 ; 		pop	hl
-		ld	(ix+7),c	; *** AUTO-SEARCH
+		ld	(ix+4),c	; *** AUTO-SEARCH
 		ld	b,0		; b - octave
 		ld	e,7
 .get_oct:
@@ -1626,32 +1650,32 @@ setupchip:
 		jr	nz,.get_oct
 .fnd_oct:
 	; b - octave / c - note
-; 		ld	e,(ix+6)	; e - tbl keys
 		push	de
-		ld	e,(ix+4)	; e - tbl 0B0h
-		push	hl
-		pop	ix
 		rst	8		; ix - current fmcom
-		ld	a,c		; c - Note
+		ld	a,c
 		add	a,a
-		ld	c,a		; c - Freq slot
+		ld	c,a		; c - freq word
 		ld	a,b
 		add	a,a
 		add	a,a
 		add	a,a
-		ld	b,0
 		rst	8
+		ld	b,0
+		push	hl
+		pop	ix
 		ld	hl,fmFreq_List
 		add	hl,bc
 		inc	hl
 		ld	c,a		; c - octave << 3
 		ld	a,(hl)		; Note MSB
 		or	c		; add octave
-		ld	(ix+FMRG_A4),a	; Save freq MSB
+		ld	d,a
 		dec	hl
 		rst	8
 		ld	a,(hl)
-		ld	(ix+FMRG_A0),a	; Save freq LSB
+		ld	e,a
+		ld	(ix+FMRG_A4),d	; Save freq MSB
+		ld	(ix+FMRG_A0),e	; Save freq LSB
 		pop	de
 .fmsame_note:
 		ld	a,(iy+chnl_Flags)
@@ -1693,7 +1717,7 @@ setupchip:
 ; hl - Instrument data point
 ; ix - Chip table
 ;
-; And if a == -1, THEN check (hl)
+; If a != -1, THEN check (hl)
 ; manually for these types:
 ;
 ;  -1 - Null instrument, exit.
@@ -2899,7 +2923,7 @@ psgFreq_List:
 		dw -1
 		dw -1
 		dw -1
-		dw -1		; C-2 $18
+psgFreqN_List:	dw -1		; C-2 $18
 		dw -1
 		dw -1
 		dw -1
@@ -3135,6 +3159,7 @@ wavFreq_List:	dw 100h		; C-0
 	;  7 - Decay rate (DKY)
 	;  8 - Release rate (RRT)
 	;  9 - Frequency copy for effects
+		align 10h
 tblPSG:		db 00h,00h,80h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,81h,00h,00h,00h,00h,00h	; Channel 2
@@ -3146,11 +3171,10 @@ tblPSGN:	db 00h,00h,83h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 
 	; FM: 90h+ FM3: 0A0h DAC: 0B0h
-	;  4 - ??? TODO
-	;  5 - Panning (%LR000000)
-	;  6 - FM keys
-	;  7 - Last ImpulseNote used
-	;  8 - Last FM instrument location (24-bit)
+	;  4 - Last Note used
+	;  5 - BASE frequency
+	;  7 - Panning (%LR000000)
+	;  8 - FM keys
 tblFM:		db 00h,00h,90h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,91h,00h,00h,00h,00h,00h	; Channel 2

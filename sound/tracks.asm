@@ -109,10 +109,10 @@ GemaTrk_cirno_patt:
 GemaTrk_cirno_ins:
 	trkInsFm  -12,FmIns_Brass_Eur,0
 	trkInsFm  0,FmIns_Bass_synth,0
-	trkInsPsgN  0,$20,$FF,$20,$40,$40,%100
+	trkInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
 	trkInsNull
 	trkInsNull
-	trkInsNull
+	trkInsPsgN  0,$20,$FF,$20,$10,$10,%100
 	trkInsNull
 	trkInsFm 0,FmIns_Bass_3,0
 	trkInsFm  -12,FmIns_Brass_Eur,0
@@ -151,7 +151,7 @@ GemaTrk_brinstr_patt:
 	binclude "sound/tracks/brinstr_patt.bin"
 GemaTrk_brinstr_ins:
 	trkInsPsg   0,$40,$10,$10,$01,$01
-	trkInsPsgN -12,$00,$FF,$00,$01,$01,%011
+	trkInsPsgN  0,$00,$FF,$00,$01,$01,%011
 
 GemaTrk_gigalo_blk:
 	binclude "sound/tracks/gigalo_blk.bin"
@@ -165,26 +165,47 @@ GemaTrk_gigalo_ins:
 	trkInsNull
 
 GemaTrk_mecano_blk:
-	binclude "sound/tracks/mecano_blk.bin"
+	binclude "sound/tracks/ttzgf_blk.bin"
 GemaTrk_mecano_patt:
-	binclude "sound/tracks/mecano_patt.bin"
+	binclude "sound/tracks/ttzgf_patt.bin"
 GemaTrk_mecano_ins:
-	trkInsPsgN  0,$00,$00,$00,$08,$08,%100
-	trkInsPsgN  0,$00,$00,$00,$10,$10,%100
-	trkInsFm    0,FmIns_PianoM1,0
-	trkInsPsg   0,$10,$00,$10,$02,$02
-	trkInsFm    0,FmIns_Bass_mecan,0
+	trkInsFm    0,FmIns_Bass_7
+	trkInsPsg   0,$40,$C0,$20,$10,$10
+	trkInsPsg   0,$60,$80,$20,$F0,$01
+	trkInsFm  -12,FmIns_Brass_Eur
+	trkInsPsgN 60,$00,$FF,$20,$10,$10,%111
 	trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-	trkInsNull
 	trkInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	trkInsFm  -12,FmIns_Trumpet_2
+	trkInsFm  -12,FmIns_Ding_toy
 	trkInsNull
 	trkInsNull
 	trkInsNull
 	trkInsNull
 	trkInsNull
 	trkInsNull
-	trkInsFm    0,FmIns_Trumpet_2,0
 	trkInsNull
+	trkInsNull
+	trkInsNull
+	trkInsNull
+	trkInsNull
+
+; 	trkInsPsgN  0,$00,$00,$00,$08,$08,%100
+; 	trkInsPsgN  0,$00,$00,$00,$10,$10,%100
+; 	trkInsFm    0,FmIns_PianoM1,0
+; 	trkInsPsg   0,$10,$00,$10,$02,$02
+; 	trkInsFm    0,FmIns_Bass_mecan,0
+; 	trkInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+; 	trkInsNull
+; 	trkInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsNull
+; 	trkInsFm    0,FmIns_Trumpet_2,0
+; 	trkInsNull
 
 GemaTrk_mars_blk:
 	binclude "sound/tracks/mars_blk.bin"

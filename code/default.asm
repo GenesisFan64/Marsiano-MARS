@@ -213,7 +213,7 @@ thisCode_Top:
 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
 	dc.l 4
 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
-	dc.l 2
+	dc.l 1
 	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
 	dc.l 3
 	dc.l GemaTrk_jackrab_patt,GemaTrk_jackrab_blk,GemaTrk_jackrab_ins
