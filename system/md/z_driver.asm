@@ -124,10 +124,13 @@ dac_me:		exx			; <-- opcode changes between EXX(play) and RET(stop)
 		ld	a,2Ah		; Prepare DAC register
 		ld	(Zym_ctrl_1),a
 		nop
+		nop
 		ld	l,h		; xx.00 to 00xx
 		ld	h,c		; Buffer MSB | 00xx
 		ld	a,(hl)
 		ld	(Zym_data_1),a
+		nop
+		nop
 		nop
 		ld	h,l		; get hl back
 		ld	l,b
@@ -135,28 +138,6 @@ dac_me:		exx			; <-- opcode changes between EXX(play) and RET(stop)
 		ex	af,af'
 		exx
 		ret
-
-commZRomBlk	db 0			; 68k ROM block flag
-commZRomRd	db 0			; Z80 ROM reading flag
-commZRead	db 0			; cmd read pointer (here)
-commZWrite	db 0			; cmd fifo wptr (from 68k)
-sbeatPtck	dw 208-40			; Sub beats per tick (8frac), default is 120bpm
-sbeatAcc	dw 0			; Accumulates ^^ each tick to track sub beats
-
-; small variables stored here before 0038h
-wave_Start	dw 0			; START: 68k direct pointer ($00xxxxxx)
-		db 0
-wave_Len	dw 0			; LENGTH
-		db 0
-wave_Loop	dw 0			; LOOP POINT
-		db 0
-wave_Pitch	dw 0100h		; 01.00h
-wave_Flags	db 0100b		; WAVE playback flags (%10x: 1 loop / 0 no loop)
-tickFlag	dw 0			; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
-tickCnt		db 0			; Tick counter (PUT THIS TAG AFTER tickFlag)
-currTickBits	db 0			; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
-psgHatMode	db 0
-fmSpcMode	db 0
 
 ; --------------------------------------------------------
 ; Z80 Interrupt at 0038h
@@ -848,19 +829,27 @@ updtrack:
 		ld	d,(hl)
 		ld	a,e		; If link == 0, exit
 		or	d
-		ret	z
-.can_silnc:	; note: hl is at +1
+		jr	nz,.from_link
+		inc	hl		; Move to chip id
+		ld	a,(hl)
+		ld	c,a
+		jr	.get_slnc
+
+; If link is active
+; note: hl is at +1
+.from_link:
 		push	de
 		pop	ix
 		ld	a,(ix+chnl_Note); Check for noteoff/notecut
 		cp	-2
-		jr	z,.vlid
+		jr	z,.get_slnc
 		cp	-1
 		ret	nz
-.vlid:
+.get_slnc:
 		ld	a,(ix+chnl_Chip)
 		ld	c,a
 		ld	(ix+chnl_Chip),0
+.
 		and	11110000b
 		cp	80h
 		jr	z,.is_psg
@@ -2125,7 +2114,7 @@ transferRom:
 		pop	de
 		set	7,h
 
-	; Transfer data in packs of 3bytes
+	; Transfer data in packs of bytes
 	; while playing cache WAV in the process
 	; CRITICAL PROCESS FOR WAV PLAYBACK
 	;
@@ -2138,23 +2127,25 @@ transferRom:
 		ld	b,0
 		ld	a,c
 		set	0,(ix+1)	; Tell to 68k that we are reading from ROM
-		sub	8		; LENGHT lower than 8?
+		sub	6		; LENGHT lower than 8?
 		jr	c,.x68klast	; Process single piece
 .x68kloop:
-		ld	c,8-1
+		ld	c,6-1
 		bit	0,(ix)		; If 68k requested ROM block from here
 		jr	nz,.x68klpwt
 .x68klpcont:
 		rst	8
-		ldir			; (de) to (hl) until bc==0
 		nop
-		sub	a,8-1
+		nop
+		ldir			; (de) to (hl) until bc==0
 		rst	8
 		nop
+		nop
+		sub	a,6-1
 		jp	nc,.x68kloop
 ; last block
 .x68klast:
-		add	a,8
+		add	a,6
 		ld	c,a
 		bit	0,(ix)		; If 68k requested ROM block from here
 		jp	nz,.x68klstwt
@@ -2642,10 +2633,10 @@ chip_env:
 .do_vol:
 		ld	a,(ix)
 		add	a,b
-	; TODO: > 7Fh check
-	;	cp	7Fh
-	;	jr	c,.vmuch
-	;	ld	e,7Fh
+; 	TODO: > 7Fh check
+		cp	7Fh
+		jr	c,.vmuch
+		ld	a,7Fh
 .vmuch:
 		ld	e,a
 		bit	2,c
@@ -3243,6 +3234,28 @@ pwmcom:		dw 0000h,0000h,0000h,0000h,0000h,0000h,0000h
 ; ----------------------------------------------------------------
 
 	; NON-aligned values and buffers
+commZRomBlk	db 0			; 68k ROM block flag
+commZRomRd	db 0			; Z80 ROM reading flag
+commZRead	db 0			; cmd read pointer (here)
+commZWrite	db 0			; cmd fifo wptr (from 68k)
+sbeatPtck	dw 208-20		; Sub beats per tick (8frac), default is 120bpm
+sbeatAcc	dw 0			; Accumulates ^^ each tick to track sub beats
+
+; small variables stored here before 0038h
+wave_Start	dw 0			; START: 68k direct pointer ($00xxxxxx)
+		db 0
+wave_Len	dw 0			; LENGTH
+		db 0
+wave_Loop	dw 0			; LOOP POINT
+		db 0
+wave_Pitch	dw 0100h		; 01.00h
+wave_Flags	db 0100b		; WAVE playback flags (%10x: 1 loop / 0 no loop)
+tickFlag	dw 0			; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
+tickCnt		db 0			; Tick counter (PUT THIS TAG AFTER tickFlag)
+currTickBits	db 0			; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
+psgHatMode	db 0
+fmSpcMode	db 0
+
 commZfifo	ds 40h		; Buffer for command requests from 68k
 currInsData	dw 0
 dDacPntr	db 0,0,0	; WAVE play current ROM position
@@ -3258,7 +3271,7 @@ insDataC_0	ds 100h		; Instrument data+pointers for current track: 100h bytes
 insDataC_1	ds 100h
 
 	; ALIGNED buffers
-		org 1A00h
+		org 1900h
+dWaveBuff	ds 100h		; WAVE data buffer: 100h bytes, updates every 80h
 trkData_0	ds 100h		; Track note-cache buffers: 100h bytes, updates every 80h
 trkData_1	ds 100h
-dWaveBuff	ds 100h		; WAVE data buffer: 100h bytes, updates every 80h

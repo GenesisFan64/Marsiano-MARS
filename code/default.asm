@@ -143,22 +143,22 @@ thisCode_Top:
 		move.w	#1,d0
 		move.w	d0,(sysmars_reg+comm0)
 .noc_up:
-; 		move.w	(Controller_1+on_press),d7
-; 		btst	#bitJoyB,d7
-; 		beq.s	.noc_d
-; 		move.l	#PCM_START,d0
-; 		move.l	#PCM_END-PCM_START,d1
-; 		moveq	#0,d2
-; 		move.w	#$100,d3
-; 		moveq	#1,d4
-; 		bsr	SoundReq_SetSample
-; .noc_d:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyB,d7
+		beq.s	.noc_d
+		move.l	#PCM_START,d0
+		move.l	#PCM_END-PCM_START,d1
+		moveq	#0,d2
+		move.w	#$100,d3
+		moveq	#1,d4
+		bsr	SoundReq_SetSample
+.noc_d:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
 		beq.s	.noc_c
-		move.w	(RAM_CurrTrack).w,d0
-		lsl.l	#4,d0
-		lea	.playlist(pc,d0.w),a0
+; 		move.w	(RAM_CurrTrack).w,d0
+; 		lsl.l	#4,d0
+		lea	.playlist(pc),a0
 		move.l	(a0)+,d0
 		move.l	(a0)+,d1
 		move.l	(a0)+,d2
@@ -206,22 +206,22 @@ thisCode_Top:
 
 ; test playlist
 .playlist:
-	dc.l GemaTrk_cirno_patt,GemaTrk_cirno_blk,GemaTrk_cirno_ins
-	dc.l 4
-	dc.l GemaTrk_doom_patt,GemaTrk_doom_blk,GemaTrk_doom_ins
-	dc.l 4
-	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
-	dc.l 4
-	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
-	dc.l 1
-	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
+	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
 	dc.l 3
-	dc.l GemaTrk_jackrab_patt,GemaTrk_jackrab_blk,GemaTrk_jackrab_ins
-	dc.l 5
-	dc.l GemaTrk_gigalo_patt,GemaTrk_gigalo_blk,GemaTrk_gigalo_ins
-	dc.l 3
-	dc.l GemaTrk_brinstr_patt,GemaTrk_brinstr_blk,GemaTrk_brinstr_ins
-	dc.l 3
+; 	dc.l GemaTrk_doom_patt,GemaTrk_doom_blk,GemaTrk_doom_ins
+; 	dc.l 4
+; 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
+; 	dc.l 4
+; 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
+; 	dc.l 1
+; 	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
+; 	dc.l 3
+; 	dc.l GemaTrk_jackrab_patt,GemaTrk_jackrab_blk,GemaTrk_jackrab_ins
+; 	dc.l 5
+; 	dc.l GemaTrk_gigalo_patt,GemaTrk_gigalo_blk,GemaTrk_gigalo_ins
+; 	dc.l 3
+; 	dc.l GemaTrk_brinstr_patt,GemaTrk_brinstr_blk,GemaTrk_brinstr_ins
+; 	dc.l 3
 	align 2
 
 .print_cursor:
