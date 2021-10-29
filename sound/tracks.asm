@@ -107,14 +107,24 @@ GemaTrk_blk_TEST:
 GemaTrk_patt_TEST:
 	binclude "sound/tracks/test_patt.bin"
 GemaTrk_ins_TEST:
+	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
+	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
+	gInsFm    0,FmIns_Trumpet_2
+	gInsPsg   0,$10,$FF,$10,$00,$00
+
+GemaTrk_blk_TEST3:
+	binclude "sound/tracks/test3_blk.bin"
+GemaTrk_patt_TEST3:
+	binclude "sound/tracks/test3_patt.bin"
+GemaTrk_ins_TEST3:
 	gInsDac 0,DacIns_Magic1,DacIns_Magic1_e,0,0
 	gInsDac 0,DacIns_Magic2,DacIns_Magic2_e,0,0
 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
 	gInsFm    0,FmIns_Ding_toy
 	gInsFm    0,FmIns_Ambient_Dark
-	gInsNull
-	gInsNull
+	gInsFm    0,FmIns_Bass_Calm
+	gInsNull;gInsPsg   0,$10,$FF,$10,$01,$01
 	gInsNull
 	gInsNull
 	gInsNull
@@ -186,31 +196,31 @@ GemaTrk_ins_TEST:
 ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%110
 ; 	gInsNull
 ;
-; GemaTrk_mecano_blk:
-; 	binclude "sound/tracks/ttzgf_blk.bin"
-; GemaTrk_mecano_patt:
-; 	binclude "sound/tracks/ttzgf_patt.bin"
-; GemaTrk_mecano_ins:
-; 	gInsFm    0,FmIns_Bass_7
-; 	gInsPsg   0,$40,$C0,$20,$10,$10
-; 	gInsPsg   0,$60,$80,$20,$F0,$01
-; 	gInsFm  -12,FmIns_Brass_Eur
-; 	gInsPsgN 60,$00,$FF,$20,$10,$10,%111
-; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-; 	gInsFm  -12,FmIns_Trumpet_2
-; 	gInsFm  -12,FmIns_Ding_toy
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
+GemaTrk_mecano_blk:
+	binclude "sound/tracks/ttzgf_blk.bin"
+GemaTrk_mecano_patt:
+	binclude "sound/tracks/ttzgf_patt.bin"
+GemaTrk_mecano_ins:
+	gInsFm    0,FmIns_Bass_groove
+	gInsPsg   0,$40,$C0,$20,$10,$10
+	gInsPsg   0,$60,$80,$20,$F0,$01
+	gInsFm  -12,FmIns_Brass_Eur
+	gInsPsgN 60,$00,$FF,$20,$10,$10,%111
+	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	gInsFm  -12,FmIns_Trumpet_2
+	gInsFm  -12,FmIns_Ding_toy
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
 ;
 ; ; 	gInsPsgN  0,$00,$00,$00,$08,$08,%100
 ; ; 	gInsPsgN  0,$00,$00,$00,$10,$10,%100

@@ -5,8 +5,8 @@
 
 ; Fmins_Guitar_Heavy:
 ; 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
-; FmIns_Brass_Eur:
-; 		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
+FmIns_Brass_Eur:
+		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
 ;
 FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
@@ -27,8 +27,8 @@ FmIns_Fm3_ClosedHat:
 ; ;
 ; ; ; FmIns_Bass_gum:
 ; ; ; 		binclude "sound/instr/fm/bass_gum.gsx",$2478,$20
-; FmIns_Bass_calm:
-; 		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
+FmIns_Bass_calm:
+		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
 ; FmIns_Bass_heavy:
 ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; ; ; FmIns_Bass_ambient:
@@ -49,8 +49,8 @@ FmIns_Fm3_ClosedHat:
 ; 		binclude "sound/instr/fm/bass_5.gsx",$2478,$20
 ; FmIns_Bass_6:
 ; 		binclude "sound/instr/fm/bass_6.gsx",$2478,$20
-; FmIns_Bass_7:
-; 		binclude "sound/instr/fm/bass_7.gsx",$2478,$20
+FmIns_Bass_groove:
+		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
 ; FmIns_Bass_italo:
 ; 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
 ; FmIns_Bass_mecan:
@@ -80,8 +80,8 @@ FmIns_Organ_M1:
 ; ; 		binclude "sound/instr/fm/piano_small.gsx",$2478,$20
 ; ; FmIns_Piano:
 ; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
-; FmIns_Trumpet_2:
-; 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
+FmIns_Trumpet_2:
+		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
 ; ; ; FmIns_Bell_Glass:
 ; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
 ; ; ; FmIns_Marimba_1:
