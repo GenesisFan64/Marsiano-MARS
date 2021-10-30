@@ -414,13 +414,16 @@ get_cmdbyte:
 
 updtrack:
 		call	dac_fill
+		rst	8
 		ld	iy,trkBuff_0		; Low priority
 		ld	hl,trkHeads_0
 		ld	de,insDataC_0
+		rst	8
 		call	.read_track
 		ld	iy,trkBuff_1		; High priority
 		ld	hl,trkHeads_1
 		ld	de,insDataC_1
+		rst	8
 		call	.read_track
 		ret
 
@@ -764,16 +767,19 @@ updtrack:
 		jp	z,.dntslnce
 		push	de
 		push	bc
-		call	.chktbl_sl
-		ld	(ix+chnl_Flags),00000011b
+		rst	8
+		call	.chktbl_sl		; search and unlink channel
+		ld	(ix+chnl_Flags),0	; reset all flags
 		ld	(ix+chnl_Note),-2
-		ld	(ix+chnl_Chip),0	; mark as gone (no chip)
+		ld	(ix+chnl_Chip),0	; remove chip
 		rst	8
 		pop	bc
 		pop	de
 .dntslnce:
 		add	ix,de
 		djnz	.clrf
+		ld	a,1
+		ld	(flagResChip),a
 		ld	(iy+trk_rowPause),0	; Reset row timer
 		ld	a,(iy+trk_setBlk)	; Set current block
 		ld 	(iy+trk_currBlk),a	;
@@ -809,6 +815,7 @@ updtrack:
 		pop	ix
 		ld	de,20h
 		add	ix,de
+		rst	8
 		ld	de,8
 		ld	b,MAX_TRKCHN
 .clrfe:
@@ -829,7 +836,7 @@ updtrack:
 		ret
 
 ; ----------------------------------------
-; Check table for auto-silence
+; Unlink current channel
 ;
 ; ix - current track channel
 ; ----------------------------------------
@@ -877,13 +884,7 @@ updtrack:
 		ld	(hl),0
 		dec	hl
 		ld	(hl),0
-; .psgn_f:
-; 		ld	a,c
-; 		and	11b
-; 		ld	c,a
-; 		ld	hl,psgcom
-; 		add	hl,bc
-; 		ld	(hl),100b	; KEY STOP
+		rst	8
 		ret
 ; FM
 .is_fm:
@@ -912,12 +913,6 @@ updtrack:
 		ld	(hl),0
 		dec	hl
 		ld	(hl),0
-; 		ld	a,c
-; 		and	11b
-; 		ld	c,a
-; 		ld	hl,fmcom
-; 		add	hl,bc
-; 		ld	(hl),100b	; KEY STOP
 		ret
 .is_dac:
 		ld	hl,tblFM6
@@ -932,8 +927,6 @@ updtrack:
 		ld	(hl),0
 		dec	hl
 		ld	(hl),0
-		ld	hl,daccom
-		ld	(hl),010b
 		ret
 
 ; ; --------------------------------------------------------
@@ -1024,6 +1017,28 @@ updtrack:
 ; --------------------------------------------------------
 
 setupchip:
+		ld	a,(flagResChip)
+		or	a
+		jr	z,.dont_resch
+		xor	a
+		ld	(flagResChip),a
+		rst	8
+		ld	iy,tblFM		; silence floating channels
+		ld	ix,fmcom
+		call	.silnc_list
+		rst	8
+		ld	iy,tblPSG
+		ld	ix,psgcom
+		call	.silnc_list
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+
+	; PSGN,DAC
+.dont_resch:
 		call	dac_fill
 		ld	hl,insDataC_0
 		ld	iy,trkBuff_0		; iy - Tracker channels
@@ -1031,23 +1046,63 @@ setupchip:
 		ld	hl,insDataC_1
 		ld	iy,trkBuff_1
 .mk_chip:
-		ld	(currInsData),hl
 		rst	8
+		ld	(currInsData),hl
 		ld	de,20h
 		add	iy,de
 		ld	b,MAX_TRKCHN
-.nxt_chnl:
 		rst	8
+.nxt_chnl:
 		push	bc
 		ld	a,(iy+chnl_Flags)	; Get status bits
 		and	00001111b
+		rst	8
 		or	a			; Check for non-zero
 		call	nz,.do_chnl
 		pop	bc
-		ld	de,8			; Next CHANNEL
-		add	iy,de
+		inc	iy	; *** doing this instead
+		inc	iy	; *** of 2 lines to keep the
+		inc	iy	; *** wave playback clean
+		inc	iy
+		rst	8
+		nop
+		nop
+		nop
+		inc	iy
+		inc	iy
+		inc	iy
+		inc	iy
 		djnz	.nxt_chnl
 		ret
+
+; ----------------------------------------
+
+; iy - table
+; ix - chip com's
+.silnc_list:
+		ld	a,(iy+1)
+		cp	-1
+		ret	z
+		ld	h,a
+		rst	8
+		ld	l,(iy)
+		ld	a,(hl)		; *** DIRECT chnl_Chip
+		or	a
+		jr	nz,.busy
+		rst	8
+		ld	d,0
+		ld	a,(iy+2)
+		and	111b
+		ld	e,a
+		rst	8
+		push	ix
+		pop	hl
+		add	hl,de
+		ld	(hl),100b
+.busy:
+		ld	de,10h
+		add	iy,de
+		jr	.silnc_list
 
 ; ----------------------------------------
 ; Channel requested update
@@ -1193,7 +1248,7 @@ setupchip:
 		cp	5		; Check if we are on FM6
 		jp	nz,.not_prdac
 		ld	e,a
-		ld	a,010b		; FORCE DAC STOP
+		ld	a,100b		; FORCE DAC STOP
 		ld	(daccom),a
 		ld	a,e
 .not_prdac:
@@ -1601,7 +1656,7 @@ setupchip:
 		ld	(daccom),a
 		ret
 .dcut:
-		ld	a,010b			; Request DAC stop
+		ld	a,100b			; Request DAC stop
 		ld	(daccom),a
 .doff:
 		ld	hl,0
@@ -2264,12 +2319,10 @@ transferRom:
 		jr	nz,.x68klpwt
 .x68klpcont:
 		rst	8
-		nop
-		nop
 		ldir			; (de) to (hl) until bc==0
+		or	a
 		rst	8
-		nop
-		nop
+		or	a
 		sub	a,6-1
 		jp	nc,.x68kloop
 ; last block
@@ -2349,7 +2402,6 @@ chip_env:
 		ld	(iy+FLG),1		; psg update flag
 		ld	(iy+MODE),100b		; set envelope mode 100b
 .ckon:
-		rst	8
 		bit	0,c			; bit 0 - key on
 		jr	z,.envproc
 		ld	(iy+LEV),-1		; reset level
@@ -2411,7 +2463,6 @@ chip_env:
 		jr	z,.atkend
 		ld	c,a
 		ld	a,b			; a - current level (volume)
-		rst	8
 		ld	b,(iy+ALV)		; b - attack level
 		sub	a,c			; (attack rate) - (level)
 		jr	c,.atkend		; if carry: already finished
@@ -2485,6 +2536,7 @@ chip_env:
 		or	d			; add current channel
 		ld	(hl),a			; Write volume
 .noupd:
+		rst	8
 		dec	iy			; next COM to check
 		ld	a,d
 		sub	a,20h			; next PSG (backwards)
@@ -2496,6 +2548,7 @@ chip_env:
 ; FM section
 ; ----------------------------
 
+
 	; TODO: rewrite this part, it's bad.
 		ld	a,(fmSpcMode)
 		ld	e,a
@@ -2506,10 +2559,12 @@ chip_env:
 		jr	z,.no_chng
 		ld	a,e
 		and	11000000b
+		rst	8
 		ld	(fmSpcMode),a
 		ld	a,c
 		ld	d,27h		; CH3 + timer settings
 		or	e
+		rst	8
 		and	11000000b
 		ld	e,a
 		call	fm_send_1
@@ -2551,10 +2606,11 @@ chip_env:
 		ld	a,(daccom)
 		ld	e,a
 		xor	a
+		rst	8
 		ld	(daccom),a
 		bit	0,e			; WAVE sample request
 		jr	nz,.req_dac
-		bit	1,e
+		bit	2,e			; key-off?
 		call	nz,dac_off		; DAC OFF but keep going
 		ld	de,20h
 		add	ix,de
@@ -3266,8 +3322,43 @@ wavFreq_List:	dw 100h		; C-0
 		dw 100h
 		dw 100h
 		dw 100h
+; ====================================================================
+; ----------------------------------------------------------------
+; Z80 RAM
+; ----------------------------------------------------------------
 
-; --------------------------------------------------------
+	; PSG psuedo-controls
+psgcom		db 00h,00h,00h,00h	;  0 command 1 = key on, 2 = key off, 4 = stop snd
+psglev		db -1, -1, -1, -1	;  4 output level attenuation (%llll.0000, -1 = silent)
+psgatk		db 00h,00h,00h,00h	;  8 attack rate
+psgdec		db 00h,00h,00h,00h	; 12 decay rate
+psgslv		db 00h,00h,00h,00h	; 16 sustain level attenuation
+psgrrt		db 00h,00h,00h,00h	; 20 release rate
+psgenv		db 00h,00h,00h,00h	; 24 envelope mode 0 = off, 1 = attack, 2 = decay, 3 = sustain, 4
+psgdtl		db 00h,00h,00h,00h	; 28 tone bottom 4 bits
+psgdth		db 00h,00h,00h,00h	; 32 tone upper 6 bits
+psgalv		db 00h,00h,00h,00h	; 36 attack level attenuation
+whdflg		db 00h,00h,00h,00h	; 40 flags to indicate hardware should be updated
+psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
+
+	; FM psuedo-controls
+fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
+		db 00h,00h,00h,00h,00h,00h	;  6 - keys xxxx0000b
+		db 00h,00h,00h,00h,00h,00h	; 12 - volume (for 40h+)
+		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
+		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
+		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
+fmins_com:	ds 020h				; Current instrument data for each FM
+		ds 020h
+		ds 020h
+		ds 020h
+		ds 020h
+		ds 020h
+fm3reg:		dw 0AC00h,0A800h		; S3-S1, S4 is at A6/A2
+		dw 0AD00h,0A900h
+		dw 0AE00h,0AA00h
+daccom:		db 0				; single byte for key on, off
+pwmcom:		dw 0000h,0000h,0000h,0000h,0000h,0000h,0000h
 
 	; Channel tables: 10h bytes
 	; 0  - Link addr (0000h = free, used chnls start from 0020h)
@@ -3284,7 +3375,6 @@ wavFreq_List:	dw 100h		; C-0
 	;  7 - Decay rate (DKY)
 	;  8 - Release rate (RRT)
 	;  9 - Frequency copy for effects
-		align 10h
 tblPSG:		db 00h,00h,80h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,81h,00h,00h,00h,00h,00h	; Channel 2
@@ -3313,7 +3403,6 @@ tblFM3:		db 00h,00h,92h,00h,00h,00h,00h,00h	; Channel 3 (0A0h: FM3 special mode)
 tblFM6:		db 00h,00h,95h,00h,00h,00h,00h,00h	; Channel 6 (0B0h: WAVE playback mode)
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		dw -1
-
 tblPWM:		db 00h,00h,0B0h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,0B1h,00h,00h,00h,00h,00h	; Channel 2
@@ -3330,53 +3419,14 @@ tblPWM:		db 00h,00h,0B0h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		dw -1
 
-	; PSG psuedo-controls
-psgcom		db 00h,00h,00h,00h	;  0 command 1 = key on, 2 = key off, 4 = stop snd
-psglev		db -1, -1, -1, -1	;  4 output level attenuation (%llll.0000, -1 = silent)
-psgatk		db 00h,00h,00h,00h	;  8 attack rate
-psgdec		db 00h,00h,00h,00h	; 12 decay rate
-psgslv		db 00h,00h,00h,00h	; 16 sustain level attenuation
-psgrrt		db 00h,00h,00h,00h	; 20 release rate
-psgenv		db 00h,00h,00h,00h	; 24 envelope mode 0 = off, 1 = attack, 2 = decay, 3 = sustain, 4
-psgdtl		db 00h,00h,00h,00h	; 28 tone bottom 4 bits
-psgdth		db 00h,00h,00h,00h	; 32 tone upper 6 bits
-psgalv		db 00h,00h,00h,00h	; 36 attack level attenuation
-whdflg		db 00h,00h,00h,00h	; 40 flags to indicate hardware should be updated
-psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
-
-fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
-		db 00h,00h,00h,00h,00h,00h	;  6 - keys xxxx0000b
-		db 00h,00h,00h,00h,00h,00h	; 12 - volume (for 40h+)
-		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
-		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
-		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
-fmins_com:	ds 020h			; Current instrument data for each FM
-		ds 020h
-		ds 020h
-		ds 020h
-		ds 020h
-		ds 020h
-fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
-		dw 0AD00h,0A900h
-		dw 0AE00h,0AA00h
-daccom:		db 0			; single byte for key on, off
-pwmcom:		dw 0000h,0000h,0000h,0000h,0000h,0000h,0000h
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Z80 RAM
-; ----------------------------------------------------------------
 
 	; NON-aligned values and buffers
-
-
-; small variables stored here before 0038h
-tickFlag	dw 0			; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
-tickCnt		db 0			; Tick counter (PUT THIS TAG AFTER tickFlag)
-currTickBits	db 0			; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
+tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
+tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
+currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 psgHatMode	db 0
 fmSpcMode	db 0
-sbeatAcc	dw 0			; Accumulates ^^ each tick to track sub beats
+sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 commZfifo	ds 40h		; Buffer for command requests from 68k
 currInsData	dw 0
 dDacPntr	db 0,0,0	; WAVE play current ROM position
@@ -3385,8 +3435,7 @@ dDacFifoMid	db 0		; WAVE play halfway refill flag (00h/80h)
 x68ksrclsb	db 0		; transferRom temporal LSB
 x68ksrcmid	db 0		; transferRom temporal MID
 palMode		db 0
-
-		align 10h
+flagResChip	db 0		; reset chips flag
 trkBuff_0	ds 100h		; Track control (first 20h) + channels (8h each)
 trkBuff_1	ds 100h
 trkHeads_0	ds 80h		; Track blocks and heads: divided by 80h bytes
