@@ -447,14 +447,14 @@ updtrack:
 ; .sfxmd:
 		bit	0,a			; TICK passed?
 		ret	z
-		bit	6,b			; Restart/First time?
-		call	nz,.first_fill
 		ld	a,(iy+trk_tickTmr)	; TICK timer for this track
 		dec	a
 		ld	(iy+trk_tickTmr),a
 		rst	8
 		or	a
 		ret	nz			; If != 0, exit
+		bit	6,b			; Restart/First time?
+		call	nz,.first_fill
 		ld	a,(iy+trk_tickSet)	; Set new tick timer
 		ld	(iy+trk_tickTmr),a
 		rst	8
@@ -759,40 +759,21 @@ updtrack:
 		ld	de,8
 		ld	b,MAX_TRKCHN
 .clrf:
-		push	de
 		ld	a,(ix+chnl_Chip)
 		or	a
 		jp	z,.dntslnce
-		ld	(ix+chnl_Flags),00000001b
+		push	de
+		push	bc
+		call	.chktbl_sl
+		ld	(ix+chnl_Flags),00000011b
 		ld	(ix+chnl_Note),-2
-		ld	(ix+chnl_EffId),0
+		ld	(ix+chnl_Chip),0	; mark as gone (no chip)
 		rst	8
-.dntslnce:
+		pop	bc
 		pop	de
+.dntslnce:
 		add	ix,de
 		djnz	.clrf
-		ld	hl,tblPSGN	; PSGN
-		call	.chktbl_sl
-		ld	hl,tblPSG	; PSG1-3
-		ld	b,3
-.psglp:
-		push	hl
-		call	.chktbl_sl
-		pop	hl
-		ld	de,10h
-		add	hl,de
-		djnz	.psglp
-		ld	hl,tblFM	; FM1-6
-		ld	b,6
-.fmlp:
-		push	hl
-		call	.chktbl_sl
-		pop	hl
-		ld	de,10h
-		add	hl,de
-		djnz	.fmlp
-	; TODO: no olvides el PWM
-
 		ld	(iy+trk_rowPause),0	; Reset row timer
 		ld	a,(iy+trk_setBlk)	; Set current block
 		ld 	(iy+trk_currBlk),a	;
@@ -849,25 +830,14 @@ updtrack:
 
 ; ----------------------------------------
 ; Check table for auto-silence
+;
+; ix - current track channel
 ; ----------------------------------------
 
 .chktbl_sl:
-		ld	e,(hl)		; Get link
-		inc	hl
-		ld	d,(hl)
-		inc	hl
-		ld	a,(hl)		; c - channel chip
+		push	ix
+		pop	de
 		ld	c,a
-		ld	a,e		; If link == 0, exit
-		or	d
-		ret	nz
-; 		ret	z
-; 		push	de
-; 		pop	ix
-; 		ld	c,(ix+chnl_Chip)
-; .is_zro:
-		dec	hl
-		ld	a,c
 		and	11110000b
 		cp	80h
 		jr	z,.is_psg
@@ -875,60 +845,95 @@ updtrack:
 		jr	z,.is_fm
 		cp	0A0h
 		jr	z,.is_dac
-; 		cp	0B0h
-; 		jp	z,.is_pwm
-		ret
-.is_fm:
-; 		rst	8
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-		rst	8
-		ld	hl,fmcom
-		ld	de,0
-		ld	a,c
-		and	111b
-		ld	e,a
-		add	hl,de
-		ld	(hl),100b	; KEY STOP
-		ret
-; FM6
-.is_dac:
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-		ld	hl,daccom
-		ld	(hl),010b
 		ret
 ; PSG
 .is_psg:
+		ld	b,0
+		ld	hl,tblPSGN
 		ld	a,c
 		and	11b
 		cp	3		; PSGN later
 		jr	z,.is_psgn
-; 		rst	8
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
+		ld	hl,tblPSG
 		rst	8
-		ld	hl,psgcom
-		ld	de,0
-		ld	a,c
-		and	111b
-		ld	e,a
-		add	hl,de
-		ld	(hl),100b	; KEY STOP
-		ret
+		add	a,a		; *10h
+		add	a,a
+		add	a,a
+		add	a,a
+		ld	c,a
+		rst	8
+		push	bc
+		add	hl,bc
+		pop	bc
 .is_psgn:
+		ld	a,(hl)
+		cp	e
+		ret	nz
 		rst	8
+		inc	hl
+		ld	a,(hl)
+		cp	d
+		ret	nz
 		ld	(hl),0
 		dec	hl
 		ld	(hl),0
+; .psgn_f:
+; 		ld	a,c
+; 		and	11b
+; 		ld	c,a
+; 		ld	hl,psgcom
+; 		add	hl,bc
+; 		ld	(hl),100b	; KEY STOP
+		ret
+; FM
+.is_fm:
+		ld	a,c
+		and	111b
+		ld	hl,tblFM
 		rst	8
-		xor	a
-		ld	(psgHatMode),a
-		ld	hl,psgcom+3	; KEY STOP
-		ld	(hl),100b
+		add	a,a		; *10h
+		add	a,a
+		add	a,a
+		add	a,a
+		ld	b,0
+		ld	c,a
+		rst	8
+		push	bc
+		add	hl,bc
+		pop	bc
+		ld	a,(hl)
+		cp	e
+		ret	nz
+		rst	8
+		inc	hl
+		ld	a,(hl)
+		cp	d
+		ret	nz
+		ld	(hl),0
+		dec	hl
+		ld	(hl),0
+; 		ld	a,c
+; 		and	11b
+; 		ld	c,a
+; 		ld	hl,fmcom
+; 		add	hl,bc
+; 		ld	(hl),100b	; KEY STOP
+		ret
+.is_dac:
+		ld	hl,tblFM6
+		ld	a,(hl)
+		cp	e
+		ret	nz
+		rst	8
+		inc	hl
+		ld	a,(hl)
+		cp	d
+		ret	nz
+		ld	(hl),0
+		dec	hl
+		ld	(hl),0
+		ld	hl,daccom
+		ld	(hl),010b
 		ret
 
 ; ; --------------------------------------------------------
@@ -1098,7 +1103,7 @@ setupchip:
 		rst	8
 		inc	hl		; one more byte for hatMode
 		ld	a,(hl)
-		ld	(psgHatMode),a
+		ld	(ix+9),a
 		ret
 .ins_psg:
 		inc	hl		; Skip ID
@@ -1343,9 +1348,9 @@ setupchip:
 		cp	-1		; Null
 		ret	z
 ; 		cp	0		; PSG normal
-; 		jr	z,.note_psg
+; 		jr	z,.eff_psg
 ; 		cp	1		; PSG noise
-; 		jp	z,.note_psgn
+; 		jp	z,.eff_psgn
 ; 		rst	8
 		cp	2		; FM Normal
 		jp	z,.eff_fm
@@ -1536,10 +1541,13 @@ setupchip:
 		rst	8
 		ld	a,(hl)
 		ld	(ix+RRT),a	; RRT
+		ld	a,c
+		cp	3
+		jr	nz,.npsg
 		inc	hl
-		ld	(hl),c
-		inc	hl
-		ld	(hl),b
+		ld 	a,(hl)
+		ld	(psgHatMode),a
+.npsg:
 		ld	a,e		; bc - freq
 		and	0Fh
 		ld	(ix+DTL),a
@@ -1869,7 +1877,8 @@ setupchip:
 		or	a
 		jr	z,.new
 		cp	d		; Same Channel MSB?
-		jr	nz,.busy_s	; If not, skip
+		jr	z,.new
+		jr	nc,.busy_s	; If not, skip
 .new:
 		rst	8
 		ld	(ix),e		; NEW slot
@@ -1879,6 +1888,15 @@ setupchip:
 .busy_s:
 		ld	a,-1
 		ret
+
+; 		ld	e,(ix+1)	; Check if this link == 0
+; 		ld	a,(ix)
+; 		or	e
+; 		jr	z,.fndlink
+; 		ld	a,e		; Check if MSB is higher
+; 		cp	d
+; 		jr	nc,.alrdfnd
+; .fndlink:
 
 ; --------------------------------------------
 ; Check available channel slot from list
@@ -1928,8 +1946,8 @@ setupchip:
 		ld	a,c		; found free link?
 		or	b
 		jr	z,.fndslot
-		cp	d		; Same Channel MSB?
-		jr	z,.fndslot	; If not, skip
+; 		cp	d		; Same Channel MSB?
+; 		jr	z,.fndslot	; If not, skip
 ; 		jr	c,.fndslot
 		push	bc
 		pop	ix		; tell ix is the new slot
@@ -1983,16 +2001,18 @@ gema_init:
 		inc	e
 		call	fm_send_1
 
+	; set each tracks' settings
 		ld	iy,trkBuff_0
 		ld	hl,insDataC_0
 		ld	de,trkData_0
 		ld	bc,trkHeads_0
+		ld	a,0
 		call	.set_it
 		ld	iy,trkBuff_1
 		ld	hl,insDataC_1
 		ld	de,trkData_1
 		ld	bc,trkHeads_1
-
+		ld	a,1
 .set_it:
 		ld	(iy+trk_CachIns),l
 		ld	(iy+(trk_CachIns+1)),h
@@ -2000,6 +2020,7 @@ gema_init:
 		ld	(iy+(trk_CachNotes+1)),d
 		ld	(iy+trk_CachHeads),c
 		ld	(iy+(trk_CachHeads+1)),b
+	; a - priority
 		ret
 
 ; --------------------------------------------------------
@@ -3363,6 +3384,8 @@ dDacCntr	db 0,0,0	; WAVE play length counter
 dDacFifoMid	db 0		; WAVE play halfway refill flag (00h/80h)
 x68ksrclsb	db 0		; transferRom temporal LSB
 x68ksrcmid	db 0		; transferRom temporal MID
+palMode		db 0
+
 		align 10h
 trkBuff_0	ds 100h		; Track control (first 20h) + channels (8h each)
 trkBuff_1	ds 100h

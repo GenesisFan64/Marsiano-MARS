@@ -110,7 +110,8 @@ GemaTrk_ins_TEST:
 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
 	gInsFm    0,FmIns_Trumpet_2
-	gInsPsg   0,$10,$FF,$10,$00,$00
+	gInsPsgN +36,$00,$FF,$00,$00,$00,%011
+	gInsPsg   0,$10,$FF,$10,$01,$01
 
 GemaTrk_blk_TEST3:
 	binclude "sound/tracks/test3_blk.bin"

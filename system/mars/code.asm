@@ -882,8 +882,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#384,r2
-		mov	#368,r3
+		mov	#320,r2
+		mov	#320,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1020,7 +1020,7 @@ mstr_gfx1_loop:
 ;  		mov.w	r0,@(marsGbl_PlgnBuffNum,gbr)
 ; .no_req:
 
-		mov	#$8000,r8
+		mov	#-$4000,r8
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r8,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
