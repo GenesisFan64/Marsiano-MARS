@@ -95,8 +95,8 @@ FmIns_Ambient_spook:
 ; 		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
 FmIns_Ding_toy:
 		binclude "sound/instr/fm/ding_toy.gsx",$2478,$20
-; FmIns_Bell_China:
-; 		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
+FmIns_Bell_China:
+		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
 
 ; --------------------------------------------------------
 ; DAC samples

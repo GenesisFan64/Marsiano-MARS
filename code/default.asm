@@ -9,7 +9,7 @@
 ; ------------------------------------------------------
 
 var_MoveSpd	equ	$4000
-MAX_TSTTRKS	equ	1
+MAX_TSTTRKS	equ	3
 MAX_TSTENTRY	equ	1
 
 ; ====================================================================
@@ -162,7 +162,8 @@ thisCode_Top:
 		add.w	d0,d0
 		move.w	(a0,d0.w),d0
 		lsl.w	#4,d0
-		lea	.playlist(pc,d0.w),a0
+		lea	.playlist(pc),a0
+		lea	(a0,d0.w),a0
 		move.l	(a0)+,d0
 		move.l	(a0)+,d1
 		move.l	(a0)+,d2
@@ -187,7 +188,6 @@ thisCode_Top:
 		add.w	#1,(RAM_CurrSelc).w
 		bsr	.print_cursor
 .nod:
-
 		move.w	(RAM_CurrSelc),d0
 		add.w	d0,d0
 		lea	(RAM_CurrTrack),a1
@@ -208,17 +208,19 @@ thisCode_Top:
 		add.w	#1,(a1)
 		bsr	.print_cursor
 .nor:
-
+		lea	str_COMM(pc),a0
+		move.l	#locate(0,2,7),d0
+		bsr	Video_Print
 		rts
 
 ; test playlist
 .playlist:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
 	dc.l 6
-; 	dc.l GemaTrk_doom_patt,GemaTrk_doom_blk,GemaTrk_doom_ins
-; 	dc.l 4
-; 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
-; 	dc.l 4
+	dc.l GemaTrk_cirno_patt,GemaTrk_cirno_blk,GemaTrk_cirno_ins
+	dc.l 3
+	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
+	dc.l 3
 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
 	dc.l 1
 ; 	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
@@ -235,7 +237,6 @@ thisCode_Top:
 		lea	str_Status(pc),a0
 		move.l	#locate(0,13,4),d0
 		bsr	Video_Print
-
 		lea	str_Cursor(pc),a0
 		moveq	#0,d0
 		move.w	(RAM_CurrSelc).w,d0
@@ -682,12 +683,23 @@ str_Status:
 		dc.l RAM_CurrTrack
 		dc.l RAM_CurrTrack+2
 		align 2
-
 str_Title:
 		dc.b "Marsiano/GEMA sound driver",$A
 		dc.b $A
-		dc.b "  Track 0: ",$A
-		dc.b "  Track 1: ----",0
+		dc.b "  Track 0:",$A
+		dc.b "  Track 1:",0
+		align 2
+str_COMM:
+		dc.b "\\w \\w \\w \\w",$A
+		dc.b "\\w \\w \\w \\w",0
+		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm2
+		dc.l sysmars_reg+comm4
+		dc.l sysmars_reg+comm6
+		dc.l sysmars_reg+comm8
+		dc.l sysmars_reg+comm10
+		dc.l sysmars_reg+comm12
+		dc.l sysmars_reg+comm14
 		align 2
 
 ; ====================================================================

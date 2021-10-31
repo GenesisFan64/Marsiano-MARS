@@ -135,19 +135,19 @@ GemaTrk_ins_TEST3:
 	gInsNull
 	gInsNull
 
-; GemaTrk_cirno_blk:
-; 	binclude "sound/tracks/chrono_blk.bin"
-; GemaTrk_cirno_patt:
-; 	binclude "sound/tracks/chrono_patt.bin"
-; GemaTrk_cirno_ins:
-; 	gInsFm  0,FmIns_Ding_toy
-; 	gInsFm  0,FmIns_Bell_China
-; 	gInsFm  0,FmIns_Bass_calm
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsFm  -12,FmIns_Brass_Eur,0
-; 	gInsNull
+GemaTrk_cirno_blk:
+	binclude "sound/tracks/chrono_blk.bin"
+GemaTrk_cirno_patt:
+	binclude "sound/tracks/chrono_patt.bin"
+GemaTrk_cirno_ins:
+	gInsFm  0,FmIns_Ding_toy
+	gInsFm  0,FmIns_Bell_China
+	gInsFm  0,FmIns_Bass_calm
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsFm  -12,FmIns_Brass_Eur,0;gInsPsg   0,$50,$20,$20,$01,$01	;
+	gInsNull
 ;
 ; ; 	gInsPsg   0,$00,$FF,$00,$00,$01
 ;
@@ -165,11 +165,26 @@ GemaTrk_ins_TEST3:
 ; 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
 ;
 ;
-; GemaTrk_moon_blk:
-; 	binclude "sound/tracks/moon_blk.bin"
-; GemaTrk_moon_patt:
-; 	binclude "sound/tracks/moon_patt.bin"
-; GemaTrk_moon_ins:
+GemaTrk_moon_blk:
+	binclude "sound/tracks/brinstar_blk.bin"
+GemaTrk_moon_patt:
+	binclude "sound/tracks/brinstar_patt.bin"
+GemaTrk_moon_ins:
+	gInsPsg   0,$40,$FF,$00,$10,$10
+	gInsPsgN  0,$00,$FF,$20,$10,$10,%100
+	gInsDac  +17,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	gInsDac  +17,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	gInsFm  -12,FmIns_Brass_Eur,0
+	gInsNull
+	gInsFm    0,FmIns_Bass_groove,0
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsFm  0,FmIns_Bass_calm,0
+	gInsPsg   0,$20,$10,$80,$00,$00
+
+
 ; 	gInsFm  -24,FmIns_Bass_calm,0
 ; 	gInsPsg   0,$10,$80,$10,$20,$04
 ; 	gInsFm  -12,FmIns_Brass_Eur,0
@@ -250,7 +265,7 @@ GemaTrk_mecano_ins:
 ; 	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
 ; 	gInsFm    0,FmIns_PianoM1,0
 ; 	gInsPsg   0,$40,$20,$20,$00,$00
-; 	gInsFm    0,FmIns_Bass_7,0
+; 	gInsFm    0,FmIns_Bass_groove,0
 ; 	gInsNull
 ; 	gInsNull
 ; 	gInsFm    0,FmIns_Guitar_heavy,0
