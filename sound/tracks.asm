@@ -66,6 +66,21 @@ gInsPwm	macro pitch,start,end,loop,flags
 
 ; ------------------------------------------------------------
 
+ align $8000
+GemaTrk_cirno_blk:
+	binclude "sound/tracks/chrono_blk.bin"
+GemaTrk_cirno_patt:
+	binclude "sound/tracks/chrono_patt.bin"
+GemaTrk_cirno_ins:
+	gInsPsg  +12,$50,$20,$30,$40,$04
+	gInsFm  0,FmIns_Bell_China
+	gInsFm  0,FmIns_Bass_calm
+	gInsPsgN  0,$00,$FF,$00,$08,$08,%110
+	gInsPsgN  0,$00,$FF,$00,$08,$08,%101
+	gInsPsgN  0,$00,$FF,$00,$10,$10,%100
+	gInsFm  -12,FmIns_Brass_Eur,0
+	gInsNull
+
 ; OLD:
 ; PsgIns_00:	db 00h,0FFh,40h,00h, 80h
 ; PsgIns_01:	db 00h,0FFh,00h,03h, 03h
@@ -133,20 +148,6 @@ GemaTrk_ins_TEST3:
 	gInsNull
 	gInsNull
 	gInsNull
-	gInsNull
-
-GemaTrk_cirno_blk:
-	binclude "sound/tracks/chrono_blk.bin"
-GemaTrk_cirno_patt:
-	binclude "sound/tracks/chrono_patt.bin"
-GemaTrk_cirno_ins:
-	gInsFm  0,FmIns_Ding_toy
-	gInsFm  0,FmIns_Bell_China
-	gInsFm  0,FmIns_Bass_calm
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsFm  -12,FmIns_Brass_Eur,0;gInsPsg   0,$50,$20,$20,$01,$01	;
 	gInsNull
 ;
 ; ; 	gInsPsg   0,$00,$FF,$00,$00,$01

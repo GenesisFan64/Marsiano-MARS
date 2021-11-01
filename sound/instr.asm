@@ -102,6 +102,7 @@ FmIns_Bell_China:
 ; DAC samples
 ; --------------------------------------------------------
 
+ align $8000
 DacIns_Magic1:
 		binclude "sound/instr/smpl/magic_1.wav",$2C
 DacIns_Magic1_e:
@@ -136,5 +137,5 @@ DacIns_SaurTom_e:
 ; Sampl_Snare:	binclude "sound/instr/smpl/snare.wav",$2C
 ; Sampl_Snare_End:
 
-PCM_START:	binclude "sound/TEST_MD.wav",$2C,$C0000
+PCM_START:	binclude "sound/TEST_MD.wav",$2C,$90000
 PCM_END:

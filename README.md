@@ -1,13 +1,22 @@
 # Marsiano-MARS
-A video+sound "driver" for the 32X.
+A Video+Sound "driver"/handler for the 32X.
 
-Things working:
-- Sound: FM+PSG+DAC
-- Draw an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
+Sound driver:
+- Runs on Z80, DMA safe (supposedly, needs testing)
+- Supports custom tempo.
+- It uses the channel-link system, it automaticly picks the available soundchip channel to play. Can autodetect special features (DAC and FM3 special) and swap sound chips
+- Two playback tracks: second slot has priority (for SFX sound effects) and can temporally override channels used by the first slot
+- PSG soundchip: supports effects like Attack and Release, can autodetect if the NOISE channel uses Tone3 mode
+- YM2616 soundchip: DAC sample playback at 16000hz aprox. supports FM3 special mode for extra frequencies
+- Music can be composed in any tracker that supports ImpulseTracker (.IT) then imported with a simple python3 script
+
+Video "driver":
+- Draws an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
 
 Notes/Issues:
 - Polygon rendering broken. Will have to rewrite it entirely
-- PWM IS working but it's not being used by the sound driver YET
+- PWM IS working but it's not being used by the sound driver yet.
+- Sound wave playback can get scratchy if a track play too many channels
 
 Please note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers

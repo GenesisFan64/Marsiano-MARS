@@ -137,19 +137,19 @@ thisCode_Top:
 
 ; Mode 0 mainloop
 .mode0_loop:
+; 		move.w	(Controller_1+on_press),d7
+; 		btst	#bitJoyA,d7
+; 		beq.s	.noc_up
+; 		move.w	#1,d0
+; 		move.w	d0,(sysmars_reg+comm0)
+; .noc_up:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyA,d7
-		beq.s	.noc_up
-		move.w	#1,d0
-		move.w	d0,(sysmars_reg+comm0)
-.noc_up:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyB,d7
 		beq.s	.noc_d
 		move.l	#PCM_START,d0
 		move.l	#PCM_END-PCM_START,d1
 		moveq	#0,d2
-		move.w	#$100,d3
+		move.w	#$100-32,d3
 		moveq	#1,d4
 		bsr	SoundReq_SetSample
 .noc_d:
@@ -686,7 +686,7 @@ str_Status:
 str_Title:
 		dc.b "Marsiano/GEMA sound driver",$A
 		dc.b $A
-		dc.b "  Track 0:",$A
+		dc.b "  Track 0:      B-stop C-play",$A
 		dc.b "  Track 1:",0
 		align 2
 str_COMM:
