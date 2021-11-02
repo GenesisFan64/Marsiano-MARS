@@ -66,56 +66,20 @@ gInsPwm	macro pitch,start,end,loop,flags
 
 ; ------------------------------------------------------------
 
- align $8000
+;  align $8000
 GemaTrk_cirno_blk:
 	binclude "sound/tracks/chrono_blk.bin"
 GemaTrk_cirno_patt:
 	binclude "sound/tracks/chrono_patt.bin"
 GemaTrk_cirno_ins:
-	gInsPsg  +12,$50,$20,$30,$40,$04
-	gInsFm  0,FmIns_Bell_China
-	gInsFm  0,FmIns_Bass_calm
-	gInsPsgN  0,$00,$FF,$00,$08,$08,%110
-	gInsPsgN  0,$00,$FF,$00,$08,$08,%101
-	gInsPsgN  0,$00,$FF,$00,$10,$10,%100
-	gInsFm  -12,FmIns_Brass_Eur,0
+	gInsPsg  +12,$80,$01,$40,$20,$10
+	gInsFm     0,FmIns_Bell_China
+	gInsFm     0,FmIns_Bass_calm
+	gInsPsgN   0,$00,$00,$00,$08,$08,%110
+	gInsPsgN   0,$00,$00,$00,$08,$08,%101
+	gInsPsgN   0,$00,$00,$00,$10,$10,%100
+	gInsFm   -12,FmIns_Brass_Eur,0
 	gInsNull
-
-; OLD:
-; PsgIns_00:	db 00h,0FFh,40h,00h, 80h
-; PsgIns_01:	db 00h,0FFh,00h,03h, 03h
-; PsgIns_02:	db 00h,0FFh,80h,04h, 04h
-; PsgIns_03:	db 30h,0FFh, -1,00h, 04h
-; PsgIns_Bass:	db 00h,0FFh, -1,01h, 01h
-; PsgIns_Snare:	db 00h,0FFh,00h,0F0h,0F0h
-
-; TEST_BLOCKS	binclude "sound/tracks/temple_blk.bin"
-; TEST_PATTERN	binclude "sound/tracks/temple_patt.bin"
-; TEST_INSTR
-; 		gInsPsg  0,PsgIns_01
-; 		gInsPsgN 0,PsgIns_Snare,%101
-
-; GemaTrk_base_blk:
-; 	binclude "sound/tracks/base_blk.bin"
-; GemaTrk_base_patt:
-; 	binclude "sound/tracks/base_patt.bin"
-; GemaTrk_base_ins:
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
 
 GemaTrk_blk_TEST:
 	binclude "sound/tracks/test_blk.bin"

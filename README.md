@@ -1,7 +1,7 @@
 # Marsiano-MARS
 A Video+Sound "driver"/handler for the 32X.
 
-Sound driver:
+Sound driver, both Genesis and 32X:
 - Runs on Z80, DMA safe (supposedly, needs testing)
 - Supports custom tempo.
 - It uses the channel-link system, it automaticly picks the available soundchip channel to play. Can autodetect special features (DAC and FM3 special) and swap sound chips
@@ -10,13 +10,13 @@ Sound driver:
 - YM2616 soundchip: DAC sample playback at 16000hz aprox. supports FM3 special mode for extra frequencies
 - Music can be composed in any tracker that supports ImpulseTracker (.IT) then imported with a simple python3 script
 
-Video "driver":
+Video "driver" (on the 32X side):
 - Draws an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
 
 Notes/Issues:
 - Polygon rendering broken. Will have to rewrite it entirely
 - PWM IS working but it's not being used by the sound driver yet.
-- Sound wave playback can get scratchy if a track play too many channels
+- Sound wave playback can get scratchy if a track plays too many channels
 
 Please note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers

@@ -149,7 +149,7 @@ thisCode_Top:
 		move.l	#PCM_START,d0
 		move.l	#PCM_END-PCM_START,d1
 		moveq	#0,d2
-		move.w	#$100-32,d3
+		move.w	#$100,d3
 		moveq	#1,d4
 		bsr	SoundReq_SetSample
 .noc_d:
@@ -216,7 +216,7 @@ thisCode_Top:
 ; test playlist
 .playlist:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
-	dc.l 6
+	dc.l 5
 	dc.l GemaTrk_cirno_patt,GemaTrk_cirno_blk,GemaTrk_cirno_ins
 	dc.l 3
 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
