@@ -418,6 +418,7 @@ updtrack:
 		ld	hl,trkHeads_0
 		ld	de,insDataC_0
 		call	.read_track
+		rst	8
 		ld	iy,trkBuff_1		; High priority
 		ld	hl,trkHeads_1
 		ld	de,insDataC_1
@@ -434,10 +435,10 @@ updtrack:
 
 .read_track:
 		ld	(currInsData),de	; save temporal InsData
-		rst	8
 		ld	b,(iy+trk_status)	; b - Track status
 		bit	7,b			; Active?
 		ret	z
+		rst	8
 		ld	a,(currTickBits)	; a - Tick/Beat bits
 	; TODO implementar bien esto
 ; 		bit	5,b			; This track uses Beats?
@@ -986,18 +987,16 @@ setupchip:
 		ld	iy,trkBuff_1
 .mk_chip:
 		ld	(currInsData),hl
-; 		rst	8
+		rst	8
 		ld	de,20h
 		add	iy,de
 		ld	b,MAX_TRKCHN
 .nxt_chnl:
-		push	bc
 		ld	a,(iy+chnl_Flags)	; Get status bits
 		and	00001111b
 		or	a			; Check for non-zero
 		call	nz,.do_chnl
 		rst	8
-		pop	bc
 		ld	de,8			; Next CHANNEL
 		add	iy,de
 		djnz	.nxt_chnl
@@ -1067,7 +1066,6 @@ setupchip:
 		add	iy,de
 		jr	.silnc_list
 
-
 ; ----------------------------------------
 ; Channel requested update
 ;
@@ -1075,12 +1073,13 @@ setupchip:
 ; ----------------------------------------
 
 .do_chnl:
+		push	bc
 		call	.check_chnl
 		cp	-1
-		ret	z
+		jr	z,.no_chnl
 		ld	a,(hl)
-		cp	-1		; Null
-		ret	z
+		cp	-1
+		jr	z,.no_chnl
 		ld	(currTblPos),ix
 		ld	(currInsPos),hl
 		bit	1,(iy+chnl_Flags)
@@ -1095,6 +1094,8 @@ setupchip:
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
 		ld	(iy+chnl_Flags),a
+.no_chnl:
+		pop	bc
 		ret
 
 ; ----------------------------------------
@@ -1357,30 +1358,6 @@ setupchip:
 		sub	a,e
 		ld	(ix+6),a
 		ret
-
-; 		ld	a,(iy+chnl_Vol)
-; 		sub	a,40h
-; 		neg	a
-; 		ld	(ix+9),a	; update volume in psg table
-; 		ret
-; .vol_psg:
-; 		ld	a,(iy+chnl_Vol)
-; 		sub	a,40h
-; 		neg	a
-; 		add	a,a
-; 		ld	c,a
-; 		ld	d,0
-; 		rst	8
-; 		ld	a,(ix+2)
-; 		and	11b
-; 		ld	e,a
-; 		ld	ix,psgcom
-; 		add	ix,de
-; 		ld	a,(ix)
-; 		or	00010000b
-; 		ld	(ix),a
-; 		ld	(ix+PVOL),c	; direct write
-; 		ret
 
 ; --------------------------------
 ; FM,FM3,FM6
@@ -2628,6 +2605,7 @@ chip_env:
 		jr	z,.no_chng
 		ld	a,e
 		and	11000000b
+		rst	8
 		ld	(fmSpcMode),a
 		ld	a,c
 		ld	d,27h		; CH3 + timer settings
@@ -2636,7 +2614,6 @@ chip_env:
 		ld	e,a
 		call	fm_send_1
 .no_chng:
-		call	dac_fill
 
 	; Read FM channels
 	; iy - FM com
@@ -2670,16 +2647,21 @@ chip_env:
 		call	.fm_set		; Channel 5
 		rst	8
 
-		ld	a,(daccom)
+		ld	a,(daccom)	; Channel 6 / DAC
 		ld	e,a
 		xor	a
+		rst	8
 		ld	(daccom),a
-		bit	0,e			; WAVE sample request
+		bit	0,e		; WAVE sample request
 		jr	nz,.req_dac
-		bit	1,e
-		call	nz,dac_off		; DAC OFF but keep going
+		bit	1,e		; key-off? (failsafe)
+		jp	nz,dac_off
+		rst	8
+		bit	2,e		; key-cut?
+		jp	nz,dac_off
 		ld	de,20h
 		add	ix,de
+		ld	a,(ix)
 		inc	iy
 		inc	c
 		rst	8
@@ -2703,10 +2685,18 @@ chip_env:
 		bit	0,a
 		ret	z
 		ld	b,a
-		call	.fm_keyoff	; Do key-off anyway.
+		ld	a,c
+		cp	6
+		call	z,dac_off
 		bit	4,b		; Instrument-update bit?
 		call	nz,.fm_insupd
 		call	.fm_volupd	; Update volume ALWAYS
+		ld	a,b		; only wanted volume...
+		and	00110000b
+		cp	00100000b
+		jr	z,$
+		ret	z
+
 	; other effect-calls go here
 		rst	8
 		ld	a,c
@@ -2748,7 +2738,6 @@ chip_env:
 		bit	2,c
 		call	nz,fm_send_2
 		call	z,fm_send_1
-
 		ld	a,c		; FM3 special check
 		cp	2
 		jr	nz,.notfm3
@@ -2764,8 +2753,9 @@ chip_env:
 		inc	hl
 		ld	d,(hl)
 		inc	hl
-		call	fm_send_1
+		nop
 		rst	8
+		call	fm_send_1
 		djnz	.copyops
 .notfm3:
 		rst	8
@@ -2782,11 +2772,10 @@ chip_env:
 		ld	d,28h
 		jp	fm_send_1
 .fm_keycut:
-		rst	8
-		ld	e,c
-		ld	d,28h
-		call	fm_send_1
+		call	.fm_keyoff
 
+	; TODO: actually shutting the TL's
+	; instead of muting the L/R outputs
 		ld	a,c		; panning off
 		and	11b
 		or	0B4h
@@ -2798,10 +2787,11 @@ chip_env:
 		bit	2,c
 		jp	nz,fm_send_2
 		jp	fm_send_1
+
+; instrument update request
+; only call it if needed.
 .fm_insupd:
-; 		ld	e,c
-; 		ld	d,28h
-; 		call	fm_send_1
+		call	.fm_keyoff
 		push	ix
 		ld	a,c
 		and	011b
@@ -2848,6 +2838,7 @@ chip_env:
 		add	ix,de
 		ld	a,c
 		and	11b
+		rst	8
 		or	40h
 		ld	d,a
 		ld	b,(iy+FMVOL)
@@ -2856,11 +2847,8 @@ chip_env:
 		call	z,.do_vol
 		ld	a,d
 		add	a,4
+		rst	8
 		ld	d,a
-; 		inc	d		; Next...
-; 		inc	d
-; 		inc	d
-; 		inc	d
 		inc	ix
 		ld	a,h		; Check 44h
 		cp	4		; Algorithm > 04h?
@@ -2868,24 +2856,18 @@ chip_env:
 		ld	a,d
 		add	a,4
 		ld	d,a
-; 		inc	d		; Next...
-; 		inc	d
-; 		inc	d
-; 		inc	d
 		inc	ix
+		rst	8
 		ld	a,h		; Check 48h
 		cp	5		; Algorithm > 05h?
 		call	nc,.do_vol
 		ld	a,d
 		add	a,4
 		ld	d,a
-; 		inc	d		; Next...
-; 		inc	d
-; 		inc	d
-; 		inc	d
 		inc	ix
 		call	.do_vol		; Do 4Ch
 		pop	ix
+		rst	8
 		ret
 .do_vol:
 		ld	a,(ix)

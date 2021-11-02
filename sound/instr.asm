@@ -102,13 +102,12 @@ FmIns_Bell_China:
 ; DAC samples
 ; --------------------------------------------------------
 
- align $8000
-DacIns_Magic1:
-		binclude "sound/instr/smpl/magic_1.wav",$2C
-DacIns_Magic1_e:
-DacIns_Magic2:
-		binclude "sound/instr/smpl/magic_2.wav",$2C
-DacIns_Magic2_e:
+; DacIns_Magic1:
+; 		binclude "sound/instr/smpl/magic_1.wav",$2C
+; DacIns_Magic1_e:
+; DacIns_Magic2:
+; 		binclude "sound/instr/smpl/magic_2.wav",$2C
+; DacIns_Magic2_e:
 
 DacIns_Snare_Gem:
 		binclude "sound/instr/smpl/snare_lobo.wav",$2C
@@ -124,9 +123,9 @@ DacIns_SaurKick_e:
 DacIns_SaurSnare:
 		binclude "sound/instr/smpl/sauron_snare.wav",$2C
 DacIns_SaurSnare_e:
-DacIns_SaurTom:
-		binclude "sound/instr/smpl/sauron_tom.wav",$2C
-DacIns_SaurTom_e:
+; DacIns_SaurTom:
+; 		binclude "sound/instr/smpl/sauron_tom.wav",$2C
+; DacIns_SaurTom_e:
 
 ; Sampl_KickSpinb:
 ; 		binclude "sound/instr/smpl/spinb_kick.wav",$2C
@@ -137,5 +136,5 @@ DacIns_SaurTom_e:
 ; Sampl_Snare:	binclude "sound/instr/smpl/snare.wav",$2C
 ; Sampl_Snare_End:
 
-PCM_START:	binclude "sound/TEST_MD.wav",$2C,$90000
+PCM_START:	binclude "sound/TEST_MD.wav",$2C,$E6000
 PCM_END:

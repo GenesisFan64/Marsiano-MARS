@@ -66,7 +66,7 @@ gInsPwm	macro pitch,start,end,loop,flags
 
 ; ------------------------------------------------------------
 
-;  align $8000
+ align $8000
 GemaTrk_cirno_blk:
 	binclude "sound/tracks/chrono_blk.bin"
 GemaTrk_cirno_patt:
@@ -92,27 +92,27 @@ GemaTrk_ins_TEST:
 	gInsPsgN +36,$00,$FF,$00,$00,$00,%011
 	gInsPsg   0,$10,$FF,$10,$01,$01
 
-GemaTrk_blk_TEST3:
-	binclude "sound/tracks/test3_blk.bin"
-GemaTrk_patt_TEST3:
-	binclude "sound/tracks/test3_patt.bin"
-GemaTrk_ins_TEST3:
-	gInsDac 0,DacIns_Magic1,DacIns_Magic1_e,0,0
-	gInsDac 0,DacIns_Magic2,DacIns_Magic2_e,0,0
-	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
-	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
-	gInsFm    0,FmIns_Ding_toy
-	gInsFm    0,FmIns_Ambient_Dark
-	gInsFm    0,FmIns_Bass_Calm
-	gInsNull;gInsPsg   0,$10,$FF,$10,$01,$01
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
+; GemaTrk_blk_TEST3:
+; 	binclude "sound/tracks/test3_blk.bin"
+; GemaTrk_patt_TEST3:
+; 	binclude "sound/tracks/test3_patt.bin"
+; GemaTrk_ins_TEST3:
+; 	gInsDac 0,DacIns_Magic1,DacIns_Magic1_e,0,0
+; 	gInsDac 0,DacIns_Magic2,DacIns_Magic2_e,0,0
+; 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
+; 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
+; 	gInsFm    0,FmIns_Ding_toy
+; 	gInsFm    0,FmIns_Ambient_Dark
+; 	gInsFm    0,FmIns_Bass_Calm
+; 	gInsNull;gInsPsg   0,$10,$FF,$10,$01,$01
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
 ;
 ; ; 	gInsPsg   0,$00,$FF,$00,$00,$01
 ;
