@@ -3,18 +3,16 @@
 ; PSG, FM and DAC instruments go here
 ; ----------------------------------------------------------------
 
-; Fmins_Guitar_Heavy:
-; 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
-FmIns_Brass_Eur:
-		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
+Fmins_Guitar_Heavy:
+		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
+
 ;
 FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
-;
-; FmIns_DrumKick_gem:
-; 		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
+FmIns_DrumKick_gem:
+		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
 ;
 ; FmIns_DrumKick:
 ; 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
@@ -22,8 +20,11 @@ FmIns_Fm3_ClosedHat:
 ; 		binclude "sound/instr/fm/drum_snare.gsx",$2478,$20
 ; ; ; FmIns_DrumCloseHat:
 ; ; ; 		binclude "sound/instr/fm/drum_closehat.gsx",$2478,$20
-; FmIns_PianoM1:
-; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+FmIns_PianoM1:
+		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+; FmIns_PianoM116:
+; 		binclude "sound/instr/fm/piano_m116.gsx",$2478,$20
+
 ; ;
 ; ; ; FmIns_Bass_gum:
 ; ; ; 		binclude "sound/instr/fm/bass_gum.gsx",$2478,$20
@@ -51,8 +52,8 @@ FmIns_Bass_calm:
 ; 		binclude "sound/instr/fm/bass_6.gsx",$2478,$20
 FmIns_Bass_groove:
 		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
-; FmIns_Bass_italo:
-; 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
+FmIns_Bass_italo:
+		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
 ; FmIns_Bass_mecan:
 ; 		binclude "sound/instr/fm/bass_mecan.gsx",$2478,$20
 ;
@@ -97,6 +98,8 @@ FmIns_Ding_toy:
 		binclude "sound/instr/fm/ding_toy.gsx",$2478,$20
 FmIns_Bell_China:
 		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
+FmIns_Brass_Eur:
+		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
 
 ; --------------------------------------------------------
 ; DAC samples

@@ -16,8 +16,8 @@ gInsNull	macro
 ; alv: attack level (00=high)
 ; atk: attack rate
 ; slv: sustain (00=high)
-; dky: decay rate
-; rrt: release rate
+; dky: decay rate (up)
+; rrt: release rate (down)
 gInsPsg	macro pitch,alv,atk,slv,dky,rrt
 		dc.b $00,pitch,alv,atk
 		dc.b slv,dky,rrt,$00
@@ -66,20 +66,45 @@ gInsPwm	macro pitch,start,end,loop,flags
 
 ; ------------------------------------------------------------
 
- align $8000
-GemaTrk_cirno_blk:
-	binclude "sound/tracks/chrono_blk.bin"
-GemaTrk_cirno_patt:
-	binclude "sound/tracks/chrono_patt.bin"
-GemaTrk_cirno_ins:
-	gInsPsg  +12,$80,$01,$40,$20,$10
-	gInsFm     0,FmIns_Bell_China
-	gInsFm     0,FmIns_Bass_calm
-	gInsPsgN   0,$00,$00,$00,$08,$08,%110
-	gInsPsgN   0,$00,$00,$00,$08,$08,%101
-	gInsPsgN   0,$00,$00,$00,$10,$10,%100
-	gInsFm   -12,FmIns_Brass_Eur,0
-	gInsNull
+;  align $8000
+
+; GemaTrk_cirno_blk:
+; 	binclude "sound/tracks/mecano_blk.bin"
+; GemaTrk_cirno_patt:
+; 	binclude "sound/tracks/mecano_patt.bin"
+; GemaTrk_cirno_ins:
+; 	gInsNull
+; 	gInsPsgN   0,$00,$00,$00,$00,$00,%100
+; 	gInsFm    0,FmIns_PianoM1
+; 	gInsNull;gInsPsg   0,$00,$00,$00,$00,$02
+; 	gInsFm    0,FmIns_Bass_italo
+; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+; 	gInsNull
+; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+
+;
+
+
+; GemaTrk_cirno_blk:
+; 	binclude "sound/tracks/chrono_blk.bin"
+; GemaTrk_cirno_patt:
+; 	binclude "sound/tracks/chrono_patt.bin"
+; GemaTrk_cirno_ins:
+; 	gInsPsg  +12,$30,$00,$20,$10,$02
+; 	gInsFm     0,FmIns_Bell_China
+; 	gInsFm     0,FmIns_Bass_calm
+; 	gInsPsgN   0,$00,$00,$00,$08,$08,%110
+; 	gInsPsgN   0,$00,$00,$00,$08,$08,%101
+; 	gInsPsgN   0,$00,$00,$00,$10,$10,%100
+; 	gInsFm   -12,FmIns_Brass_Eur,0
+; 	gInsNull
 
 GemaTrk_blk_TEST:
 	binclude "sound/tracks/test_blk.bin"
@@ -88,9 +113,9 @@ GemaTrk_patt_TEST:
 GemaTrk_ins_TEST:
 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
-	gInsFm    0,FmIns_Trumpet_2
+	gInsFm  -12,FmIns_Brass_Eur,0
 	gInsPsgN +36,$00,$FF,$00,$00,$00,%011
-	gInsPsg   0,$10,$FF,$10,$01,$01
+
 
 ; GemaTrk_blk_TEST3:
 ; 	binclude "sound/tracks/test3_blk.bin"
@@ -220,22 +245,22 @@ GemaTrk_mecano_ins:
 ; ; 	gInsFm    0,FmIns_Trumpet_2,0
 ; ; 	gInsNull
 ;
-; GemaTrk_mars_blk:
-; 	binclude "sound/tracks/mars_blk.bin"
-; GemaTrk_mars_patt:
-; 	binclude "sound/tracks/mars_patt.bin"
-; GemaTrk_mars_ins:
-; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-; 	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
-; 	gInsFm    0,FmIns_PianoM1,0
-; 	gInsPsg   0,$40,$20,$20,$00,$00
-; 	gInsFm    0,FmIns_Bass_groove,0
-; 	gInsNull
-; 	gInsNull
-; 	gInsFm    0,FmIns_Guitar_heavy,0
-; 	gInsNull
-; 	gInsNull
+GemaTrk_mars_blk:
+	binclude "sound/tracks/mars_blk.bin"
+GemaTrk_mars_patt:
+	binclude "sound/tracks/mars_patt.bin"
+GemaTrk_mars_ins:
+	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
+	gInsFm    0,FmIns_PianoM1,0
+	gInsPsg   0,$40,$20,$30,$00,$01
+	gInsFm    0,FmIns_Bass_groove,0
+	gInsNull
+	gInsNull
+	gInsFm    0,FmIns_Guitar_heavy,0
+	gInsNull
+	gInsNull
 ;
 ; GemaTrk_jackrab_blk:
 ; 	binclude "sound/tracks/jackrab_blk.bin"

@@ -217,7 +217,7 @@ thisCode_Top:
 .playlist:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
 	dc.l 5
-	dc.l GemaTrk_cirno_patt,GemaTrk_cirno_blk,GemaTrk_cirno_ins
+	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
 	dc.l 3
 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
 	dc.l 3
