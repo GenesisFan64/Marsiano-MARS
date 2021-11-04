@@ -216,8 +216,8 @@ thisCode_Top:
 ; test playlist
 .playlist:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
-	dc.l 5
-	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
+	dc.l 4
+	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
 	dc.l 3
 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
 	dc.l 3

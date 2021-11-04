@@ -113,34 +113,31 @@ GemaTrk_patt_TEST:
 GemaTrk_ins_TEST:
 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
-	gInsFm  -12,FmIns_Brass_Eur,0
-	gInsPsgN +36,$00,$FF,$00,$00,$00,%011
+	gInsFm 0,FmIns_Trumpet_2
+	gInsFm 0,FmIns_bass_kon
 
+GemaTrk_blk_TEST2:
+	binclude "sound/tracks/cave_blk.bin"
+GemaTrk_patt_TEST2:
+	binclude "sound/tracks/cave_patt.bin"
+GemaTrk_ins_TEST2:
+	gInsFm -12,FmIns_flaute_cave
+	gInsNull
+	gInsNull
+	gInsFm 0,FmIns_bass_kon
+	gInsFm -12,FmIns_Trumpet_kon
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
 
-; GemaTrk_blk_TEST3:
-; 	binclude "sound/tracks/test3_blk.bin"
-; GemaTrk_patt_TEST3:
-; 	binclude "sound/tracks/test3_patt.bin"
-; GemaTrk_ins_TEST3:
-; 	gInsDac 0,DacIns_Magic1,DacIns_Magic1_e,0,0
-; 	gInsDac 0,DacIns_Magic2,DacIns_Magic2_e,0,0
-; 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
-; 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
-; 	gInsFm    0,FmIns_Ding_toy
-; 	gInsFm    0,FmIns_Ambient_Dark
-; 	gInsFm    0,FmIns_Bass_Calm
-; 	gInsNull;gInsPsg   0,$10,$FF,$10,$01,$01
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-;
-; ; 	gInsPsg   0,$00,$FF,$00,$00,$01
-;
 ; GemaTrk_doom_blk:
 ; 	binclude "sound/tracks/doom_blk.bin"
 ; GemaTrk_doom_patt:
@@ -254,7 +251,7 @@ GemaTrk_mars_ins:
 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
 	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
 	gInsFm    0,FmIns_PianoM1,0
-	gInsPsg   0,$40,$20,$30,$00,$01
+	gInsPsg   0,$50,$20,$40,$00,$01
 	gInsFm    0,FmIns_Bass_groove,0
 	gInsNull
 	gInsNull

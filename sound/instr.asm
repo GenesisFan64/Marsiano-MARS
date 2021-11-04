@@ -42,8 +42,8 @@ FmIns_Bass_calm:
 ; 		binclude "sound/instr/fm/bass_1.gsx",$2478,$20
 ; FmIns_Bass_2:
 ; 		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
-; FmIns_Bass_3:
-; 		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
+FmIns_Bass_3:
+		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
 ; FmIns_Bass_4:
 ; 		binclude "sound/instr/fm/bass_4.gsx",$2478,$20
 ; FmIns_Bass_5:
@@ -54,6 +54,9 @@ FmIns_Bass_groove:
 		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
 FmIns_Bass_italo:
 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
+FmIns_Bass_kon:
+		binclude "sound/instr/fm/bass_kon.gsx",$2478,$20
+
 ; FmIns_Bass_mecan:
 ; 		binclude "sound/instr/fm/bass_mecan.gsx",$2478,$20
 ;
@@ -61,8 +64,8 @@ FmIns_Bass_italo:
 ; ; ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; ; ; FmIns_Bass_metal:
 ; ; ; 		binclude "sound/instr/fm/bass_metal.gsx",$2478,$20
-; FmIns_Bass_synth:
-; 		binclude "sound/instr/fm/bass_synth_1.gsx",$2478,$20
+FmIns_Bass_synth:
+		binclude "sound/instr/fm/bass_synth_1.gsx",$2478,$20
 ; FmIns_Guitar_1:
 ; 		binclude "sound/instr/fm/guitar_1.gsx",$2478,$20
 ; ; ; FmIns_Horn_1:
@@ -83,6 +86,8 @@ FmIns_Organ_M1:
 ; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
 FmIns_Trumpet_2:
 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
+FmIns_Trumpet_kon:
+		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
 ; ; ; FmIns_Bell_Glass:
 ; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
 ; ; ; FmIns_Marimba_1:
@@ -100,6 +105,9 @@ FmIns_Bell_China:
 		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
 FmIns_Brass_Eur:
 		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
+
+FmIns_Flaute_cave:
+		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
 
 ; --------------------------------------------------------
 ; DAC samples
