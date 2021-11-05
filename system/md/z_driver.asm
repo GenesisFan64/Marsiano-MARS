@@ -786,8 +786,8 @@ updtrack:
 
 		ld	l,(iy+trk_romIns)	; Recieve almost 100h of instrument pointers
 		ld	h,(iy+(trk_romIns+1))	; NOTE: transferRom can't do 100h
-		ld	a,(iy+(trk_romIns+2))	; 0FFh is the max.
-		ld	de,(currInsData)
+		ld	a,(iy+(trk_romIns+2))	; So instrument 32 is invalid because of the
+		ld	de,(currInsData)	; missing byte
 		ld	bc,0FFh
 		call	transferRom
 
@@ -1093,6 +1093,7 @@ setupchip:
 		call	dac_fill
 		ld	(currTblPos),ix
 		ld	(currInsPos),hl
+
 		bit	1,(iy+chnl_Flags)
 		call	nz,.req_ins
 		bit	2,(iy+chnl_Flags)
@@ -1126,7 +1127,7 @@ setupchip:
 		cp	2		; FM normal
 		jp	z,.ins_fm
 		cp	3		; FM special
-		jr	z,.ins_fm3
+		jp	z,.ins_fm3
 		cp	4		; DAC
 		jp	z,.ins_dac
 ; 		cp	5		; PWM
@@ -1184,65 +1185,57 @@ setupchip:
 		ld	a,(hl)		; Save pitch
 		ld	(ix+3),a
 		inc	hl
-		ld	de,wave_Start
-		ld	b,4
-.copypas1:				; copypastes START,END,LOOP and FLAGS
-		ld	a,(hl)
-		ld	(de),a
+		ld	c,(hl)		; Grab the 24-bit
+		inc	hl		; big endian this time.
+		rst	8
+		ld	d,(hl)
 		inc	hl
-		inc	de
+		ld	e,(hl)
+	; c - start bank
+	; de - start rom mid-addr
+		inc	hl
+		ld	a,(hl)		; Set LOOP point
+		ld	(wave_Loop),a
+		inc	hl
 		rst	8
 		ld	a,(hl)
-		ld	(de),a
+		ld	(wave_Loop+1),a
 		inc	hl
-		inc	de
-		djnz	.copypas1
 		ld	a,(hl)
-		inc	hl
-		ld	(de),a
-		ld	a,(hl)		; flag
+		ld	(wave_Loop+2),a
+		rst	8
+		ld	l,e
+		ld	h,d
+		ld	a,c
+		push	hl		; Recieve LEN from the WAVE
+		push	af		; separately
+		ld	de,wave_Len	; (all this mess just to get the
+		ld	bc,03h		; ending point)
+		rst	8
+		call	transferRom
+		pop	af
+		pop	hl
+		ld	de,3		; skip LEN point
+		add	hl,de
+		adc	a,0
+		ld	(wave_Start),hl	; save START point
+		ld	(wave_Start+2),a
+
+	; Set FLAGS here.
+		ld	a,00b		; TODO: temporal flag
 		ld	(wave_Flags),a
 		ret
 
 ; FM3 special mode
 .ins_fm3:
-		push	hl		; Save hl
+		ld	d,27h		; Set enable Special mode
+		ld	a,01000000b	; both YM and
+		ld	(fmSpcMode),a	; internal flag
+		ld	e,a
+		call	fm_send_1
 		ld	a,(ix+2)
 		and	00000111b
-		call	.rd_fmins	; Get our ROM-instrument regs
-		rst	8
-		pop	hl		; Pop hl
-		ld	de,5		; Point to external freqs
-		add	hl,de
-		ld	ix,fmcom+2	; Read OP4 freq
-		ld	d,(hl)
-		inc	hl
-		rst	8
-		ld	e,(hl)
-		inc	hl
-		ld	(ix+FMFRQH),d
-		ld	(ix+FMFRQL),e
-		ld	ix,fm3reg
-		ld	b,3
-.copyops:
-		ld	d,(hl)		; Read OP3-1 freqs
-		inc	hl
-		rst	8
-		ld	e,(hl)
-		inc	hl
-		ld	(ix),d
-		ld	(ix+2),e
-		inc	ix
-		rst	8
-		inc	ix
-		inc	ix
-		inc	ix
-		djnz	.copyops
-		ld	d,27h		; TODO: Timer bits go here
-		ld	a,01000000b	; Enable CH3 special
-		ld	(fmSpcMode),a
-		ld	e,a
-		jp	fm_send_1
+		jr	.rd_fmins	; grab instrument as normal
 
 ; Regular FM
 .ins_fm:
@@ -1259,11 +1252,11 @@ setupchip:
 		ld	a,d
 		jr	.rd_fmins
 .not_prdac:
-		cp	2		; Check for FM3
+		cp	2		; Check if we got into channel 3
 		jr	nz,.rd_fmins
 		ld	c,a
-		ld	d,27h		; TODO: Timer bits go here
-		ld	a,00000000b	; Disable CH3 special
+		ld	d,27h		; Disable CH3 special mode
+		ld	a,00000000b
 		ld	(fmSpcMode),a
 		rst	8
 		ld	e,a
@@ -1279,21 +1272,18 @@ setupchip:
 		inc	hl		; skip ID and pitch
 		ld	e,(hl)
 		ld	(ix+3),e	; save pitch
-		ld	e,a
-		rst	8
 		inc	hl
+		add	a,a
 		ld	d,0
-		rrca			; * 20h
-		rrca
-		rrca
-		and	11100000b
 		ld	e,a
-		push	hl
-		ld	hl,fmins_com
-		add	hl,de
-		push	hl
 		rst	8
-		pop	de
+		push	hl		; save ins hl
+		ld	hl,.fmpickins
+		add	hl,de
+		ld	e,(hl)		; get output location
+		inc	hl		; from list
+		ld	d,(hl)
+		rst	8
 		pop	hl
 		ld	a,(hl)		; a - xx0000
 		inc	hl
@@ -1319,7 +1309,7 @@ setupchip:
 		ld	(ix+6),h
 		ld	(ix+7),c
 		ld	a,c
-		ld	bc,020h		; 20h bytes
+		ld	bc,028h		; 28h bytes
 		call	transferRom	; Transfer instrument data from ROM
 .fmsame_ins:
 		ld	bc,0
@@ -1335,6 +1325,14 @@ setupchip:
 		ld	(ix+FMVOL),0
 		pop	hl
 		ret
+
+; manual location for each instr cache
+.fmpickins:
+		dw fmins_com
+		dw fmins_com2
+		dw fmins_com3
+		dw fmins_com4
+		dw fmins_com5
 
 ; ----------------------------------------
 ; bit 2
@@ -1708,8 +1706,8 @@ setupchip:
 		ld	de,ZSET_WTUNE		; Fine-tune to desired
 		add	hl,de			; WAVE frequency
 		ld	(wave_Pitch),hl
-		ld	a,0			; No loop
-		ld	(wave_Flags),a
+; 		ld	a,0			; No loop
+; 		ld	(wave_Flags),a
 		ld	a,001b			; Request DAC play
 		ld	(daccom),a
 		ret
@@ -1949,8 +1947,7 @@ setupchip:
 		ld	a,(iy+chnl_Ins)
 		dec	a		; minus 1
 		ret	m		; return as -1 if no ins is used.
-		add	a,a		; * 10h
-		add	a,a
+		add	a,a		; * 08h
 		add	a,a
 		rst	8
 		add	a,a
@@ -2643,23 +2640,23 @@ chip_env:
 		ld	bc,0
 		call	.fm_set		; Channel 1
 		rst	8
-		ld	de,20h
+		ld	de,28h
 		add	ix,de		; Next ins data
 		inc	iy		; Next com
 		inc	c		; Next id
 		call	.fm_set		; Channel 2
-		ld	de,20h
+		ld	de,28h
 		add	ix,de
 		inc	iy
 		inc	c
 		rst	8
 		call	.fm_set		; Channel 3
-		ld	de,20h
+		ld	de,28h
 		add	ix,de
 		inc	iy
 		ld	bc,4
 		call	.fm_set		; Channel 4
-		ld	de,20h
+		ld	de,28h
 		add	ix,de
 		inc	iy
 		inc	c
@@ -2678,7 +2675,7 @@ chip_env:
 		rst	8
 		bit	2,e		; key-cut?
 		jp	nz,dac_off
-		ld	de,20h
+		ld	de,28h
 		add	ix,de
 		ld	a,(ix)
 		inc	iy
@@ -2822,12 +2819,14 @@ chip_env:
 		jp	nz,fm_send_2
 		jp	fm_send_1
 
-; CPU-intense, only call this if needed
+; CPU-intense
+; only call this if needed
 .fm_insupd:
 		push	bc
 		call	.fm_keyoff	; restart chip channel
 		call	dac_fill	; TODO: small slowdown.
-		push	ix
+		push	ix		; copy ix to hl
+		pop	hl
 		ld	a,c
 		and	011b
 		or	30h
@@ -2836,11 +2835,11 @@ chip_env:
 		ld	b,4*7
 .copy_1:
 		rst	8
-		ld	e,(ix)
+		ld	e,(hl)
 		bit	2,c
 		call	z,fm_send_1
 		call	nz,fm_send_2
-		inc	ix
+		inc	hl
 		inc	d
 		rst	8
 		nop
@@ -2848,9 +2847,42 @@ chip_env:
 		inc	d
 		inc	d
 		djnz	.copy_1
-		rst	8
-		pop	ix
+		ld	de,4	; skip AMS and FMS
+		add	hl,de	; old FM3 check (oops) and keys
 		pop	bc
+		ld	a,c	; check for Channel 3
+		cp	2
+		ret	nz
+		rst	8
+		ld	a,(fmSpcMode)
+		bit	6,a
+		ret	z
+		push	ix
+		ld	ix,fm3reg
+		ld	b,3
+.copyops3:
+		ld	d,(hl)		; Read OP3-1 freqs
+		inc	hl
+		rst	8
+		ld	e,(hl)
+		inc	hl
+		ld	(ix),d
+		ld	(ix+2),e
+		inc	ix
+		rst	8
+		inc	ix
+		inc	ix
+		inc	ix
+		djnz	.copyops3
+		ld	ix,fmcom+2	; Read OP4 freq
+		ld	d,(hl)
+		inc	hl
+		rst	8
+		ld	e,(hl)
+		inc	hl
+		ld	(ix+FMFRQH),d
+		ld	(ix+FMFRQL),e
+		pop	ix
 		ret
 
 ; b - Volume decrement
@@ -3481,12 +3513,12 @@ fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
 		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
 		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
 		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
-fmins_com:	ds 020h			; Current instrument data for each FM
-		ds 020h
-		ds 020h
-		ds 020h
-		ds 020h
-		ds 020h
+fmins_com:	ds 028h			; Current instrument data for each FM
+fmins_com2:	ds 028h
+fmins_com3:	ds 028h
+fmins_com4:	ds 028h
+fmins_com5:	ds 028h
+fmins_com6:	ds 028h
 fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
 		dw 0AD00h,0A900h
 		dw 0AE00h,0AA00h
@@ -3500,9 +3532,13 @@ pwmcom:		dw 0000h,0000h,0000h,0000h,0000h,0000h,0000h
 
 	; NON-aligned values and buffers
 
+trkBuff_0	ds 100h		; Track control (first 20h) + channels (8h each)
+trkBuff_1	ds 100h
+trkHeads_0	ds 80h		; Track blocks and heads: divided by 80h bytes
+trkHeads_1	ds 80h
+insDataC_0	ds 100h		; Instrument data+pointers for current track: 100h bytes
+insDataC_1	ds 100h
 
-; small variables stored here before 0038h
-	; NON-aligned values and buffers
 tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
 tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
@@ -3521,13 +3557,6 @@ x68ksrcmid	db 0		; transferRom temporal MID
 palMode		db 0
 flagResChip	db 0		; reset chips flag
 commZfifo	ds 40h		; Buffer for command requests from 68k (40h bytes, loops)
-
-trkBuff_0	ds 100h		; Track control (first 20h) + channels (8h each)
-trkBuff_1	ds 100h
-trkHeads_0	ds 80h		; Track blocks and heads: divided by 80h bytes
-trkHeads_1	ds 80h
-insDataC_0	ds 100h		; Instrument data+pointers for current track: 100h bytes
-insDataC_1	ds 100h
 
 	; ALIGNED buffers
 		org 1C00h

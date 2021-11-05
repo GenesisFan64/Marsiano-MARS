@@ -3,16 +3,21 @@
 ; PSG, FM and DAC instruments go here
 ; ----------------------------------------------------------------
 
+; Normal FM ins: $20
+; Special FM ins: $28
+
+FmIns_Fm3_OpenHat:
+		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
+FmIns_Fm3_ClosedHat:
+		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
+
 Fmins_Guitar_Heavy:
 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
 Fmins_Guitar_puy:
 		binclude "sound/instr/fm/guitar_puy.gsx",$2478,$20
 
 ;
-FmIns_Fm3_OpenHat:
-		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
-FmIns_Fm3_ClosedHat:
-		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
+
 FmIns_DrumKick_gem:
 		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
 ;
@@ -120,27 +125,26 @@ FmIns_Banjo_puy:
 ; DAC samples
 ; --------------------------------------------------------
 
-; DacIns_Magic1:
-; 		binclude "sound/instr/smpl/magic_1.wav",$2C
-; DacIns_Magic1_e:
-; DacIns_Magic2:
-; 		binclude "sound/instr/smpl/magic_2.wav",$2C
-; DacIns_Magic2_e:
+; Special include macro for sample only for tracker songs.
+;
+gSmpl macro locate
+.start
+	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)
+	binclude locate,$2C
+.end
+	endm
 
+DacIns_Magic2:
+	gSmpl "sound/instr/smpl/magic_2.wav"
 DacIns_Snare_Gem:
-		binclude "sound/instr/smpl/snare_lobo.wav",$2C
-DacIns_Snare_Gem_e:
-
+	gSmpl "sound/instr/smpl/snare_lobo.wav"
 DacIns_CdSnare:
-		binclude "sound/instr/smpl/cd_snare.wav",$2C
-DacIns_CdSnare_e:
-
+	gSmpl "sound/instr/smpl/cd_snare.wav"
 DacIns_SaurKick:
-		binclude "sound/instr/smpl/sauron_kick.wav",$2C
-DacIns_SaurKick_e:
+	gSmpl "sound/instr/smpl/sauron_kick.wav"
 DacIns_SaurSnare:
-		binclude "sound/instr/smpl/sauron_snare.wav",$2C
-DacIns_SaurSnare_e:
+	gSmpl "sound/instr/smpl/sauron_snare.wav"
+
 ; DacIns_SaurTom:
 ; 		binclude "sound/instr/smpl/sauron_tom.wav",$2C
 ; DacIns_SaurTom_e:
@@ -154,5 +158,5 @@ DacIns_SaurSnare_e:
 ; Sampl_Snare:	binclude "sound/instr/smpl/snare.wav",$2C
 ; Sampl_Snare_End:
 
-PCM_START:	binclude "sound/TEST_MD.wav",$2C,$E6000
+PCM_START:	binclude "sound/TEST_MD.wav",$2C,$C0000
 PCM_END:

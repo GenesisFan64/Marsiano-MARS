@@ -9,8 +9,6 @@
 gInsNull	macro
 		dc.b  -1,$00,$00,$00
 		dc.b $00,$00,$00,$00
-		dc.b $00,$00,$00,$00
-		dc.b $00,$00,$00,$00
 		endm
 
 ; alv: attack level (00=high)
@@ -19,50 +17,37 @@ gInsNull	macro
 ; dky: decay rate (up)
 ; rrt: release rate (down)
 gInsPsg	macro pitch,alv,atk,slv,dky,rrt
-		dc.b $00,pitch,alv,atk
-		dc.b slv,dky,rrt,$00
-		dc.b $00,$00,$00,$00
-		dc.b $00,$00,$00,$00
-		endm
+	dc.b $00,pitch,alv,atk
+	dc.b slv,dky,rrt,$00
+	endm
 
 ; mode: noise mode (PSGN only)
-gInsPsgN	macro pitch,alv,atk,slv,dky,rrt,mode
-		dc.b $01,pitch,alv,atk
-		dc.b slv,dky,rrt,mode
-		dc.b $00,$00,$00,$00
-		dc.b $00,$00,$00,$00
-		endm
+gInsPsgN macro pitch,alv,atk,slv,dky,rrt,mode
+	dc.b $01,pitch,alv,atk
+	dc.b slv,dky,rrt,mode
+	endm
 
-gInsFm	macro pitch,fmins
-		dc.b $02,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
-		dc.b fmins&$FF,$00,$00,$00
-		dc.b $00,$00,$00,$00
-		dc.b $00,$00,$00,$00
-		endm
+gInsFm macro pitch,fmins
+	dc.b $02,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+	dc.b fmins&$FF,$00,$00,$00
+	endm
 
 ; ex freq order: OP4 OP3 OP2 OP1
-gInsFm3	macro pitch,fmins,freq1,freq2,freq3,freq4
-		dc.b $03,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
-		dc.b fmins&$FF,((freq1>>8)&$FF),freq1&$FF,((freq2>>8)&$FF)
-		dc.b freq2&$FF,((freq3>>8)&$FF),freq3&$FF,((freq4>>8)&$FF)
-		dc.b freq4&$FF,$00,$00,$00
-		endm
+gInsFm3	macro pitch,fmins
+	dc.b $03,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+	dc.b fmins&$FF,$00,$00,$00
+	endm
 
-gInsDac	macro pitch,start,end,loop,flags
-		dc.b $04,pitch
-		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
-		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
-		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
-		dc.b flags,0,0,0,0
-		endm
+; START point is in 24-bit BIG endian
+gInsDac	macro pitch,start,loop,flags
+	dc.b $04,pitch,((start>>16)&$FF),((start>>8)&$FF)
+	dc.b start&$FF,((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
+	endm
 
-gInsPwm	macro pitch,start,end,loop,flags
-		dc.b $05,pitch
-		dc.b start&$FF,((start>>8)&$FF),((start>>16)&$FF)
-		dc.b ((end-start)&$FF),(((end-start)>>8)&$FF),(((end-start)>>16)&$FF)
-		dc.b loop&$FF,((loop>>8)&$FF),((loop>>16)&$FF)
-		dc.b flags,0,0,0,0
-		endm
+gInsPwm	macro pitch,start,end,loop
+	dc.b $05,pitch,start&$FF,((start>>8)&$FF)
+	dc.b ((start>>16)&$FF),((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
+	endm
 
 ; ------------------------------------------------------------
 
@@ -111,12 +96,13 @@ GemaTrk_blk_TEST:
 GemaTrk_patt_TEST:
 	binclude "sound/tracks/test_patt.bin"
 GemaTrk_ins_TEST:
-	ginsDac 0,PCM_START,PCM_END,0,0
+	gInsDac -2,DacIns_Magic2,0,0
 	gInsNull;gInsPsg   0,$40,$FF,$00,$10,$10
-	gInsPsgN +24,$00,$00,$00,$00,$00,%011
+	gInsFm3   0,FmIns_Fm3_OpenHat;gInsPsgN +24,$00,$00,$00,$00,$00,%011
+	gInsNull
 
-; 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
-; 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
+; 	gInsFm3   0,FmIns_Fm3_ClosedHat
+; 	gInsFm3   0,FmIns_Fm3_OpenHat
 ; 	gInsFm 0,FmIns_Trumpet_2
 ; 	gInsFm 0,FmIns_bass_kon
 
@@ -140,6 +126,13 @@ GemaTrk_ins_TEST2:
 	gInsNull
 	gInsFm -36,FmIns_Banjo_puy
 	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
 
 ; GemaTrk_doom_blk:
 ; 	binclude "sound/tracks/doom_blk.bin"
@@ -152,7 +145,7 @@ GemaTrk_ins_TEST2:
 ; 	gInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
 ; 	gInsFm    0,FmIns_Bass_heavy,0
 ; 	gInsFm    0,FmIns_Guitar_1,0
-; 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
+; 	gInsFm3   0,FmIns_Fm3_OpenHat
 ;
 ;
 GemaTrk_moon_blk:
@@ -162,8 +155,8 @@ GemaTrk_moon_patt:
 GemaTrk_moon_ins:
 	gInsPsg   0,$40,$FF,$00,$10,$10
 	gInsPsgN  0,$00,$FF,$20,$10,$10,%100
-	gInsDac  +17,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-	gInsDac  +17,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	gInsDac  +17,DacIns_CdSnare,0,0
+	gInsDac  +17,DacIns_CdSnare,0,0
 	gInsFm  -12,FmIns_Brass_Eur,0
 	gInsNull
 	gInsFm    0,FmIns_Bass_groove,0
@@ -212,8 +205,8 @@ GemaTrk_mecano_ins:
 	gInsPsg   0,$60,$80,$20,$F0,$01
 	gInsFm  -12,FmIns_Brass_Eur
 	gInsPsgN 60,$00,$FF,$20,$10,$10,%111
-	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+	gInsDac   0,DacIns_SaurKick,0,0
+	gInsDac   0,DacIns_CdSnare,0,0
 	gInsFm  -12,FmIns_Trumpet_2
 	gInsFm  -12,FmIns_Ding_toy
 	gInsNull
@@ -250,8 +243,8 @@ GemaTrk_mars_blk:
 GemaTrk_mars_patt:
 	binclude "sound/tracks/mars_patt.bin"
 GemaTrk_mars_ins:
-	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+	gInsDac   0,DacIns_CdSnare,0,0
+	gInsDac   0,DacIns_SaurKick,0,0
 	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
 	gInsFm    0,FmIns_PianoM1,0
 	gInsPsg   0,$50,$20,$40,$00,$01
