@@ -125,12 +125,13 @@ FmIns_Banjo_puy:
 ; DAC samples
 ; --------------------------------------------------------
 
-; Special include macro for sample only for tracker songs.
+; Special include macro for samples
 ;
+; only for tracker songs.
 gSmpl macro locate
 .start
-	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)
-	binclude locate,$2C
+	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
+	binclude locate,$2C	; actual data
 .end
 	endm
 
@@ -144,19 +145,3 @@ DacIns_SaurKick:
 	gSmpl "sound/instr/smpl/sauron_kick.wav"
 DacIns_SaurSnare:
 	gSmpl "sound/instr/smpl/sauron_snare.wav"
-
-; DacIns_SaurTom:
-; 		binclude "sound/instr/smpl/sauron_tom.wav",$2C
-; DacIns_SaurTom_e:
-
-; Sampl_KickSpinb:
-; 		binclude "sound/instr/smpl/spinb_kick.wav",$2C
-; Sampl_KickSpinb_End:
-;
-; Sampl_Kick:	binclude "sound/instr/smpl/stKick.wav",$2C
-; Sampl_Kick_End:
-; Sampl_Snare:	binclude "sound/instr/smpl/snare.wav",$2C
-; Sampl_Snare_End:
-
-PCM_START:	binclude "sound/TEST_MD.wav",$2C,$C0000
-PCM_END:

@@ -7,5 +7,6 @@
 ; ----------------------------------------------------------------
 
 		align $8000
-; PCM_START:	binclude "sound/test_md.wav",$2C,$05FFFF
-; PCM_END:
+PCM_START:	binclude "sound/TEST_MD.wav",$2C,$80000
+PCM_END:
+

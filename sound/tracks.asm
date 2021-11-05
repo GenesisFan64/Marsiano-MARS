@@ -17,35 +17,38 @@ gInsNull	macro
 ; dky: decay rate (up)
 ; rrt: release rate (down)
 gInsPsg	macro pitch,alv,atk,slv,dky,rrt
-	dc.b $00,pitch,alv,atk
+	dc.b $80,pitch,alv,atk
 	dc.b slv,dky,rrt,$00
 	endm
 
 ; mode: noise mode (PSGN only)
 gInsPsgN macro pitch,alv,atk,slv,dky,rrt,mode
-	dc.b $01,pitch,alv,atk
+	dc.b $90,pitch,alv,atk
 	dc.b slv,dky,rrt,mode
 	endm
 
 gInsFm macro pitch,fmins
-	dc.b $02,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+	dc.b $A0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
 ; ex freq order: OP4 OP3 OP2 OP1
 gInsFm3	macro pitch,fmins
-	dc.b $03,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+	dc.b $B0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
-; START point is in 24-bit BIG endian
+; start: Pointer to sample data, the first 3 bytes of
+;        the sample contains the LENGTH of the sample
+; loop: Sample to jump to, 0-start
+; flags: 0-dont loop, 1-loop
 gInsDac	macro pitch,start,loop,flags
-	dc.b $04,pitch,((start>>16)&$FF),((start>>8)&$FF)
+	dc.b $C0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
 	dc.b start&$FF,((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
 	endm
 
 gInsPwm	macro pitch,start,end,loop
-	dc.b $05,pitch,start&$FF,((start>>8)&$FF)
+	dc.b $D0|flags,pitch,start&$FF,((start>>8)&$FF)
 	dc.b ((start>>16)&$FF),((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
 	endm
 
