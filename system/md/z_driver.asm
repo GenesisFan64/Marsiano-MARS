@@ -22,6 +22,7 @@ MAX_TRKCHN	equ 18		; Max internal tracker channels
 ; now it's at 18000hz
 ;
 ZSET_WTUNE	equ -26
+ZSET_TESTME	equ 0		; Set to 1 to hear-test WAVE playback
 
 ; --------------------------------------------------------
 ; Structs
@@ -445,8 +446,8 @@ updtrack:
 	; TODO implementar bien esto
 ; 		bit	5,b			; This track uses Beats?
 ; 		jp	nz,.sfxmd		; Nope
-; 		bit	1,a			; BEAT passed?
-; 		ret	z
+		bit	1,a			; BEAT passed?
+		ret	z
 ; .sfxmd:
 		bit	0,a			; TICK passed?
 		ret	z
@@ -782,12 +783,14 @@ updtrack:
 		ld	a,(iy+trk_setBlk)	; Set current block
 		ld 	(iy+trk_currBlk),a	;
 		rst	8			; First cache fills
+
 		ld	l,(iy+trk_romIns)	; Recieve almost 100h of instrument pointers
 		ld	h,(iy+(trk_romIns+1))	; NOTE: transferRom can't do 100h
 		ld	a,(iy+(trk_romIns+2))	; 0FFh is the max.
 		ld	de,(currInsData)
 		ld	bc,0FFh
 		call	transferRom
+
 		rst	8
 		ld	e,(iy+trk_CachHeads)	; de - Cache headers
 		ld	d,(iy+(trk_CachHeads+1))
@@ -1087,6 +1090,7 @@ setupchip:
 		ld	a,(hl)
 		cp	-1
 		jr	z,.no_chnl
+		call	dac_fill
 		ld	(currTblPos),ix
 		ld	(currInsPos),hl
 		bit	1,(iy+chnl_Flags)
@@ -1206,6 +1210,7 @@ setupchip:
 		ld	a,(ix+2)
 		and	00000111b
 		call	.rd_fmins	; Get our ROM-instrument regs
+		rst	8
 		pop	hl		; Pop hl
 		ld	de,5		; Point to external freqs
 		add	hl,de
@@ -1222,12 +1227,13 @@ setupchip:
 .copyops:
 		ld	d,(hl)		; Read OP3-1 freqs
 		inc	hl
+		rst	8
 		ld	e,(hl)
 		inc	hl
 		ld	(ix),d
 		ld	(ix+2),e
-		rst	8
 		inc	ix
+		rst	8
 		inc	ix
 		inc	ix
 		inc	ix
@@ -1240,25 +1246,26 @@ setupchip:
 
 ; Regular FM
 .ins_fm:
+		rst	8
 		ld	e,0		; Set as normal FM
 		ld	a,(ix+2)
 		and	00000111b
 		cp	5		; Check if we are on FM6
 		jr	nz,.not_prdac
-		rst	8
 		ld	d,a
 		ld	a,100b		; FORCE DAC STOP
+		rst	8
 		ld	(daccom),a
 		ld	a,d
 		jr	.rd_fmins
 .not_prdac:
 		cp	2		; Check for FM3
 		jr	nz,.rd_fmins
-		rst	8
 		ld	c,a
 		ld	d,27h		; TODO: Timer bits go here
 		ld	a,00000000b	; Disable CH3 special
 		ld	(fmSpcMode),a
+		rst	8
 		ld	e,a
 		call	fm_send_1
 		ld	a,c
@@ -1389,16 +1396,15 @@ setupchip:
 		ld	c,a
 		ld	ix,fmcom
 		add	ix,bc
-		rst	8
 		ld	a,(iy+chnl_Vol)
 		sub	a,40h
+		rst	8
 		neg	a		; reverse impulse volume
 		srl	a		; /2
 		ld	(ix+FMVOL),a
 		ld	a,(ix)		; volume update
 		or	00100000b|1	; flag, plus keyon
 		ld	(ix),a
-		rst	8
 		ret
 
 ; ----------------------------------------
@@ -1746,12 +1752,12 @@ setupchip:
 		and	111b
 		ld	e,a
 		add	hl,de
+		rst	8
 		ld	a,(iy+chnl_Note)
 		cp	-1
 		jr	z,.fm_keyoff
 		cp	-2
 		jr	z,.fm_keycut
-		rst	8
 		ld	(iy+chnl_Chip),b
 		ld	a,c
 ; 		ld	e,(ix+9)
@@ -1764,6 +1770,7 @@ setupchip:
 ; .newnote:
 ; 		ld	b,0
 ; 		ld	(ix+9),c
+		rst	8
 		ld	b,0		; b - octave
 		ld	e,7
 .get_oct:
@@ -1787,9 +1794,9 @@ setupchip:
 		add	a,a
 		ld	b,0
 		push	hl
+		rst	8
 		pop	ix
 		ld	hl,fmFreq_List
-		rst	8
 		add	hl,bc
 		inc	hl
 		ld	c,a		; c - octave << 3
@@ -1797,6 +1804,7 @@ setupchip:
 		or	c		; add octave
 		ld	d,a
 		dec	hl
+		rst	8
 		ld	a,(hl)
 		ld	e,a
 		ld	(ix+FMFRQH),d	; Save freq MSB
@@ -1804,13 +1812,13 @@ setupchip:
 		pop	de
 .fm_setkon:
 		ld	a,(iy+chnl_Flags)
-		rst	8
 		add	a,a		; move LR bits
 		add	a,a
 		cpl
 		and	11000000b	; Set Panning ENABLE bits
 		ld	(ix+FMPAN),a
 		ld	e,11110000b	; ALLOWED keys (TEMPORAL)
+		rst	8
 		ld	(ix+FMKEYS),e
 		ld	a,(ix)		; key on
 		or	00000001b
@@ -1820,7 +1828,6 @@ setupchip:
 		ld	c,010b
 		ld	(hl),c
 		ret
-
 .fm_keycut:
 		ld	c,100b
 .fm_dlink:
@@ -1851,6 +1858,7 @@ setupchip:
 		or	a		; if == 0, stop
 		ret	z
 		ld	c,a
+		rst	8
 		and	11110000b
 		cp	e		; if channel is ours, ignore.
 		ret	z
@@ -2046,18 +2054,16 @@ setupchip:
 		ld	a,(ix)
 		or	e
 		jr	z,.fndlink
-
-		push	de		; Check if this link is
-		ld	d,(ix+1)	; floating.
-		ld	e,(ix)		; TODO: seguir checando esto
-		inc	de
-		ld	a,(de)		; *** DIRECT chnl_Note
-		pop	de
-		cp	-2
-		jr	z,.fndlink
-		cp	-1
-		jr	z,.fndlink
-
+; 		push	de		; Check if this link is
+; 		ld	d,(ix+1)	; floating.
+; 		ld	e,(ix)		; TODO: seguir checando esto
+; 		inc	de		; ***
+; 		ld	a,(de)		; *** DIRECT chnl_Note
+; 		pop	de
+; 		cp	-2
+; 		jr	z,.fndlink
+; 		cp	-1
+; 		jr	z,.fndlink
 		rst	8
 		ld	a,e		; Check if MSB is higher
 		cp	d
@@ -2612,7 +2618,10 @@ chip_env:
 		and	00001111b
 		or	90h		; Set volume-set mode
 		or	d		; add current channel
+	if ZSET_TESTME=0
 		ld	(hl),a		; Write volume
+	endif
+
 .noupd:
 		dec	iy		; next COM to check
 		ld	a,d
@@ -2789,7 +2798,11 @@ chip_env:
 		and	b
 		or	c
 		ld	e,a
+	if ZSET_TESTME=1
+		ret
+	endif
 		jp	fm_send_1
+
 .fm_keyoff:
 		rst	8
 		ld	e,c
@@ -2813,37 +2826,29 @@ chip_env:
 .fm_insupd:
 		push	bc
 		call	.fm_keyoff	; restart chip channel
+		call	dac_fill	; TODO: small slowdown.
 		push	ix
 		ld	a,c
 		and	011b
 		or	30h
+		rst	8
 		ld	d,a
 		ld	b,4*7
-		bit	2,c
-		jr	nz,.copy_2
 .copy_1:
+		rst	8
 		ld	e,(ix)
-		call	fm_send_1
+		bit	2,c
+		call	z,fm_send_1
+		call	nz,fm_send_2
 		inc	ix
 		inc	d
 		rst	8
+		nop
 		inc	d
 		inc	d
 		inc	d
 		djnz	.copy_1
-		pop	ix
-		pop	bc
-		ret
-.copy_2:
-		ld	e,(ix)
-		call	fm_send_2
-		inc	ix
-		inc	d
 		rst	8
-		inc	d
-		inc	d
-		inc	d
-		djnz	.copy_2
 		pop	ix
 		pop	bc
 		ret
@@ -3503,7 +3508,7 @@ tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 psgHatMode	db 0
 fmSpcMode	db 0
-sbeatPtck	dw 208-20	; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 208+10	; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 currInsData	dw 0
 currTblPos	dw 0

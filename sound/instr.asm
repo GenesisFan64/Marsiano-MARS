@@ -5,6 +5,8 @@
 
 Fmins_Guitar_Heavy:
 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
+Fmins_Guitar_puy:
+		binclude "sound/instr/fm/guitar_puy.gsx",$2478,$20
 
 ;
 FmIns_Fm3_OpenHat:
@@ -52,6 +54,8 @@ FmIns_Bass_3:
 ; 		binclude "sound/instr/fm/bass_6.gsx",$2478,$20
 FmIns_Bass_groove:
 		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
+FmIns_Bass_groove_2:
+		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
 FmIns_Bass_italo:
 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
 FmIns_Bass_kon:
@@ -108,6 +112,9 @@ FmIns_Brass_Eur:
 
 FmIns_Flaute_cave:
 		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
+
+FmIns_Banjo_puy:
+		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
 
 ; --------------------------------------------------------
 ; DAC samples

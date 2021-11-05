@@ -111,20 +111,24 @@ GemaTrk_blk_TEST:
 GemaTrk_patt_TEST:
 	binclude "sound/tracks/test_patt.bin"
 GemaTrk_ins_TEST:
-	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
-	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
-	gInsFm 0,FmIns_Trumpet_2
-	gInsFm 0,FmIns_bass_kon
+	ginsDac 0,PCM_START,PCM_END,0,0
+	gInsNull;gInsPsg   0,$40,$FF,$00,$10,$10
+	gInsPsgN +24,$00,$00,$00,$00,$00,%011
+
+; 	gInsFm3   0,FmIns_Fm3_ClosedHat,$251C,$2328,$205E,$2328
+; 	gInsFm3   0,FmIns_Fm3_OpenHat,$251C,$2328,$205E,$2328
+; 	gInsFm 0,FmIns_Trumpet_2
+; 	gInsFm 0,FmIns_bass_kon
 
 GemaTrk_blk_TEST2:
-	binclude "sound/tracks/cave_blk.bin"
+	binclude "sound/tracks/puyo2_blk.bin"
 GemaTrk_patt_TEST2:
-	binclude "sound/tracks/cave_patt.bin"
+	binclude "sound/tracks/puyo2_patt.bin"
 GemaTrk_ins_TEST2:
-	gInsFm -12,FmIns_flaute_cave
+	gInsFm 0,FmIns_guitar_puy
 	gInsNull
+	gInsFm 0,FmIns_Bass_groove_2
 	gInsNull
-	gInsFm 0,FmIns_bass_kon
 	gInsFm -12,FmIns_Trumpet_kon
 	gInsNull
 	gInsNull
@@ -134,8 +138,7 @@ GemaTrk_ins_TEST2:
 	gInsNull
 	gInsNull
 	gInsNull
-	gInsNull
-	gInsNull
+	gInsFm -36,FmIns_Banjo_puy
 	gInsNull
 
 ; GemaTrk_doom_blk:
