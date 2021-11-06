@@ -52,14 +52,14 @@ trk_CachHeads	equ 27			; Buff'd Track heads
 trk_CachIns	equ 29
 
 ; Track data: 8 bytes only
-chnl_Chip	equ 0			; MUST BE 0 or else modify .can_silnc
+chnl_Chip	equ 0			; MUST BE 0, some routines read here directly.
 chnl_Note	equ 1
 chnl_Ins	equ 2
 chnl_Vol	equ 3
 chnl_EffId	equ 4
 chnl_EffArg	equ 5
 chnl_Type	equ 6			; Impulse note bits
-chnl_Flags	equ 7			; 00pp uuuu | pp-Panning(LR) u-update bits from Tracker
+chnl_Flags	equ 7			; 00pp uuuu | pp-Panning(LR) u-Tracker update bits
 
 ; --------------------------------------------------------
 ; Variables
@@ -799,7 +799,7 @@ updtrack:
 		ld	l,(iy+trk_romPatt)	; hl - ROM pattern data BASE
 		ld	h,(iy+(trk_romPatt+1))
 		ld	a,(iy+(trk_romPatt+2))
-		ld	bc,60h
+		ld	bc,80h
 		call	transferRom
 		ld	l,(iy+trk_CachNotes)	; Read first cache notes
 		ld	h,(iy+(trk_CachNotes+1))
@@ -854,19 +854,18 @@ updtrack:
 		and	11110000b
 		cp	80h
 		jr	z,.is_psg
-		cp	090h		; Includes FM3
+		cp	90h
+		jr	z,.is_psgn
+		cp	0A0h		;
 		jr	z,.is_fm
-; 		cp	0A0h
-; 		jr	z,.is_dac
+		cp	0B0h		; For FM3 special
+		jr	z,.is_fm
+		cp	0C0h		; For FM6 DAC
+		jr	z,.is_fm
 		ret
 ; PSG
 .is_psg:
 		ld	b,0
-		ld	hl,tblPSGN
-		ld	a,c
-		and	11b
-		cp	3		; PSGN later
-		jr	z,.is_psgn
 		ld	hl,tblPSG
 		rst	8
 		add	a,a		; *08h
@@ -877,7 +876,10 @@ updtrack:
 		push	bc
 		add	hl,bc
 		pop	bc
+		jr	.ispsg_c
 .is_psgn:
+		ld	hl,tblPSGN
+.ispsg_c:
 		ld	a,(hl)
 		cp	e
 		ret	nz
@@ -973,23 +975,31 @@ setupchip:
 		ld	iy,trkBuff_1
 		call	.mk_chip
 
-	; Check if there's floating unused
+	; Check if there's floating
+	; channels to auto-mute by request
 		ld	a,(flagResChip)
 		or	a
 		ret	z
 		xor	a
 		ld	(flagResChip),a
 		rst	8
+		ld	iy,tblPSGN
+		ld	ix,psgcom+3
+		call	.silnc_singl
+; 		ld	iy,tblFM3
+; 		ld	ix,fmcom+2
+; 		call	.silnc_singl
+; 		rst	8
+; 		ld	iy,tblFM6
+; 		ld	ix,fmcom+5
+; 		call	.silnc_singl
 		ld	iy,tblFM		; silence floating channels
 		ld	ix,fmcom
 		call	.silnc_list
+		rst	8
 		ld	iy,tblPSG
 		ld	ix,psgcom
 		call	.silnc_list
-		rst	8
-		ld	iy,tblPSGN
-		ld	ix,psgcom
-		call	.silnc_singl
 		ret
 
 .mk_chip:
@@ -1084,15 +1094,18 @@ setupchip:
 
 .do_chnl:
 		push	bc
+		call	.check_chip
+		cp	-1
+		jr	z,.no_chnl
+		ld	(currInsPos),hl
 		call	.check_chnl
 		cp	-1
 		jr	z,.no_chnl
-		ld	a,(hl)
-		cp	-1
-		jr	z,.no_chnl
-		call	dac_fill
 		ld	(currTblPos),ix
-		ld	(currInsPos),hl
+		ld	hl,(currInsPos)
+; 		ld	e,(hl)
+; 		call	.chip_swap
+		call	dac_fill
 
 		bit	1,(iy+chnl_Flags)
 		call	nz,.req_ins
@@ -1109,6 +1122,152 @@ setupchip:
 .no_chnl:
 		pop	bc
 		ret
+
+; TODO
+; bad idea.
+; .chip_swap:
+; 		ld	a,(iy+chnl_Chip)
+; 		or	a		; if == 0, stop
+; 		ret	z
+; 		ld	c,a
+; 		rst	8
+; 		and	11110000b
+; 		cp	e		; if channel is ours, ignore.
+; 		ret	z
+; 		ld	d,0
+; 		ld	b,0
+; 		cp	80h
+; 		jr	z,.noslc_psg
+; 		cp	90h
+; 		jr	z,.noslc_psgn
+; 		cp	0A0h
+; 		jr	z,.noslc_fm
+; 		cp	0B0h
+; 		jr	z,.noslc_fm3
+; 		cp	0C0h
+; 		jp	z,.noslc_dac
+; 		ret
+; .noslc_psg:
+; 		ld	a,c
+; 		and	0011b
+; 		ld	c,a
+; 		rst	8
+; 		ld	hl,tblPSG
+; 		add	a,a		; *08h
+; 		add	a,a
+; 		add	a,a
+; 		ld	e,a
+; 		add	hl,de
+; 		push	iy
+; 		pop	de
+; 		ld	a,(hl)
+; 		cp	e
+; 		ret	nz
+; 		inc	hl
+; 		rst	8
+; 		ld	a,(hl)
+; 		cp	d
+; 		ret	nz
+; 		inc	hl
+; 		ld	d,0
+; 		ld	a,(hl)
+; 		and	011b
+; 		ld	e,a
+; 		dec	hl
+; 		ld	(hl),0
+; 		dec	hl
+; 		ld	(hl),0
+; 		ld	hl,psgcom
+; 		add	hl,de
+; 		ld	(hl),100b
+; 		ret
+; .noslc_psgn:
+; 		ld	hl,tblPSGN
+; 		push	iy
+; 		pop	de
+; 		ld	a,(hl)
+; 		cp	e
+; 		ret	nz
+; 		inc	hl
+; 		ld	a,(hl)
+; 		cp	d
+; 		ret	nz
+; 		rst	8
+; 		ld	(hl),0
+; 		dec	hl
+; 		ld	(hl),0
+; 		ld	a,100b
+; 		ld	(psgcom+3),a
+; 		ret
+; .noslc_fm:
+; 		rst	8
+; 		ld	a,c
+; 		and	0111b
+; 		ld	c,a
+; 		rst	8
+; 		ld	hl,tblFM
+; 		add	a,a		; *08h
+; 		add	a,a
+; 		add	a,a
+; 		ld	e,a
+; 		add	hl,de
+; 		push	iy
+; 		pop	de
+; 		ld	a,(hl)
+; 		cp	e
+; 		ret	nz
+; 		inc	hl
+; 		rst	8
+; 		ld	a,(hl)
+; 		cp	d
+; 		ret	nz
+;
+; 	; same
+; 		ld	d,0
+; 		ld	(hl),0
+; 		dec	hl
+; 		ld	(hl),0
+; 		ld	hl,fmcom
+; 		add	hl,bc
+; 		ld	(hl),100b
+; 		ret
+; .noslc_fm3:
+; 		ld	hl,tblFM3
+; 		push	iy
+; 		pop	de
+; 		ld	a,(hl)
+; 		cp	e
+; 		ret	nz
+; 		inc	hl
+; 		ld	a,(hl)
+; 		cp	d
+; 		ret	nz
+; 		rst	8
+; 		ld	(hl),0
+; 		dec	hl
+; 		ld	(hl),0
+; 		ld	a,100b
+; 		ld	(fmcom+2),a
+; 		ret
+;
+; .noslc_dac:
+; 		ld	hl,tblFM6
+; 		push	iy
+; 		pop	de
+; 		ld	a,(hl)
+; 		cp	e
+; 		ret	nz
+; 		inc	hl
+; 		ld	a,(hl)
+; 		cp	d
+; 		ret	nz
+; 		rst	8
+; 		ld	(hl),0
+; 		dec	hl
+; 		ld	(hl),0
+; 		ld	a,100b
+; 		ld	(daccom),a
+; 		ret
 
 ; ----------------------------------------
 ; bit 1: Intrument
@@ -1148,17 +1307,19 @@ setupchip:
 		ld	(ix+4),a
 		ret
 .ins_psg:
-		ld	a,(ix+2)
-		and	11b
-		ld	d,0
-		ld	e,a
 		rst	8
 		inc	hl		; Skip ID
 		ld	a,(hl)
 		ld	(ix+3),a	; Save pitch
 		inc	hl
+
+		ld	a,(ix+2)
+		and	11b
+		ld	d,0
+		ld	e,a
 		ld	ix,psgcom
 		add	ix,de
+
 		ld	a,(hl)
 		ld	(ix+ALV),a	; ALV
 		inc	hl
@@ -1225,15 +1386,13 @@ setupchip:
 
 ; FM3 special mode
 .ins_fm3:
-		ld	d,27h		; Set enable Special mode
-		ld	a,01000000b	; both YM and
-		ld	(fmSpcMode),a	; internal flag
-		ld	e,a
-		call	fm_send_1
-		ld	a,(ix+2)
-		and	00000111b
-		jr	.rd_fmins	; grab instrument as normal
-
+		ld	a,2		; manual index
+		call	.rd_fmins
+		ld	hl,fmcom+2
+		ld	a,(hl)		; instrument update bit
+		or	00010000b	; flag
+		ld	(hl),a
+		ret
 ; Regular FM
 .ins_fm:
 		rst	8
@@ -1247,10 +1406,10 @@ setupchip:
 		rst	8
 		ld	(daccom),a
 		ld	a,d
-		jr	.rd_fmins
+		jr	.rd_nt3
 .not_prdac:
 		cp	2		; Check if we got into channel 3
-		jr	nz,.rd_fmins
+		jr	nz,.rd_nt3
 		ld	c,a
 		ld	d,27h		; Disable CH3 special mode
 		ld	a,00000000b
@@ -1260,6 +1419,19 @@ setupchip:
 		call	fm_send_1
 		ld	a,c
 		ld	e,1		; Set as alternate (FM3 special)
+.rd_nt3:
+		call	.rd_fmins
+		ld	a,(ix+2)
+		and	00000111b
+		ld	d,0
+		rst	8
+		ld	e,a
+		ld	hl,fmcom
+		add	hl,de
+		ld	a,(hl)		; instrument update bit
+		or	00010000b	; flag
+		ld	(hl),a
+		ret
 
 ; Read FM instrument
 ;
@@ -1309,17 +1481,6 @@ setupchip:
 		ld	bc,028h		; 28h bytes
 		call	transferRom	; Transfer instrument data from ROM
 .fmsame_ins:
-		ld	bc,0
-		ld	a,(ix+2)
-		and	00000111b
-		ld	c,a
-		ld	ix,fmcom
-		add	ix,bc
-		ld	a,(ix)		; instrument update bit
-		rst	8
-		or	00010000b	; flag
-		ld	(ix),a
-		ld	(ix+FMVOL),0
 		pop	hl
 		ret
 
@@ -1330,6 +1491,7 @@ setupchip:
 		dw fmins_com3
 		dw fmins_com4
 		dw fmins_com5
+		dw fmins_com6
 
 ; ----------------------------------------
 ; bit 2
@@ -1578,14 +1740,11 @@ setupchip:
 ; PSG Keyoff
 .poff:
 		ld	c,010b
-		ld	(hl),c
-		ret
-; 		jr	.pct_go
-
 ; PSG Keycut
-.pstop:
+.pcut:
 		ld	c,100b
 .pct_go:
+		rst	8
 		push	iy
 		pop	de
 		ld	a,(ix)
@@ -1595,28 +1754,25 @@ setupchip:
 		cp	d
 		ret	nz
 		rst	8
+		ld	(hl),c
 		ld	(ix),0
 		ld	(ix+1),0
+		bit	1,c
+		ret	nz
 		ld	(iy+chnl_Chip),0
-		ld	(hl),c
 		ret
 
 ; Play PSG note
-.note_psg:
-		ld	a,(ix+2)	; Check channel 3
-		and	11b
-		cp	02h
-		jr	nz,.note_psgn
-		rst	8
-		ld	a,(psgHatMode)	; Tone3 active?
-		and	011b
-		cp	011b
-		jr	nz,.note_psgn
-		ld	hl,psgcom+2	; point to PSG3 com
-		jr	.pstop		; and automute
 .note_psgn:
-		ld	e,80h
-		call	.chip_swap
+		ld 	hl,psgcom+3
+		ld	a,(ix+2)
+		ld	(iy+chnl_Chip),a
+		ld 	a,(ix+4)
+		ld	(psgHatMode),a
+		jr	.notepsg_c
+.note_psg:
+		ld	a,(ix+2)
+		ld	(iy+chnl_Chip),a
 		ld	a,(ix+2)
 		rst	8
 		and	11b
@@ -1624,9 +1780,16 @@ setupchip:
 		ld	e,a
 		ld 	hl,psgcom
 		add	hl,de
+		cp	2
+		jr	nz,.notepsg_c
+		ld	a,(psgHatMode)
+		and	011b
+		cp	011b
+		jr	z,.pcut
+.notepsg_c:
 		ld	a,(iy+chnl_Note)
 		cp	-2
-		jp	z,.pstop
+		jp	z,.pcut
 		cp	-1
 		jp	z,.poff
 		rst	8
@@ -1642,8 +1805,6 @@ setupchip:
 		inc	hl
 		ld	d,(hl)
 		ld	bc,0
-		ld	a,(ix+2)
-		ld	(iy+chnl_Chip),a; Mark as PSG
 		and	11b
 		ld	c,a
 		push	ix		; swap ix to hl
@@ -1653,12 +1814,12 @@ setupchip:
 		inc	hl
 		inc 	hl		; channel id
 		inc	hl		; pitch
-		ld	a,c
-		cp	3
-		jr	nz,.npsg2
-		ld 	a,(ix+4)
-		ld	(psgHatMode),a
-.npsg2:
+; 		ld	a,c
+; 		cp	3
+; 		jr	nz,.npsg2
+; 		ld 	a,(ix+4)
+; 		ld	(psgHatMode),a
+; .npsg2:
 		pop	ix			; restore psgcom as ix
 		ld	a,(iy+chnl_Flags)	; Check is volume bit
 		bit	2,a			; is being used
@@ -1694,17 +1855,15 @@ setupchip:
 ; --------------------------------
 
 .note_dac:
-; 		ld	e,90h
-; 		call	.chip_swap
+		ld	hl,daccom
 		ld	a,(iy+chnl_Note)
 		cp	-1
-		jr	z,.doff
+		jp	z,.fm_keyoff
 		cp	-2
-		jr	z,.dcut
-		ld	(iy+chnl_Chip),095h	; Set as FM6
-		inc	hl
+		jp	z,.fm_keycut
+		ld	(iy+chnl_Chip),0C0h	; Set as DAC
 		ld	de,0
-		ld	e,(hl)			; Get pitch
+		ld	e,(ix+3)		; Get pitch
 		add	a,e
 		add	a,a
 		ld	e,a
@@ -1734,31 +1893,66 @@ setupchip:
 		ret
 ; FM3 special
 .note_fm3:
-		ld	e,90h
-		call	.chip_swap
-		ld	hl,fmcom+2	; Channel 3 fmcom
+		ld	hl,fmcom+2		; Channel 3 fmcom
 		ld	a,(iy+chnl_Note)
 		cp	-1
 		jp	z,.fm_keyoff
 		cp	-2
 		jp	z,.fm_keycut
+;
+; 		push	iy
+; 		pop	de
+; 		ld	a,(ix)
+; 		cp	e
+; 		jr	nz,.don_rev3
+; 		ld	a,(ix+1)
+; 		cp	d
+; 		jr	nz,.don_rev3
+; 		ld	a,(iy+chnl_Chip)
+; 		and	111b
+; 		cp	2
+; 		jr	z,.don_rev3
+; 		push	hl
+; 		ld	d,0
+; 		ld	e,a
+; 		ld	hl,fmcom	; shut same note on channel
+; 		add	hl,de
+; 		ld	(hl),100b
+; ; 		ld	hl,tblFM
+; ; 		ld	a,e
+; ; 		add	a,a		; *08h
+; ; 		add	a,a
+; ; 		add	a,a
+; ; 		ld	d,0
+; ; 		ld	e,a
+; ; 		add	hl,de
+; ; 		ld	(hl),0
+; ; 		inc	hl
+; ; 		ld	(hl),0
+; 		pop	hl
+; .don_rev3:
+
+		ld	(iy+chnl_Chip),0B0h	; Set as FM3 special
+		ld	d,27h
+		ld	a,01000000b
+		ld	(fmSpcMode),a
+		ld	e,a
+		call	fm_send_1
 		push	hl
 		pop	ix
 		jr	.fm_setkon
 ; Normal FM
 .note_fm:
-		ld	e,90h
-		call	.chip_swap
 		ld	a,(iy+chnl_Note)
 		ld	d,a
 		ld	e,(ix+3)
 		add	a,e
 		rst	8
-		ld	c,a		; c - Note+pitch
+		ld	c,a			; c - Note+pitch
 		ld	a,(ix+2)
 		ld	b,a
 		and	00000111b
-		ld	hl,fmcom	; hl - fmcom list
+		ld	hl,fmcom		; hl - fmcom list
 		ld	de,0
 		and	111b
 		ld	e,a
@@ -1769,10 +1963,13 @@ setupchip:
 		jr	z,.fm_keyoff
 		cp	-2
 		jr	z,.fm_keycut
-		ld	(iy+chnl_Chip),b
+		ld	a,b			; Set chip as FM
+		and	111b
+		or	90h
+		ld	(iy+chnl_Chip),a
 		ld	a,c
 		rst	8
-		ld	b,0		; b - octave
+		ld	b,0			; b - octave
 		ld	e,7
 .get_oct:
 		ld	c,a
@@ -1827,11 +2024,11 @@ setupchip:
 		ret
 .fm_keyoff:
 		ld	c,010b
-		ld	(hl),c
-		ret		; TODO
+		jr	.fm_dlink
 .fm_keycut:
 		ld	c,100b
 .fm_dlink:
+		rst	8
 		push	iy
 		pop	de
 		ld	a,(ix)
@@ -1841,85 +2038,12 @@ setupchip:
 		cp	d
 		ret	nz
 		rst	8
+		ld	(hl),c
 		ld	(ix),0
 		ld	(ix+1),0
+		bit	1,c
+		ret	nz
 		ld	(iy+chnl_Chip),0
-		ld	(hl),c
-		ret
-
-; ----------------------------------------
-; If chip got changed in the
-; current track's channel
-; ----------------------------------------
-
-; e - channel chip ID BASE bits xxxx0000b
-.chip_swap:
-		ld	a,(iy+chnl_Chip)
-		or	a		; if == 0, stop
-		ret	z
-		ld	c,a
-		rst	8
-		and	11110000b
-		cp	e		; if channel is ours, ignore.
-		ret	z
-		ld	d,0
-		ld	b,0
-		cp	80h
-		jr	nz,.noslc_psg
-		ld	a,c
-		and	0011b
-		ld	c,a
-		rst	8
-		ld	hl,tblPSG
-		add	a,a		; *08h
-		add	a,a
-		add	a,a
-		ld	e,a
-		add	hl,de
-		push	iy
-		pop	de
-		ld	a,(hl)
-		cp	e
-		ret	nz
-		inc	hl
-		rst	8
-		ld	a,(hl)
-		cp	d
-		ret	nz
-		ld	(hl),0
-		dec	hl
-		ld	(hl),0
-		ret
-.noslc_psg:
-		cp	90h
-		jr	nz,.noslc_fm
-		rst	8
-		ld	a,c
-		and	0111b
-		ld	c,a
-		ld	hl,tblFM
-		add	a,a		; * 08h
-		add	a,a
-		add	a,a
-		ld	e,a
-		add	hl,de
-		ld	a,(hl)
-		cp	e
-		ret	nz
-		inc	hl
-		ld	a,(hl)
-		cp	d
-		ret	nz
-		rst	8
-		ld	(hl),0
-		dec	hl
-		ld	(hl),0
-		ret
-.noslc_fm:
-; 		cp	0A0h
-; 		jr	nz,.noslc_dac
-; 		jr	$
-; .noslc_dac:
 		ret
 
 ; ----------------------------------------
@@ -1944,7 +2068,7 @@ setupchip:
 ; 0D0h - PWM (or extra)
 ; ----------------------------------------
 
-.check_chnl:
+.check_chip:
 		ld	a,(iy+chnl_Ins)
 		dec	a		; minus 1
 		ret	m		; return as -1 if no ins is used.
@@ -1956,6 +2080,10 @@ setupchip:
 		ld	de,0
 		ld	e,a
 		add	hl,de
+		ld	a,(hl)
+		ret
+
+.check_chnl:
 		ld	a,(hl)		; a - intrument type
 		cp	-1		; if -1: Null
 		ret	z
@@ -1977,11 +2105,11 @@ setupchip:
 		push	de
 		pop	ix
 		ld	a,c		; restore from c
-		cp	01h		; type PSGN?
+		cp	90h		; type PSGN?
 		jp	z,.chk_tbln
-		cp	03h		; type FM3?
+		cp	0B0h		; type FM3?
 		jp	z,.chk_tbln
-		cp	04h		; type DAC?
+		cp	0C0h		; type DAC?
 		jp	z,.chk_tbln
 		jp	.chk_tbl
 .bad_ins:
@@ -2029,7 +2157,7 @@ setupchip:
 ; --------------------------------------------
 
 .chk_tbl:
-		ld	bc,0		; bc - Free slot point
+		ld	hl,0		; hl - Free slot point
 .next:
 		ld	a,(ix+1)	; Check MSB first
 		cp	-1		; End of list? (as WORD: 0FFxxh)
@@ -2042,38 +2170,44 @@ setupchip:
 		ld	a,(ix)
 		cp	e
 		jr	nz,.diffr
+; 		ld	a,(ix+2)	; type changed?
+; 		and	11110000b
+; 		cp	c		; then reroll
+; 		jr	nz,.newkey
 		xor	a		; return 0
 		ret
+; .newkey:
+; 		ld	(ix),0
+; 		ld	(ix+1),0
+; 		jr	$
 
-; MSB and LSB links are not equal
-;
 ; d - MSB to check for auto-priority
 .diffr:
-		ld	a,c		; already found link at bc?
-		or	b
+		ld	a,l		; already found link at hl?
+		or	h
 		jr	nz,.alrdfnd
 		rst	8
 		ld	e,(ix+1)	; Check if this link == 0
 		ld	a,(ix)
 		or	e
 		jr	z,.fndlink
-; 		push	de		; Check if this link is
-; 		ld	d,(ix+1)	; floating.
-; 		ld	e,(ix)		; TODO: seguir checando esto
-; 		inc	de		; ***
-; 		ld	a,(de)		; *** DIRECT chnl_Note
-; 		pop	de
-; 		cp	-2
-; 		jr	z,.fndlink
-; 		cp	-1
-; 		jr	z,.fndlink
+		push	de		; Check if this link is
+		ld	d,(ix+1)	; floating.
+		ld	e,(ix)		; TODO: seguir checando esto
+		inc	de		; ***
+		ld	a,(de)		; *** DIRECT chnl_Note
+		pop	de
+		cp	-2
+		jr	z,.fndlink
+		cp	-1
+		jr	z,.fndlink
 		rst	8
 		ld	a,e		; Check if MSB is higher
 		cp	d
 		jr	nc,.alrdfnd
 .fndlink:
-		push	ix		; bc - got new link
-		pop	bc
+		push	ix		; hl - got new link
+		pop	hl
 		rst	8
 .alrdfnd:
 		ld	de,8		; Next channel table
@@ -2082,13 +2216,15 @@ setupchip:
 
 ; free link slot
 .chkfree:
-		ld	a,c		; found free link?
-		or	b
+		ld	a,l		; found free link?
+		or	h
 		jr	z,.fndslot
+
+
 ; 		cp	d		; Same Channel MSB?
 ; 		jr	z,.fndslot	; If not, skip
 ; 		jr	c,.fndslot
-		push	bc
+		push	hl
 		pop	ix		; tell ix is the new slot
 		push	iy
 		pop	de		; and mark it on buffer
@@ -2652,10 +2788,10 @@ chip_env:
 		bit	0,e		; WAVE sample request
 		jr	nz,.req_dac
 		rst	8
-		bit	1,e		; key-off? (failsafe)
-		jp	nz,dac_off
 		bit	2,e		; key-cut?
 		jp	nz,dac_off
+		bit	1,e		; key-off?
+		ret	nz
 		ld	de,28h
 		add	ix,de
 		rst	8
@@ -2831,14 +2967,13 @@ chip_env:
 		djnz	.copy_1
 		ld	de,4	; skip AMS and FMS
 		add	hl,de	; old FM3 check (oops) and keys
-		pop	bc
 		ld	a,c	; check for Channel 3
 		cp	2
-		ret	nz
+		jr	nz,.fm_ins_ex
 		rst	8
 		ld	a,(fmSpcMode)
 		bit	6,a
-		ret	z
+		jr	z,.fm_ins_ex
 		push	ix
 		ld	ix,fm3reg
 		ld	b,3
@@ -2865,6 +3000,8 @@ chip_env:
 		ld	(ix+FMFRQH),d
 		ld	(ix+FMFRQL),e
 		pop	ix
+.fm_ins_ex:
+		pop	bc
 		ret
 
 ; b - Volume decrement
@@ -2893,7 +3030,7 @@ chip_env:
 		ld	d,a
 		inc	ix
 		ld	a,h		; Check 44h
-		cp	4		; Algorithm > 04h?
+		cp	5		; Algorithm > 05h?
 		call	nc,.do_vol
 		ld	a,d
 		add	a,4
@@ -2901,7 +3038,7 @@ chip_env:
 		inc	ix
 		rst	8
 		ld	a,h		; Check 48h
-		cp	5		; Algorithm > 05h?
+		cp	4		; Algorithm > 04h?
 		call	nc,.do_vol
 		ld	a,d
 		add	a,4
@@ -3425,31 +3562,36 @@ wavFreq_List:	dw 100h		; C-0
 
 	; PSG (80h+)
 	;  4 - psgNoise mode
-		align 10h
+
 tblPSG:		db 00h,00h,80h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,81h,00h,00h,00h,00h,00h	; Channel 2
 		db 00h,00h,82h,00h,00h,00h,00h,00h	; Channel 3
 		dw -1	; end-of-list
-tblPSGN:	db 00h,00h,83h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
+tblPSGN:	db 00h,00h,93h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 
 	; FM: 90h+ FM3: 0A0h DAC: 0B0h
 	;  4 - Special mode (FM3: Special, FM6: DAC)
 	;  5 - 24-bit copy of ROM instrument pointer
-tblFM:		db 00h,00h,90h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,91h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,93h,00h,00h,00h,00h,00h	; Channel 4
-		db 00h,00h,94h,00h,00h,00h,00h,00h	; Channel 5
-tblFM3:		db 00h,00h,92h,00h,00h,00h,00h,00h	; Channel 3 (0A0h: FM3 special mode)
-tblFM6:		db 00h,00h,95h,00h,00h,00h,00h,00h	; Channel 6 (0B0h: WAVE playback mode)
-		dw -1	; end-of-list
 
-tblPWM:		db 00h,00h,0B0h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,0B1h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,0B2h,00h,00h,00h,00h,00h	; Channel 3
-		db 00h,00h,0B3h,00h,00h,00h,00h,00h	; Channel 4
-		db 00h,00h,0B4h,00h,00h,00h,00h,00h	; Channel 5
-		db 00h,00h,0B5h,00h,00h,00h,00h,00h	; Channel 6
-		db 00h,00h,0B6h,00h,00h,00h,00h,00h	; Channel 7
+		align 10h
+tblFM:		db 00h,00h,0A0h,00h,00h,00h,00h,00h	; Channel 1
+		db 00h,00h,0A1h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,0A3h,00h,00h,00h,00h,00h	; Channel 4
+		db 00h,00h,0A4h,00h,00h,00h,00h,00h	; Channel 5
+tblFM3:		db 00h,00h,0B2h,00h,00h,00h,00h,00h	; Channel 3
+tblFM6:		db 00h,00h,0C5h,00h,00h,00h,00h,00h	; Channel 6
+		dw -1	; end-of-list
+		dw -1
+
+
+
+tblPWM:		db 00h,00h,0D0h,00h,00h,00h,00h,00h	; Channel 1
+		db 00h,00h,0D1h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,0D2h,00h,00h,00h,00h,00h	; Channel 3
+		db 00h,00h,0D3h,00h,00h,00h,00h,00h	; Channel 4
+		db 00h,00h,0D4h,00h,00h,00h,00h,00h	; Channel 5
+		db 00h,00h,0D5h,00h,00h,00h,00h,00h	; Channel 6
+		db 00h,00h,0D6h,00h,00h,00h,00h,00h	; Channel 7
 		dw -1
 
 	; PSG psuedo-controls
@@ -3492,12 +3634,16 @@ pwmcom:		dw 0000h,0000h,0000h,0000h,0000h,0000h,0000h
 
 	; NON-aligned values and buffers
 
+insDataC_0	ds 100h		; Instrument data+pointers for current track: 100h bytes
+insDataC_1	ds 100h
+trkHeads_0	ds 80h		; Track blocks and heads: divided by 80h bytes
+trkHeads_1	ds 80h
 tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
 tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 psgHatMode	db 0
 fmSpcMode	db 0
-sbeatPtck	dw 208+10	; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 208-24	; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 currInsData	dw 0
 currTblPos	dw 0
@@ -3511,15 +3657,10 @@ palMode		db 0
 flagResChip	db 0		; reset chips flag
 commZfifo	ds 40h		; Buffer for command requests from 68k (40h bytes, loops)
 
+	; ALIGNED buffers
+		org 1A00h
 trkBuff_0	ds 100h		; Track control (first 20h) + channels (8h each)
 trkBuff_1	ds 100h
-insDataC_0	ds 100h		; Instrument data+pointers for current track: 100h bytes
-insDataC_1	ds 100h
-trkHeads_0	ds 60h		; Track blocks and heads: divided by 80h bytes
-trkHeads_1	ds 60h
-
-	; ALIGNED buffers
-		org 1B00h
 dWaveBuff	ds 100h		; WAVE data buffer: 100h bytes, updates every 80h
 trkData_0	ds 100h		; Track note-cache buffers: 100h bytes, updates every 80h
 trkData_1	ds 100h

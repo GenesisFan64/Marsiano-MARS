@@ -99,10 +99,13 @@ GemaTrk_blk_TEST:
 GemaTrk_patt_TEST:
 	binclude "sound/tracks/test_patt.bin"
 GemaTrk_ins_TEST:
-	gInsDac -2,DacIns_Magic2,0,0
-	gInsNull;gInsPsg   0,$40,$FF,$00,$10,$10
-	gInsFm3   0,FmIns_Fm3_OpenHat;gInsPsgN +24,$00,$00,$00,$00,$00,%011
-	gInsNull
+; 	gInsPsg 0,$00,$00,$00,$00,$00
+; 	gInsPsgN 0,$00,$00,$00,$00,$00,%000
+; 	gInsPsgN +24,$00,$00,$00,$00,$00,%011
+
+	gInsFm    0,FmIns_Bass_groove
+	gInsFm3   0,FmIns_Fm3_OpenHat
+	gInsDac   0,DacIns_CdSnare,0,0
 
 ; 	gInsFm3   0,FmIns_Fm3_ClosedHat
 ; 	gInsFm3   0,FmIns_Fm3_OpenHat
@@ -117,19 +120,19 @@ GemaTrk_ins_TEST2:
 	gInsFm 0,FmIns_guitar_puy
 	gInsNull
 	gInsFm 0,FmIns_Bass_groove_2
-	gInsNull
-	gInsFm -12,FmIns_Trumpet_kon
-	gInsNull
-	gInsNull
+	gInsFm -12,FmIns_Brass_Puy
+	gInsDac +24,DacIns_SaurKick,0,0
 	gInsNull
 	gInsNull
+	gInsFm3   0,FmIns_Fm3_OpenHat
+	gInsDac +24,DacIns_CdSnare,0,0
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsFm -36,FmIns_Banjo_puy
-	gInsNull
-	gInsNull
+	gInsFm -12,FmIns_Trumpet_Puy
+	gInsFm 0,FmIns_guitar_puy_2
 	gInsNull
 	gInsNull
 	gInsNull

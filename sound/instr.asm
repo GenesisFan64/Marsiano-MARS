@@ -15,7 +15,8 @@ Fmins_Guitar_Heavy:
 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
 Fmins_Guitar_puy:
 		binclude "sound/instr/fm/guitar_puy.gsx",$2478,$20
-
+Fmins_Guitar_puy_2:
+		binclude "sound/instr/fm/guitar_puy_2.gsx",$2478,$20
 ;
 
 FmIns_DrumKick_gem:
@@ -97,6 +98,9 @@ FmIns_Trumpet_2:
 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
 FmIns_Trumpet_kon:
 		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
+FmIns_Trumpet_puy:
+		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
+
 ; ; ; FmIns_Bell_Glass:
 ; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
 ; ; ; FmIns_Marimba_1:
@@ -114,6 +118,8 @@ FmIns_Bell_China:
 		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
 FmIns_Brass_Eur:
 		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
+FmIns_Brass_Puy:
+		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
 
 FmIns_Flaute_cave:
 		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
