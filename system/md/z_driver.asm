@@ -1248,6 +1248,7 @@ setupchip:
 ; FM3 special mode
 .ins_fm3:
 		ld	a,2		; manual index
+		ld	e,1		; set as alternate FM
 		call	.rd_fmins
 		ld	hl,fmcom+2
 		ld	a,(hl)		; instrument update bit
@@ -1263,24 +1264,12 @@ setupchip:
 		cp	5		; Check if we are on FM6
 		jr	nz,.not_prdac
 		ld	d,a
-		ld	a,100b		; FORCE DAC STOP
+		ld	a,100b		; Force DAC stop
 		rst	8
 		ld	(daccom),a
 		ld	a,d
-		jr	.rd_nt3
 .not_prdac:
-		cp	2		; Check if we got into channel 3
-		jr	nz,.rd_nt3
-		ld	c,a
-		ld	d,27h		; Disable CH3 special mode
-		ld	a,00000000b
-		ld	(fmSpcMode),a
-		rst	8
-		ld	e,a
-		call	fm_send_1
-		ld	a,c
-		ld	e,1		; Set as alternate (FM3 special)
-.rd_nt3:
+		ld	e,0		; Set as Normal
 		call	.rd_fmins
 		ld	a,(ix+2)
 		and	00000111b
@@ -1346,6 +1335,7 @@ setupchip:
 		ret
 
 ; manual location for each instr cache
+; 28h bytes each
 .fmpickins:
 		dw fmins_com
 		dw fmins_com2
@@ -1763,7 +1753,6 @@ setupchip:
 		jp	z,.fm_keyoff
 		cp	-2
 		jp	z,.fm_keycut
-
 		ld	(iy+chnl_Chip),0B0h	; Set as FM3 special
 		ld	d,27h
 		ld	a,01000000b
@@ -1797,6 +1786,17 @@ setupchip:
 		jr	z,.fm_keycut
 		ld	a,b			; Set chip as FM
 		and	111b
+		cp	2			; Check if we got into channel 3
+		jr	nz,.rd_nt3
+		ld	b,a
+		ld	d,27h			; Disable CH3 special mode
+		ld	a,00000000b
+		ld	(fmSpcMode),a
+		rst	8
+		ld	e,a
+		call	fm_send_1
+		ld	a,b
+.rd_nt3:
 		or	0A0h
 		ld	(iy+chnl_Chip),a
 		ld	a,c
@@ -3572,7 +3572,7 @@ tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 psgHatMode	db 0
 fmSpcMode	db 0
-sbeatPtck	dw 208-24	; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 208-22	; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 currInsData	dw 0
 currTblPos	dw 0

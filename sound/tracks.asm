@@ -80,19 +80,19 @@ gInsPwm	macro pitch,start,end,loop
 ;
 
 
-; GemaTrk_cirno_blk:
-; 	binclude "sound/tracks/chrono_blk.bin"
-; GemaTrk_cirno_patt:
-; 	binclude "sound/tracks/chrono_patt.bin"
-; GemaTrk_cirno_ins:
-; 	gInsPsg  +12,$30,$00,$20,$10,$02
-; 	gInsFm     0,FmIns_Bell_China
-; 	gInsFm     0,FmIns_Bass_calm
-; 	gInsPsgN   0,$00,$00,$00,$08,$08,%110
-; 	gInsPsgN   0,$00,$00,$00,$08,$08,%101
-; 	gInsPsgN   0,$00,$00,$00,$10,$10,%100
-; 	gInsFm   -12,FmIns_Brass_Eur,0
-; 	gInsNull
+GemaTrk_blk_chrono:
+	binclude "sound/tracks/chrono_blk.bin"
+GemaTrk_patt_chrono:
+	binclude "sound/tracks/chrono_patt.bin"
+GemaTrk_ins_chrono:
+	gInsPsg  +12,$50,$20,$30,$10,$04
+	gInsFm     0,FmIns_Bell_China
+	gInsFm     0,FmIns_Bass_calm
+	gInsPsgN   0,$00,$00,$00,$08,$08,%110
+	gInsPsgN   0,$00,$00,$00,$08,$08,%101
+	gInsPsgN   0,$00,$00,$00,$10,$10,%100
+	gInsFm   -12,FmIns_Brass_Eur,0
+	gInsNull
 
 GemaTrk_blk_TEST:
 	binclude "sound/tracks/test_blk.bin"

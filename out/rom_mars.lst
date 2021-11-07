@@ -1,4 +1,4 @@
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 1 - 11/6/2021 22:09:09
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 1 - 11/6/2021 23:56:48
 
 
        1/       0 :                     ; ===========================================================================
@@ -563,7 +563,7 @@ MD RAM ends at: FF880C
 (1)   78/     190 : 4A36 2020 2020 2020 		dc.b "J6              "
                     2020 2020 2020 2020 
 (1)   79/     1A0 : 0000 0000           		dc.l 0
-(1)   80/     1A4 : 0010 8950           		dc.l ROM_END
+(1)   80/     1A4 : 0011 0950           		dc.l ROM_END
 (1)   81/     1A8 : 00FF 0000           		dc.l $FF0000
 (1)   82/     1AC : 00FF FFFF           		dc.l $FFFFFF
 (1)   83/     1B0 : 2020 2020           		dc.l $20202020		; dc.b "RA",$F8,$20
@@ -651,7 +651,7 @@ MD RAM ends at: FF880C
 (1)  164/     3C0 : 4D41 5253 2043 4845 		dc.b "MARS CHECK MODE "			; Module name
                     434B 204D 4F44 4520 
 (1)  165/     3D0 : 0000 0000           		dc.l 0					; Version (always 0)
-(1)  166/     3D4 : 000B 0014           		dc.l MARS_RAMDATA			; Set to 0 if SH2 code points to ROM
+(1)  166/     3D4 : 000B 8014           		dc.l MARS_RAMDATA			; Set to 0 if SH2 code points to ROM
 (1)  167/     3D8 : 0000 0000           		dc.l 0					; Zero.
 (1)  168/     3DC : 0000 413C           		dc.l MARS_RAMDATA_e-MARS_RAMDATA	; Set to 4 if SH2 code points to ROM
 (1)  169/     3E0 : 0600 0C58           		dc.l SH2_M_Entry			; Master SH2 PC (SH2 map area)
@@ -3519,12 +3519,12 @@ MD RAM ends at: FF880C
 (1) 1116/     5C4 : FD CB 07 4E         		bit	1,(iy+chnl_Flags)
 (1) 1117/     5C8 : C4 EB 05            		call	nz,.req_ins
 (1) 1118/     5CB : FD CB 07 56         		bit	2,(iy+chnl_Flags)
-(1) 1119/     5CF : C4 28 07            		call	nz,.req_vol
+(1) 1119/     5CF : C4 16 07            		call	nz,.req_vol
 (1) 1120/     5D2 : CF                  		rst	8
 (1) 1121/     5D3 : FD CB 07 5E         		bit	3,(iy+chnl_Flags)
-(1) 1122/     5D7 : C4 8C 07            		call	nz,.req_eff
+(1) 1122/     5D7 : C4 7A 07            		call	nz,.req_eff
 (1) 1123/     5DA : FD CB 07 46         		bit	0,(iy+chnl_Flags)
-(1) 1124/     5DE : C4 39 08            		call	nz,.req_note
+(1) 1124/     5DE : C4 27 08            		call	nz,.req_note
 (1) 1125/     5E1 :                     .ran_out:
 (1) 1126/     5E1 : FD 7E 07            		ld	a,(iy+chnl_Flags)	; Clear status bits
 (1) 1127/     5E4 : E6 F0               		and	11110000b
@@ -3549,7 +3549,7 @@ MD RAM ends at: FF880C
 (1) 1146/     5FB : 28 11               		jr	z,.ins_psgn
 (1) 1147/     5FD : CF                  		rst	8
 (1) 1148/     5FE : FE A0               		cp	0A0h		; FM normal
-(1) 1149/     600 : CA 96 06            		jp	z,.ins_fm
+(1) 1149/     600 : CA 98 06            		jp	z,.ins_fm
 (1) 1150/     603 : FE B0               		cp	0B0h		; FM special
 (1) 1151/     605 : CA 89 06            		jp	z,.ins_fm3
 (1) 1152/     608 : FE C0               		cp	0C0h		; DAC
@@ -3651,555 +3651,555 @@ MD RAM ends at: FF880C
 (1) 1248/     689 :                     ; FM3 special mode
 (1) 1249/     689 :                     .ins_fm3:
 (1) 1250/     689 : 3E 02               		ld	a,2		; manual index
-(1) 1251/     68B : CD D5 06            		call	.rd_fmins
-(1) 1252/     68E : 21 54 14            		ld	hl,fmcom+2
-(1) 1253/     691 : 7E                  		ld	a,(hl)		; instrument update bit
-(1) 1254/     692 : F6 10               		or	00010000b	; flag
-(1) 1255/     694 : 77                  		ld	(hl),a
-(1) 1256/     695 : C9                  		ret
-(1) 1257/     696 :                     ; Regular FM
-(1) 1258/     696 :                     .ins_fm:
-(1) 1259/     696 : CF                  		rst	8
-(1) 1260/     697 : 1E 00               		ld	e,0		; Set as normal FM
-(1) 1261/     699 : DD 7E 02            		ld	a,(ix+2)
-(1) 1262/     69C : E6 07               		and	00000111b
-(1) 1263/     69E : FE 05               		cp	5		; Check if we are on FM6
-(1) 1264/     6A0 : 20 0A               		jr	nz,.not_prdac
-(1) 1265/     6A2 : 57                  		ld	d,a
-(1) 1266/     6A3 : 3E 04               		ld	a,100b		; FORCE DAC STOP
-(1) 1267/     6A5 : CF                  		rst	8
-(1) 1268/     6A6 : 32 72 15            		ld	(daccom),a
-(1) 1269/     6A9 : 7A                  		ld	a,d
-(1) 1270/     6AA : 18 14               		jr	.rd_nt3
+(1) 1251/     68B : 1E 01               		ld	e,1		; set as alternate FM
+(1) 1252/     68D : CD C3 06            		call	.rd_fmins
+(1) 1253/     690 : 21 54 14            		ld	hl,fmcom+2
+(1) 1254/     693 : 7E                  		ld	a,(hl)		; instrument update bit
+(1) 1255/     694 : F6 10               		or	00010000b	; flag
+(1) 1256/     696 : 77                  		ld	(hl),a
+(1) 1257/     697 : C9                  		ret
+(1) 1258/     698 :                     ; Regular FM
+(1) 1259/     698 :                     .ins_fm:
+(1) 1260/     698 : CF                  		rst	8
+(1) 1261/     699 : 1E 00               		ld	e,0		; Set as normal FM
+(1) 1262/     69B : DD 7E 02            		ld	a,(ix+2)
+(1) 1263/     69E : E6 07               		and	00000111b
+(1) 1264/     6A0 : FE 05               		cp	5		; Check if we are on FM6
+(1) 1265/     6A2 : 20 08               		jr	nz,.not_prdac
+(1) 1266/     6A4 : 57                  		ld	d,a
+(1) 1267/     6A5 : 3E 04               		ld	a,100b		; Force DAC stop
+(1) 1268/     6A7 : CF                  		rst	8
+(1) 1269/     6A8 : 32 72 15            		ld	(daccom),a
+(1) 1270/     6AB : 7A                  		ld	a,d
 (1) 1271/     6AC :                     .not_prdac:
-(1) 1272/     6AC : FE 02               		cp	2		; Check if we got into channel 3
-(1) 1273/     6AE : 20 10               		jr	nz,.rd_nt3
-(1) 1274/     6B0 : 4F                  		ld	c,a
-(1) 1275/     6B1 : 16 27               		ld	d,27h		; Disable CH3 special mode
-(1) 1276/     6B3 : 3E 00               		ld	a,00000000b
-(1) 1277/     6B5 : 32 86 18            		ld	(fmSpcMode),a
-(1) 1278/     6B8 : CF                  		rst	8
-(1) 1279/     6B9 : 5F                  		ld	e,a
-(1) 1280/     6BA : CD 48 10            		call	fm_send_1
-(1) 1281/     6BD : 79                  		ld	a,c
-(1) 1282/     6BE : 1E 01               		ld	e,1		; Set as alternate (FM3 special)
-(1) 1283/     6C0 :                     .rd_nt3:
-(1) 1284/     6C0 : CD D5 06            		call	.rd_fmins
-(1) 1285/     6C3 : DD 7E 02            		ld	a,(ix+2)
-(1) 1286/     6C6 : E6 07               		and	00000111b
-(1) 1287/     6C8 : 16 00               		ld	d,0
-(1) 1288/     6CA : CF                  		rst	8
-(1) 1289/     6CB : 5F                  		ld	e,a
-(1) 1290/     6CC : 21 52 14            		ld	hl,fmcom
-(1) 1291/     6CF : 19                  		add	hl,de
-(1) 1292/     6D0 : 7E                  		ld	a,(hl)		; instrument update bit
-(1) 1293/     6D1 : F6 10               		or	00010000b	; flag
-(1) 1294/     6D3 : 77                  		ld	(hl),a
-(1) 1295/     6D4 : C9                  		ret
-(1) 1296/     6D5 :                     
-(1) 1297/     6D5 :                     ; Read FM instrument
-(1) 1298/     6D5 :                     ;
-(1) 1299/     6D5 :                     ; e - alternate mode flag
-(1) 1300/     6D5 :                     .rd_fmins:
-(1) 1301/     6D5 : DD 73 04            		ld	(ix+4),e	; e - alternate mode flag
-(1) 1302/     6D8 : 23                  		inc	hl		; skip ID and pitch
-(1) 1303/     6D9 : 5E                  		ld	e,(hl)
-(1) 1304/     6DA : DD 73 03            		ld	(ix+3),e	; save pitch
-(1) 1305/     6DD : 23                  		inc	hl
-(1) 1306/     6DE : 87                  		add	a,a
-(1) 1307/     6DF : 16 00               		ld	d,0
-(1) 1308/     6E1 : 5F                  		ld	e,a
-(1) 1309/     6E2 : CF                  		rst	8
-(1) 1310/     6E3 : E5                  		push	hl		; save ins hl
-(1) 1311/     6E4 : 21 1C 07            		ld	hl,.fmpickins
-(1) 1312/     6E7 : 19                  		add	hl,de
-(1) 1313/     6E8 : 5E                  		ld	e,(hl)		; get output location
-(1) 1314/     6E9 : 23                  		inc	hl		; from list
-(1) 1315/     6EA : 56                  		ld	d,(hl)
-(1) 1316/     6EB : CF                  		rst	8
-(1) 1317/     6EC : E1                  		pop	hl
-(1) 1318/     6ED : 7E                  		ld	a,(hl)		; a - xx0000
-(1) 1319/     6EE : 23                  		inc	hl
-(1) 1320/     6EF : 4E                  		ld	c,(hl)		; c - 00xx00
-(1) 1321/     6F0 : 23                  		inc	hl
-(1) 1322/     6F1 : 6E                  		ld	l,(hl)		; l - 0000xx
-(1) 1323/     6F2 : 61                  		ld	h,c		; c to h
-(1) 1324/     6F3 : D5                  		push	de
-(1) 1325/     6F4 : CF                  		rst	8
-(1) 1326/     6F5 : 4F                  		ld	c,a
-(1) 1327/     6F6 : DD 7E 07            		ld	a,(ix+7)
-(1) 1328/     6F9 : B9                  		cp	c
-(1) 1329/     6FA : C2 09 07            		jp	nz,.confm_rd
-(1) 1330/     6FD : DD 7E 06            		ld	a,(ix+6)
-(1) 1331/     700 : BC                  		cp	h
-(1) 1332/     701 : 20 06               		jr	nz,.confm_rd
-(1) 1333/     703 : DD 7E 05            		ld	a,(ix+5)
-(1) 1334/     706 : BD                  		cp	l
-(1) 1335/     707 : 28 11               		jr	z,.fmsame_ins
-(1) 1336/     709 :                     .confm_rd:
-(1) 1337/     709 : CF                  		rst	8
-(1) 1338/     70A : DD 75 05            		ld	(ix+5),l
-(1) 1339/     70D : DD 74 06            		ld	(ix+6),h
-(1) 1340/     710 : DD 71 07            		ld	(ix+7),c
-(1) 1341/     713 : 79                  		ld	a,c
-(1) 1342/     714 : 01 28 00            		ld	bc,028h		; 28h bytes
-(1) 1343/     717 : CD 84 0C            		call	transferRom	; Transfer instrument data from ROM
-(1) 1344/     71A :                     .fmsame_ins:
-(1) 1345/     71A : E1                  		pop	hl
-(1) 1346/     71B : C9                  		ret
-(1) 1347/     71C :                     
-(1) 1348/     71C :                     ; manual location for each instr cache
-(1) 1349/     71C :                     .fmpickins:
-(1) 1350/     71C : 76 14               		dw fmins_com
-(1) 1351/     71E : 9E 14               		dw fmins_com2
-(1) 1352/     720 : C6 14               		dw fmins_com3
-(1) 1353/     722 : EE 14               		dw fmins_com4
-(1) 1354/     724 : 16 15               		dw fmins_com5
-(1) 1355/     726 : 3E 15               		dw fmins_com6
-(1) 1356/     728 :                     
-(1) 1357/     728 :                     ; ----------------------------------------
-(1) 1358/     728 :                     ; bit 2
-(1) 1359/     728 :                     ; ----------------------------------------
-(1) 1360/     728 :                     
-(1) 1361/     728 :                     .req_vol:
-(1) 1362/     728 : 2A 8F 18            		ld	hl,(currInsPos)
-(1) 1363/     72B : DD 2A 8D 18         		ld	ix,(currTblPos)
-(1) 1364/     72F :                     ; 		call	.check_chnl
-(1) 1365/     72F : 7E                  		ld	a,(hl)
-(1) 1366/     730 : E6 F0               		and	11110000b
-(1) 1367/     732 : FE 80               		cp	80h		; PSG normal
-(1) 1368/     734 : 28 0E               		jr	z,.vol_psg
-(1) 1369/     736 : FE 90               		cp	90h		; PSG noise
-(1) 1370/     738 : 28 0A               		jr	z,.vol_psg
-(1) 1371/     73A : CF                  		rst	8
-(1) 1372/     73B : FE A0               		cp	0A0h		; FM normal
-(1) 1373/     73D : 28 28               		jr	z,.vol_fm
-(1) 1374/     73F : FE B0               		cp	0B0h		; FM special (same thing)
-(1) 1375/     741 : 28 24               		jr	z,.vol_fm
-(1) 1376/     743 :                     ; 		cp	0C0h		; DAC
-(1) 1377/     743 :                     ; 		jp	z,.vol_dac
-(1) 1378/     743 :                     ; 		cp	0D0h		; PWM
-(1) 1379/     743 :                     ; 		jp	z,.vol_pwm
-(1) 1380/     743 : C9                  		ret
-(1) 1381/     744 :                     
-(1) 1382/     744 :                     ; --------------------------------
-(1) 1383/     744 :                     ; PSG1-3,PSGN
-(1) 1384/     744 :                     
-(1) 1385/     744 :                     .vol_psg:
-(1) 1386/     744 : DD 7E 02            		ld	a,(ix+2)
-(1) 1387/     747 : DD 21 1E 14         		ld	ix,psgcom
-(1) 1388/     74B : E6 03               		and	11b
-(1) 1389/     74D : 16 00               		ld	d,0
-(1) 1390/     74F : 5F                  		ld	e,a
-(1) 1391/     750 : DD 19               		add	ix,de
-(1) 1392/     752 : FD 7E 03            		ld	a,(iy+chnl_Vol)
-(1) 1393/     755 : D6 40               		sub	a,40h
-(1) 1394/     757 : ED 44               		neg	a
-(1) 1395/     759 : 4F                  		ld	c,a
-(1) 1396/     75A : FE 40               		cp	40h
-(1) 1397/     75C : 20 02               		jr	nz,.vmuch
-(1) 1398/     75E : 0E FF               		ld	c,-1
-(1) 1399/     760 :                     .vmuch:
-(1) 1400/     760 : 79                  		ld	a,c
-(1) 1401/     761 : 87                  		add	a,a
-(1) 1402/     762 : 87                  		add	a,a
-(1) 1403/     763 : DD 77 30            		ld	(ix+PVOL),a
-(1) 1404/     766 :                     ; 		ld	a,(ix)
-(1) 1405/     766 :                     ; 		or	00100000b	; Set volume
-(1) 1406/     766 :                     ; 		ld	(ix),a		; update flag
-(1) 1407/     766 : C9                  		ret
-(1) 1408/     767 :                     
-(1) 1409/     767 :                     ; --------------------------------
-(1) 1410/     767 :                     ; FM,FM3,FM6
-(1) 1411/     767 :                     .vol_fm:
-(1) 1412/     767 : 01 00 00            		ld	bc,0
-(1) 1413/     76A : DD 7E 02            		ld	a,(ix+2)
-(1) 1414/     76D : E6 07               		and	00000111b
-(1) 1415/     76F : 4F                  		ld	c,a
-(1) 1416/     770 : DD 21 52 14         		ld	ix,fmcom
-(1) 1417/     774 : DD 09               		add	ix,bc
-(1) 1418/     776 : FD 7E 03            		ld	a,(iy+chnl_Vol)
-(1) 1419/     779 : D6 40               		sub	a,40h
-(1) 1420/     77B : CF                  		rst	8
-(1) 1421/     77C : ED 44               		neg	a		; reverse impulse volume
-(1) 1422/     77E : CB 3F               		srl	a		; /2
-(1) 1423/     780 : DD 77 0C            		ld	(ix+FMVOL),a
-(1) 1424/     783 : DD 7E 00            		ld	a,(ix)		; volume update
-(1) 1425/     786 : F6 21               		or	00100000b|1	; flag, plus keyon
-(1) 1426/     788 : DD 77 00            		ld	(ix),a
-(1) 1427/     78B : C9                  		ret
-(1) 1428/     78C :                     
-(1) 1429/     78C :                     ; ----------------------------------------
-(1) 1430/     78C :                     ; bit 3
-(1) 1431/     78C :                     ; ----------------------------------------
-(1) 1432/     78C :                     
-(1) 1433/     78C :                     .req_eff:
-(1) 1434/     78C : 2A 8F 18            		ld	hl,(currInsPos)
-(1) 1435/     78F : DD 2A 8D 18         		ld	ix,(currTblPos)
-(1) 1436/     793 :                     ; 		call	.check_chnl
-(1) 1437/     793 : 7E                  		ld	a,(hl)
-(1) 1438/     794 : E6 F0               		and	11110000b
-(1) 1439/     796 :                     ; 		rst	8
-(1) 1440/     796 :                     ; 		cp	80h		; PSG normal
-(1) 1441/     796 :                     ; 		jr	z,.eff_psg
-(1) 1442/     796 :                     ; 		cp	90h		; PSG noise
-(1) 1443/     796 :                     ; 		jp	z,.eff_psgn
-(1) 1444/     796 : FE A0               		cp	0A0h		; FM Normal
-(1) 1445/     798 : CA A1 07            		jp	z,.eff_fm
-(1) 1446/     79B : FE B0               		cp	0B0h		; FM Special
-(1) 1447/     79D : CA A1 07            		jp	z,.eff_fm
-(1) 1448/     7A0 : C9                  		ret
-(1) 1449/     7A1 :                     
-(1) 1450/     7A1 :                     ; --------------------------------
-(1) 1451/     7A1 :                     ; FM,FM3,FM6
-(1) 1452/     7A1 :                     
-(1) 1453/     7A1 :                     .eff_fm:
-(1) 1454/     7A1 : FD 5E 05            		ld	e,(iy+chnl_EffArg)
-(1) 1455/     7A4 : FD 7E 04            		ld	a,(iy+chnl_EffId)
-(1) 1456/     7A7 : B7                  		or	a
-(1) 1457/     7A8 : C8                  		ret	z
-(1) 1458/     7A9 : FE 05               		cp	5		; Effect E?
-(1) 1459/     7AB : 28 09               		jr	z,.effFm_E
-(1) 1460/     7AD : FE 06               		cp	6		; Effect F?
-(1) 1461/     7AF : 28 2A               		jr	z,.effFm_F
-(1) 1462/     7B1 : FE 18               		cp	24		; Effect X?
-(1) 1463/     7B3 : 28 67               		jr	z,.effFm_X
-(1) 1464/     7B5 : C9                  		ret
-(1) 1465/     7B6 :                     
-(1) 1466/     7B6 :                     ; --------------------------------
-(1) 1467/     7B6 :                     ; FM Effect E
-(1) 1468/     7B6 :                     ; --------------------------------
-(1) 1469/     7B6 :                     ; TODO: cleanup the code mess
-(1) 1470/     7B6 :                     
-(1) 1471/     7B6 :                     .effFm_E:
-(1) 1472/     7B6 : 7B                  		ld	a,e
-(1) 1473/     7B7 : E6 F0               		and	11110000b
-(1) 1474/     7B9 : FE F0               		cp	0F0h
-(1) 1475/     7BB : 20 06               		jr	nz,.e_nof
-(1) 1476/     7BD : 7B                  		ld	a,e
-(1) 1477/     7BE : E6 0F               		and	0Fh
-(1) 1478/     7C0 : 87                  		add	a,a
-(1) 1479/     7C1 : 18 0C               		jr	.e_go
-(1) 1480/     7C3 :                     .e_nof:
-(1) 1481/     7C3 : FE E0               		cp	0E0h
-(1) 1482/     7C5 : 20 05               		jr	nz,.e_noef
-(1) 1483/     7C7 : 7B                  		ld	a,e
-(1) 1484/     7C8 : E6 0F               		and	0Fh
-(1) 1485/     7CA : 18 03               		jr	.e_go
-(1) 1486/     7CC :                     .e_noef:
-(1) 1487/     7CC : 7B                  		ld	a,e
-(1) 1488/     7CD : 87                  		add	a,a
-(1) 1489/     7CE : 87                  		add	a,a
-(1) 1490/     7CF :                     .e_go:
-(1) 1491/     7CF : 16 00               		ld	d,0
-(1) 1492/     7D1 : ED 44               		neg	a
-(1) 1493/     7D3 : B7                  		or	a
-(1) 1494/     7D4 : 28 02               		jr	z,.e_neg
-(1) 1495/     7D6 : 16 FF               		ld	d,-1
-(1) 1496/     7D8 :                     .e_neg:
-(1) 1497/     7D8 : 5F                  		ld	e,a
-(1) 1498/     7D9 : 18 1D               		jr	.freq_set
-(1) 1499/     7DB :                     
-(1) 1500/     7DB :                     ; --------------------------------
-(1) 1501/     7DB :                     ; FM Effect F
-(1) 1502/     7DB :                     ; --------------------------------
-(1) 1503/     7DB :                     
-(1) 1504/     7DB :                     .effFm_F:
-(1) 1505/     7DB : 7B                  		ld	a,e
-(1) 1506/     7DC : E6 F0               		and	11110000b
-(1) 1507/     7DE : FE F0               		cp	0F0h
-(1) 1508/     7E0 : 20 06               		jr	nz,.f_nof
-(1) 1509/     7E2 : 7B                  		ld	a,e
-(1) 1510/     7E3 : E6 0F               		and	0Fh
-(1) 1511/     7E5 : 87                  		add	a,a
-(1) 1512/     7E6 : 18 0C               		jr	.f_go
-(1) 1513/     7E8 :                     .f_nof:
-(1) 1514/     7E8 : FE E0               		cp	0E0h
-(1) 1515/     7EA : 20 05               		jr	nz,.f_noef
-(1) 1516/     7EC : 7B                  		ld	a,e
-(1) 1517/     7ED : E6 0F               		and	0Fh
-(1) 1518/     7EF : 18 03               		jr	.f_go
-(1) 1519/     7F1 :                     .f_noef:
-(1) 1520/     7F1 : 7B                  		ld	a,e
-(1) 1521/     7F2 : 87                  		add	a,a
-(1) 1522/     7F3 : 87                  		add	a,a
-(1) 1523/     7F4 :                     .f_go:
-(1) 1524/     7F4 : 16 00               		ld	d,0
-(1) 1525/     7F6 : 87                  		add	a,a
-(1) 1526/     7F7 : 5F                  		ld	e,a
-(1) 1527/     7F8 :                     
-(1) 1528/     7F8 :                     ; de - freq incr/decr
-(1) 1529/     7F8 :                     .freq_set:
-(1) 1530/     7F8 : DD 7E 02            		ld	a,(ix+2)
-(1) 1531/     7FB : E6 07               		and	111b
-(1) 1532/     7FD : DD 21 52 14         		ld	ix,fmcom
-(1) 1533/     801 : 06 00               		ld	b,0
-(1) 1534/     803 : 4F                  		ld	c,a
-(1) 1535/     804 : DD 09               		add	ix,bc
-(1) 1536/     806 : DD 66 18            		ld	h,(ix+FMFRQH)
-(1) 1537/     809 : DD 6E 1E            		ld	l,(ix+FMFRQL)
-(1) 1538/     80C : 19                  		add	hl,de
-(1) 1539/     80D : DD 74 18            		ld	(ix+FMFRQH),h
-(1) 1540/     810 : DD 75 1E            		ld	(ix+FMFRQL),l
-(1) 1541/     813 : DD 7E 00            		ld	a,(ix)
-(1) 1542/     816 : F6 01               		or	00000001b
-(1) 1543/     818 : DD 77 00            		ld	(ix),a
-(1) 1544/     81B : C9                  		ret
-(1) 1545/     81C :                     
-(1) 1546/     81C :                     ; --------------------------------
-(1) 1547/     81C :                     ; FM Effect X: Panning
-(1) 1548/     81C :                     ; --------------------------------
-(1) 1549/     81C :                     
-(1) 1550/     81C :                     .effFm_X:
-(1) 1551/     81C : 7B                  		ld	a,e
-(1) 1552/     81D : 07                  		rlca
-(1) 1553/     81E : 07                  		rlca
-(1) 1554/     81F : E6 03               		and	00000011b
-(1) 1555/     821 : 21 35 08            		ld	hl,.fmpan_list
-(1) 1556/     824 : 11 00 00            		ld	de,0
-(1) 1557/     827 : 5F                  		ld	e,a
-(1) 1558/     828 : CF                  		rst	8
-(1) 1559/     829 : 19                  		add	hl,de
-(1) 1560/     82A : 5E                  		ld	e,(hl)
-(1) 1561/     82B : FD 7E 07            		ld	a,(iy+chnl_Flags)
-(1) 1562/     82E : E6 CF               		and	11001111b
-(1) 1563/     830 : B3                  		or	e
-(1) 1564/     831 : FD 77 07            		ld	(iy+chnl_Flags),a
-(1) 1565/     834 : C9                  		ret
-(1) 1566/     835 :                     .fmpan_list:
-(1) 1567/     835 : 10                  		db 00010000b	; 000h
-(1) 1568/     836 : 10                  		db 00010000b	; 040h
-(1) 1569/     837 : 00                  		db 00000000b	; 080h
-(1) 1570/     838 : 20                  		db 00100000b	; 0C0h
-(1) 1571/     839 :                     
-(1) 1572/     839 :                     ; ----------------------------------------
-(1) 1573/     839 :                     ; bit 0
-(1) 1574/     839 :                     ; ----------------------------------------
-(1) 1575/     839 :                     
-(1) 1576/     839 :                     .req_note:
-(1) 1577/     839 : 2A 8F 18            		ld	hl,(currInsPos)
-(1) 1578/     83C : DD 2A 8D 18         		ld	ix,(currTblPos)
-(1) 1579/     840 :                     ; 		call	.check_chnl
-(1) 1580/     840 : 7E                  		ld	a,(hl)
-(1) 1581/     841 : 4F                  		ld	c,a		; special copy
-(1) 1582/     842 : E6 F0               		and	11110000b
-(1) 1583/     844 : FE 80               		cp	80h		; PSG normal
-(1) 1584/     846 : 28 4F               		jr	z,.note_psg
-(1) 1585/     848 : FE 90               		cp	90h		; PSG noise
-(1) 1586/     84A : CA 84 08            		jp	z,.note_psgn
-(1) 1587/     84D : FE A0               		cp	0A0h
-(1) 1588/     84F : CA 89 09            		jp	z,.note_fm
-(1) 1589/     852 : CF                  		rst	8
-(1) 1590/     853 : FE B0               		cp	0B0h
-(1) 1591/     855 : CA 65 09            		jp	z,.note_fm3
-(1) 1592/     858 : FE C0               		cp	0C0h
-(1) 1593/     85A : CA 1C 09            		jp	z,.note_dac
-(1) 1594/     85D : C9                  		ret
-(1) 1595/     85E :                     
-(1) 1596/     85E :                     ; --------------------------------
-(1) 1597/     85E :                     ; Note: PSG1-3,PSGN
-(1) 1598/     85E :                     ; --------------------------------
-(1) 1599/     85E :                     
-(1) 1600/     85E :                     ; PSG Keyoff
-(1) 1601/     85E :                     .poff:
-(1) 1602/     85E : 0E 02               		ld	c,010b
-(1) 1603/     860 : 71                  		ld	(hl),c
-(1) 1604/     861 : C9                  		ret
-(1) 1605/     862 :                     ; PSG Keycut
-(1) 1606/     862 :                     .pcut:
-(1) 1607/     862 : 0E 04               		ld	c,100b
-(1) 1608/     864 :                     .pct_go:
-(1) 1609/     864 : CF                  		rst	8
-(1) 1610/     865 : FD E5               		push	iy
-(1) 1611/     867 : D1                  		pop	de
-(1) 1612/     868 : DD 7E 00            		ld	a,(ix)
-(1) 1613/     86B : BB                  		cp	e
-(1) 1614/     86C : C0                  		ret	nz
-(1) 1615/     86D : DD 7E 01            		ld	a,(ix+1)
-(1) 1616/     870 : BA                  		cp	d
-(1) 1617/     871 : C0                  		ret	nz
-(1) 1618/     872 : CF                  		rst	8
-(1) 1619/     873 : 71                  		ld	(hl),c
-(1) 1620/     874 : DD 36 00 00         		ld	(ix),0
-(1) 1621/     878 : DD 36 01 00         		ld	(ix+1),0
-(1) 1622/     87C : CB 49               		bit	1,c
-(1) 1623/     87E : C0                  		ret	nz
-(1) 1624/     87F : FD 36 00 00         		ld	(iy+chnl_Chip),0
-(1) 1625/     883 : C9                  		ret
-(1) 1626/     884 :                     
-(1) 1627/     884 :                     ; Play PSG note
-(1) 1628/     884 :                     .note_psgn:
-(1) 1629/     884 : 21 21 14            		ld 	hl,psgcom+3
-(1) 1630/     887 : DD 7E 02            		ld	a,(ix+2)
-(1) 1631/     88A : F6 90               		or	90h
-(1) 1632/     88C : FD 77 00            		ld	(iy+chnl_Chip),a
-(1) 1633/     88F : DD 7E 04            		ld 	a,(ix+4)
-(1) 1634/     892 : 32 85 18            		ld	(psgHatMode),a
-(1) 1635/     895 : 18 22               		jr	.notepsg_c
-(1) 1636/     897 :                     .note_psg:
-(1) 1637/     897 : DD 7E 02            		ld	a,(ix+2)
-(1) 1638/     89A : F6 80               		or	80h
-(1) 1639/     89C : FD 77 00            		ld	(iy+chnl_Chip),a
-(1) 1640/     89F : DD 7E 02            		ld	a,(ix+2)
-(1) 1641/     8A2 : CF                  		rst	8
-(1) 1642/     8A3 : E6 03               		and	11b
-(1) 1643/     8A5 : 16 00               		ld	d,0
-(1) 1644/     8A7 : 5F                  		ld	e,a
-(1) 1645/     8A8 : 21 1E 14            		ld 	hl,psgcom
-(1) 1646/     8AB : 19                  		add	hl,de
-(1) 1647/     8AC : FE 02               		cp	2
-(1) 1648/     8AE : 20 09               		jr	nz,.notepsg_c
-(1) 1649/     8B0 : 3A 85 18            		ld	a,(psgHatMode)
-(1) 1650/     8B3 : E6 03               		and	011b
-(1) 1651/     8B5 : FE 03               		cp	011b
-(1) 1652/     8B7 : 28 A9               		jr	z,.pcut
-(1) 1653/     8B9 :                     .notepsg_c:
-(1) 1654/     8B9 : FD 7E 01            		ld	a,(iy+chnl_Note)
-(1) 1655/     8BC : FE FE               		cp	-2
-(1) 1656/     8BE : CA 62 08            		jp	z,.pcut
-(1) 1657/     8C1 : FE FF               		cp	-1
-(1) 1658/     8C3 : CA 5E 08            		jp	z,.poff
-(1) 1659/     8C6 : CF                  		rst	8
-(1) 1660/     8C7 : E5                  		push	hl		; save psgcom
-(1) 1661/     8C8 : 21 AE 11            		ld	hl,psgFreq_List
-(1) 1662/     8CB : DD 4E 03            		ld	c,(ix+3)
-(1) 1663/     8CE : 81                  		add	a,c
-(1) 1664/     8CF : 87                  		add	a,a
-(1) 1665/     8D0 : 11 00 00            		ld	de,0
-(1) 1666/     8D3 : 5F                  		ld	e,a
-(1) 1667/     8D4 : 19                  		add	hl,de
-(1) 1668/     8D5 : 5E                  		ld	e,(hl)
-(1) 1669/     8D6 : 23                  		inc	hl
-(1) 1670/     8D7 : 56                  		ld	d,(hl)
-(1) 1671/     8D8 : 01 00 00            		ld	bc,0
-(1) 1672/     8DB : E6 03               		and	11b
-(1) 1673/     8DD : 4F                  		ld	c,a
-(1) 1674/     8DE : DD E5               		push	ix		; swap ix to hl
-(1) 1675/     8E0 : E1                  		pop	hl
-(1) 1676/     8E1 : CF                  		rst	8
-(1) 1677/     8E2 : 23                  		inc	hl		; skip link
-(1) 1678/     8E3 : 23                  		inc	hl
-(1) 1679/     8E4 : 23                  		inc 	hl		; channel id
-(1) 1680/     8E5 : 23                  		inc	hl		; pitch
-(1) 1681/     8E6 :                     ; 		ld	a,c
-(1) 1682/     8E6 :                     ; 		cp	3
-(1) 1683/     8E6 :                     ; 		jr	nz,.npsg2
-(1) 1684/     8E6 :                     ; 		ld 	a,(ix+4)
-(1) 1685/     8E6 :                     ; 		ld	(psgHatMode),a
-(1) 1686/     8E6 :                     ; .npsg2:
-(1) 1687/     8E6 : DD E1               		pop	ix			; restore psgcom as ix
-(1) 1688/     8E8 : FD 7E 07            		ld	a,(iy+chnl_Flags)	; Check is volume bit
-(1) 1689/     8EB : CB 57               		bit	2,a			; is being used
-(1) 1690/     8ED : 20 04               		jr	nz,.nodefv
-(1) 1691/     8EF : DD 36 30 00         		ld	(ix+PVOL),0		; if not, set max volume
-(1) 1692/     8F3 :                     .nodefv:
-(1) 1693/     8F3 : CF                  		rst	8
-(1) 1694/     8F4 : 7B                  		ld	a,e			; bc - freq
-(1) 1695/     8F5 : E6 0F               		and	0Fh
-(1) 1696/     8F7 : DD 77 1C            		ld	(ix+DTL),a
-(1) 1697/     8FA : 7B                  		ld	a,e
-(1) 1698/     8FB : CB 2F               		sra	a
-(1) 1699/     8FD : CB 2F               		sra	a
-(1) 1700/     8FF : CB 2F               		sra	a
-(1) 1701/     901 : CB 2F               		sra	a
-(1) 1702/     903 : E6 0F               		and	0Fh
-(1) 1703/     905 : 47                  		ld	b,a
-(1) 1704/     906 : 23                  		inc	hl
-(1) 1705/     907 : CF                  		rst	8
-(1) 1706/     908 : 7A                  		ld	a,d
-(1) 1707/     909 : CB 27               		sla	a
-(1) 1708/     90B : CB 27               		sla	a
-(1) 1709/     90D : CB 27               		sla	a
-(1) 1710/     90F : CB 27               		sla	a
-(1) 1711/     911 : E6 F0               		and	0F0h
-(1) 1712/     913 : B0                  		or	b
-(1) 1713/     914 : DD 77 20            		ld	(ix+DTH),a
-(1) 1714/     917 : DD 36 00 01         		ld	(ix+COM),001b	; Key ON
-(1) 1715/     91B : C9                  		ret
-(1) 1716/     91C :                     
-(1) 1717/     91C :                     ; --------------------------------
-(1) 1718/     91C :                     ; Note: FM,FM3,FM6
-(1) 1719/     91C :                     ; --------------------------------
-(1) 1720/     91C :                     
-(1) 1721/     91C :                     .note_dac:
-(1) 1722/     91C : 21 72 15            		ld	hl,daccom
-(1) 1723/     91F : FD 7E 01            		ld	a,(iy+chnl_Note)
-(1) 1724/     922 : FE FF               		cp	-1
-(1) 1725/     924 : CA 05 0A            		jp	z,.fm_keyoff
-(1) 1726/     927 : FE FE               		cp	-2
-(1) 1727/     929 : CA 09 0A            		jp	z,.fm_keycut
-(1) 1728/     92C : FD 36 00 C0         		ld	(iy+chnl_Chip),0C0h	; Set as DAC
-(1) 1729/     930 : 11 00 00            		ld	de,0
-(1) 1730/     933 : DD 5E 03            		ld	e,(ix+3)		; Get pitch
-(1) 1731/     936 : 83                  		add	a,e
-(1) 1732/     937 : 87                  		add	a,a
-(1) 1733/     938 : 5F                  		ld	e,a
-(1) 1734/     939 : 21 A0 12            		ld	hl,wavFreq_List
-(1) 1735/     93C : 19                  		add	hl,de
-(1) 1736/     93D : 7E                  		ld	a,(hl)
-(1) 1737/     93E : 23                  		inc	hl
-(1) 1738/     93F : 66                  		ld	h,(hl)
-(1) 1739/     940 : CF                  		rst	8
-(1) 1740/     941 : 6F                  		ld	l,a
-(1) 1741/     942 : 11 E6 FF            		ld	de,ZSET_WTUNE		; Fine-tune to desired
-(1) 1742/     945 : 19                  		add	hl,de			; WAVE frequency
-(1) 1743/     946 : 22 29 00            		ld	(wave_Pitch),hl
-(1) 1744/     949 : 79                  		ld	a,c
-(1) 1745/     94A : E6 01               		and	001b
-(1) 1746/     94C : 32 2B 00            		ld	(wave_Flags),a
-(1) 1747/     94F : 3E 01               		ld	a,001b			; Request DAC play
-(1) 1748/     951 : 32 72 15            		ld	(daccom),a
-(1) 1749/     954 : C9                  		ret
-(1) 1750/     955 :                     .dcut:
-(1) 1751/     955 : 3E 04               		ld	a,100b			; Request DAC stop
-(1) 1752/     957 : 32 72 15            		ld	(daccom),a
-(1) 1753/     95A :                     .doff:
-(1) 1754/     95A : 21 00 00            		ld	hl,0
-(1) 1755/     95D : 22 DA 13            		ld	(tblFM6),hl
-(1) 1756/     960 : FD 36 00 00         		ld	(iy+chnl_Chip),0
-(1) 1757/     964 : C9                  		ret
-(1) 1758/     965 :                     ; FM3 special
-(1) 1759/     965 :                     .note_fm3:
-(1) 1760/     965 : 21 54 14            		ld	hl,fmcom+2		; Channel 3 fmcom
-(1) 1761/     968 : FD 7E 01            		ld	a,(iy+chnl_Note)
-(1) 1762/     96B : FE FF               		cp	-1
-(1) 1763/     96D : CA 05 0A            		jp	z,.fm_keyoff
-(1) 1764/     970 : FE FE               		cp	-2
-(1) 1765/     972 : CA 09 0A            		jp	z,.fm_keycut
-(1) 1766/     975 :                     
-(1) 1767/     975 : FD 36 00 B0         		ld	(iy+chnl_Chip),0B0h	; Set as FM3 special
-(1) 1768/     979 : 16 27               		ld	d,27h
-(1) 1769/     97B : 3E 40               		ld	a,01000000b
-(1) 1770/     97D : 32 86 18            		ld	(fmSpcMode),a
-(1) 1771/     980 : 5F                  		ld	e,a
-(1) 1772/     981 : CD 48 10            		call	fm_send_1
-(1) 1773/     984 : E5                  		push	hl
-(1) 1774/     985 : DD E1               		pop	ix
-(1) 1775/     987 : 18 62               		jr	.fm_setkon
-(1) 1776/     989 :                     ; Normal FM
-(1) 1777/     989 :                     .note_fm:
-(1) 1778/     989 : FD 7E 01            		ld	a,(iy+chnl_Note)
-(1) 1779/     98C : 57                  		ld	d,a
-(1) 1780/     98D : DD 5E 03            		ld	e,(ix+3)
-(1) 1781/     990 : 83                  		add	a,e
-(1) 1782/     991 : CF                  		rst	8
-(1) 1783/     992 : 4F                  		ld	c,a			; c - Note+pitch
-(1) 1784/     993 : DD 7E 02            		ld	a,(ix+2)
-(1) 1785/     996 : 47                  		ld	b,a
-(1) 1786/     997 : E6 07               		and	00000111b
-(1) 1787/     999 : 21 52 14            		ld	hl,fmcom		; hl - fmcom list
-(1) 1788/     99C : 11 00 00            		ld	de,0
-(1) 1789/     99F : E6 07               		and	111b
-(1) 1790/     9A1 : 5F                  		ld	e,a
-(1) 1791/     9A2 : 19                  		add	hl,de
-(1) 1792/     9A3 : CF                  		rst	8
-(1) 1793/     9A4 : FD 7E 01            		ld	a,(iy+chnl_Note)
-(1) 1794/     9A7 : FE FF               		cp	-1
-(1) 1795/     9A9 : 28 5A               		jr	z,.fm_keyoff
-(1) 1796/     9AB : FE FE               		cp	-2
-(1) 1797/     9AD : 28 5A               		jr	z,.fm_keycut
-(1) 1798/     9AF : 78                  		ld	a,b			; Set chip as FM
-(1) 1799/     9B0 : E6 07               		and	111b
+(1) 1272/     6AC : 1E 00               		ld	e,0		; Set as Normal
+(1) 1273/     6AE : CD C3 06            		call	.rd_fmins
+(1) 1274/     6B1 : DD 7E 02            		ld	a,(ix+2)
+(1) 1275/     6B4 : E6 07               		and	00000111b
+(1) 1276/     6B6 : 16 00               		ld	d,0
+(1) 1277/     6B8 : CF                  		rst	8
+(1) 1278/     6B9 : 5F                  		ld	e,a
+(1) 1279/     6BA : 21 52 14            		ld	hl,fmcom
+(1) 1280/     6BD : 19                  		add	hl,de
+(1) 1281/     6BE : 7E                  		ld	a,(hl)		; instrument update bit
+(1) 1282/     6BF : F6 10               		or	00010000b	; flag
+(1) 1283/     6C1 : 77                  		ld	(hl),a
+(1) 1284/     6C2 : C9                  		ret
+(1) 1285/     6C3 :                     
+(1) 1286/     6C3 :                     ; Read FM instrument
+(1) 1287/     6C3 :                     ;
+(1) 1288/     6C3 :                     ; e - alternate mode flag
+(1) 1289/     6C3 :                     .rd_fmins:
+(1) 1290/     6C3 : DD 73 04            		ld	(ix+4),e	; e - alternate mode flag
+(1) 1291/     6C6 : 23                  		inc	hl		; skip ID and pitch
+(1) 1292/     6C7 : 5E                  		ld	e,(hl)
+(1) 1293/     6C8 : DD 73 03            		ld	(ix+3),e	; save pitch
+(1) 1294/     6CB : 23                  		inc	hl
+(1) 1295/     6CC : 87                  		add	a,a
+(1) 1296/     6CD : 16 00               		ld	d,0
+(1) 1297/     6CF : 5F                  		ld	e,a
+(1) 1298/     6D0 : CF                  		rst	8
+(1) 1299/     6D1 : E5                  		push	hl		; save ins hl
+(1) 1300/     6D2 : 21 0A 07            		ld	hl,.fmpickins
+(1) 1301/     6D5 : 19                  		add	hl,de
+(1) 1302/     6D6 : 5E                  		ld	e,(hl)		; get output location
+(1) 1303/     6D7 : 23                  		inc	hl		; from list
+(1) 1304/     6D8 : 56                  		ld	d,(hl)
+(1) 1305/     6D9 : CF                  		rst	8
+(1) 1306/     6DA : E1                  		pop	hl
+(1) 1307/     6DB : 7E                  		ld	a,(hl)		; a - xx0000
+(1) 1308/     6DC : 23                  		inc	hl
+(1) 1309/     6DD : 4E                  		ld	c,(hl)		; c - 00xx00
+(1) 1310/     6DE : 23                  		inc	hl
+(1) 1311/     6DF : 6E                  		ld	l,(hl)		; l - 0000xx
+(1) 1312/     6E0 : 61                  		ld	h,c		; c to h
+(1) 1313/     6E1 : D5                  		push	de
+(1) 1314/     6E2 : CF                  		rst	8
+(1) 1315/     6E3 : 4F                  		ld	c,a
+(1) 1316/     6E4 : DD 7E 07            		ld	a,(ix+7)
+(1) 1317/     6E7 : B9                  		cp	c
+(1) 1318/     6E8 : C2 F7 06            		jp	nz,.confm_rd
+(1) 1319/     6EB : DD 7E 06            		ld	a,(ix+6)
+(1) 1320/     6EE : BC                  		cp	h
+(1) 1321/     6EF : 20 06               		jr	nz,.confm_rd
+(1) 1322/     6F1 : DD 7E 05            		ld	a,(ix+5)
+(1) 1323/     6F4 : BD                  		cp	l
+(1) 1324/     6F5 : 28 11               		jr	z,.fmsame_ins
+(1) 1325/     6F7 :                     .confm_rd:
+(1) 1326/     6F7 : CF                  		rst	8
+(1) 1327/     6F8 : DD 75 05            		ld	(ix+5),l
+(1) 1328/     6FB : DD 74 06            		ld	(ix+6),h
+(1) 1329/     6FE : DD 71 07            		ld	(ix+7),c
+(1) 1330/     701 : 79                  		ld	a,c
+(1) 1331/     702 : 01 28 00            		ld	bc,028h		; 28h bytes
+(1) 1332/     705 : CD 84 0C            		call	transferRom	; Transfer instrument data from ROM
+(1) 1333/     708 :                     .fmsame_ins:
+(1) 1334/     708 : E1                  		pop	hl
+(1) 1335/     709 : C9                  		ret
+(1) 1336/     70A :                     
+(1) 1337/     70A :                     ; manual location for each instr cache
+(1) 1338/     70A :                     ; 28h bytes each
+(1) 1339/     70A :                     .fmpickins:
+(1) 1340/     70A : 76 14               		dw fmins_com
+(1) 1341/     70C : 9E 14               		dw fmins_com2
+(1) 1342/     70E : C6 14               		dw fmins_com3
+(1) 1343/     710 : EE 14               		dw fmins_com4
+(1) 1344/     712 : 16 15               		dw fmins_com5
+(1) 1345/     714 : 3E 15               		dw fmins_com6
+(1) 1346/     716 :                     
+(1) 1347/     716 :                     ; ----------------------------------------
+(1) 1348/     716 :                     ; bit 2
+(1) 1349/     716 :                     ; ----------------------------------------
+(1) 1350/     716 :                     
+(1) 1351/     716 :                     .req_vol:
+(1) 1352/     716 : 2A 8F 18            		ld	hl,(currInsPos)
+(1) 1353/     719 : DD 2A 8D 18         		ld	ix,(currTblPos)
+(1) 1354/     71D :                     ; 		call	.check_chnl
+(1) 1355/     71D : 7E                  		ld	a,(hl)
+(1) 1356/     71E : E6 F0               		and	11110000b
+(1) 1357/     720 : FE 80               		cp	80h		; PSG normal
+(1) 1358/     722 : 28 0E               		jr	z,.vol_psg
+(1) 1359/     724 : FE 90               		cp	90h		; PSG noise
+(1) 1360/     726 : 28 0A               		jr	z,.vol_psg
+(1) 1361/     728 : CF                  		rst	8
+(1) 1362/     729 : FE A0               		cp	0A0h		; FM normal
+(1) 1363/     72B : 28 28               		jr	z,.vol_fm
+(1) 1364/     72D : FE B0               		cp	0B0h		; FM special (same thing)
+(1) 1365/     72F : 28 24               		jr	z,.vol_fm
+(1) 1366/     731 :                     ; 		cp	0C0h		; DAC
+(1) 1367/     731 :                     ; 		jp	z,.vol_dac
+(1) 1368/     731 :                     ; 		cp	0D0h		; PWM
+(1) 1369/     731 :                     ; 		jp	z,.vol_pwm
+(1) 1370/     731 : C9                  		ret
+(1) 1371/     732 :                     
+(1) 1372/     732 :                     ; --------------------------------
+(1) 1373/     732 :                     ; PSG1-3,PSGN
+(1) 1374/     732 :                     
+(1) 1375/     732 :                     .vol_psg:
+(1) 1376/     732 : DD 7E 02            		ld	a,(ix+2)
+(1) 1377/     735 : DD 21 1E 14         		ld	ix,psgcom
+(1) 1378/     739 : E6 03               		and	11b
+(1) 1379/     73B : 16 00               		ld	d,0
+(1) 1380/     73D : 5F                  		ld	e,a
+(1) 1381/     73E : DD 19               		add	ix,de
+(1) 1382/     740 : FD 7E 03            		ld	a,(iy+chnl_Vol)
+(1) 1383/     743 : D6 40               		sub	a,40h
+(1) 1384/     745 : ED 44               		neg	a
+(1) 1385/     747 : 4F                  		ld	c,a
+(1) 1386/     748 : FE 40               		cp	40h
+(1) 1387/     74A : 20 02               		jr	nz,.vmuch
+(1) 1388/     74C : 0E FF               		ld	c,-1
+(1) 1389/     74E :                     .vmuch:
+(1) 1390/     74E : 79                  		ld	a,c
+(1) 1391/     74F : 87                  		add	a,a
+(1) 1392/     750 : 87                  		add	a,a
+(1) 1393/     751 : DD 77 30            		ld	(ix+PVOL),a
+(1) 1394/     754 :                     ; 		ld	a,(ix)
+(1) 1395/     754 :                     ; 		or	00100000b	; Set volume
+(1) 1396/     754 :                     ; 		ld	(ix),a		; update flag
+(1) 1397/     754 : C9                  		ret
+(1) 1398/     755 :                     
+(1) 1399/     755 :                     ; --------------------------------
+(1) 1400/     755 :                     ; FM,FM3,FM6
+(1) 1401/     755 :                     .vol_fm:
+(1) 1402/     755 : 01 00 00            		ld	bc,0
+(1) 1403/     758 : DD 7E 02            		ld	a,(ix+2)
+(1) 1404/     75B : E6 07               		and	00000111b
+(1) 1405/     75D : 4F                  		ld	c,a
+(1) 1406/     75E : DD 21 52 14         		ld	ix,fmcom
+(1) 1407/     762 : DD 09               		add	ix,bc
+(1) 1408/     764 : FD 7E 03            		ld	a,(iy+chnl_Vol)
+(1) 1409/     767 : D6 40               		sub	a,40h
+(1) 1410/     769 : CF                  		rst	8
+(1) 1411/     76A : ED 44               		neg	a		; reverse impulse volume
+(1) 1412/     76C : CB 3F               		srl	a		; /2
+(1) 1413/     76E : DD 77 0C            		ld	(ix+FMVOL),a
+(1) 1414/     771 : DD 7E 00            		ld	a,(ix)		; volume update
+(1) 1415/     774 : F6 21               		or	00100000b|1	; flag, plus keyon
+(1) 1416/     776 : DD 77 00            		ld	(ix),a
+(1) 1417/     779 : C9                  		ret
+(1) 1418/     77A :                     
+(1) 1419/     77A :                     ; ----------------------------------------
+(1) 1420/     77A :                     ; bit 3
+(1) 1421/     77A :                     ; ----------------------------------------
+(1) 1422/     77A :                     
+(1) 1423/     77A :                     .req_eff:
+(1) 1424/     77A : 2A 8F 18            		ld	hl,(currInsPos)
+(1) 1425/     77D : DD 2A 8D 18         		ld	ix,(currTblPos)
+(1) 1426/     781 :                     ; 		call	.check_chnl
+(1) 1427/     781 : 7E                  		ld	a,(hl)
+(1) 1428/     782 : E6 F0               		and	11110000b
+(1) 1429/     784 :                     ; 		rst	8
+(1) 1430/     784 :                     ; 		cp	80h		; PSG normal
+(1) 1431/     784 :                     ; 		jr	z,.eff_psg
+(1) 1432/     784 :                     ; 		cp	90h		; PSG noise
+(1) 1433/     784 :                     ; 		jp	z,.eff_psgn
+(1) 1434/     784 : FE A0               		cp	0A0h		; FM Normal
+(1) 1435/     786 : CA 8F 07            		jp	z,.eff_fm
+(1) 1436/     789 : FE B0               		cp	0B0h		; FM Special
+(1) 1437/     78B : CA 8F 07            		jp	z,.eff_fm
+(1) 1438/     78E : C9                  		ret
+(1) 1439/     78F :                     
+(1) 1440/     78F :                     ; --------------------------------
+(1) 1441/     78F :                     ; FM,FM3,FM6
+(1) 1442/     78F :                     
+(1) 1443/     78F :                     .eff_fm:
+(1) 1444/     78F : FD 5E 05            		ld	e,(iy+chnl_EffArg)
+(1) 1445/     792 : FD 7E 04            		ld	a,(iy+chnl_EffId)
+(1) 1446/     795 : B7                  		or	a
+(1) 1447/     796 : C8                  		ret	z
+(1) 1448/     797 : FE 05               		cp	5		; Effect E?
+(1) 1449/     799 : 28 09               		jr	z,.effFm_E
+(1) 1450/     79B : FE 06               		cp	6		; Effect F?
+(1) 1451/     79D : 28 2A               		jr	z,.effFm_F
+(1) 1452/     79F : FE 18               		cp	24		; Effect X?
+(1) 1453/     7A1 : 28 67               		jr	z,.effFm_X
+(1) 1454/     7A3 : C9                  		ret
+(1) 1455/     7A4 :                     
+(1) 1456/     7A4 :                     ; --------------------------------
+(1) 1457/     7A4 :                     ; FM Effect E
+(1) 1458/     7A4 :                     ; --------------------------------
+(1) 1459/     7A4 :                     ; TODO: cleanup the code mess
+(1) 1460/     7A4 :                     
+(1) 1461/     7A4 :                     .effFm_E:
+(1) 1462/     7A4 : 7B                  		ld	a,e
+(1) 1463/     7A5 : E6 F0               		and	11110000b
+(1) 1464/     7A7 : FE F0               		cp	0F0h
+(1) 1465/     7A9 : 20 06               		jr	nz,.e_nof
+(1) 1466/     7AB : 7B                  		ld	a,e
+(1) 1467/     7AC : E6 0F               		and	0Fh
+(1) 1468/     7AE : 87                  		add	a,a
+(1) 1469/     7AF : 18 0C               		jr	.e_go
+(1) 1470/     7B1 :                     .e_nof:
+(1) 1471/     7B1 : FE E0               		cp	0E0h
+(1) 1472/     7B3 : 20 05               		jr	nz,.e_noef
+(1) 1473/     7B5 : 7B                  		ld	a,e
+(1) 1474/     7B6 : E6 0F               		and	0Fh
+(1) 1475/     7B8 : 18 03               		jr	.e_go
+(1) 1476/     7BA :                     .e_noef:
+(1) 1477/     7BA : 7B                  		ld	a,e
+(1) 1478/     7BB : 87                  		add	a,a
+(1) 1479/     7BC : 87                  		add	a,a
+(1) 1480/     7BD :                     .e_go:
+(1) 1481/     7BD : 16 00               		ld	d,0
+(1) 1482/     7BF : ED 44               		neg	a
+(1) 1483/     7C1 : B7                  		or	a
+(1) 1484/     7C2 : 28 02               		jr	z,.e_neg
+(1) 1485/     7C4 : 16 FF               		ld	d,-1
+(1) 1486/     7C6 :                     .e_neg:
+(1) 1487/     7C6 : 5F                  		ld	e,a
+(1) 1488/     7C7 : 18 1D               		jr	.freq_set
+(1) 1489/     7C9 :                     
+(1) 1490/     7C9 :                     ; --------------------------------
+(1) 1491/     7C9 :                     ; FM Effect F
+(1) 1492/     7C9 :                     ; --------------------------------
+(1) 1493/     7C9 :                     
+(1) 1494/     7C9 :                     .effFm_F:
+(1) 1495/     7C9 : 7B                  		ld	a,e
+(1) 1496/     7CA : E6 F0               		and	11110000b
+(1) 1497/     7CC : FE F0               		cp	0F0h
+(1) 1498/     7CE : 20 06               		jr	nz,.f_nof
+(1) 1499/     7D0 : 7B                  		ld	a,e
+(1) 1500/     7D1 : E6 0F               		and	0Fh
+(1) 1501/     7D3 : 87                  		add	a,a
+(1) 1502/     7D4 : 18 0C               		jr	.f_go
+(1) 1503/     7D6 :                     .f_nof:
+(1) 1504/     7D6 : FE E0               		cp	0E0h
+(1) 1505/     7D8 : 20 05               		jr	nz,.f_noef
+(1) 1506/     7DA : 7B                  		ld	a,e
+(1) 1507/     7DB : E6 0F               		and	0Fh
+(1) 1508/     7DD : 18 03               		jr	.f_go
+(1) 1509/     7DF :                     .f_noef:
+(1) 1510/     7DF : 7B                  		ld	a,e
+(1) 1511/     7E0 : 87                  		add	a,a
+(1) 1512/     7E1 : 87                  		add	a,a
+(1) 1513/     7E2 :                     .f_go:
+(1) 1514/     7E2 : 16 00               		ld	d,0
+(1) 1515/     7E4 : 87                  		add	a,a
+(1) 1516/     7E5 : 5F                  		ld	e,a
+(1) 1517/     7E6 :                     
+(1) 1518/     7E6 :                     ; de - freq incr/decr
+(1) 1519/     7E6 :                     .freq_set:
+(1) 1520/     7E6 : DD 7E 02            		ld	a,(ix+2)
+(1) 1521/     7E9 : E6 07               		and	111b
+(1) 1522/     7EB : DD 21 52 14         		ld	ix,fmcom
+(1) 1523/     7EF : 06 00               		ld	b,0
+(1) 1524/     7F1 : 4F                  		ld	c,a
+(1) 1525/     7F2 : DD 09               		add	ix,bc
+(1) 1526/     7F4 : DD 66 18            		ld	h,(ix+FMFRQH)
+(1) 1527/     7F7 : DD 6E 1E            		ld	l,(ix+FMFRQL)
+(1) 1528/     7FA : 19                  		add	hl,de
+(1) 1529/     7FB : DD 74 18            		ld	(ix+FMFRQH),h
+(1) 1530/     7FE : DD 75 1E            		ld	(ix+FMFRQL),l
+(1) 1531/     801 : DD 7E 00            		ld	a,(ix)
+(1) 1532/     804 : F6 01               		or	00000001b
+(1) 1533/     806 : DD 77 00            		ld	(ix),a
+(1) 1534/     809 : C9                  		ret
+(1) 1535/     80A :                     
+(1) 1536/     80A :                     ; --------------------------------
+(1) 1537/     80A :                     ; FM Effect X: Panning
+(1) 1538/     80A :                     ; --------------------------------
+(1) 1539/     80A :                     
+(1) 1540/     80A :                     .effFm_X:
+(1) 1541/     80A : 7B                  		ld	a,e
+(1) 1542/     80B : 07                  		rlca
+(1) 1543/     80C : 07                  		rlca
+(1) 1544/     80D : E6 03               		and	00000011b
+(1) 1545/     80F : 21 23 08            		ld	hl,.fmpan_list
+(1) 1546/     812 : 11 00 00            		ld	de,0
+(1) 1547/     815 : 5F                  		ld	e,a
+(1) 1548/     816 : CF                  		rst	8
+(1) 1549/     817 : 19                  		add	hl,de
+(1) 1550/     818 : 5E                  		ld	e,(hl)
+(1) 1551/     819 : FD 7E 07            		ld	a,(iy+chnl_Flags)
+(1) 1552/     81C : E6 CF               		and	11001111b
+(1) 1553/     81E : B3                  		or	e
+(1) 1554/     81F : FD 77 07            		ld	(iy+chnl_Flags),a
+(1) 1555/     822 : C9                  		ret
+(1) 1556/     823 :                     .fmpan_list:
+(1) 1557/     823 : 10                  		db 00010000b	; 000h
+(1) 1558/     824 : 10                  		db 00010000b	; 040h
+(1) 1559/     825 : 00                  		db 00000000b	; 080h
+(1) 1560/     826 : 20                  		db 00100000b	; 0C0h
+(1) 1561/     827 :                     
+(1) 1562/     827 :                     ; ----------------------------------------
+(1) 1563/     827 :                     ; bit 0
+(1) 1564/     827 :                     ; ----------------------------------------
+(1) 1565/     827 :                     
+(1) 1566/     827 :                     .req_note:
+(1) 1567/     827 : 2A 8F 18            		ld	hl,(currInsPos)
+(1) 1568/     82A : DD 2A 8D 18         		ld	ix,(currTblPos)
+(1) 1569/     82E :                     ; 		call	.check_chnl
+(1) 1570/     82E : 7E                  		ld	a,(hl)
+(1) 1571/     82F : 4F                  		ld	c,a		; special copy
+(1) 1572/     830 : E6 F0               		and	11110000b
+(1) 1573/     832 : FE 80               		cp	80h		; PSG normal
+(1) 1574/     834 : 28 4F               		jr	z,.note_psg
+(1) 1575/     836 : FE 90               		cp	90h		; PSG noise
+(1) 1576/     838 : CA 72 08            		jp	z,.note_psgn
+(1) 1577/     83B : FE A0               		cp	0A0h
+(1) 1578/     83D : CA 77 09            		jp	z,.note_fm
+(1) 1579/     840 : CF                  		rst	8
+(1) 1580/     841 : FE B0               		cp	0B0h
+(1) 1581/     843 : CA 53 09            		jp	z,.note_fm3
+(1) 1582/     846 : FE C0               		cp	0C0h
+(1) 1583/     848 : CA 0A 09            		jp	z,.note_dac
+(1) 1584/     84B : C9                  		ret
+(1) 1585/     84C :                     
+(1) 1586/     84C :                     ; --------------------------------
+(1) 1587/     84C :                     ; Note: PSG1-3,PSGN
+(1) 1588/     84C :                     ; --------------------------------
+(1) 1589/     84C :                     
+(1) 1590/     84C :                     ; PSG Keyoff
+(1) 1591/     84C :                     .poff:
+(1) 1592/     84C : 0E 02               		ld	c,010b
+(1) 1593/     84E : 71                  		ld	(hl),c
+(1) 1594/     84F : C9                  		ret
+(1) 1595/     850 :                     ; PSG Keycut
+(1) 1596/     850 :                     .pcut:
+(1) 1597/     850 : 0E 04               		ld	c,100b
+(1) 1598/     852 :                     .pct_go:
+(1) 1599/     852 : CF                  		rst	8
+(1) 1600/     853 : FD E5               		push	iy
+(1) 1601/     855 : D1                  		pop	de
+(1) 1602/     856 : DD 7E 00            		ld	a,(ix)
+(1) 1603/     859 : BB                  		cp	e
+(1) 1604/     85A : C0                  		ret	nz
+(1) 1605/     85B : DD 7E 01            		ld	a,(ix+1)
+(1) 1606/     85E : BA                  		cp	d
+(1) 1607/     85F : C0                  		ret	nz
+(1) 1608/     860 : CF                  		rst	8
+(1) 1609/     861 : 71                  		ld	(hl),c
+(1) 1610/     862 : DD 36 00 00         		ld	(ix),0
+(1) 1611/     866 : DD 36 01 00         		ld	(ix+1),0
+(1) 1612/     86A : CB 49               		bit	1,c
+(1) 1613/     86C : C0                  		ret	nz
+(1) 1614/     86D : FD 36 00 00         		ld	(iy+chnl_Chip),0
+(1) 1615/     871 : C9                  		ret
+(1) 1616/     872 :                     
+(1) 1617/     872 :                     ; Play PSG note
+(1) 1618/     872 :                     .note_psgn:
+(1) 1619/     872 : 21 21 14            		ld 	hl,psgcom+3
+(1) 1620/     875 : DD 7E 02            		ld	a,(ix+2)
+(1) 1621/     878 : F6 90               		or	90h
+(1) 1622/     87A : FD 77 00            		ld	(iy+chnl_Chip),a
+(1) 1623/     87D : DD 7E 04            		ld 	a,(ix+4)
+(1) 1624/     880 : 32 85 18            		ld	(psgHatMode),a
+(1) 1625/     883 : 18 22               		jr	.notepsg_c
+(1) 1626/     885 :                     .note_psg:
+(1) 1627/     885 : DD 7E 02            		ld	a,(ix+2)
+(1) 1628/     888 : F6 80               		or	80h
+(1) 1629/     88A : FD 77 00            		ld	(iy+chnl_Chip),a
+(1) 1630/     88D : DD 7E 02            		ld	a,(ix+2)
+(1) 1631/     890 : CF                  		rst	8
+(1) 1632/     891 : E6 03               		and	11b
+(1) 1633/     893 : 16 00               		ld	d,0
+(1) 1634/     895 : 5F                  		ld	e,a
+(1) 1635/     896 : 21 1E 14            		ld 	hl,psgcom
+(1) 1636/     899 : 19                  		add	hl,de
+(1) 1637/     89A : FE 02               		cp	2
+(1) 1638/     89C : 20 09               		jr	nz,.notepsg_c
+(1) 1639/     89E : 3A 85 18            		ld	a,(psgHatMode)
+(1) 1640/     8A1 : E6 03               		and	011b
+(1) 1641/     8A3 : FE 03               		cp	011b
+(1) 1642/     8A5 : 28 A9               		jr	z,.pcut
+(1) 1643/     8A7 :                     .notepsg_c:
+(1) 1644/     8A7 : FD 7E 01            		ld	a,(iy+chnl_Note)
+(1) 1645/     8AA : FE FE               		cp	-2
+(1) 1646/     8AC : CA 50 08            		jp	z,.pcut
+(1) 1647/     8AF : FE FF               		cp	-1
+(1) 1648/     8B1 : CA 4C 08            		jp	z,.poff
+(1) 1649/     8B4 : CF                  		rst	8
+(1) 1650/     8B5 : E5                  		push	hl		; save psgcom
+(1) 1651/     8B6 : 21 AE 11            		ld	hl,psgFreq_List
+(1) 1652/     8B9 : DD 4E 03            		ld	c,(ix+3)
+(1) 1653/     8BC : 81                  		add	a,c
+(1) 1654/     8BD : 87                  		add	a,a
+(1) 1655/     8BE : 11 00 00            		ld	de,0
+(1) 1656/     8C1 : 5F                  		ld	e,a
+(1) 1657/     8C2 : 19                  		add	hl,de
+(1) 1658/     8C3 : 5E                  		ld	e,(hl)
+(1) 1659/     8C4 : 23                  		inc	hl
+(1) 1660/     8C5 : 56                  		ld	d,(hl)
+(1) 1661/     8C6 : 01 00 00            		ld	bc,0
+(1) 1662/     8C9 : E6 03               		and	11b
+(1) 1663/     8CB : 4F                  		ld	c,a
+(1) 1664/     8CC : DD E5               		push	ix		; swap ix to hl
+(1) 1665/     8CE : E1                  		pop	hl
+(1) 1666/     8CF : CF                  		rst	8
+(1) 1667/     8D0 : 23                  		inc	hl		; skip link
+(1) 1668/     8D1 : 23                  		inc	hl
+(1) 1669/     8D2 : 23                  		inc 	hl		; channel id
+(1) 1670/     8D3 : 23                  		inc	hl		; pitch
+(1) 1671/     8D4 :                     ; 		ld	a,c
+(1) 1672/     8D4 :                     ; 		cp	3
+(1) 1673/     8D4 :                     ; 		jr	nz,.npsg2
+(1) 1674/     8D4 :                     ; 		ld 	a,(ix+4)
+(1) 1675/     8D4 :                     ; 		ld	(psgHatMode),a
+(1) 1676/     8D4 :                     ; .npsg2:
+(1) 1677/     8D4 : DD E1               		pop	ix			; restore psgcom as ix
+(1) 1678/     8D6 : FD 7E 07            		ld	a,(iy+chnl_Flags)	; Check is volume bit
+(1) 1679/     8D9 : CB 57               		bit	2,a			; is being used
+(1) 1680/     8DB : 20 04               		jr	nz,.nodefv
+(1) 1681/     8DD : DD 36 30 00         		ld	(ix+PVOL),0		; if not, set max volume
+(1) 1682/     8E1 :                     .nodefv:
+(1) 1683/     8E1 : CF                  		rst	8
+(1) 1684/     8E2 : 7B                  		ld	a,e			; bc - freq
+(1) 1685/     8E3 : E6 0F               		and	0Fh
+(1) 1686/     8E5 : DD 77 1C            		ld	(ix+DTL),a
+(1) 1687/     8E8 : 7B                  		ld	a,e
+(1) 1688/     8E9 : CB 2F               		sra	a
+(1) 1689/     8EB : CB 2F               		sra	a
+(1) 1690/     8ED : CB 2F               		sra	a
+(1) 1691/     8EF : CB 2F               		sra	a
+(1) 1692/     8F1 : E6 0F               		and	0Fh
+(1) 1693/     8F3 : 47                  		ld	b,a
+(1) 1694/     8F4 : 23                  		inc	hl
+(1) 1695/     8F5 : CF                  		rst	8
+(1) 1696/     8F6 : 7A                  		ld	a,d
+(1) 1697/     8F7 : CB 27               		sla	a
+(1) 1698/     8F9 : CB 27               		sla	a
+(1) 1699/     8FB : CB 27               		sla	a
+(1) 1700/     8FD : CB 27               		sla	a
+(1) 1701/     8FF : E6 F0               		and	0F0h
+(1) 1702/     901 : B0                  		or	b
+(1) 1703/     902 : DD 77 20            		ld	(ix+DTH),a
+(1) 1704/     905 : DD 36 00 01         		ld	(ix+COM),001b	; Key ON
+(1) 1705/     909 : C9                  		ret
+(1) 1706/     90A :                     
+(1) 1707/     90A :                     ; --------------------------------
+(1) 1708/     90A :                     ; Note: FM,FM3,FM6
+(1) 1709/     90A :                     ; --------------------------------
+(1) 1710/     90A :                     
+(1) 1711/     90A :                     .note_dac:
+(1) 1712/     90A : 21 72 15            		ld	hl,daccom
+(1) 1713/     90D : FD 7E 01            		ld	a,(iy+chnl_Note)
+(1) 1714/     910 : FE FF               		cp	-1
+(1) 1715/     912 : CA 05 0A            		jp	z,.fm_keyoff
+(1) 1716/     915 : FE FE               		cp	-2
+(1) 1717/     917 : CA 09 0A            		jp	z,.fm_keycut
+(1) 1718/     91A : FD 36 00 C0         		ld	(iy+chnl_Chip),0C0h	; Set as DAC
+(1) 1719/     91E : 11 00 00            		ld	de,0
+(1) 1720/     921 : DD 5E 03            		ld	e,(ix+3)		; Get pitch
+(1) 1721/     924 : 83                  		add	a,e
+(1) 1722/     925 : 87                  		add	a,a
+(1) 1723/     926 : 5F                  		ld	e,a
+(1) 1724/     927 : 21 A0 12            		ld	hl,wavFreq_List
+(1) 1725/     92A : 19                  		add	hl,de
+(1) 1726/     92B : 7E                  		ld	a,(hl)
+(1) 1727/     92C : 23                  		inc	hl
+(1) 1728/     92D : 66                  		ld	h,(hl)
+(1) 1729/     92E : CF                  		rst	8
+(1) 1730/     92F : 6F                  		ld	l,a
+(1) 1731/     930 : 11 E6 FF            		ld	de,ZSET_WTUNE		; Fine-tune to desired
+(1) 1732/     933 : 19                  		add	hl,de			; WAVE frequency
+(1) 1733/     934 : 22 29 00            		ld	(wave_Pitch),hl
+(1) 1734/     937 : 79                  		ld	a,c
+(1) 1735/     938 : E6 01               		and	001b
+(1) 1736/     93A : 32 2B 00            		ld	(wave_Flags),a
+(1) 1737/     93D : 3E 01               		ld	a,001b			; Request DAC play
+(1) 1738/     93F : 32 72 15            		ld	(daccom),a
+(1) 1739/     942 : C9                  		ret
+(1) 1740/     943 :                     .dcut:
+(1) 1741/     943 : 3E 04               		ld	a,100b			; Request DAC stop
+(1) 1742/     945 : 32 72 15            		ld	(daccom),a
+(1) 1743/     948 :                     .doff:
+(1) 1744/     948 : 21 00 00            		ld	hl,0
+(1) 1745/     94B : 22 DA 13            		ld	(tblFM6),hl
+(1) 1746/     94E : FD 36 00 00         		ld	(iy+chnl_Chip),0
+(1) 1747/     952 : C9                  		ret
+(1) 1748/     953 :                     ; FM3 special
+(1) 1749/     953 :                     .note_fm3:
+(1) 1750/     953 : 21 54 14            		ld	hl,fmcom+2		; Channel 3 fmcom
+(1) 1751/     956 : FD 7E 01            		ld	a,(iy+chnl_Note)
+(1) 1752/     959 : FE FF               		cp	-1
+(1) 1753/     95B : CA 05 0A            		jp	z,.fm_keyoff
+(1) 1754/     95E : FE FE               		cp	-2
+(1) 1755/     960 : CA 09 0A            		jp	z,.fm_keycut
+(1) 1756/     963 : FD 36 00 B0         		ld	(iy+chnl_Chip),0B0h	; Set as FM3 special
+(1) 1757/     967 : 16 27               		ld	d,27h
+(1) 1758/     969 : 3E 40               		ld	a,01000000b
+(1) 1759/     96B : 32 86 18            		ld	(fmSpcMode),a
+(1) 1760/     96E : 5F                  		ld	e,a
+(1) 1761/     96F : CD 48 10            		call	fm_send_1
+(1) 1762/     972 : E5                  		push	hl
+(1) 1763/     973 : DD E1               		pop	ix
+(1) 1764/     975 : 18 74               		jr	.fm_setkon
+(1) 1765/     977 :                     ; Normal FM
+(1) 1766/     977 :                     .note_fm:
+(1) 1767/     977 : FD 7E 01            		ld	a,(iy+chnl_Note)
+(1) 1768/     97A : 57                  		ld	d,a
+(1) 1769/     97B : DD 5E 03            		ld	e,(ix+3)
+(1) 1770/     97E : 83                  		add	a,e
+(1) 1771/     97F : CF                  		rst	8
+(1) 1772/     980 : 4F                  		ld	c,a			; c - Note+pitch
+(1) 1773/     981 : DD 7E 02            		ld	a,(ix+2)
+(1) 1774/     984 : 47                  		ld	b,a
+(1) 1775/     985 : E6 07               		and	00000111b
+(1) 1776/     987 : 21 52 14            		ld	hl,fmcom		; hl - fmcom list
+(1) 1777/     98A : 11 00 00            		ld	de,0
+(1) 1778/     98D : E6 07               		and	111b
+(1) 1779/     98F : 5F                  		ld	e,a
+(1) 1780/     990 : 19                  		add	hl,de
+(1) 1781/     991 : CF                  		rst	8
+(1) 1782/     992 : FD 7E 01            		ld	a,(iy+chnl_Note)
+(1) 1783/     995 : FE FF               		cp	-1
+(1) 1784/     997 : 28 6C               		jr	z,.fm_keyoff
+(1) 1785/     999 : FE FE               		cp	-2
+(1) 1786/     99B : 28 6C               		jr	z,.fm_keycut
+(1) 1787/     99D : 78                  		ld	a,b			; Set chip as FM
+(1) 1788/     99E : E6 07               		and	111b
+(1) 1789/     9A0 : FE 02               		cp	2			; Check if we got into channel 3
+(1) 1790/     9A2 : 20 0E               		jr	nz,.rd_nt3
+(1) 1791/     9A4 : 47                  		ld	b,a
+(1) 1792/     9A5 : 16 27               		ld	d,27h			; Disable CH3 special mode
+(1) 1793/     9A7 : 3E 00               		ld	a,00000000b
+(1) 1794/     9A9 : 32 86 18            		ld	(fmSpcMode),a
+(1) 1795/     9AC : CF                  		rst	8
+(1) 1796/     9AD : 5F                  		ld	e,a
+(1) 1797/     9AE : CD 48 10            		call	fm_send_1
+(1) 1798/     9B1 : 78                  		ld	a,b
+(1) 1799/     9B2 :                     .rd_nt3:
 (1) 1800/     9B2 : F6 A0               		or	0A0h
 (1) 1801/     9B4 : FD 77 00            		ld	(iy+chnl_Chip),a
 (1) 1802/     9B7 : 79                  		ld	a,c
@@ -5989,7 +5989,7 @@ MD RAM ends at: FF880C
 (1) 3572/    1884 : 00                  currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 (1) 3573/    1885 : 00                  psgHatMode	db 0
 (1) 3574/    1886 : 00                  fmSpcMode	db 0
-(1) 3575/    1887 : B8 00               sbeatPtck	dw 208-24	; Sub beats per tick (8frac), default is 120bpm
+(1) 3575/    1887 : BA 00               sbeatPtck	dw 208-22	; Sub beats per tick (8frac), default is 120bpm
 (1) 3576/    1889 : 00 00               sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 (1) 3577/    188B : 00 00               currInsData	dw 0
 (1) 3578/    188D : 00 00               currTblPos	dw 0
@@ -6476,7 +6476,7 @@ MD RAM ends at: FF880C
 (1)  146/  FF1A90 : 3E38 91BE           		move.w	(Controller_1+on_press),d7
 (1)  147/  FF1A94 : 0807 0006           		btst	#bitJoyA,d7
 (1)  148/  FF1A98 : 6718                		beq.s	.noc_d
-(1)  149/  FF1A9A : 203C 0093 0000      		move.l	#PCM_START,d0
+(1)  149/  FF1A9A : 203C 0093 8000      		move.l	#PCM_START,d0
 (1)  150/  FF1AA0 : 223C 0008 0000      		move.l	#PCM_END-PCM_START,d1
 (1)  151/  FF1AA6 : 7400                		moveq	#0,d2
 (1)  152/  FF1AA8 : 363C 0100           		move.w	#$100,d3
@@ -6545,17 +6545,17 @@ MD RAM ends at: FF880C
 (1)  215/  FF1B60 :                     
 (1)  216/  FF1B60 :                     ; test playlist
 (1)  217/  FF1B60 :                     .playlist:
-(1)  218/  FF1B60 : 0090 4591 0090 458E 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
-                    0090 45DF           
+(1)  218/  FF1B60 : 0090 AD9B 0090 AD98 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
+                    0090 ADE9           
 (1)  219/  FF1B6C : 0000 0004           	dc.l 4
-(1)  220/  FF1B70 : 0090 4602 0090 45F7 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
-                    0090 7C49           
+(1)  220/  FF1B70 : 0090 4599 0090 458E 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
+                    0090 AD58           
 (1)  221/  FF1B7C : 0000 0003           	dc.l 3
-(1)  222/  FF1B80 : 0090 7D09 0090 7CF9 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
-                    0090 9820           
+(1)  222/  FF1B80 : 0090 E513 0090 E503 	dc.l GemaTrk_moon_patt,GemaTrk_moon_blk,GemaTrk_moon_ins
+                    0091 002A           
 (1)  223/  FF1B8C : 0000 0003           	dc.l 3
-(1)  224/  FF1B90 : 0090 98A9 0090 9888 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
-                    0090 BDFA           
+(1)  224/  FF1B90 : 0091 00B3 0091 0092 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
+                    0091 2604           
 (1)  225/  FF1B9C : 0000 0001           	dc.l 1
 (1)  226/  FF1BA0 :                     ; 	dc.l GemaTrk_mars_patt,GemaTrk_mars_blk,GemaTrk_mars_ins
 (1)  227/  FF1BA0 :                     ; 	dc.l 3
@@ -7142,595 +7142,611 @@ MD RAM ends at: FF880C
 (1)   80/  90458E :                     ;
 (1)   81/  90458E :                     
 (1)   82/  90458E :                     
-(1)   83/  90458E :                     ; GemaTrk_cirno_blk:
-(1)   84/  90458E :                     ; 	binclude "sound/tracks/chrono_blk.bin"
-(1)   85/  90458E :                     ; GemaTrk_cirno_patt:
-(1)   86/  90458E :                     ; 	binclude "sound/tracks/chrono_patt.bin"
-(1)   87/  90458E :                     ; GemaTrk_cirno_ins:
-(1)   88/  90458E :                     ; 	gInsPsg  +12,$30,$00,$20,$10,$02
-(1)   89/  90458E :                     ; 	gInsFm     0,FmIns_Bell_China
-(1)   90/  90458E :                     ; 	gInsFm     0,FmIns_Bass_calm
-(1)   91/  90458E :                     ; 	gInsPsgN   0,$00,$00,$00,$08,$08,%110
-(1)   92/  90458E :                     ; 	gInsPsgN   0,$00,$00,$00,$08,$08,%101
-(1)   93/  90458E :                     ; 	gInsPsgN   0,$00,$00,$00,$10,$10,%100
-(1)   94/  90458E :                     ; 	gInsFm   -12,FmIns_Brass_Eur,0
-(1)   95/  90458E :                     ; 	gInsNull
-(1)   96/  90458E :                     
-(1)   97/  90458E :                     GemaTrk_blk_TEST:
-(1)   98/  90458E :                     	binclude "sound/tracks/test_blk.bin"
-(1)   99/  904591 :                     GemaTrk_patt_TEST:
-(1)  100/  904591 :                     	binclude "sound/tracks/test_patt.bin"
-(1)  101/  9045DF :                     GemaTrk_ins_TEST:
-(1)  102/  9045DF :                     ; 	gInsPsg 0,$00,$00,$00,$00,$00
-(1)  103/  9045DF :                     ; 	gInsPsgN 0,$00,$00,$00,$00,$00,%000
-(1)  104/  9045DF :                     ; 	gInsPsgN +24,$00,$00,$00,$00,$00,%011
-(1)  105/  9045DF :                     
-(1)  106/  9045DF : (MACRO)             	gInsFm    0,FmIns_Bass_groove
-(1)  106/  9045DF : A000 90E7                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
-(1)  106/  9045E3 : 5D00 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
-(1)  107/  9045E7 : (MACRO)             	gInsFm3   0,FmIns_Fm3_OpenHat
-(1)  107/  9045E7 : B000 90E6                   dc.b $B0,0,((FMINS_FM3_OPENHAT>>16)&$FF),((FMINS_FM3_OPENHAT>>8)&$FF)
-(1)  107/  9045EB : 2D00 0000                   dc.b FMINS_FM3_OPENHAT&$FF,$00,$00,$00
-(1)  108/  9045EF : (MACRO)             	gInsDac   0,DacIns_CdSnare,0,0
-(1)  108/  9045EF : C000 9288                   dc.b $C0|0,0,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
-(1)  108/  9045F3 : DB00 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  109/  9045F7 :                     
-(1)  110/  9045F7 :                     ; 	gInsFm3   0,FmIns_Fm3_ClosedHat
-(1)  111/  9045F7 :                     ; 	gInsFm3   0,FmIns_Fm3_OpenHat
-(1)  112/  9045F7 :                     ; 	gInsFm 0,FmIns_Trumpet_2
-(1)  113/  9045F7 :                     ; 	gInsFm 0,FmIns_bass_kon
-(1)  114/  9045F7 :                     
-(1)  115/  9045F7 :                     GemaTrk_blk_TEST2:
-(1)  116/  9045F7 :                     	binclude "sound/tracks/puyo2_blk.bin"
-(1)  117/  904602 :                     GemaTrk_patt_TEST2:
-(1)  118/  904602 :                     	binclude "sound/tracks/puyo2_patt.bin"
-(1)  119/  907C49 :                     GemaTrk_ins_TEST2:
-(1)  120/  907C49 : (MACRO)             	gInsFm 0,FmIns_guitar_puy
-(1)  120/  907C49 : A000 90E6                   dc.b $A0,0,((FMINS_GUITAR_PUY>>16)&$FF),((FMINS_GUITAR_PUY>>8)&$FF)
-(1)  120/  907C4D : 9D00 0000                   dc.b FMINS_GUITAR_PUY&$FF,$00,$00,$00
-(1)  121/  907C51 : (MACRO)             	gInsNull
-(1)  121/  907C51 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  121/  907C55 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  122/  907C59 : (MACRO)             	gInsFm 0,FmIns_Bass_groove_2
-(1)  122/  907C59 : A000 90E7                   dc.b $A0,0,((FMINS_BASS_GROOVE_2>>16)&$FF),((FMINS_BASS_GROOVE_2>>8)&$FF)
-(1)  122/  907C5D : 7D00 0000                   dc.b FMINS_BASS_GROOVE_2&$FF,$00,$00,$00
-(1)  123/  907C61 : (MACRO)             	gInsFm -12,FmIns_Brass_Puy
-(1)  123/  907C61 : A0F4 90E9                   dc.b $A0,-12,((FMINS_BRASS_PUY>>16)&$FF),((FMINS_BRASS_PUY>>8)&$FF)
-(1)  123/  907C65 : 1D00 0000                   dc.b FMINS_BRASS_PUY&$FF,$00,$00,$00
-(1)  124/  907C69 : (MACRO)             	gInsDac +24,DacIns_SaurKick,0,0
-(1)  124/  907C69 : C018 92A2                   dc.b $C0|0,+24,((DACINS_SAURKICK>>16)&$FF),((DACINS_SAURKICK>>8)&$FF)
-(1)  124/  907C6D : D200 0000                   dc.b DACINS_SAURKICK&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  125/  907C71 : (MACRO)             	gInsNull
-(1)  125/  907C71 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  125/  907C75 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  126/  907C79 : (MACRO)             	gInsNull
-(1)  126/  907C79 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  126/  907C7D : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  127/  907C81 : (MACRO)             	gInsFm3   0,FmIns_Fm3_OpenHat
-(1)  127/  907C81 : B000 90E6                   dc.b $B0,0,((FMINS_FM3_OPENHAT>>16)&$FF),((FMINS_FM3_OPENHAT>>8)&$FF)
-(1)  127/  907C85 : 2D00 0000                   dc.b FMINS_FM3_OPENHAT&$FF,$00,$00,$00
-(1)  128/  907C89 : (MACRO)             	gInsDac +24,DacIns_CdSnare,0,0
-(1)  128/  907C89 : C018 9288                   dc.b $C0|0,+24,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
-(1)  128/  907C8D : DB00 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  129/  907C91 : (MACRO)             	gInsNull
-(1)  129/  907C91 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  129/  907C95 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  130/  907C99 : (MACRO)             	gInsNull
-(1)  130/  907C99 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  130/  907C9D : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  131/  907CA1 : (MACRO)             	gInsNull
-(1)  131/  907CA1 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  131/  907CA5 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  132/  907CA9 : (MACRO)             	gInsNull
-(1)  132/  907CA9 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  132/  907CAD : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  133/  907CB1 : (MACRO)             	gInsFm -36,FmIns_Banjo_puy
-(1)  133/  907CB1 : A0DC 90E9                   dc.b $A0,-36,((FMINS_BANJO_PUY>>16)&$FF),((FMINS_BANJO_PUY>>8)&$FF)
-(1)  133/  907CB5 : 5D00 0000                   dc.b FMINS_BANJO_PUY&$FF,$00,$00,$00
-(1)  134/  907CB9 : (MACRO)             	gInsFm -12,FmIns_Trumpet_Puy
-(1)  134/  907CB9 : A0F4 90E8                   dc.b $A0,-12,((FMINS_TRUMPET_PUY>>16)&$FF),((FMINS_TRUMPET_PUY>>8)&$FF)
-(1)  134/  907CBD : 5D00 0000                   dc.b FMINS_TRUMPET_PUY&$FF,$00,$00,$00
-(1)  135/  907CC1 : (MACRO)             	gInsFm 0,FmIns_guitar_puy_2
-(1)  135/  907CC1 : A000 90E6                   dc.b $A0,0,((FMINS_GUITAR_PUY_2>>16)&$FF),((FMINS_GUITAR_PUY_2>>8)&$FF)
-(1)  135/  907CC5 : BD00 0000                   dc.b FMINS_GUITAR_PUY_2&$FF,$00,$00,$00
-(1)  136/  907CC9 : (MACRO)             	gInsNull
-(1)  136/  907CC9 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  136/  907CCD : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  137/  907CD1 : (MACRO)             	gInsNull
-(1)  137/  907CD1 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  137/  907CD5 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  138/  907CD9 : (MACRO)             	gInsNull
-(1)  138/  907CD9 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  138/  907CDD : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  139/  907CE1 : (MACRO)             	gInsNull
-(1)  139/  907CE1 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  139/  907CE5 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  140/  907CE9 : (MACRO)             	gInsNull
-(1)  140/  907CE9 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  140/  907CED : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  141/  907CF1 : (MACRO)             	gInsNull
-(1)  141/  907CF1 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  141/  907CF5 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  142/  907CF9 :                     
-(1)  143/  907CF9 :                     ; GemaTrk_doom_blk:
-(1)  144/  907CF9 :                     ; 	binclude "sound/tracks/doom_blk.bin"
-(1)  145/  907CF9 :                     ; GemaTrk_doom_patt:
-(1)  146/  907CF9 :                     ; 	binclude "sound/tracks/doom_patt.bin"
-(1)  147/  907CF9 :                     ; GemaTrk_doom_ins:
-(1)  148/  907CF9 :                     ; 	gInsFm    0,FmIns_Bass_3,0
-(1)  149/  907CF9 :                     ; 	gInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
-(1)  150/  907CF9 :                     ; 	gInsFm  -36,FmIns_DrumKick_gem,0
-(1)  151/  907CF9 :                     ; 	gInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
-(1)  152/  907CF9 :                     ; 	gInsFm    0,FmIns_Bass_heavy,0
-(1)  153/  907CF9 :                     ; 	gInsFm    0,FmIns_Guitar_1,0
-(1)  154/  907CF9 :                     ; 	gInsFm3   0,FmIns_Fm3_OpenHat
-(1)  155/  907CF9 :                     ;
-(1)  156/  907CF9 :                     ;
-(1)  157/  907CF9 :                     GemaTrk_moon_blk:
-(1)  158/  907CF9 :                     	binclude "sound/tracks/brinstar_blk.bin"
-(1)  159/  907D09 :                     GemaTrk_moon_patt:
-(1)  160/  907D09 :                     	binclude "sound/tracks/brinstar_patt.bin"
-(1)  161/  909820 :                     GemaTrk_moon_ins:
-(1)  162/  909820 : (MACRO)             	gInsPsg   0,$40,$FF,$00,$10,$10
-(1)  162/  909820 : 8000 40FF                   dc.b $80,0,$40,$FF
-(1)  162/  909824 : 0010 1000                   dc.b $00,$10,$10,$00
-(1)  163/  909828 : (MACRO)             	gInsPsgN  0,$00,$FF,$20,$10,$10,%100
-(1)  163/  909828 : 9000 00FF                   dc.b $90,0,$00,$FF
-(1)  163/  90982C : 2010 1004                   dc.b $20,$10,$10,%100
-(1)  164/  909830 : (MACRO)             	gInsDac  +17,DacIns_CdSnare,0,0
-(1)  164/  909830 : C011 9288                   dc.b $C0|0,+17,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
-(1)  164/  909834 : DB00 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  165/  909838 : (MACRO)             	gInsDac  +17,DacIns_CdSnare,0,0
-(1)  165/  909838 : C011 9288                   dc.b $C0|0,+17,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
-(1)  165/  90983C : DB00 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  166/  909840 : (MACRO)             	gInsFm  -12,FmIns_Brass_Eur,0
-(1)  166/  909840 : A0F4 90E8                   dc.b $A0,-12,((FMINS_BRASS_EUR>>16)&$FF),((FMINS_BRASS_EUR>>8)&$FF)
-(1)  166/  909844 : FD00 0000                   dc.b FMINS_BRASS_EUR&$FF,$00,$00,$00
-(1)  167/  909848 : (MACRO)             	gInsNull
-(1)  167/  909848 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  167/  90984C : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  168/  909850 : (MACRO)             	gInsFm    0,FmIns_Bass_groove,0
-(1)  168/  909850 : A000 90E7                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
-(1)  168/  909854 : 5D00 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
-(1)  169/  909858 : (MACRO)             	gInsNull
-(1)  169/  909858 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  169/  90985C : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  170/  909860 : (MACRO)             	gInsNull
-(1)  170/  909860 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  170/  909864 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  171/  909868 : (MACRO)             	gInsNull
-(1)  171/  909868 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  171/  90986C : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  172/  909870 : (MACRO)             	gInsNull
-(1)  172/  909870 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  172/  909874 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  173/  909878 : (MACRO)             	gInsFm  0,FmIns_Bass_calm,0
-(1)  173/  909878 : A000 90E7                   dc.b $A0,0,((FMINS_BASS_CALM>>16)&$FF),((FMINS_BASS_CALM>>8)&$FF)
-(1)  173/  90987C : 1D00 0000                   dc.b FMINS_BASS_CALM&$FF,$00,$00,$00
-(1)  174/  909880 : (MACRO)             	gInsPsg   0,$20,$10,$80,$00,$00
-(1)  174/  909880 : 8000 2010                   dc.b $80,0,$20,$10
-(1)  174/  909884 : 8000 0000                   dc.b $80,$00,$00,$00
-(1)  175/  909888 :                     
-(1)  176/  909888 :                     
-(1)  177/  909888 :                     ; 	gInsFm  -24,FmIns_Bass_calm,0
-(1)  178/  909888 :                     ; 	gInsPsg   0,$10,$80,$10,$20,$04
-(1)  179/  909888 :                     ; 	gInsFm  -12,FmIns_Brass_Eur,0
-(1)  180/  909888 :                     ; 	gInsPsg   0,$10,$80,$10,$F0,$01
-(1)  181/  909888 :                     ; 	gInsDac -12,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-(1)  182/  909888 :                     ; 	gInsPsgN  0,$00,$FF,$00,$08,$08,%100
-(1)  183/  909888 :                     ;
-(1)  184/  909888 :                     ;
-(1)  185/  909888 :                     ; GemaTrk_brinstr_blk:
-(1)  186/  909888 :                     ; 	binclude "sound/tracks/brinstr_blk.bin"
-(1)  187/  909888 :                     ; GemaTrk_brinstr_patt:
-(1)  188/  909888 :                     ; 	binclude "sound/tracks/brinstr_patt.bin"
-(1)  189/  909888 :                     ; GemaTrk_brinstr_ins:
-(1)  190/  909888 :                     ; 	gInsPsg   0,$40,$70,$30,$F0,$01
-(1)  191/  909888 :                     ; 	gInsPsgN  0,$00,$FF,$00,$01,$01,%011
-(1)  192/  909888 :                     ;
-(1)  193/  909888 :                     ; GemaTrk_gigalo_blk:
-(1)  194/  909888 :                     ; 	binclude "sound/tracks/gigalo_blk.bin"
-(1)  195/  909888 :                     ; GemaTrk_gigalo_patt:
-(1)  196/  909888 :                     ; 	binclude "sound/tracks/gigalo_patt.bin"
-(1)  197/  909888 :                     ; GemaTrk_gigalo_ins:
-(1)  198/  909888 :                     ; 	gInsPsg   0,$20,$80,$40,$08,$08
-(1)  199/  909888 :                     ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%100
-(1)  200/  909888 :                     ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%101
-(1)  201/  909888 :                     ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%110
-(1)  202/  909888 :                     ; 	gInsNull
-(1)  203/  909888 :                     ;
-(1)  204/  909888 :                     GemaTrk_mecano_blk:
-(1)  205/  909888 :                     	binclude "sound/tracks/ttzgf_blk.bin"
-(1)  206/  9098A9 :                     GemaTrk_mecano_patt:
-(1)  207/  9098A9 :                     	binclude "sound/tracks/ttzgf_patt.bin"
-(1)  208/  90BDFA :                     GemaTrk_mecano_ins:
-(1)  209/  90BDFA : (MACRO)             	gInsFm    0,FmIns_Bass_groove
-(1)  209/  90BDFA : A000 90E7                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
-(1)  209/  90BDFE : 5D00 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
-(1)  210/  90BE02 : (MACRO)             	gInsPsg   0,$40,$C0,$20,$10,$10
-(1)  210/  90BE02 : 8000 40C0                   dc.b $80,0,$40,$C0
-(1)  210/  90BE06 : 2010 1000                   dc.b $20,$10,$10,$00
-(1)  211/  90BE0A : (MACRO)             	gInsPsg   0,$60,$80,$20,$F0,$01
-(1)  211/  90BE0A : 8000 6080                   dc.b $80,0,$60,$80
-(1)  211/  90BE0E : 20F0 0100                   dc.b $20,$F0,$01,$00
-(1)  212/  90BE12 : (MACRO)             	gInsFm  -12,FmIns_Brass_Eur
-(1)  212/  90BE12 : A0F4 90E8                   dc.b $A0,-12,((FMINS_BRASS_EUR>>16)&$FF),((FMINS_BRASS_EUR>>8)&$FF)
-(1)  212/  90BE16 : FD00 0000                   dc.b FMINS_BRASS_EUR&$FF,$00,$00,$00
-(1)  213/  90BE1A : (MACRO)             	gInsPsgN 60,$00,$FF,$20,$10,$10,%111
-(1)  213/  90BE1A : 903C 00FF                   dc.b $90,60,$00,$FF
-(1)  213/  90BE1E : 2010 1007                   dc.b $20,$10,$10,%111
-(1)  214/  90BE22 : (MACRO)             	gInsDac   0,DacIns_SaurKick,0,0
-(1)  214/  90BE22 : C000 92A2                   dc.b $C0|0,0,((DACINS_SAURKICK>>16)&$FF),((DACINS_SAURKICK>>8)&$FF)
-(1)  214/  90BE26 : D200 0000                   dc.b DACINS_SAURKICK&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  215/  90BE2A : (MACRO)             	gInsDac   0,DacIns_CdSnare,0,0
-(1)  215/  90BE2A : C000 9288                   dc.b $C0|0,0,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
-(1)  215/  90BE2E : DB00 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  216/  90BE32 : (MACRO)             	gInsFm  -12,FmIns_Trumpet_2
-(1)  216/  90BE32 : A0F4 90E8                   dc.b $A0,-12,((FMINS_TRUMPET_2>>16)&$FF),((FMINS_TRUMPET_2>>8)&$FF)
-(1)  216/  90BE36 : 1D00 0000                   dc.b FMINS_TRUMPET_2&$FF,$00,$00,$00
-(1)  217/  90BE3A : (MACRO)             	gInsFm  -12,FmIns_Ding_toy
-(1)  217/  90BE3A : A0F4 90E8                   dc.b $A0,-12,((FMINS_DING_TOY>>16)&$FF),((FMINS_DING_TOY>>8)&$FF)
-(1)  217/  90BE3E : BD00 0000                   dc.b FMINS_DING_TOY&$FF,$00,$00,$00
-(1)  218/  90BE42 : (MACRO)             	gInsNull
-(1)  218/  90BE42 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  218/  90BE46 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  219/  90BE4A : (MACRO)             	gInsNull
-(1)  219/  90BE4A : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  219/  90BE4E : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  220/  90BE52 : (MACRO)             	gInsNull
-(1)  220/  90BE52 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  220/  90BE56 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  221/  90BE5A : (MACRO)             	gInsNull
-(1)  221/  90BE5A : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  221/  90BE5E : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  222/  90BE62 : (MACRO)             	gInsNull
-(1)  222/  90BE62 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  222/  90BE66 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  223/  90BE6A : (MACRO)             	gInsNull
-(1)  223/  90BE6A : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  223/  90BE6E : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  224/  90BE72 : (MACRO)             	gInsNull
-(1)  224/  90BE72 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  224/  90BE76 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  225/  90BE7A : (MACRO)             	gInsNull
-(1)  225/  90BE7A : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  225/  90BE7E : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  226/  90BE82 : (MACRO)             	gInsNull
-(1)  226/  90BE82 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  226/  90BE86 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  227/  90BE8A : (MACRO)             	gInsNull
-(1)  227/  90BE8A : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  227/  90BE8E : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  228/  90BE92 : (MACRO)             	gInsNull
-(1)  228/  90BE92 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  228/  90BE96 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  229/  90BE9A :                     ;
-(1)  230/  90BE9A :                     ; ; 	gInsPsgN  0,$00,$00,$00,$08,$08,%100
-(1)  231/  90BE9A :                     ; ; 	gInsPsgN  0,$00,$00,$00,$10,$10,%100
-(1)  232/  90BE9A :                     ; ; 	gInsFm    0,FmIns_PianoM1,0
-(1)  233/  90BE9A :                     ; ; 	gInsPsg   0,$10,$00,$10,$02,$02
-(1)  234/  90BE9A :                     ; ; 	gInsFm    0,FmIns_Bass_mecan,0
-(1)  235/  90BE9A :                     ; ; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-(1)  236/  90BE9A :                     ; ; 	gInsNull
-(1)  237/  90BE9A :                     ; ; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-(1)  238/  90BE9A :                     ; ; 	gInsNull
-(1)  239/  90BE9A :                     ; ; 	gInsNull
-(1)  240/  90BE9A :                     ; ; 	gInsNull
-(1)  241/  90BE9A :                     ; ; 	gInsNull
-(1)  242/  90BE9A :                     ; ; 	gInsNull
-(1)  243/  90BE9A :                     ; ; 	gInsNull
-(1)  244/  90BE9A :                     ; ; 	gInsFm    0,FmIns_Trumpet_2,0
-(1)  245/  90BE9A :                     ; ; 	gInsNull
-(1)  246/  90BE9A :                     ;
-(1)  247/  90BE9A :                     GemaTrk_mars_blk:
-(1)  248/  90BE9A :                     	binclude "sound/tracks/mars_blk.bin"
-(1)  249/  90BEA8 :                     GemaTrk_mars_patt:
-(1)  250/  90BEA8 :                     	binclude "sound/tracks/mars_patt.bin"
-(1)  251/  90E5D5 :                     GemaTrk_mars_ins:
-(1)  252/  90E5D5 : (MACRO)             	gInsDac   0,DacIns_CdSnare,0,0
-(1)  252/  90E5D5 : C000 9288                   dc.b $C0|0,0,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
-(1)  252/  90E5D9 : DB00 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  253/  90E5DD : (MACRO)             	gInsDac   0,DacIns_SaurKick,0,0
-(1)  253/  90E5DD : C000 92A2                   dc.b $C0|0,0,((DACINS_SAURKICK>>16)&$FF),((DACINS_SAURKICK>>8)&$FF)
-(1)  253/  90E5E1 : D200 0000                   dc.b DACINS_SAURKICK&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
-(1)  254/  90E5E5 : (MACRO)             	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
-(1)  254/  90E5E5 : 9000 20FF                   dc.b $90,0,$20,$FF
-(1)  254/  90E5E9 : 0030 3004                   dc.b $00,$30,$30,%100
-(1)  255/  90E5ED : (MACRO)             	gInsFm    0,FmIns_PianoM1,0
-(1)  255/  90E5ED : A000 90E6                   dc.b $A0,0,((FMINS_PIANOM1>>16)&$FF),((FMINS_PIANOM1>>8)&$FF)
-(1)  255/  90E5F1 : FD00 0000                   dc.b FMINS_PIANOM1&$FF,$00,$00,$00
-(1)  256/  90E5F5 : (MACRO)             	gInsPsg   0,$50,$20,$40,$00,$01
-(1)  256/  90E5F5 : 8000 5020                   dc.b $80,0,$50,$20
-(1)  256/  90E5F9 : 4000 0100                   dc.b $40,$00,$01,$00
-(1)  257/  90E5FD : (MACRO)             	gInsFm    0,FmIns_Bass_groove,0
-(1)  257/  90E5FD : A000 90E7                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
-(1)  257/  90E601 : 5D00 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
-(1)  258/  90E605 : (MACRO)             	gInsNull
-(1)  258/  90E605 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  258/  90E609 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  259/  90E60D : (MACRO)             	gInsNull
-(1)  259/  90E60D : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  259/  90E611 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  260/  90E615 : (MACRO)             	gInsFm    0,FmIns_Guitar_heavy,0
-(1)  260/  90E615 : A000 90E6                   dc.b $A0,0,((FMINS_GUITAR_HEAVY>>16)&$FF),((FMINS_GUITAR_HEAVY>>8)&$FF)
-(1)  260/  90E619 : 7D00 0000                   dc.b FMINS_GUITAR_HEAVY&$FF,$00,$00,$00
-(1)  261/  90E61D : (MACRO)             	gInsNull
-(1)  261/  90E61D : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  261/  90E621 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  262/  90E625 : (MACRO)             	gInsNull
-(1)  262/  90E625 : FF00 0000                           dc.b  -1,$00,$00,$00
-(1)  262/  90E629 : 0000 0000                           dc.b $00,$00,$00,$00
-(1)  263/  90E62D :                     ;
-(1)  264/  90E62D :                     ; GemaTrk_jackrab_blk:
-(1)  265/  90E62D :                     ; 	binclude "sound/tracks/jackrab_blk.bin"
-(1)  266/  90E62D :                     ; GemaTrk_jackrab_patt:
-(1)  267/  90E62D :                     ; 	binclude "sound/tracks/jackrab_patt.bin"
-(1)  268/  90E62D :                     ; GemaTrk_jackrab_ins:
-(1)  269/  90E62D :                     ; 	gInsFm    0,FmIns_Ambient_Spook,0
-(1)  270/  90E62D :                     ; 	gInsNull
-(1)  271/  90E62D :                     ; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
-(1)  272/  90E62D :                     ; 	gInsPsgN  0,$20,$FF,$10,$10,$10,%100
-(1)  273/  90E62D :                     ; 	gInsNull
-(1)  274/  90E62D :                     ; 	gInsNull
-(1)  275/  90E62D :                     ; 	gInsFm    0,FmIns_PianoM1,0
-(1)  276/  90E62D :                     ; 	gInsNull
-(1)  277/  90E62D :                     ; 	gInsNull
-(1)  278/  90E62D :                     ; 	gInsPsg   0,$20,$FF,$20,$04,$04
-(1)  279/  90E62D :                     ; 	gInsFm    0,FmIns_Ambient_Dark,0
-(1)  280/  90E62D :                     ; 	gInsNull
-(1)  281/  90E62D :                     ; 	gInsFm    0,FmIns_Ding_Toy,0
-(1)  282/  90E62D :                     ; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
-(1)  283/  90E62D :                     ; 	gInsFm    0,FmIns_Trumpet_2,0
-(1)  284/  90E62D :                     ; 	gInsNull
-(1)  285/  90E62D :                     
-      73/  90E62D :                     		include "sound/instr.asm"
-(1)    1/  90E62D :                     ; ====================================================================
-(1)    2/  90E62D :                     ; ----------------------------------------------------------------
-(1)    3/  90E62D :                     ; PSG, FM and DAC instruments go here
-(1)    4/  90E62D :                     ; ----------------------------------------------------------------
-(1)    5/  90E62D :                     
-(1)    6/  90E62D :                     ; Normal FM ins: $20
-(1)    7/  90E62D :                     ; Special FM ins: $28
-(1)    8/  90E62D :                     
-(1)    9/  90E62D :                     FmIns_Fm3_OpenHat:
-(1)   10/  90E62D :                     		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
-(1)   11/  90E655 :                     FmIns_Fm3_ClosedHat:
-(1)   12/  90E655 :                     		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
-(1)   13/  90E67D :                     
-(1)   14/  90E67D :                     Fmins_Guitar_Heavy:
-(1)   15/  90E67D :                     		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
-(1)   16/  90E69D :                     Fmins_Guitar_puy:
-(1)   17/  90E69D :                     		binclude "sound/instr/fm/guitar_puy.gsx",$2478,$20
-(1)   18/  90E6BD :                     Fmins_Guitar_puy_2:
-(1)   19/  90E6BD :                     		binclude "sound/instr/fm/guitar_puy_2.gsx",$2478,$20
-(1)   20/  90E6DD :                     ;
-(1)   21/  90E6DD :                     
-(1)   22/  90E6DD :                     FmIns_DrumKick_gem:
-(1)   23/  90E6DD :                     		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
-(1)   24/  90E6FD :                     ;
-(1)   25/  90E6FD :                     ; FmIns_DrumKick:
-(1)   26/  90E6FD :                     ; 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
-(1)   27/  90E6FD :                     ; FmIns_DrumSnare:
-(1)   28/  90E6FD :                     ; 		binclude "sound/instr/fm/drum_snare.gsx",$2478,$20
-(1)   29/  90E6FD :                     ; ; ; FmIns_DrumCloseHat:
-(1)   30/  90E6FD :                     ; ; ; 		binclude "sound/instr/fm/drum_closehat.gsx",$2478,$20
-(1)   31/  90E6FD :                     FmIns_PianoM1:
-(1)   32/  90E6FD :                     		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
-(1)   33/  90E71D :                     ; FmIns_PianoM116:
-(1)   34/  90E71D :                     ; 		binclude "sound/instr/fm/piano_m116.gsx",$2478,$20
-(1)   35/  90E71D :                     
-(1)   36/  90E71D :                     ; ;
-(1)   37/  90E71D :                     ; ; ; FmIns_Bass_gum:
-(1)   38/  90E71D :                     ; ; ; 		binclude "sound/instr/fm/bass_gum.gsx",$2478,$20
-(1)   39/  90E71D :                     FmIns_Bass_calm:
-(1)   40/  90E71D :                     		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
-(1)   41/  90E73D :                     ; FmIns_Bass_heavy:
-(1)   42/  90E73D :                     ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
-(1)   43/  90E73D :                     ; ; ; FmIns_Bass_ambient:
-(1)   44/  90E73D :                     ; ; ; 		binclude "sound/instr/fm/bass_ambient.gsx",$2478,$20
-(1)   45/  90E73D :                     ; ; ; FmIns_Brass_gummy:
-(1)   46/  90E73D :                     ; ; ; 		binclude "sound/instr/fm/brass_gummy.gsx",$2478,$20
-(1)   47/  90E73D :                     ; ; ; FmIns_Flaute_1:
-(1)   48/  90E73D :                     ; ; ; 		binclude "sound/instr/fm/flaute_1.gsx",$2478,$20
-(1)   49/  90E73D :                     ; FmIns_Bass_1:
-(1)   50/  90E73D :                     ; 		binclude "sound/instr/fm/bass_1.gsx",$2478,$20
-(1)   51/  90E73D :                     ; FmIns_Bass_2:
-(1)   52/  90E73D :                     ; 		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
-(1)   53/  90E73D :                     FmIns_Bass_3:
-(1)   54/  90E73D :                     		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
-(1)   55/  90E75D :                     ; FmIns_Bass_4:
-(1)   56/  90E75D :                     ; 		binclude "sound/instr/fm/bass_4.gsx",$2478,$20
-(1)   57/  90E75D :                     ; FmIns_Bass_5:
-(1)   58/  90E75D :                     ; 		binclude "sound/instr/fm/bass_5.gsx",$2478,$20
-(1)   59/  90E75D :                     ; FmIns_Bass_6:
-(1)   60/  90E75D :                     ; 		binclude "sound/instr/fm/bass_6.gsx",$2478,$20
-(1)   61/  90E75D :                     FmIns_Bass_groove:
-(1)   62/  90E75D :                     		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
-(1)   63/  90E77D :                     FmIns_Bass_groove_2:
-(1)   64/  90E77D :                     		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
-(1)   65/  90E79D :                     FmIns_Bass_italo:
-(1)   66/  90E79D :                     		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
-(1)   67/  90E7BD :                     FmIns_Bass_kon:
-(1)   68/  90E7BD :                     		binclude "sound/instr/fm/bass_kon.gsx",$2478,$20
-(1)   69/  90E7DD :                     
-(1)   70/  90E7DD :                     ; FmIns_Bass_mecan:
-(1)   71/  90E7DD :                     ; 		binclude "sound/instr/fm/bass_mecan.gsx",$2478,$20
-(1)   72/  90E7DD :                     ;
-(1)   73/  90E7DD :                     ; ; ; FmIns_Bass_heavy:
-(1)   74/  90E7DD :                     ; ; ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
-(1)   75/  90E7DD :                     ; ; ; FmIns_Bass_metal:
-(1)   76/  90E7DD :                     ; ; ; 		binclude "sound/instr/fm/bass_metal.gsx",$2478,$20
-(1)   77/  90E7DD :                     FmIns_Bass_synth:
-(1)   78/  90E7DD :                     		binclude "sound/instr/fm/bass_synth_1.gsx",$2478,$20
-(1)   79/  90E7FD :                     ; FmIns_Guitar_1:
-(1)   80/  90E7FD :                     ; 		binclude "sound/instr/fm/guitar_1.gsx",$2478,$20
-(1)   81/  90E7FD :                     ; ; ; FmIns_Horn_1:
-(1)   82/  90E7FD :                     ; ; ; 		binclude "sound/instr/fm/horn_1.gsx",$2478,$20
-(1)   83/  90E7FD :                     FmIns_Organ_M1:
-(1)   84/  90E7FD :                     		binclude "sound/instr/fm/organ_m1.gsx",$2478,$20
-(1)   85/  90E81D :                     ; ; ; FmIns_Bass_Beach:
-(1)   86/  90E81D :                     ; ; ; 		binclude "sound/instr/fm/bass_beach.gsx",$2478,$20
-(1)   87/  90E81D :                     ; ; ; FmIns_Bass_Beach_2:
-(1)   88/  90E81D :                     ; ; ; 		binclude "sound/instr/fm/bass_beach_2.gsx",$2478,$20
-(1)   89/  90E81D :                     ; ; ; FmIns_Brass_Cave:
-(1)   90/  90E81D :                     ; ; ; 		binclude "sound/instr/fm/brass_cave.gsx",$2478,$20
-(1)   91/  90E81D :                     ; ; FmIns_Brass_Gem:
-(1)   92/  90E81D :                     ; ; 		binclude "sound/instr/fm/brass_gem.gsx",$2478,$20
-(1)   93/  90E81D :                     ; ; FmIns_Piano_Small:
-(1)   94/  90E81D :                     ; ; 		binclude "sound/instr/fm/piano_small.gsx",$2478,$20
-(1)   95/  90E81D :                     ; ; FmIns_Piano:
-(1)   96/  90E81D :                     ; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
-(1)   97/  90E81D :                     FmIns_Trumpet_2:
-(1)   98/  90E81D :                     		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
-(1)   99/  90E83D :                     FmIns_Trumpet_kon:
-(1)  100/  90E83D :                     		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
-(1)  101/  90E85D :                     FmIns_Trumpet_puy:
-(1)  102/  90E85D :                     		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
-(1)  103/  90E87D :                     
-(1)  104/  90E87D :                     ; ; ; FmIns_Bell_Glass:
-(1)  105/  90E87D :                     ; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
-(1)  106/  90E87D :                     ; ; ; FmIns_Marimba_1:
-(1)  107/  90E87D :                     ; ; ; 		binclude "sound/instr/fm/marimba_1.gsx",$2478,$20
-(1)  108/  90E87D :                     
-(1)  109/  90E87D :                     FmIns_Ambient_dark:
-(1)  110/  90E87D :                     		binclude "sound/instr/fm/ambient_dark.gsx",$2478,$20
-(1)  111/  90E89D :                     FmIns_Ambient_spook:
-(1)  112/  90E89D :                     		binclude "sound/instr/fm/ambient_spook.gsx",$2478,$20
-(1)  113/  90E8BD :                     ; FmIns_Ambient_3:
-(1)  114/  90E8BD :                     ; 		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
-(1)  115/  90E8BD :                     FmIns_Ding_toy:
-(1)  116/  90E8BD :                     		binclude "sound/instr/fm/ding_toy.gsx",$2478,$20
-(1)  117/  90E8DD :                     FmIns_Bell_China:
-(1)  118/  90E8DD :                     		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
-(1)  119/  90E8FD :                     FmIns_Brass_Eur:
-(1)  120/  90E8FD :                     		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
-(1)  121/  90E91D :                     FmIns_Brass_Puy:
-(1)  122/  90E91D :                     		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
-(1)  123/  90E93D :                     
-(1)  124/  90E93D :                     FmIns_Flaute_cave:
-(1)  125/  90E93D :                     		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
-(1)  126/  90E95D :                     
-(1)  127/  90E95D :                     FmIns_Banjo_puy:
-(1)  128/  90E95D :                     		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
-(1)  129/  90E97D :                     
-(1)  130/  90E97D :                     ; --------------------------------------------------------
-(1)  131/  90E97D :                     ; DAC samples
-(1)  132/  90E97D :                     ; --------------------------------------------------------
-(1)  133/  90E97D :                     
-(1)  134/  90E97D :                     ; Special include macro for samples
-(1)  135/  90E97D :                     ;
-(1)  136/  90E97D :                     ; only for tracker songs.
-(1)  137/  90E97D :                     gSmpl macro locate
-(1)  138/  90E97D :                     .start
-(1)  139/  90E97D :                     	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
-(1)  140/  90E97D :                     	binclude locate,$2C	; actual data
-(1)  141/  90E97D :                     .end
-(1)  142/  90E97D :                     	endm
-(1)  143/  90E97D :                     
-(1)  144/  90E97D :                     DacIns_Magic2:
-(1)  145/  90E97D : (MACRO)             	gSmpl "sound/instr/smpl/magic_2.wav"
-(1)  145/  90E97D :                     .start
-(1)  145/  90E97D : 378E 01                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
-(1)  145/  90E980 :                             binclude "sound/instr/smpl/magic_2.wav",$2C     ; actual data
-(1)  145/  9277B4 :                     .end
-(1)  146/  9277B4 :                     DacIns_Snare_Gem:
-(1)  147/  9277B4 : (MACRO)             	gSmpl "sound/instr/smpl/snare_lobo.wav"
-(1)  147/  9277B4 :                     .start
-(1)  147/  9277B4 : 2711 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
-(1)  147/  9277B7 :                             binclude "sound/instr/smpl/snare_lobo.wav",$2C     ; actual data
-(1)  147/  9288DB :                     .end
-(1)  148/  9288DB :                     DacIns_CdSnare:
-(1)  149/  9288DB : (MACRO)             	gSmpl "sound/instr/smpl/cd_snare.wav"
-(1)  149/  9288DB :                     .start
-(1)  149/  9288DB : F719 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
-(1)  149/  9288DE :                             binclude "sound/instr/smpl/cd_snare.wav",$2C     ; actual data
-(1)  149/  92A2D2 :                     .end
-(1)  150/  92A2D2 :                     DacIns_SaurKick:
-(1)  151/  92A2D2 : (MACRO)             	gSmpl "sound/instr/smpl/sauron_kick.wav"
-(1)  151/  92A2D2 :                     .start
-(1)  151/  92A2D2 : 910F 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
-(1)  151/  92A2D5 :                             binclude "sound/instr/smpl/sauron_kick.wav",$2C     ; actual data
-(1)  151/  92B263 :                     .end
-(1)  152/  92B263 :                     DacIns_SaurSnare:
-(1)  153/  92B263 : (MACRO)             	gSmpl "sound/instr/smpl/sauron_snare.wav"
-(1)  153/  92B263 :                     .start
-(1)  153/  92B263 : E30C 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
-(1)  153/  92B266 :                             binclude "sound/instr/smpl/sauron_snare.wav",$2C     ; actual data
-(1)  153/  92BF46 :                     .end
-(1)  154/  92BF46 :                     
-      74/  92BF46 :                     		include "data/md_bank0.asm"
-(1)    1/  92BF46 :                     ; ====================================================================
-(1)    2/  92BF46 :                     ; ----------------------------------------------------------------
-(1)    3/  92BF46 :                     ; Single 68k DATA BANK for MD ($900000-$9FFFFF)
-(1)    4/  92BF46 :                     ; for stuff other than MD's DMA data
-(1)    5/  92BF46 :                     ; 
-(1)    6/  92BF46 :                     ; Maximum size: $0FFFFF bytes per bank
-(1)    7/  92BF46 :                     ; ----------------------------------------------------------------
-(1)    8/  92BF46 :                     
-(1)    9/  92BF46 :                     		align $8000
-(1)   10/  930000 :                     PCM_START:	binclude "sound/TEST_MD.wav",$2C,$80000
-(1)   11/  9B0000 :                     PCM_END:
-(1)   12/  9B0000 :                     
-(1)   13/  9B0000 :                     
-      75/   B0000 :                     		dephase
-      76/   B0000 :                     ; 		org $100000-4				; Fill this bank and
-      77/   B0000 :                     ; 		dc.b "BNK0"				; add a tag at the end
-      78/   B0000 :                     
-      79/   B0000 :                     ; 		phase $900000+*
-      80/   B0000 :                     ; 		include "data/md_bank1.asm"
-      81/   B0000 :                     ; 		dephase
-      82/   B0000 :                     ; 		org $200000-4
-      83/   B0000 :                     ; 		dc.b "BNK1"
-      84/   B0000 :                     
-      85/   B0000 :                     ; 		phase $900000+*
-      86/   B0000 :                     ; 		include "data/md_bank2.asm"
-      87/   B0000 :                     ; 		dephase
-      88/   B0000 :                     ; 		org $300000-4
-      89/   B0000 :                     ; 		dc.b "BNK2"
-      90/   B0000 :                     
-      91/   B0000 :                     ; 		phase $900000+*
-      92/   B0000 :                     ; 		include "data/md_bank3.asm"
-      93/   B0000 :                     ; 		dephase
-      94/   B0000 :                     ; 		org $400000-4
-      95/   B0000 :                     ; 		dc.b "BNK3"
-      96/   B0000 :                     
-      97/   B0000 :                     ; ====================================================================
-      98/   B0000 :                     ; ----------------------------------------------------------------
-      99/   B0000 :                     ; DMA transfer data, RV=1 only.
-     100/   B0000 :                     ; ----------------------------------------------------------------
-     101/   B0000 :                     
-     102/   B0000 :                     		align 4
-     103/   B0000 :                     		include "data/md_dma.asm"
-(1)    1/   B0000 :                     ; ====================================================================
-(1)    2/   B0000 :                     ; ----------------------------------------------------------------
-(1)    3/   B0000 :                     ; DMA ROM DATA Transfer section, no bank limitations
-(1)    4/   B0000 :                     ; 
-(1)    5/   B0000 :                     ; RV bit must be set to access here
-(1)    6/   B0000 :                     ; ----------------------------------------------------------------
-(1)    7/   B0000 :                     
-(1)    8/   B0000 :                     		align $8000
-(1)    9/   B0000 : 4D44 2044 4154 4120 		dc.b "MD DATA GOES HERE"
+(1)   83/  90458E :                     GemaTrk_blk_chrono:
+(1)   84/  90458E :                     	binclude "sound/tracks/chrono_blk.bin"
+(1)   85/  904599 :                     GemaTrk_patt_chrono:
+(1)   86/  904599 :                     	binclude "sound/tracks/chrono_patt.bin"
+(1)   87/  90AD58 :                     GemaTrk_ins_chrono:
+(1)   88/  90AD58 : (MACRO)             	gInsPsg  +12,$50,$20,$30,$10,$04
+(1)   88/  90AD58 : 800C 5020                   dc.b $80,+12,$50,$20
+(1)   88/  90AD5C : 3010 0400                   dc.b $30,$10,$04,$00
+(1)   89/  90AD60 : (MACRO)             	gInsFm     0,FmIns_Bell_China
+(1)   89/  90AD60 : A000 9150                   dc.b $A0,0,((FMINS_BELL_CHINA>>16)&$FF),((FMINS_BELL_CHINA>>8)&$FF)
+(1)   89/  90AD64 : E700 0000                   dc.b FMINS_BELL_CHINA&$FF,$00,$00,$00
+(1)   90/  90AD68 : (MACRO)             	gInsFm     0,FmIns_Bass_calm
+(1)   90/  90AD68 : A000 914F                   dc.b $A0,0,((FMINS_BASS_CALM>>16)&$FF),((FMINS_BASS_CALM>>8)&$FF)
+(1)   90/  90AD6C : 2700 0000                   dc.b FMINS_BASS_CALM&$FF,$00,$00,$00
+(1)   91/  90AD70 : (MACRO)             	gInsPsgN   0,$00,$00,$00,$08,$08,%110
+(1)   91/  90AD70 : 9000 0000                   dc.b $90,0,$00,$00
+(1)   91/  90AD74 : 0008 0806                   dc.b $00,$08,$08,%110
+(1)   92/  90AD78 : (MACRO)             	gInsPsgN   0,$00,$00,$00,$08,$08,%101
+(1)   92/  90AD78 : 9000 0000                   dc.b $90,0,$00,$00
+(1)   92/  90AD7C : 0008 0805                   dc.b $00,$08,$08,%101
+(1)   93/  90AD80 : (MACRO)             	gInsPsgN   0,$00,$00,$00,$10,$10,%100
+(1)   93/  90AD80 : 9000 0000                   dc.b $90,0,$00,$00
+(1)   93/  90AD84 : 0010 1004                   dc.b $00,$10,$10,%100
+(1)   94/  90AD88 : (MACRO)             	gInsFm   -12,FmIns_Brass_Eur,0
+(1)   94/  90AD88 : A0F4 9151                   dc.b $A0,-12,((FMINS_BRASS_EUR>>16)&$FF),((FMINS_BRASS_EUR>>8)&$FF)
+(1)   94/  90AD8C : 0700 0000                   dc.b FMINS_BRASS_EUR&$FF,$00,$00,$00
+(1)   95/  90AD90 : (MACRO)             	gInsNull
+(1)   95/  90AD90 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)   95/  90AD94 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)   96/  90AD98 :                     
+(1)   97/  90AD98 :                     GemaTrk_blk_TEST:
+(1)   98/  90AD98 :                     	binclude "sound/tracks/test_blk.bin"
+(1)   99/  90AD9B :                     GemaTrk_patt_TEST:
+(1)  100/  90AD9B :                     	binclude "sound/tracks/test_patt.bin"
+(1)  101/  90ADE9 :                     GemaTrk_ins_TEST:
+(1)  102/  90ADE9 :                     ; 	gInsPsg 0,$00,$00,$00,$00,$00
+(1)  103/  90ADE9 :                     ; 	gInsPsgN 0,$00,$00,$00,$00,$00,%000
+(1)  104/  90ADE9 :                     ; 	gInsPsgN +24,$00,$00,$00,$00,$00,%011
+(1)  105/  90ADE9 :                     
+(1)  106/  90ADE9 : (MACRO)             	gInsFm    0,FmIns_Bass_groove
+(1)  106/  90ADE9 : A000 914F                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
+(1)  106/  90ADED : 6700 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
+(1)  107/  90ADF1 : (MACRO)             	gInsFm3   0,FmIns_Fm3_OpenHat
+(1)  107/  90ADF1 : B000 914E                   dc.b $B0,0,((FMINS_FM3_OPENHAT>>16)&$FF),((FMINS_FM3_OPENHAT>>8)&$FF)
+(1)  107/  90ADF5 : 3700 0000                   dc.b FMINS_FM3_OPENHAT&$FF,$00,$00,$00
+(1)  108/  90ADF9 : (MACRO)             	gInsDac   0,DacIns_CdSnare,0,0
+(1)  108/  90ADF9 : C000 92F0                   dc.b $C0|0,0,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
+(1)  108/  90ADFD : E500 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  109/  90AE01 :                     
+(1)  110/  90AE01 :                     ; 	gInsFm3   0,FmIns_Fm3_ClosedHat
+(1)  111/  90AE01 :                     ; 	gInsFm3   0,FmIns_Fm3_OpenHat
+(1)  112/  90AE01 :                     ; 	gInsFm 0,FmIns_Trumpet_2
+(1)  113/  90AE01 :                     ; 	gInsFm 0,FmIns_bass_kon
+(1)  114/  90AE01 :                     
+(1)  115/  90AE01 :                     GemaTrk_blk_TEST2:
+(1)  116/  90AE01 :                     	binclude "sound/tracks/puyo2_blk.bin"
+(1)  117/  90AE0C :                     GemaTrk_patt_TEST2:
+(1)  118/  90AE0C :                     	binclude "sound/tracks/puyo2_patt.bin"
+(1)  119/  90E453 :                     GemaTrk_ins_TEST2:
+(1)  120/  90E453 : (MACRO)             	gInsFm 0,FmIns_guitar_puy
+(1)  120/  90E453 : A000 914E                   dc.b $A0,0,((FMINS_GUITAR_PUY>>16)&$FF),((FMINS_GUITAR_PUY>>8)&$FF)
+(1)  120/  90E457 : A700 0000                   dc.b FMINS_GUITAR_PUY&$FF,$00,$00,$00
+(1)  121/  90E45B : (MACRO)             	gInsNull
+(1)  121/  90E45B : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  121/  90E45F : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  122/  90E463 : (MACRO)             	gInsFm 0,FmIns_Bass_groove_2
+(1)  122/  90E463 : A000 914F                   dc.b $A0,0,((FMINS_BASS_GROOVE_2>>16)&$FF),((FMINS_BASS_GROOVE_2>>8)&$FF)
+(1)  122/  90E467 : 8700 0000                   dc.b FMINS_BASS_GROOVE_2&$FF,$00,$00,$00
+(1)  123/  90E46B : (MACRO)             	gInsFm -12,FmIns_Brass_Puy
+(1)  123/  90E46B : A0F4 9151                   dc.b $A0,-12,((FMINS_BRASS_PUY>>16)&$FF),((FMINS_BRASS_PUY>>8)&$FF)
+(1)  123/  90E46F : 2700 0000                   dc.b FMINS_BRASS_PUY&$FF,$00,$00,$00
+(1)  124/  90E473 : (MACRO)             	gInsDac +24,DacIns_SaurKick,0,0
+(1)  124/  90E473 : C018 930A                   dc.b $C0|0,+24,((DACINS_SAURKICK>>16)&$FF),((DACINS_SAURKICK>>8)&$FF)
+(1)  124/  90E477 : DC00 0000                   dc.b DACINS_SAURKICK&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  125/  90E47B : (MACRO)             	gInsNull
+(1)  125/  90E47B : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  125/  90E47F : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  126/  90E483 : (MACRO)             	gInsNull
+(1)  126/  90E483 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  126/  90E487 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  127/  90E48B : (MACRO)             	gInsFm3   0,FmIns_Fm3_OpenHat
+(1)  127/  90E48B : B000 914E                   dc.b $B0,0,((FMINS_FM3_OPENHAT>>16)&$FF),((FMINS_FM3_OPENHAT>>8)&$FF)
+(1)  127/  90E48F : 3700 0000                   dc.b FMINS_FM3_OPENHAT&$FF,$00,$00,$00
+(1)  128/  90E493 : (MACRO)             	gInsDac +24,DacIns_CdSnare,0,0
+(1)  128/  90E493 : C018 92F0                   dc.b $C0|0,+24,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
+(1)  128/  90E497 : E500 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  129/  90E49B : (MACRO)             	gInsNull
+(1)  129/  90E49B : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  129/  90E49F : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  130/  90E4A3 : (MACRO)             	gInsNull
+(1)  130/  90E4A3 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  130/  90E4A7 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  131/  90E4AB : (MACRO)             	gInsNull
+(1)  131/  90E4AB : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  131/  90E4AF : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  132/  90E4B3 : (MACRO)             	gInsNull
+(1)  132/  90E4B3 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  132/  90E4B7 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  133/  90E4BB : (MACRO)             	gInsFm -36,FmIns_Banjo_puy
+(1)  133/  90E4BB : A0DC 9151                   dc.b $A0,-36,((FMINS_BANJO_PUY>>16)&$FF),((FMINS_BANJO_PUY>>8)&$FF)
+(1)  133/  90E4BF : 6700 0000                   dc.b FMINS_BANJO_PUY&$FF,$00,$00,$00
+(1)  134/  90E4C3 : (MACRO)             	gInsFm -12,FmIns_Trumpet_Puy
+(1)  134/  90E4C3 : A0F4 9150                   dc.b $A0,-12,((FMINS_TRUMPET_PUY>>16)&$FF),((FMINS_TRUMPET_PUY>>8)&$FF)
+(1)  134/  90E4C7 : 6700 0000                   dc.b FMINS_TRUMPET_PUY&$FF,$00,$00,$00
+(1)  135/  90E4CB : (MACRO)             	gInsFm 0,FmIns_guitar_puy_2
+(1)  135/  90E4CB : A000 914E                   dc.b $A0,0,((FMINS_GUITAR_PUY_2>>16)&$FF),((FMINS_GUITAR_PUY_2>>8)&$FF)
+(1)  135/  90E4CF : C700 0000                   dc.b FMINS_GUITAR_PUY_2&$FF,$00,$00,$00
+(1)  136/  90E4D3 : (MACRO)             	gInsNull
+(1)  136/  90E4D3 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  136/  90E4D7 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  137/  90E4DB : (MACRO)             	gInsNull
+(1)  137/  90E4DB : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  137/  90E4DF : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  138/  90E4E3 : (MACRO)             	gInsNull
+(1)  138/  90E4E3 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  138/  90E4E7 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  139/  90E4EB : (MACRO)             	gInsNull
+(1)  139/  90E4EB : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  139/  90E4EF : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  140/  90E4F3 : (MACRO)             	gInsNull
+(1)  140/  90E4F3 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  140/  90E4F7 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  141/  90E4FB : (MACRO)             	gInsNull
+(1)  141/  90E4FB : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  141/  90E4FF : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  142/  90E503 :                     
+(1)  143/  90E503 :                     ; GemaTrk_doom_blk:
+(1)  144/  90E503 :                     ; 	binclude "sound/tracks/doom_blk.bin"
+(1)  145/  90E503 :                     ; GemaTrk_doom_patt:
+(1)  146/  90E503 :                     ; 	binclude "sound/tracks/doom_patt.bin"
+(1)  147/  90E503 :                     ; GemaTrk_doom_ins:
+(1)  148/  90E503 :                     ; 	gInsFm    0,FmIns_Bass_3,0
+(1)  149/  90E503 :                     ; 	gInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
+(1)  150/  90E503 :                     ; 	gInsFm  -36,FmIns_DrumKick_gem,0
+(1)  151/  90E503 :                     ; 	gInsDac -12,DacIns_Snare_Gem,DacIns_Snare_Gem_e,0,0
+(1)  152/  90E503 :                     ; 	gInsFm    0,FmIns_Bass_heavy,0
+(1)  153/  90E503 :                     ; 	gInsFm    0,FmIns_Guitar_1,0
+(1)  154/  90E503 :                     ; 	gInsFm3   0,FmIns_Fm3_OpenHat
+(1)  155/  90E503 :                     ;
+(1)  156/  90E503 :                     ;
+(1)  157/  90E503 :                     GemaTrk_moon_blk:
+(1)  158/  90E503 :                     	binclude "sound/tracks/brinstar_blk.bin"
+(1)  159/  90E513 :                     GemaTrk_moon_patt:
+(1)  160/  90E513 :                     	binclude "sound/tracks/brinstar_patt.bin"
+(1)  161/  91002A :                     GemaTrk_moon_ins:
+(1)  162/  91002A : (MACRO)             	gInsPsg   0,$40,$FF,$00,$10,$10
+(1)  162/  91002A : 8000 40FF                   dc.b $80,0,$40,$FF
+(1)  162/  91002E : 0010 1000                   dc.b $00,$10,$10,$00
+(1)  163/  910032 : (MACRO)             	gInsPsgN  0,$00,$FF,$20,$10,$10,%100
+(1)  163/  910032 : 9000 00FF                   dc.b $90,0,$00,$FF
+(1)  163/  910036 : 2010 1004                   dc.b $20,$10,$10,%100
+(1)  164/  91003A : (MACRO)             	gInsDac  +17,DacIns_CdSnare,0,0
+(1)  164/  91003A : C011 92F0                   dc.b $C0|0,+17,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
+(1)  164/  91003E : E500 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  165/  910042 : (MACRO)             	gInsDac  +17,DacIns_CdSnare,0,0
+(1)  165/  910042 : C011 92F0                   dc.b $C0|0,+17,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
+(1)  165/  910046 : E500 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  166/  91004A : (MACRO)             	gInsFm  -12,FmIns_Brass_Eur,0
+(1)  166/  91004A : A0F4 9151                   dc.b $A0,-12,((FMINS_BRASS_EUR>>16)&$FF),((FMINS_BRASS_EUR>>8)&$FF)
+(1)  166/  91004E : 0700 0000                   dc.b FMINS_BRASS_EUR&$FF,$00,$00,$00
+(1)  167/  910052 : (MACRO)             	gInsNull
+(1)  167/  910052 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  167/  910056 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  168/  91005A : (MACRO)             	gInsFm    0,FmIns_Bass_groove,0
+(1)  168/  91005A : A000 914F                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
+(1)  168/  91005E : 6700 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
+(1)  169/  910062 : (MACRO)             	gInsNull
+(1)  169/  910062 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  169/  910066 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  170/  91006A : (MACRO)             	gInsNull
+(1)  170/  91006A : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  170/  91006E : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  171/  910072 : (MACRO)             	gInsNull
+(1)  171/  910072 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  171/  910076 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  172/  91007A : (MACRO)             	gInsNull
+(1)  172/  91007A : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  172/  91007E : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  173/  910082 : (MACRO)             	gInsFm  0,FmIns_Bass_calm,0
+(1)  173/  910082 : A000 914F                   dc.b $A0,0,((FMINS_BASS_CALM>>16)&$FF),((FMINS_BASS_CALM>>8)&$FF)
+(1)  173/  910086 : 2700 0000                   dc.b FMINS_BASS_CALM&$FF,$00,$00,$00
+(1)  174/  91008A : (MACRO)             	gInsPsg   0,$20,$10,$80,$00,$00
+(1)  174/  91008A : 8000 2010                   dc.b $80,0,$20,$10
+(1)  174/  91008E : 8000 0000                   dc.b $80,$00,$00,$00
+(1)  175/  910092 :                     
+(1)  176/  910092 :                     
+(1)  177/  910092 :                     ; 	gInsFm  -24,FmIns_Bass_calm,0
+(1)  178/  910092 :                     ; 	gInsPsg   0,$10,$80,$10,$20,$04
+(1)  179/  910092 :                     ; 	gInsFm  -12,FmIns_Brass_Eur,0
+(1)  180/  910092 :                     ; 	gInsPsg   0,$10,$80,$10,$F0,$01
+(1)  181/  910092 :                     ; 	gInsDac -12,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+(1)  182/  910092 :                     ; 	gInsPsgN  0,$00,$FF,$00,$08,$08,%100
+(1)  183/  910092 :                     ;
+(1)  184/  910092 :                     ;
+(1)  185/  910092 :                     ; GemaTrk_brinstr_blk:
+(1)  186/  910092 :                     ; 	binclude "sound/tracks/brinstr_blk.bin"
+(1)  187/  910092 :                     ; GemaTrk_brinstr_patt:
+(1)  188/  910092 :                     ; 	binclude "sound/tracks/brinstr_patt.bin"
+(1)  189/  910092 :                     ; GemaTrk_brinstr_ins:
+(1)  190/  910092 :                     ; 	gInsPsg   0,$40,$70,$30,$F0,$01
+(1)  191/  910092 :                     ; 	gInsPsgN  0,$00,$FF,$00,$01,$01,%011
+(1)  192/  910092 :                     ;
+(1)  193/  910092 :                     ; GemaTrk_gigalo_blk:
+(1)  194/  910092 :                     ; 	binclude "sound/tracks/gigalo_blk.bin"
+(1)  195/  910092 :                     ; GemaTrk_gigalo_patt:
+(1)  196/  910092 :                     ; 	binclude "sound/tracks/gigalo_patt.bin"
+(1)  197/  910092 :                     ; GemaTrk_gigalo_ins:
+(1)  198/  910092 :                     ; 	gInsPsg   0,$20,$80,$40,$08,$08
+(1)  199/  910092 :                     ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%100
+(1)  200/  910092 :                     ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%101
+(1)  201/  910092 :                     ; 	gInsPsgN  0,$00,$FF,$00,$10,$10,%110
+(1)  202/  910092 :                     ; 	gInsNull
+(1)  203/  910092 :                     ;
+(1)  204/  910092 :                     GemaTrk_mecano_blk:
+(1)  205/  910092 :                     	binclude "sound/tracks/ttzgf_blk.bin"
+(1)  206/  9100B3 :                     GemaTrk_mecano_patt:
+(1)  207/  9100B3 :                     	binclude "sound/tracks/ttzgf_patt.bin"
+(1)  208/  912604 :                     GemaTrk_mecano_ins:
+(1)  209/  912604 : (MACRO)             	gInsFm    0,FmIns_Bass_groove
+(1)  209/  912604 : A000 914F                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
+(1)  209/  912608 : 6700 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
+(1)  210/  91260C : (MACRO)             	gInsPsg   0,$40,$C0,$20,$10,$10
+(1)  210/  91260C : 8000 40C0                   dc.b $80,0,$40,$C0
+(1)  210/  912610 : 2010 1000                   dc.b $20,$10,$10,$00
+(1)  211/  912614 : (MACRO)             	gInsPsg   0,$60,$80,$20,$F0,$01
+(1)  211/  912614 : 8000 6080                   dc.b $80,0,$60,$80
+(1)  211/  912618 : 20F0 0100                   dc.b $20,$F0,$01,$00
+(1)  212/  91261C : (MACRO)             	gInsFm  -12,FmIns_Brass_Eur
+(1)  212/  91261C : A0F4 9151                   dc.b $A0,-12,((FMINS_BRASS_EUR>>16)&$FF),((FMINS_BRASS_EUR>>8)&$FF)
+(1)  212/  912620 : 0700 0000                   dc.b FMINS_BRASS_EUR&$FF,$00,$00,$00
+(1)  213/  912624 : (MACRO)             	gInsPsgN 60,$00,$FF,$20,$10,$10,%111
+(1)  213/  912624 : 903C 00FF                   dc.b $90,60,$00,$FF
+(1)  213/  912628 : 2010 1007                   dc.b $20,$10,$10,%111
+(1)  214/  91262C : (MACRO)             	gInsDac   0,DacIns_SaurKick,0,0
+(1)  214/  91262C : C000 930A                   dc.b $C0|0,0,((DACINS_SAURKICK>>16)&$FF),((DACINS_SAURKICK>>8)&$FF)
+(1)  214/  912630 : DC00 0000                   dc.b DACINS_SAURKICK&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  215/  912634 : (MACRO)             	gInsDac   0,DacIns_CdSnare,0,0
+(1)  215/  912634 : C000 92F0                   dc.b $C0|0,0,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
+(1)  215/  912638 : E500 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  216/  91263C : (MACRO)             	gInsFm  -12,FmIns_Trumpet_2
+(1)  216/  91263C : A0F4 9150                   dc.b $A0,-12,((FMINS_TRUMPET_2>>16)&$FF),((FMINS_TRUMPET_2>>8)&$FF)
+(1)  216/  912640 : 2700 0000                   dc.b FMINS_TRUMPET_2&$FF,$00,$00,$00
+(1)  217/  912644 : (MACRO)             	gInsFm  -12,FmIns_Ding_toy
+(1)  217/  912644 : A0F4 9150                   dc.b $A0,-12,((FMINS_DING_TOY>>16)&$FF),((FMINS_DING_TOY>>8)&$FF)
+(1)  217/  912648 : C700 0000                   dc.b FMINS_DING_TOY&$FF,$00,$00,$00
+(1)  218/  91264C : (MACRO)             	gInsNull
+(1)  218/  91264C : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  218/  912650 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  219/  912654 : (MACRO)             	gInsNull
+(1)  219/  912654 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  219/  912658 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  220/  91265C : (MACRO)             	gInsNull
+(1)  220/  91265C : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  220/  912660 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  221/  912664 : (MACRO)             	gInsNull
+(1)  221/  912664 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  221/  912668 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  222/  91266C : (MACRO)             	gInsNull
+(1)  222/  91266C : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  222/  912670 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  223/  912674 : (MACRO)             	gInsNull
+(1)  223/  912674 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  223/  912678 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  224/  91267C : (MACRO)             	gInsNull
+(1)  224/  91267C : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  224/  912680 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  225/  912684 : (MACRO)             	gInsNull
+(1)  225/  912684 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  225/  912688 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  226/  91268C : (MACRO)             	gInsNull
+(1)  226/  91268C : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  226/  912690 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  227/  912694 : (MACRO)             	gInsNull
+(1)  227/  912694 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  227/  912698 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  228/  91269C : (MACRO)             	gInsNull
+(1)  228/  91269C : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  228/  9126A0 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  229/  9126A4 :                     ;
+(1)  230/  9126A4 :                     ; ; 	gInsPsgN  0,$00,$00,$00,$08,$08,%100
+(1)  231/  9126A4 :                     ; ; 	gInsPsgN  0,$00,$00,$00,$10,$10,%100
+(1)  232/  9126A4 :                     ; ; 	gInsFm    0,FmIns_PianoM1,0
+(1)  233/  9126A4 :                     ; ; 	gInsPsg   0,$10,$00,$10,$02,$02
+(1)  234/  9126A4 :                     ; ; 	gInsFm    0,FmIns_Bass_mecan,0
+(1)  235/  9126A4 :                     ; ; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+(1)  236/  9126A4 :                     ; ; 	gInsNull
+(1)  237/  9126A4 :                     ; ; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+(1)  238/  9126A4 :                     ; ; 	gInsNull
+(1)  239/  9126A4 :                     ; ; 	gInsNull
+(1)  240/  9126A4 :                     ; ; 	gInsNull
+(1)  241/  9126A4 :                     ; ; 	gInsNull
+(1)  242/  9126A4 :                     ; ; 	gInsNull
+(1)  243/  9126A4 :                     ; ; 	gInsNull
+(1)  244/  9126A4 :                     ; ; 	gInsFm    0,FmIns_Trumpet_2,0
+(1)  245/  9126A4 :                     ; ; 	gInsNull
+(1)  246/  9126A4 :                     ;
+(1)  247/  9126A4 :                     GemaTrk_mars_blk:
+(1)  248/  9126A4 :                     	binclude "sound/tracks/mars_blk.bin"
+(1)  249/  9126B2 :                     GemaTrk_mars_patt:
+(1)  250/  9126B2 :                     	binclude "sound/tracks/mars_patt.bin"
+(1)  251/  914DDF :                     GemaTrk_mars_ins:
+(1)  252/  914DDF : (MACRO)             	gInsDac   0,DacIns_CdSnare,0,0
+(1)  252/  914DDF : C000 92F0                   dc.b $C0|0,0,((DACINS_CDSNARE>>16)&$FF),((DACINS_CDSNARE>>8)&$FF)
+(1)  252/  914DE3 : E500 0000                   dc.b DACINS_CDSNARE&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  253/  914DE7 : (MACRO)             	gInsDac   0,DacIns_SaurKick,0,0
+(1)  253/  914DE7 : C000 930A                   dc.b $C0|0,0,((DACINS_SAURKICK>>16)&$FF),((DACINS_SAURKICK>>8)&$FF)
+(1)  253/  914DEB : DC00 0000                   dc.b DACINS_SAURKICK&$FF,((0)&$FF),(((0)>>8)&$FF),(((0)>>16)&$FF)
+(1)  254/  914DEF : (MACRO)             	gInsPsgN  0,$20,$FF,$00,$30,$30,%100
+(1)  254/  914DEF : 9000 20FF                   dc.b $90,0,$20,$FF
+(1)  254/  914DF3 : 0030 3004                   dc.b $00,$30,$30,%100
+(1)  255/  914DF7 : (MACRO)             	gInsFm    0,FmIns_PianoM1,0
+(1)  255/  914DF7 : A000 914F                   dc.b $A0,0,((FMINS_PIANOM1>>16)&$FF),((FMINS_PIANOM1>>8)&$FF)
+(1)  255/  914DFB : 0700 0000                   dc.b FMINS_PIANOM1&$FF,$00,$00,$00
+(1)  256/  914DFF : (MACRO)             	gInsPsg   0,$50,$20,$40,$00,$01
+(1)  256/  914DFF : 8000 5020                   dc.b $80,0,$50,$20
+(1)  256/  914E03 : 4000 0100                   dc.b $40,$00,$01,$00
+(1)  257/  914E07 : (MACRO)             	gInsFm    0,FmIns_Bass_groove,0
+(1)  257/  914E07 : A000 914F                   dc.b $A0,0,((FMINS_BASS_GROOVE>>16)&$FF),((FMINS_BASS_GROOVE>>8)&$FF)
+(1)  257/  914E0B : 6700 0000                   dc.b FMINS_BASS_GROOVE&$FF,$00,$00,$00
+(1)  258/  914E0F : (MACRO)             	gInsNull
+(1)  258/  914E0F : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  258/  914E13 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  259/  914E17 : (MACRO)             	gInsNull
+(1)  259/  914E17 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  259/  914E1B : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  260/  914E1F : (MACRO)             	gInsFm    0,FmIns_Guitar_heavy,0
+(1)  260/  914E1F : A000 914E                   dc.b $A0,0,((FMINS_GUITAR_HEAVY>>16)&$FF),((FMINS_GUITAR_HEAVY>>8)&$FF)
+(1)  260/  914E23 : 8700 0000                   dc.b FMINS_GUITAR_HEAVY&$FF,$00,$00,$00
+(1)  261/  914E27 : (MACRO)             	gInsNull
+(1)  261/  914E27 : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  261/  914E2B : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  262/  914E2F : (MACRO)             	gInsNull
+(1)  262/  914E2F : FF00 0000                           dc.b  -1,$00,$00,$00
+(1)  262/  914E33 : 0000 0000                           dc.b $00,$00,$00,$00
+(1)  263/  914E37 :                     ;
+(1)  264/  914E37 :                     ; GemaTrk_jackrab_blk:
+(1)  265/  914E37 :                     ; 	binclude "sound/tracks/jackrab_blk.bin"
+(1)  266/  914E37 :                     ; GemaTrk_jackrab_patt:
+(1)  267/  914E37 :                     ; 	binclude "sound/tracks/jackrab_patt.bin"
+(1)  268/  914E37 :                     ; GemaTrk_jackrab_ins:
+(1)  269/  914E37 :                     ; 	gInsFm    0,FmIns_Ambient_Spook,0
+(1)  270/  914E37 :                     ; 	gInsNull
+(1)  271/  914E37 :                     ; 	gInsDac   0,DacIns_SaurKick,DacIns_SaurKick_e,0,0
+(1)  272/  914E37 :                     ; 	gInsPsgN  0,$20,$FF,$10,$10,$10,%100
+(1)  273/  914E37 :                     ; 	gInsNull
+(1)  274/  914E37 :                     ; 	gInsNull
+(1)  275/  914E37 :                     ; 	gInsFm    0,FmIns_PianoM1,0
+(1)  276/  914E37 :                     ; 	gInsNull
+(1)  277/  914E37 :                     ; 	gInsNull
+(1)  278/  914E37 :                     ; 	gInsPsg   0,$20,$FF,$20,$04,$04
+(1)  279/  914E37 :                     ; 	gInsFm    0,FmIns_Ambient_Dark,0
+(1)  280/  914E37 :                     ; 	gInsNull
+(1)  281/  914E37 :                     ; 	gInsFm    0,FmIns_Ding_Toy,0
+(1)  282/  914E37 :                     ; 	gInsDac   0,DacIns_CdSnare,DacIns_CdSnare_e,0,0
+(1)  283/  914E37 :                     ; 	gInsFm    0,FmIns_Trumpet_2,0
+(1)  284/  914E37 :                     ; 	gInsNull
+(1)  285/  914E37 :                     
+      73/  914E37 :                     		include "sound/instr.asm"
+(1)    1/  914E37 :                     ; ====================================================================
+(1)    2/  914E37 :                     ; ----------------------------------------------------------------
+(1)    3/  914E37 :                     ; PSG, FM and DAC instruments go here
+(1)    4/  914E37 :                     ; ----------------------------------------------------------------
+(1)    5/  914E37 :                     
+(1)    6/  914E37 :                     ; Normal FM ins: $20
+(1)    7/  914E37 :                     ; Special FM ins: $28
+(1)    8/  914E37 :                     
+(1)    9/  914E37 :                     FmIns_Fm3_OpenHat:
+(1)   10/  914E37 :                     		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
+(1)   11/  914E5F :                     FmIns_Fm3_ClosedHat:
+(1)   12/  914E5F :                     		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
+(1)   13/  914E87 :                     
+(1)   14/  914E87 :                     Fmins_Guitar_Heavy:
+(1)   15/  914E87 :                     		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
+(1)   16/  914EA7 :                     Fmins_Guitar_puy:
+(1)   17/  914EA7 :                     		binclude "sound/instr/fm/guitar_puy.gsx",$2478,$20
+(1)   18/  914EC7 :                     Fmins_Guitar_puy_2:
+(1)   19/  914EC7 :                     		binclude "sound/instr/fm/guitar_puy_2.gsx",$2478,$20
+(1)   20/  914EE7 :                     ;
+(1)   21/  914EE7 :                     
+(1)   22/  914EE7 :                     FmIns_DrumKick_gem:
+(1)   23/  914EE7 :                     		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
+(1)   24/  914F07 :                     ;
+(1)   25/  914F07 :                     ; FmIns_DrumKick:
+(1)   26/  914F07 :                     ; 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
+(1)   27/  914F07 :                     ; FmIns_DrumSnare:
+(1)   28/  914F07 :                     ; 		binclude "sound/instr/fm/drum_snare.gsx",$2478,$20
+(1)   29/  914F07 :                     ; ; ; FmIns_DrumCloseHat:
+(1)   30/  914F07 :                     ; ; ; 		binclude "sound/instr/fm/drum_closehat.gsx",$2478,$20
+(1)   31/  914F07 :                     FmIns_PianoM1:
+(1)   32/  914F07 :                     		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+(1)   33/  914F27 :                     ; FmIns_PianoM116:
+(1)   34/  914F27 :                     ; 		binclude "sound/instr/fm/piano_m116.gsx",$2478,$20
+(1)   35/  914F27 :                     
+(1)   36/  914F27 :                     ; ;
+(1)   37/  914F27 :                     ; ; ; FmIns_Bass_gum:
+(1)   38/  914F27 :                     ; ; ; 		binclude "sound/instr/fm/bass_gum.gsx",$2478,$20
+(1)   39/  914F27 :                     FmIns_Bass_calm:
+(1)   40/  914F27 :                     		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
+(1)   41/  914F47 :                     ; FmIns_Bass_heavy:
+(1)   42/  914F47 :                     ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
+(1)   43/  914F47 :                     ; ; ; FmIns_Bass_ambient:
+(1)   44/  914F47 :                     ; ; ; 		binclude "sound/instr/fm/bass_ambient.gsx",$2478,$20
+(1)   45/  914F47 :                     ; ; ; FmIns_Brass_gummy:
+(1)   46/  914F47 :                     ; ; ; 		binclude "sound/instr/fm/brass_gummy.gsx",$2478,$20
+(1)   47/  914F47 :                     ; ; ; FmIns_Flaute_1:
+(1)   48/  914F47 :                     ; ; ; 		binclude "sound/instr/fm/flaute_1.gsx",$2478,$20
+(1)   49/  914F47 :                     ; FmIns_Bass_1:
+(1)   50/  914F47 :                     ; 		binclude "sound/instr/fm/bass_1.gsx",$2478,$20
+(1)   51/  914F47 :                     ; FmIns_Bass_2:
+(1)   52/  914F47 :                     ; 		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
+(1)   53/  914F47 :                     FmIns_Bass_3:
+(1)   54/  914F47 :                     		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
+(1)   55/  914F67 :                     ; FmIns_Bass_4:
+(1)   56/  914F67 :                     ; 		binclude "sound/instr/fm/bass_4.gsx",$2478,$20
+(1)   57/  914F67 :                     ; FmIns_Bass_5:
+(1)   58/  914F67 :                     ; 		binclude "sound/instr/fm/bass_5.gsx",$2478,$20
+(1)   59/  914F67 :                     ; FmIns_Bass_6:
+(1)   60/  914F67 :                     ; 		binclude "sound/instr/fm/bass_6.gsx",$2478,$20
+(1)   61/  914F67 :                     FmIns_Bass_groove:
+(1)   62/  914F67 :                     		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
+(1)   63/  914F87 :                     FmIns_Bass_groove_2:
+(1)   64/  914F87 :                     		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
+(1)   65/  914FA7 :                     FmIns_Bass_italo:
+(1)   66/  914FA7 :                     		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
+(1)   67/  914FC7 :                     FmIns_Bass_kon:
+(1)   68/  914FC7 :                     		binclude "sound/instr/fm/bass_kon.gsx",$2478,$20
+(1)   69/  914FE7 :                     
+(1)   70/  914FE7 :                     ; FmIns_Bass_mecan:
+(1)   71/  914FE7 :                     ; 		binclude "sound/instr/fm/bass_mecan.gsx",$2478,$20
+(1)   72/  914FE7 :                     ;
+(1)   73/  914FE7 :                     ; ; ; FmIns_Bass_heavy:
+(1)   74/  914FE7 :                     ; ; ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
+(1)   75/  914FE7 :                     ; ; ; FmIns_Bass_metal:
+(1)   76/  914FE7 :                     ; ; ; 		binclude "sound/instr/fm/bass_metal.gsx",$2478,$20
+(1)   77/  914FE7 :                     FmIns_Bass_synth:
+(1)   78/  914FE7 :                     		binclude "sound/instr/fm/bass_synth_1.gsx",$2478,$20
+(1)   79/  915007 :                     ; FmIns_Guitar_1:
+(1)   80/  915007 :                     ; 		binclude "sound/instr/fm/guitar_1.gsx",$2478,$20
+(1)   81/  915007 :                     ; ; ; FmIns_Horn_1:
+(1)   82/  915007 :                     ; ; ; 		binclude "sound/instr/fm/horn_1.gsx",$2478,$20
+(1)   83/  915007 :                     FmIns_Organ_M1:
+(1)   84/  915007 :                     		binclude "sound/instr/fm/organ_m1.gsx",$2478,$20
+(1)   85/  915027 :                     ; ; ; FmIns_Bass_Beach:
+(1)   86/  915027 :                     ; ; ; 		binclude "sound/instr/fm/bass_beach.gsx",$2478,$20
+(1)   87/  915027 :                     ; ; ; FmIns_Bass_Beach_2:
+(1)   88/  915027 :                     ; ; ; 		binclude "sound/instr/fm/bass_beach_2.gsx",$2478,$20
+(1)   89/  915027 :                     ; ; ; FmIns_Brass_Cave:
+(1)   90/  915027 :                     ; ; ; 		binclude "sound/instr/fm/brass_cave.gsx",$2478,$20
+(1)   91/  915027 :                     ; ; FmIns_Brass_Gem:
+(1)   92/  915027 :                     ; ; 		binclude "sound/instr/fm/brass_gem.gsx",$2478,$20
+(1)   93/  915027 :                     ; ; FmIns_Piano_Small:
+(1)   94/  915027 :                     ; ; 		binclude "sound/instr/fm/piano_small.gsx",$2478,$20
+(1)   95/  915027 :                     ; ; FmIns_Piano:
+(1)   96/  915027 :                     ; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+(1)   97/  915027 :                     FmIns_Trumpet_2:
+(1)   98/  915027 :                     		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
+(1)   99/  915047 :                     FmIns_Trumpet_kon:
+(1)  100/  915047 :                     		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
+(1)  101/  915067 :                     FmIns_Trumpet_puy:
+(1)  102/  915067 :                     		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
+(1)  103/  915087 :                     
+(1)  104/  915087 :                     ; ; ; FmIns_Bell_Glass:
+(1)  105/  915087 :                     ; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
+(1)  106/  915087 :                     ; ; ; FmIns_Marimba_1:
+(1)  107/  915087 :                     ; ; ; 		binclude "sound/instr/fm/marimba_1.gsx",$2478,$20
+(1)  108/  915087 :                     
+(1)  109/  915087 :                     FmIns_Ambient_dark:
+(1)  110/  915087 :                     		binclude "sound/instr/fm/ambient_dark.gsx",$2478,$20
+(1)  111/  9150A7 :                     FmIns_Ambient_spook:
+(1)  112/  9150A7 :                     		binclude "sound/instr/fm/ambient_spook.gsx",$2478,$20
+(1)  113/  9150C7 :                     ; FmIns_Ambient_3:
+(1)  114/  9150C7 :                     ; 		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
+(1)  115/  9150C7 :                     FmIns_Ding_toy:
+(1)  116/  9150C7 :                     		binclude "sound/instr/fm/ding_toy.gsx",$2478,$20
+(1)  117/  9150E7 :                     FmIns_Bell_China:
+(1)  118/  9150E7 :                     		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
+(1)  119/  915107 :                     FmIns_Brass_Eur:
+(1)  120/  915107 :                     		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
+(1)  121/  915127 :                     FmIns_Brass_Puy:
+(1)  122/  915127 :                     		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
+(1)  123/  915147 :                     
+(1)  124/  915147 :                     FmIns_Flaute_cave:
+(1)  125/  915147 :                     		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
+(1)  126/  915167 :                     
+(1)  127/  915167 :                     FmIns_Banjo_puy:
+(1)  128/  915167 :                     		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
+(1)  129/  915187 :                     
+(1)  130/  915187 :                     ; --------------------------------------------------------
+(1)  131/  915187 :                     ; DAC samples
+(1)  132/  915187 :                     ; --------------------------------------------------------
+(1)  133/  915187 :                     
+(1)  134/  915187 :                     ; Special include macro for samples
+(1)  135/  915187 :                     ;
+(1)  136/  915187 :                     ; only for tracker songs.
+(1)  137/  915187 :                     gSmpl macro locate
+(1)  138/  915187 :                     .start
+(1)  139/  915187 :                     	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
+(1)  140/  915187 :                     	binclude locate,$2C	; actual data
+(1)  141/  915187 :                     .end
+(1)  142/  915187 :                     	endm
+(1)  143/  915187 :                     
+(1)  144/  915187 :                     DacIns_Magic2:
+(1)  145/  915187 : (MACRO)             	gSmpl "sound/instr/smpl/magic_2.wav"
+(1)  145/  915187 :                     .start
+(1)  145/  915187 : 378E 01                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
+(1)  145/  91518A :                             binclude "sound/instr/smpl/magic_2.wav",$2C     ; actual data
+(1)  145/  92DFBE :                     .end
+(1)  146/  92DFBE :                     DacIns_Snare_Gem:
+(1)  147/  92DFBE : (MACRO)             	gSmpl "sound/instr/smpl/snare_lobo.wav"
+(1)  147/  92DFBE :                     .start
+(1)  147/  92DFBE : 2711 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
+(1)  147/  92DFC1 :                             binclude "sound/instr/smpl/snare_lobo.wav",$2C     ; actual data
+(1)  147/  92F0E5 :                     .end
+(1)  148/  92F0E5 :                     DacIns_CdSnare:
+(1)  149/  92F0E5 : (MACRO)             	gSmpl "sound/instr/smpl/cd_snare.wav"
+(1)  149/  92F0E5 :                     .start
+(1)  149/  92F0E5 : F719 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
+(1)  149/  92F0E8 :                             binclude "sound/instr/smpl/cd_snare.wav",$2C     ; actual data
+(1)  149/  930ADC :                     .end
+(1)  150/  930ADC :                     DacIns_SaurKick:
+(1)  151/  930ADC : (MACRO)             	gSmpl "sound/instr/smpl/sauron_kick.wav"
+(1)  151/  930ADC :                     .start
+(1)  151/  930ADC : 910F 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
+(1)  151/  930ADF :                             binclude "sound/instr/smpl/sauron_kick.wav",$2C     ; actual data
+(1)  151/  931A6D :                     .end
+(1)  152/  931A6D :                     DacIns_SaurSnare:
+(1)  153/  931A6D : (MACRO)             	gSmpl "sound/instr/smpl/sauron_snare.wav"
+(1)  153/  931A6D :                     .start
+(1)  153/  931A6D : E30C 00                     dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)     ; length
+(1)  153/  931A70 :                             binclude "sound/instr/smpl/sauron_snare.wav",$2C     ; actual data
+(1)  153/  932750 :                     .end
+(1)  154/  932750 :                     
+      74/  932750 :                     		include "data/md_bank0.asm"
+(1)    1/  932750 :                     ; ====================================================================
+(1)    2/  932750 :                     ; ----------------------------------------------------------------
+(1)    3/  932750 :                     ; Single 68k DATA BANK for MD ($900000-$9FFFFF)
+(1)    4/  932750 :                     ; for stuff other than MD's DMA data
+(1)    5/  932750 :                     ; 
+(1)    6/  932750 :                     ; Maximum size: $0FFFFF bytes per bank
+(1)    7/  932750 :                     ; ----------------------------------------------------------------
+(1)    8/  932750 :                     
+(1)    9/  932750 :                     		align $8000
+(1)   10/  938000 :                     PCM_START:	binclude "sound/TEST_MD.wav",$2C,$80000
+(1)   11/  9B8000 :                     PCM_END:
+(1)   12/  9B8000 :                     
+(1)   13/  9B8000 :                     
+      75/   B8000 :                     		dephase
+      76/   B8000 :                     ; 		org $100000-4				; Fill this bank and
+      77/   B8000 :                     ; 		dc.b "BNK0"				; add a tag at the end
+      78/   B8000 :                     
+      79/   B8000 :                     ; 		phase $900000+*
+      80/   B8000 :                     ; 		include "data/md_bank1.asm"
+      81/   B8000 :                     ; 		dephase
+      82/   B8000 :                     ; 		org $200000-4
+      83/   B8000 :                     ; 		dc.b "BNK1"
+      84/   B8000 :                     
+      85/   B8000 :                     ; 		phase $900000+*
+      86/   B8000 :                     ; 		include "data/md_bank2.asm"
+      87/   B8000 :                     ; 		dephase
+      88/   B8000 :                     ; 		org $300000-4
+      89/   B8000 :                     ; 		dc.b "BNK2"
+      90/   B8000 :                     
+      91/   B8000 :                     ; 		phase $900000+*
+      92/   B8000 :                     ; 		include "data/md_bank3.asm"
+      93/   B8000 :                     ; 		dephase
+      94/   B8000 :                     ; 		org $400000-4
+      95/   B8000 :                     ; 		dc.b "BNK3"
+      96/   B8000 :                     
+      97/   B8000 :                     ; ====================================================================
+      98/   B8000 :                     ; ----------------------------------------------------------------
+      99/   B8000 :                     ; DMA transfer data, RV=1 only.
+     100/   B8000 :                     ; ----------------------------------------------------------------
+     101/   B8000 :                     
+     102/   B8000 :                     		align 4
+     103/   B8000 :                     		include "data/md_dma.asm"
+(1)    1/   B8000 :                     ; ====================================================================
+(1)    2/   B8000 :                     ; ----------------------------------------------------------------
+(1)    3/   B8000 :                     ; DMA ROM DATA Transfer section, no bank limitations
+(1)    4/   B8000 :                     ; 
+(1)    5/   B8000 :                     ; RV bit must be set to access here
+(1)    6/   B8000 :                     ; ----------------------------------------------------------------
+(1)    7/   B8000 :                     
+(1)    8/   B8000 :                     		align $8000
+(1)    9/   B8000 : 4D44 2044 4154 4120 		dc.b "MD DATA GOES HERE"
                     474F 4553 2048 4552 
                     45                  
-(1)   10/   B0011 :                     
-(1)   11/   B0011 :                     
-     104/   B0011 :                     
-     105/   B0011 :                     ; ====================================================================
-     106/   B0011 :                     ; ----------------------------------------------------------------
-     107/   B0011 :                     ; SH2 SECTION
-     108/   B0011 :                     ; ----------------------------------------------------------------
-     109/   B0011 :                     
-     110/   B0011 :                     		align 4
-     111/   B0014 :                     MARS_RAMDATA:
-     112/   B0014 :                     		include "system/mars/code.asm"
-(1)    1/   B0014 :                     ; ====================================================================
-(1)    2/   B0014 :                     ; ----------------------------------------------------------------
-(1)    3/   B0014 :                     ; MARS SH2 Section
-(1)    4/   B0014 :                     ;
-(1)    5/   B0014 :                     ; CODE for both CPUs
-(1)    6/   B0014 :                     ; RAM and some DATA go here
-(1)    7/   B0014 :                     ; ----------------------------------------------------------------
-(1)    8/   B0014 :                     
+(1)   10/   B8011 :                     
+(1)   11/   B8011 :                     
+     104/   B8011 :                     
+     105/   B8011 :                     ; ====================================================================
+     106/   B8011 :                     ; ----------------------------------------------------------------
+     107/   B8011 :                     ; SH2 SECTION
+     108/   B8011 :                     ; ----------------------------------------------------------------
+     109/   B8011 :                     
+     110/   B8011 :                     		align 4
+     111/   B8014 :                     MARS_RAMDATA:
+     112/   B8014 :                     		include "system/mars/code.asm"
+(1)    1/   B8014 :                     ; ====================================================================
+(1)    2/   B8014 :                     ; ----------------------------------------------------------------
+(1)    3/   B8014 :                     ; MARS SH2 Section
+(1)    4/   B8014 :                     ;
+(1)    5/   B8014 :                     ; CODE for both CPUs
+(1)    6/   B8014 :                     ; RAM and some DATA go here
+(1)    7/   B8014 :                     ; ----------------------------------------------------------------
+(1)    8/   B8014 :                     
 (1)    9/ 6000000 :                     		phase CS3		; now we are at SDRAM
 (1)   10/ 6000000 :                     		cpu SH7600		; should be SH7095 but this works.
 (1)   11/ 6000000 :                     
@@ -7784,8 +7800,8 @@ MD RAM ends at: FF880C
 (1)   59/ 6000000 :                     
 (1)   60/ 6000000 : (MACRO)             			struct 0
 (1)   60/ 6000000 : =$6000000           GLBL_LASTPC     set *
-(1)   60/   B0014 :                                     dephase
-(1)   60/   B0014 : =$B0014             GLBL_LASTORG    set *
+(1)   60/   B8014 :                                     dephase
+(1)   60/   B8014 : =$B8014             GLBL_LASTORG    set *
 (1)   60/       0 :                                     phase 0
 (1)   61/       0 :                     marsGbl_BgData		ds.l 1		; Background pixel data location (ROM or RAM)
 (1)   62/       4 :                     marsGbl_BgData_R	ds.l 1		; Background data pointer (Mode 2 only)
@@ -8592,8 +8608,8 @@ MD RAM ends at: FF880C
 (2)   22/ 600061E :                     ; model objects
 (2)   23/ 600061E : (MACRO)             		struct 0
 (2)   23/ 600061E : =$600061E           GLBL_LASTPC     set *
-(2)   23/   B0632 :                                     dephase
-(2)   23/   B0632 : =$B0632             GLBL_LASTORG    set *
+(2)   23/   B8632 :                                     dephase
+(2)   23/   B8632 : =$B8632             GLBL_LASTORG    set *
 (2)   23/       0 :                                     phase 0
 (2)   24/       0 :                     mdl_data	ds.l 1			; Model data pointer, if zero: no model
 (2)   25/       4 :                     mdl_option	ds.l 1			; Model options: pixelvalue add
@@ -8615,8 +8631,8 @@ MD RAM ends at: FF880C
 (2)   39/ 600061E :                     ; field view camera
 (2)   40/ 600061E : (MACRO)             		struct 0
 (2)   40/ 600061E : =$600061E           GLBL_LASTPC     set *
-(2)   40/   B0632 :                                     dephase
-(2)   40/   B0632 : =$B0632             GLBL_LASTORG    set *
+(2)   40/   B8632 :                                     dephase
+(2)   40/   B8632 : =$B8632             GLBL_LASTORG    set *
 (2)   40/       0 :                                     phase 0
 (2)   41/       0 :                     cam_x_pos	ds.l 1			; X position $000000.00
 (2)   42/       4 :                     cam_y_pos	ds.l 1			; Y position $000000.00
@@ -8635,8 +8651,8 @@ MD RAM ends at: FF880C
 (2)   53/ 600061E :                     
 (2)   54/ 600061E : (MACRO)             		struct 0
 (2)   54/ 600061E : =$600061E           GLBL_LASTPC     set *
-(2)   54/   B0632 :                                     dephase
-(2)   54/   B0632 : =$B0632             GLBL_LASTORG    set *
+(2)   54/   B8632 :                                     dephase
+(2)   54/   B8632 : =$B8632             GLBL_LASTORG    set *
 (2)   54/       0 :                                     phase 0
 (2)   55/       0 :                     mdllay_data	ds.l 1			; Model layout data, zero: Don't use layout
 (2)   56/       4 :                     mdllay_x	ds.l 1			; X position
@@ -8653,8 +8669,8 @@ MD RAM ends at: FF880C
 (2)   65/ 600061E :                     
 (2)   66/ 600061E : (MACRO)             		struct 0
 (2)   66/ 600061E : =$600061E           GLBL_LASTPC     set *
-(2)   66/   B0632 :                                     dephase
-(2)   66/   B0632 : =$B0632             GLBL_LASTORG    set *
+(2)   66/   B8632 :                                     dephase
+(2)   66/   B8632 : =$B8632             GLBL_LASTORG    set *
 (2)   66/       0 :                                     phase 0
 (2)   67/       0 :                     plypz_ypos	ds.l 1			; Ytop | Ybottom
 (2)   68/       4 :                     plypz_xl	ds.l 1
@@ -8678,8 +8694,8 @@ MD RAM ends at: FF880C
 (2)   84/ 600061E :                     
 (2)   85/ 600061E : (MACRO)             		struct 0
 (2)   85/ 600061E : =$600061E           GLBL_LASTPC     set *
-(2)   85/   B0632 :                                     dephase
-(2)   85/   B0632 : =$B0632             GLBL_LASTORG    set *
+(2)   85/   B8632 :                                     dephase
+(2)   85/   B8632 : =$B8632             GLBL_LASTORG    set *
 (2)   85/       0 :                                     phase 0
 (2)   86/       0 :                     polygn_type	ds.l 1	; %MST00000 iiiiiiii wwwwwwww wwwwwwww | Type and Material option (palinc|width)
 (2)   87/       4 :                     polygn_mtrl	ds.l 1	; Material Type: Color (0-255) or Texture data address
@@ -10659,8 +10675,8 @@ MD RAM ends at: FF880C
 (2)    8/ 6000AAA :                     ; 32X sound channel
 (2)    9/ 6000AAA : (MACRO)             		struct 0
 (2)    9/ 6000AAA : =$6000AAA           GLBL_LASTPC     set *
-(2)    9/   B0ABE :                                     dephase
-(2)    9/   B0ABE : =$B0ABE             GLBL_LASTORG    set *
+(2)    9/   B8ABE :                                     dephase
+(2)    9/   B8ABE : =$B8ABE             GLBL_LASTORG    set *
 (2)    9/       0 :                                     phase 0
 (2)   10/       0 :                     mchnsnd_enbl	ds.l 1
 (2)   11/       4 :                     mchnsnd_read	ds.l 1		; 0 - off
@@ -11516,7 +11532,7 @@ MD RAM ends at: FF880C
 (1) 1151/ 6000E36 : AF6D                		bra	master_loop
 (1) 1152/ 6000E38 : 0009                		nop
 (1) 1153/ 6000E3A :                     		align 4
-(1) 1154/ 6000E3C : 020B 4150 0210 8750 		ltorg
+(1) 1154/ 6000E3C : 020B C150 0211 0750 		ltorg
                     0600 09A8 2000 4100 
                     2000 4102 2400 0000 
                     0001 5000 0600 0A14 
@@ -12501,7 +12517,7 @@ MD RAM ends at: FF880C
 (1) 2174/ 60013E8 :                     this_polygon:
 (1) 2175/ 60013E8 : 8000                		dc.w $8000
 (1) 2176/ 60013EA : 0140                		dc.w 320
-(1) 2177/ 60013EC : 020B 4150           		dc.l TESTMARS_BG
+(1) 2177/ 60013EC : 020B C150           		dc.l TESTMARS_BG
 (1) 2178/ 60013F0 : 0020 FFE0           dest_data:	dc.w  32,-32
 (1) 2179/ 60013F4 : FFE0 FFE0           		dc.w -32,-32
 (1) 2180/ 60013F8 : FFE0 0020           		dc.w -32, 32
@@ -13940,8 +13956,8 @@ MD RAM ends at: FF880C
 (1) 2743/ 600413C :                     SH2_RAM:
 (1) 2744/ 600413C : (MACRO)             		struct SH2_RAM
 (1) 2744/ 600413C : =$600413C           GLBL_LASTPC     set *
-(1) 2744/   B4150 :                                     dephase
-(1) 2744/   B4150 : =$B4150             GLBL_LASTORG    set *
+(1) 2744/   BC150 :                                     dephase
+(1) 2744/   BC150 : =$BC150             GLBL_LASTORG    set *
 (1) 2744/ 600413C :                                     phase SH2_RAM
 (1) 2751/ 600413C :                     MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 (1) 2752/ 6004214 :                     MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
@@ -13960,8 +13976,8 @@ MD RAM ends at: FF880C
 (1) 2767/ 600413C :                     
 (1) 2768/ 600413C : (MACRO)             			struct MarsRam_Sound
 (1) 2768/ 600413C : =$600413C           GLBL_LASTPC     set *
-(1) 2768/   B4150 :                                     dephase
-(1) 2768/   B4150 : =$B4150             GLBL_LASTORG    set *
+(1) 2768/   BC150 :                                     dephase
+(1) 2768/   BC150 : =$BC150             GLBL_LASTORG    set *
 (1) 2768/ 600A360 :                                     phase MARSRAM_SOUND
 (1) 2769/ 600A360 :                     MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
 (1) 2770/ 600A45C :                     ; MarsSnd_PwmTrkData	ds.b $80*2
@@ -13978,8 +13994,8 @@ MD RAM ends at: FF880C
 (1) 2779/ 600413C :                     
 (1) 2780/ 600413C : (MACRO)             			struct MarsRam_Video
 (1) 2780/ 600413C : =$600413C           GLBL_LASTPC     set *
-(1) 2780/   B4150 :                                     dephase
-(1) 2780/   B4150 : =$B4150             GLBL_LASTORG    set *
+(1) 2780/   BC150 :                                     dephase
+(1) 2780/   BC150 : =$BC150             GLBL_LASTORG    set *
 (1) 2780/ 6004214 :                                     phase MARSRAM_VIDEO
 (1) 2781/ 6004214 :                     RAM_Mars_Palette	ds.w 256			; Indexed palette
 (1) 2782/ 6004414 :                     RAM_Mars_DREQ		ds.w 256			; 256 WORDS of MD communication
@@ -14006,8 +14022,8 @@ MD RAM ends at: FF880C
 (1) 2801/ 600413C :                     
 (1) 2802/ 600413C : (MACRO)             			struct MarsRam_System
 (1) 2802/ 600413C : =$600413C           GLBL_LASTPC     set *
-(1) 2802/   B4150 :                                     dephase
-(1) 2802/   B4150 : =$B4150             GLBL_LASTORG    set *
+(1) 2802/   BC150 :                                     dephase
+(1) 2802/   BC150 : =$BC150             GLBL_LASTORG    set *
 (1) 2802/ 600413C :                                     phase MARSRAM_SYSTEM
 (1) 2803/ 600413C :                     RAM_Mars_Global		ds.w sizeof_MarsGbl		; keep it as a word
 (1) 2804/ 6004214 :                     sizeof_marssys		ds.l 0
@@ -14017,98 +14033,98 @@ MD RAM ends at: FF880C
 (1) 2806/ 600413C :                     
      113/ 600413C :                     		cpu 68000
      114/ 600413C :                     		padding off
-     115/   B4150 :                     		dephase
-     116/   B4150 :                     MARS_RAMDATA_E:
-     117/   B4150 :                     		align 4
-     118/   B4150 :                     
-     119/   B4150 :                     ; --------------------------------------------------------
-     120/   B4150 :                     ; MARS data for SH2's ROM view
-     121/   B4150 :                     ; This section will be gone if RV=1
-     122/   B4150 :                     ; --------------------------------------------------------
-     123/   B4150 :                     
-     124/ 20B4150 :                     		phase CS1+*
-     125/ 20B4150 :                     		align 4
-     126/ 20B4150 :                     		include "data/mars_rom.asm"
-(1)    1/ 20B4150 :                     ; ====================================================================
-(1)    2/ 20B4150 :                     ; ----------------------------------------------------------------
-(1)    3/ 20B4150 :                     ; SH2 ROM user data
-(1)    4/ 20B4150 :                     ; 
-(1)    5/ 20B4150 :                     ; If your data is too much for SDRAM, place it here.
-(1)    6/ 20B4150 :                     ; Note that this section will be gone if the Genesis side is
-(1)    7/ 20B4150 :                     ; perfoming a DMA ROM-to-VDP Transfer (setting RV=1)
-(1)    8/ 20B4150 :                     ; 
-(1)    9/ 20B4150 :                     ; Note: Reading data from here is slow on hardware
-(1)   10/ 20B4150 :                     ; ----------------------------------------------------------------
-(1)   11/ 20B4150 :                     
-(1)   12/ 20B4150 :                     ; --------------------------------------------------------
-(1)   13/ 20B4150 :                     ; Textures
-(1)   14/ 20B4150 :                     ; --------------------------------------------------------
-(1)   15/ 20B4150 :                     
-(1)   16/ 20B4150 :                     ; 		align 4
-(1)   17/ 20B4150 :                     ; 		include "data/mars/maps/map_marscity.asm"
-(1)   18/ 20B4150 :                     ; 		align 4
-(1)   19/ 20B4150 :                     ; 		include "data/mars/objects/mdl/projname/head.asm"
-(1)   20/ 20B4150 :                     ; 		align 4
-(1)   21/ 20B4150 :                     
-(1)   22/ 20B4150 :                     ; Textr_marscity:
-(1)   23/ 20B4150 :                     ; 		binclude "data/mars/maps/mtrl/marscity_art.bin"
-(1)   24/ 20B4150 :                     ; 		align 4
-(1)   25/ 20B4150 :                     ; Textr_projname:
-(1)   26/ 20B4150 :                     ; 		binclude "data/mars/objects/mtrl/projname_art.bin"
-(1)   27/ 20B4150 :                     ; 		align 4
-(1)   28/ 20B4150 :                     ; Textr_intro:
-(1)   29/ 20B4150 :                     ; 		binclude "data/mars/objects/mtrl/intro_art.bin"
-(1)   30/ 20B4150 :                     ; 		align 4
-(1)   31/ 20B4150 :                     
-(1)   32/ 20B4150 :                     TESTMARS_BG:
-(1)   33/ 20B4150 :                     		binclude "data/mars/test_art.bin"
-(1)   34/ 2108750 :                     		align 4
-(1)   35/ 2108750 :                     TESTMARS_BG_PAL:
-(1)   36/ 2108750 :                     		binclude "data/mars/test_pal.bin"
-(1)   37/ 2108950 :                     		align 4
-(1)   38/ 2108950 :                     ; PWM_STEREO:	binclude "sound/test_mars.wav",$2C,$200000
-(1)   39/ 2108950 :                     ; PWM_STEREO_e:
-(1)   40/ 2108950 :                     ; 		align 4
-(1)   41/ 2108950 :                     ; PwmInsWav_SPHEAVY1:
-(1)   42/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/SPHEAVY1.wav",$2C
-(1)   43/ 2108950 :                     ; PwmInsWav_SPHEAVY1_e:
-(1)   44/ 2108950 :                     ; 		align 4
-(1)   45/ 2108950 :                     ; PwmInsWav_MCLSTRNG:
-(1)   46/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/MCLSTRNG.wav",$2C
-(1)   47/ 2108950 :                     ; PwmInsWav_MCLSTRNG_e:
-(1)   48/ 2108950 :                     ; 		align 4
-(1)   49/ 2108950 :                     ; PwmInsWav_WHODSNARE:
-(1)   50/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/ST-79_whodini-snare.wav",$2C
-(1)   51/ 2108950 :                     ; PwmInsWav_WHODSNARE_e:
-(1)   52/ 2108950 :                     ; 		align 4
-(1)   53/ 2108950 :                     ; PwmInsWav_TECHNOBASSD:
-(1)   54/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/ST-72_techno-bassd3.wav",$2C
-(1)   55/ 2108950 :                     ; PwmInsWav_TECHNOBASSD_e:
-(1)   56/ 2108950 :                     ; 		align 4
-(1)   57/ 2108950 :                     ; PwmInsWav_Synth:
-(1)   58/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/amiga_synth.wav",$2C
-(1)   59/ 2108950 :                     ; PwmInsWav_Synth_e:
-(1)   60/ 2108950 :                     ; 		align 4
-(1)   61/ 2108950 :                     ; PwmInsWav_Piano:
-(1)   62/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/piano_1.wav",$2C
-(1)   63/ 2108950 :                     ; PwmInsWav_Piano_e:
-(1)   64/ 2108950 :                     ; 		align 4
-(1)   65/ 2108950 :                     ; PwmInsWav_String:
-(1)   66/ 2108950 :                     ; 		binclude "data/sound/instr/smpl/string_1.wav",$2C
-(1)   67/ 2108950 :                     ; PwmInsWav_String_e:
-(1)   68/ 2108950 :                     ; 		align 4
-(1)   69/ 2108950 :                     
-     127/  108950 :                     		dephase
-     128/  108950 :                     
-     129/  108950 :                     ; ====================================================================
-     130/  108950 :                     ; ---------------------------------------------
-     131/  108950 :                     ; End
-     132/  108950 :                     ; ---------------------------------------------
-     133/  108950 :                     		
-     134/  108950 :                     ROM_END:
-     135/  108950 :                     		align $8000
-     136/  110000 :                     
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 2 - 11/6/2021 22:09:09
+     115/   BC150 :                     		dephase
+     116/   BC150 :                     MARS_RAMDATA_E:
+     117/   BC150 :                     		align 4
+     118/   BC150 :                     
+     119/   BC150 :                     ; --------------------------------------------------------
+     120/   BC150 :                     ; MARS data for SH2's ROM view
+     121/   BC150 :                     ; This section will be gone if RV=1
+     122/   BC150 :                     ; --------------------------------------------------------
+     123/   BC150 :                     
+     124/ 20BC150 :                     		phase CS1+*
+     125/ 20BC150 :                     		align 4
+     126/ 20BC150 :                     		include "data/mars_rom.asm"
+(1)    1/ 20BC150 :                     ; ====================================================================
+(1)    2/ 20BC150 :                     ; ----------------------------------------------------------------
+(1)    3/ 20BC150 :                     ; SH2 ROM user data
+(1)    4/ 20BC150 :                     ; 
+(1)    5/ 20BC150 :                     ; If your data is too much for SDRAM, place it here.
+(1)    6/ 20BC150 :                     ; Note that this section will be gone if the Genesis side is
+(1)    7/ 20BC150 :                     ; perfoming a DMA ROM-to-VDP Transfer (setting RV=1)
+(1)    8/ 20BC150 :                     ; 
+(1)    9/ 20BC150 :                     ; Note: Reading data from here is slow on hardware
+(1)   10/ 20BC150 :                     ; ----------------------------------------------------------------
+(1)   11/ 20BC150 :                     
+(1)   12/ 20BC150 :                     ; --------------------------------------------------------
+(1)   13/ 20BC150 :                     ; Textures
+(1)   14/ 20BC150 :                     ; --------------------------------------------------------
+(1)   15/ 20BC150 :                     
+(1)   16/ 20BC150 :                     ; 		align 4
+(1)   17/ 20BC150 :                     ; 		include "data/mars/maps/map_marscity.asm"
+(1)   18/ 20BC150 :                     ; 		align 4
+(1)   19/ 20BC150 :                     ; 		include "data/mars/objects/mdl/projname/head.asm"
+(1)   20/ 20BC150 :                     ; 		align 4
+(1)   21/ 20BC150 :                     
+(1)   22/ 20BC150 :                     ; Textr_marscity:
+(1)   23/ 20BC150 :                     ; 		binclude "data/mars/maps/mtrl/marscity_art.bin"
+(1)   24/ 20BC150 :                     ; 		align 4
+(1)   25/ 20BC150 :                     ; Textr_projname:
+(1)   26/ 20BC150 :                     ; 		binclude "data/mars/objects/mtrl/projname_art.bin"
+(1)   27/ 20BC150 :                     ; 		align 4
+(1)   28/ 20BC150 :                     ; Textr_intro:
+(1)   29/ 20BC150 :                     ; 		binclude "data/mars/objects/mtrl/intro_art.bin"
+(1)   30/ 20BC150 :                     ; 		align 4
+(1)   31/ 20BC150 :                     
+(1)   32/ 20BC150 :                     TESTMARS_BG:
+(1)   33/ 20BC150 :                     		binclude "data/mars/test_art.bin"
+(1)   34/ 2110750 :                     		align 4
+(1)   35/ 2110750 :                     TESTMARS_BG_PAL:
+(1)   36/ 2110750 :                     		binclude "data/mars/test_pal.bin"
+(1)   37/ 2110950 :                     		align 4
+(1)   38/ 2110950 :                     ; PWM_STEREO:	binclude "sound/test_mars.wav",$2C,$200000
+(1)   39/ 2110950 :                     ; PWM_STEREO_e:
+(1)   40/ 2110950 :                     ; 		align 4
+(1)   41/ 2110950 :                     ; PwmInsWav_SPHEAVY1:
+(1)   42/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/SPHEAVY1.wav",$2C
+(1)   43/ 2110950 :                     ; PwmInsWav_SPHEAVY1_e:
+(1)   44/ 2110950 :                     ; 		align 4
+(1)   45/ 2110950 :                     ; PwmInsWav_MCLSTRNG:
+(1)   46/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/MCLSTRNG.wav",$2C
+(1)   47/ 2110950 :                     ; PwmInsWav_MCLSTRNG_e:
+(1)   48/ 2110950 :                     ; 		align 4
+(1)   49/ 2110950 :                     ; PwmInsWav_WHODSNARE:
+(1)   50/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/ST-79_whodini-snare.wav",$2C
+(1)   51/ 2110950 :                     ; PwmInsWav_WHODSNARE_e:
+(1)   52/ 2110950 :                     ; 		align 4
+(1)   53/ 2110950 :                     ; PwmInsWav_TECHNOBASSD:
+(1)   54/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/ST-72_techno-bassd3.wav",$2C
+(1)   55/ 2110950 :                     ; PwmInsWav_TECHNOBASSD_e:
+(1)   56/ 2110950 :                     ; 		align 4
+(1)   57/ 2110950 :                     ; PwmInsWav_Synth:
+(1)   58/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/amiga_synth.wav",$2C
+(1)   59/ 2110950 :                     ; PwmInsWav_Synth_e:
+(1)   60/ 2110950 :                     ; 		align 4
+(1)   61/ 2110950 :                     ; PwmInsWav_Piano:
+(1)   62/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/piano_1.wav",$2C
+(1)   63/ 2110950 :                     ; PwmInsWav_Piano_e:
+(1)   64/ 2110950 :                     ; 		align 4
+(1)   65/ 2110950 :                     ; PwmInsWav_String:
+(1)   66/ 2110950 :                     ; 		binclude "data/sound/instr/smpl/string_1.wav",$2C
+(1)   67/ 2110950 :                     ; PwmInsWav_String_e:
+(1)   68/ 2110950 :                     ; 		align 4
+(1)   69/ 2110950 :                     
+     127/  110950 :                     		dephase
+     128/  110950 :                     
+     129/  110950 :                     ; ====================================================================
+     130/  110950 :                     ; ---------------------------------------------
+     131/  110950 :                     ; End
+     132/  110950 :                     ; ---------------------------------------------
+     133/  110950 :                     		
+     134/  110950 :                     ROM_END:
+     135/  110950 :                     		align $8000
+     136/  118000 :                     
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 2 - 11/6/2021 23:56:48
 
 
   symbol table (* = unused):
@@ -14193,9 +14209,9 @@ MD RAM ends at: FF880C
  CURRINSDATA :                 188B C |  CURRINSPOS :                  188F C |
  CURRTBLPOS :                  188D C |  CURRTICKBITS :                1884 C |
  CYCLE :                         32 - |  DACCOM :                      1572 C |
- DACINS_CDSNARE :            9288DB C | *DACINS_MAGIC2 :             90E97D C |
- DACINS_SAURKICK :           92A2D2 C | *DACINS_SAURSNARE :          92B263 C |
-*DACINS_SNARE_GEM :          9277B4 C |  DAC_FILL :                    10BC C |
+ DACINS_CDSNARE :            92F0E5 C | *DACINS_MAGIC2 :             915187 C |
+ DACINS_SAURKICK :           930ADC C | *DACINS_SAURSNARE :          931A6D C |
+*DACINS_SNARE_GEM :          92DFBE C |  DAC_FILL :                    10BC C |
  DAC_FIRSTFILL :               10CA C |  DAC_ME :                         8 C |
  DAC_OFF :                     1073 C |  DAC_ON :                      105E C |
  DAC_PLAY :                    1088 C |  DAC_REFILL :                  10CE C |
@@ -14260,37 +14276,39 @@ MD RAM ends at: FF880C
  FM :                            80 - |  FM3REG :                      1566 C |
  FMCOM :                       1452 C |  FMFREQ_LIST :                 1196 C |
  FMFRQH :                        18 - |  FMFRQL :                        1E - |
-*FMINS_AMBIENT_DARK :        90E87D C | *FMINS_AMBIENT_SPOOK :       90E89D C |
- FMINS_BANJO_PUY :           90E95D C | *FMINS_BASS_3 :              90E73D C |
- FMINS_BASS_CALM :           90E71D C |  FMINS_BASS_GROOVE :         90E75D C |
- FMINS_BASS_GROOVE_2 :       90E77D C | *FMINS_BASS_ITALO :          90E79D C |
-*FMINS_BASS_KON :            90E7BD C | *FMINS_BASS_SYNTH :          90E7DD C |
-*FMINS_BELL_CHINA :          90E8DD C |  FMINS_BRASS_EUR :           90E8FD C |
- FMINS_BRASS_PUY :           90E91D C |  FMINS_COM :                   1476 C |
+*FMINS_AMBIENT_DARK :        915087 C | *FMINS_AMBIENT_SPOOK :       9150A7 C |
+ FMINS_BANJO_PUY :           915167 C | *FMINS_BASS_3 :              914F47 C |
+ FMINS_BASS_CALM :           914F27 C |  FMINS_BASS_GROOVE :         914F67 C |
+ FMINS_BASS_GROOVE_2 :       914F87 C | *FMINS_BASS_ITALO :          914FA7 C |
+*FMINS_BASS_KON :            914FC7 C | *FMINS_BASS_SYNTH :          914FE7 C |
+ FMINS_BELL_CHINA :          9150E7 C |  FMINS_BRASS_EUR :           915107 C |
+ FMINS_BRASS_PUY :           915127 C |  FMINS_COM :                   1476 C |
  FMINS_COM2 :                  149E C |  FMINS_COM3 :                  14C6 C |
  FMINS_COM4 :                  14EE C |  FMINS_COM5 :                  1516 C |
- FMINS_COM6 :                  153E C |  FMINS_DING_TOY :            90E8BD C |
-*FMINS_DRUMKICK_GEM :        90E6DD C | *FMINS_FLAUTE_CAVE :         90E93D C |
-*FMINS_FM3_CLOSEDHAT :       90E655 C |  FMINS_FM3_OPENHAT :         90E62D C |
- FMINS_GUITAR_HEAVY :        90E67D C |  FMINS_GUITAR_PUY :          90E69D C |
- FMINS_GUITAR_PUY_2 :        90E6BD C | *FMINS_ORGAN_M1 :            90E7FD C |
- FMINS_PIANOM1 :             90E6FD C |  FMINS_TRUMPET_2 :           90E81D C |
-*FMINS_TRUMPET_KON :         90E83D C |  FMINS_TRUMPET_PUY :         90E85D C |
+ FMINS_COM6 :                  153E C |  FMINS_DING_TOY :            9150C7 C |
+*FMINS_DRUMKICK_GEM :        914EE7 C | *FMINS_FLAUTE_CAVE :         915147 C |
+*FMINS_FM3_CLOSEDHAT :       914E5F C |  FMINS_FM3_OPENHAT :         914E37 C |
+ FMINS_GUITAR_HEAVY :        914E87 C |  FMINS_GUITAR_PUY :          914EA7 C |
+ FMINS_GUITAR_PUY_2 :        914EC7 C | *FMINS_ORGAN_M1 :            915007 C |
+ FMINS_PIANOM1 :             914F07 C |  FMINS_TRUMPET_2 :           915027 C |
+*FMINS_TRUMPET_KON :         915047 C |  FMINS_TRUMPET_PUY :         915067 C |
  FMKEYS :                         6 - |  FMPAN :                         12 - |
  FMSPCMODE :                   1886 C |  FMVOL :                          C - |
  FM_SEND_1 :                   1048 C |  FM_SEND_2 :                   1053 C |
  FRAMECTL :                       B - | *FS :                             1 - |
-*FULLPMMU :                       1 - |  GEMATRK_BLK_TEST :          90458E C |
- GEMATRK_BLK_TEST2 :         9045F7 C |  GEMATRK_INS_TEST :          9045DF C |
- GEMATRK_INS_TEST2 :         907C49 C | *GEMATRK_MARS_BLK :          90BE9A C |
-*GEMATRK_MARS_INS :          90E5D5 C | *GEMATRK_MARS_PATT :         90BEA8 C |
- GEMATRK_MECANO_BLK :        909888 C |  GEMATRK_MECANO_INS :        90BDFA C |
- GEMATRK_MECANO_PATT :       9098A9 C |  GEMATRK_MOON_BLK :          907CF9 C |
- GEMATRK_MOON_INS :          909820 C |  GEMATRK_MOON_PATT :         907D09 C |
- GEMATRK_PATT_TEST :         904591 C |  GEMATRK_PATT_TEST2 :        904602 C |
- GEMA_INIT :                    BA1 C |  GEMA_INIT.SET_IT :             C04 C |
- GET_CMDBYTE :                  186 C |  GET_CMDBYTE.GETCBYTEL :        189 C |
- GLBL_LASTORG :               B4150 - |  GLBL_LASTPC :              600413C - |
+*FULLPMMU :                       1 - |  GEMATRK_BLK_CHRONO :        90458E C |
+ GEMATRK_BLK_TEST :          90AD98 C | *GEMATRK_BLK_TEST2 :         90AE01 C |
+ GEMATRK_INS_CHRONO :        90AD58 C |  GEMATRK_INS_TEST :          90ADE9 C |
+*GEMATRK_INS_TEST2 :         90E453 C | *GEMATRK_MARS_BLK :          9126A4 C |
+*GEMATRK_MARS_INS :          914DDF C | *GEMATRK_MARS_PATT :         9126B2 C |
+ GEMATRK_MECANO_BLK :        910092 C |  GEMATRK_MECANO_INS :        912604 C |
+ GEMATRK_MECANO_PATT :       9100B3 C |  GEMATRK_MOON_BLK :          90E503 C |
+ GEMATRK_MOON_INS :          91002A C |  GEMATRK_MOON_PATT :         90E513 C |
+ GEMATRK_PATT_CHRONO :       904599 C |  GEMATRK_PATT_TEST :         90AD9B C |
+*GEMATRK_PATT_TEST2 :        90AE0C C |  GEMA_INIT :                    BA1 C |
+ GEMA_INIT.SET_IT :             C04 C |  GET_CMDBYTE :                  186 C |
+ GET_CMDBYTE.GETCBYTEL :        189 C |  GLBL_LASTORG :               BC150 - |
+ GLBL_LASTPC :              600413C - |
  GO_DRWSLD_UPDLINE_TEX :                                   FFFFFFFFC00000F4 C |
  GO_DRWTEX_GONXTPZ :                                       FFFFFFFFC00000F8 C |
 *HAS64 :                          1 - | *HASDSP :                         0 - |
@@ -14514,7 +14532,7 @@ MD RAM ends at: FF880C
  MARS_ENTRY.NO_MARS :           930 C |  MARS_ENTRY.RAMCODE :           84A C |
  MARS_ENTRY.RESTARTICD :        85A C |  MARS_ENTRY.WAITFRAME :         8D0 C |
  MARS_ENTRY.WM :                892 C |  MARS_ENTRY.WS :                89C C |
- MARS_RAMDATA :               B0014 C |  MARS_RAMDATA_E :             B4150 C |
+ MARS_RAMDATA :               B8014 C |  MARS_RAMDATA_E :             BC150 C |
  MARS_SCOMM :                   4B6 C |  MASTER_IRQ :               6000248 C |
  MASTER_LOOP :              6000D14 C |  MAX_MDERAM :                   800 - |
  MAX_MDTASKS :                   10 - |  MAX_MDTSKARG :                   8 - |
@@ -14599,7 +14617,7 @@ MD RAM ends at: FF880C
 *PACKING :                        0 - | *PADDING :                        0 - |
 *PADDINGSOFAR :                   0 - |  PAD_ID :                         0 C |
  PAD_VER :                        1 C | *PALMODE :                     189A C |
- PCM_END :                   9B0000 C |  PCM_START :                 930000 C |
+ PCM_END :                   9B8000 C |  PCM_START :                 938000 C |
 *PEN :                           20 - |  PLGN_TEXURE :                   80 - |
  PLGN_TRI :                      40 - |  PLYPZ_MTRL :                    34 C |
  PLYPZ_SRC_XL :                  14 C |  PLYPZ_SRC_XL_DX :               18 C |
@@ -14648,7 +14666,7 @@ MD RAM ends at: FF880C
  RCHWIDTH :                      36 - |  READROMB :                     C5A C |
  READROMB.IMBACK :              C6A C |  READROMB.W2 :                  C77 C |
  READROMB.WAIT :                C73 C | *RELAXED :                        0 - |
- ROM_END :                   108950 C | *ROTATE_POINT :             6001414 C |
+ ROM_END :                   110950 C | *ROTATE_POINT :             6001414 C |
 *ROT_ANGLE :                6001410 C |  RRT :                           14 - |
  SBEATACC :                    1889 C |  SBEATPTCK :                   1887 C |
  SCREEN_HEIGHT :                 E0 - |  SCREEN_WIDTH :                 140 - |
@@ -14658,41 +14676,41 @@ MD RAM ends at: FF880C
  SETUPCHIP.CHECK_INS :          AD4 C |  SETUPCHIP.CHIP_OUT :           A55 C |
  SETUPCHIP.CHIP_SWAP :          A2B C |  SETUPCHIP.CHKFREE :            B8B C |
  SETUPCHIP.CHK_TBL :            B42 C |  SETUPCHIP.CHK_TBLN :           B27 C |
- SETUPCHIP.CHP_UNLK :           AB3 C |  SETUPCHIP.CONFM_RD :           709 C |
- SETUPCHIP.DAC_OUT :            A57 C | *SETUPCHIP.DCUT :               955 C |
- SETUPCHIP.DIFFR :              B5B C | *SETUPCHIP.DOFF :               95A C |
- SETUPCHIP.DO_CHNL :            5A8 C |  SETUPCHIP.EFFFM_E :            7B6 C |
- SETUPCHIP.EFFFM_F :            7DB C |  SETUPCHIP.EFFFM_X :            81C C |
- SETUPCHIP.EFF_FM :             7A1 C |  SETUPCHIP.E_GO :               7CF C |
- SETUPCHIP.E_NEG :              7D8 C |  SETUPCHIP.E_NOEF :             7CC C |
- SETUPCHIP.E_NOF :              7C3 C |  SETUPCHIP.FLOTIN :             586 C |
+ SETUPCHIP.CHP_UNLK :           AB3 C |  SETUPCHIP.CONFM_RD :           6F7 C |
+ SETUPCHIP.DAC_OUT :            A57 C | *SETUPCHIP.DCUT :               943 C |
+ SETUPCHIP.DIFFR :              B5B C | *SETUPCHIP.DOFF :               948 C |
+ SETUPCHIP.DO_CHNL :            5A8 C |  SETUPCHIP.EFFFM_E :            7A4 C |
+ SETUPCHIP.EFFFM_F :            7C9 C |  SETUPCHIP.EFFFM_X :            80A C |
+ SETUPCHIP.EFF_FM :             78F C |  SETUPCHIP.E_GO :               7BD C |
+ SETUPCHIP.E_NEG :              7C6 C |  SETUPCHIP.E_NOEF :             7BA C |
+ SETUPCHIP.E_NOF :              7B1 C |  SETUPCHIP.FLOTIN :             586 C |
 *SETUPCHIP.FLOTIN_S :           557 C |  SETUPCHIP.FM3_OUT :            A65 C |
- SETUPCHIP.FMPAN_LIST :         835 C |  SETUPCHIP.FMPICKINS :          71C C |
- SETUPCHIP.FMSAME_INS :         71A C | *SETUPCHIP.FM_DLINK :           A0B C |
+ SETUPCHIP.FMPAN_LIST :         823 C |  SETUPCHIP.FMPICKINS :          70A C |
+ SETUPCHIP.FMSAME_INS :         708 C | *SETUPCHIP.FM_DLINK :           A0B C |
  SETUPCHIP.FM_KEYCUT :          A09 C |  SETUPCHIP.FM_KEYOFF :          A05 C |
  SETUPCHIP.FM_OUT :             A9A C |  SETUPCHIP.FM_SETKON :          9EB C |
  SETUPCHIP.FNDLINK :            B80 C |  SETUPCHIP.FNDSLOT :            B9E C |
- SETUPCHIP.FND_OCT :            9C8 C |  SETUPCHIP.FREQ_SET :           7F8 C |
- SETUPCHIP.F_GO :               7F4 C |  SETUPCHIP.F_NOEF :             7F1 C |
- SETUPCHIP.F_NOF :              7E8 C |  SETUPCHIP.GET_OCT :            9BD C |
- SETUPCHIP.INS_DAC :            64A C |  SETUPCHIP.INS_FM :             696 C |
+ SETUPCHIP.FND_OCT :            9C8 C |  SETUPCHIP.FREQ_SET :           7E6 C |
+ SETUPCHIP.F_GO :               7E2 C |  SETUPCHIP.F_NOEF :             7DF C |
+ SETUPCHIP.F_NOF :              7D6 C |  SETUPCHIP.GET_OCT :            9BD C |
+ SETUPCHIP.INS_DAC :            64A C |  SETUPCHIP.INS_FM :             698 C |
  SETUPCHIP.INS_FM3 :            689 C |  SETUPCHIP.INS_PSG :            61B C |
  SETUPCHIP.INS_PSGN :           60E C |  SETUPCHIP.MK_CHIP :            524 C |
  SETUPCHIP.NEW :                B36 C |  SETUPCHIP.NEXT :               B45 C |
- SETUPCHIP.NODEFV :             8F3 C |  SETUPCHIP.NOTEPSG_C :          8B9 C |
- SETUPCHIP.NOTE_DAC :           91C C |  SETUPCHIP.NOTE_FM :            989 C |
- SETUPCHIP.NOTE_FM3 :           965 C |  SETUPCHIP.NOTE_PSG :           897 C |
- SETUPCHIP.NOTE_PSGN :          884 C |  SETUPCHIP.NOT_PRDAC :          6AC C |
+ SETUPCHIP.NODEFV :             8E1 C |  SETUPCHIP.NOTEPSG_C :          8A7 C |
+ SETUPCHIP.NOTE_DAC :           90A C |  SETUPCHIP.NOTE_FM :            977 C |
+ SETUPCHIP.NOTE_FM3 :           953 C |  SETUPCHIP.NOTE_PSG :           885 C |
+ SETUPCHIP.NOTE_PSGN :          872 C |  SETUPCHIP.NOT_PRDAC :          6AC C |
  SETUPCHIP.NO_CHNL :            5E9 C |  SETUPCHIP.NXT_CHNL :           52F C |
-*SETUPCHIP.PCT_GO :             864 C |  SETUPCHIP.PCUT :               862 C |
- SETUPCHIP.POFF :               85E C |  SETUPCHIP.PSGN_OUT :           A73 C |
+*SETUPCHIP.PCT_GO :             852 C |  SETUPCHIP.PCUT :               850 C |
+ SETUPCHIP.POFF :               84C C |  SETUPCHIP.PSGN_OUT :           A73 C |
  SETUPCHIP.PSG_OUT :            A81 C |  SETUPCHIP.RAN_OUT :            5E1 C |
- SETUPCHIP.RD_FMINS :           6D5 C |  SETUPCHIP.RD_NT3 :             6C0 C |
- SETUPCHIP.REQ_EFF :            78C C |  SETUPCHIP.REQ_INS :            5EB C |
- SETUPCHIP.REQ_NOTE :           839 C |  SETUPCHIP.REQ_VOL :            728 C |
+ SETUPCHIP.RD_FMINS :           6C3 C |  SETUPCHIP.RD_NT3 :             9B2 C |
+ SETUPCHIP.REQ_EFF :            77A C |  SETUPCHIP.REQ_INS :            5EB C |
+ SETUPCHIP.REQ_NOTE :           827 C |  SETUPCHIP.REQ_VOL :            716 C |
  SETUPCHIP.SILNC_LIST :         570 C |  SETUPCHIP.SILNC_SINGL :        541 C |
- SETUPCHIP.TBLLIST :            B1B C |  SETUPCHIP.VMUCH :              760 C |
- SETUPCHIP.VOL_FM :             767 C |  SETUPCHIP.VOL_PSG :            744 C |
+ SETUPCHIP.TBLLIST :            B1B C |  SETUPCHIP.VMUCH :              74E C |
+ SETUPCHIP.VOL_FM :             755 C |  SETUPCHIP.VOL_PSG :            732 C |
  SET_LEFT :                 6000720 C |  SET_LEFT.LFT_OK :          6000742 C |
  SET_LEFT.LFT_SKIP :        60007A2 C |  SET_RIGHT :                60007A8 C |
  SET_RIGHT.RGT_OK :         60007CA C |  SET_RIGHT.RGT_SKIP :       600082A C |
@@ -14758,8 +14776,8 @@ MD RAM ends at: FF880C
  S_IRQ_VRES.VRESLOOP :      60005F2 C |  TBLFM :                       13B2 C |
  TBLFM3 :                      13D2 C |  TBLFM6 :                      13DA C |
  TBLPSG :                      1390 C |  TBLPSGN :                     13AA C |
- TBLPWM :                      13E4 C |  TESTMARS_BG :              20B4150 C |
- TESTMARS_BG_PAL :          2108750 C |  TH :                      20000000 - |
+ TBLPWM :                      13E4 C |  TESTMARS_BG :              20BC150 C |
+ TESTMARS_BG_PAL :          2110750 C |  TH :                      20000000 - |
 *THISCODE_TOP :              FF19E8 C |  THISCODE_TOP.INSIDE :       FF1A1E C |
  THISCODE_TOP.LIST :         FF1A5E C |  THISCODE_TOP.LOOP :         FF1A04 C |
  THISCODE_TOP.MODE0 :        FF1A6A C |  THISCODE_TOP.MODE0_LOOP :   FF1A90 C |
@@ -14768,7 +14786,7 @@ MD RAM ends at: FF880C
  THISCODE_TOP.NOR :          FF1B50 C |  THISCODE_TOP.NOU :          FF1AFE C |
  THISCODE_TOP.PLAYLIST :     FF1B60 C |  THISCODE_TOP.PRINT_CURSOR : FF1BA0 C |
 *THIS_POLYGON :             60013E8 C |  TICKCNT :                     1883 C |
- TICKFLAG :                    1881 C | *TIME :                    22:09:09 - |
+ TICKFLAG :                    1881 C | *TIME :                    23:56:48 - |
  TIMERCTL :                      30 - | *TMR :                           2C - |
  TRANSFERROM :                  C84 C |  TRANSFERROM.DOUBLE :           CA3 C |
  TRANSFERROM.TRANSFER :         CC8 C |  TRANSFERROM.X68KLAST :         CE7 C |
@@ -14875,10 +14893,10 @@ MD RAM ends at: FF880C
 *_TCSR :                          1 - | *_TIER :                          0 - |
  _TOCR :                          7 - |  _VDPREG :                 20004100 - |
 
-   1413 symbols
-    259 unused symbols
+   1416 symbols
+    261 unused symbols
 
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 3 - 11/6/2021 22:09:09
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 3 - 11/6/2021 23:56:48
 
 
   defined macros:
@@ -14893,7 +14911,7 @@ STRUCT                                |
 
      11 macros
 
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 4 - 11/6/2021 22:09:09
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 4 - 11/6/2021 23:56:48
 
 
   defined functions:
@@ -14902,7 +14920,7 @@ STRUCT                                |
 NOTZ80                                | LOCATE                               
 MAPSIZE                               |
 
- AS V1.42 Beta [Bld 118] - source file mars.asm - page 5 - 11/6/2021 22:09:09
+ AS V1.42 Beta [Bld 118] - source file mars.asm - page 5 - 11/6/2021 23:56:48
 
 
   codepages:
@@ -14911,10 +14929,10 @@ MAPSIZE                               |
 STANDARD (0 changed characters)
 
 
-0.24 seconds assembly time
+0.21 seconds assembly time
 
   13447 lines source file
-  14109 lines incl. macro expansions
+  14125 lines incl. macro expansions
       7 passes
       0 errors
       0 warnings
