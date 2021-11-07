@@ -444,7 +444,8 @@ updtrack:
 		ret	z
 		rst	8
 		ld	a,(currTickBits)	; a - Tick/Beat bits
-	; TODO implementar bien esto
+
+	; TODO: implementar bien esto
 ; 		bit	5,b			; This track uses Beats?
 ; 		jp	nz,.sfxmd		; Nope
 		bit	1,a			; BEAT passed?
@@ -708,6 +709,7 @@ updtrack:
 		jp	z,.track_end
 ; 		call	dac_fill
 
+		call	dac_fill
 		ld	l,(iy+trk_CachHeads)
 		ld	h,(iy+(trk_CachHeads+1))
 		add	a,a			; a * 04h
@@ -983,8 +985,10 @@ setupchip:
 		xor	a
 		ld	(flagResChip),a
 		rst	8
+
 		ld	iy,tblPSGN
 		ld	ix,psgcom+3
+		ld	c,90h
 		call	.silnc_singl
 ; 		ld	iy,tblFM3
 ; 		ld	ix,fmcom+2
@@ -995,10 +999,12 @@ setupchip:
 ; 		call	.silnc_singl
 		ld	iy,tblFM		; silence floating channels
 		ld	ix,fmcom
+		ld	c,0A0h
 		call	.silnc_list
 		rst	8
 		ld	iy,tblPSG
 		ld	ix,psgcom
+		ld	b,80h
 		call	.silnc_list
 		ret
 
@@ -1023,6 +1029,7 @@ setupchip:
 
 ; iy - table
 ; ix - chip com's
+;  c - chip ID
 
 .silnc_singl:
 		ld	a,(iy+1)	; end-of-list
@@ -1031,12 +1038,13 @@ setupchip:
 		ld	h,a
 		rst	8
 		ld	l,(iy)
-		ld	a,(hl)		; *** DIRECT chnl_Chip
-		or	a
-		jr	z,.flotin_s
-		ld	d,(iy+2)
+		or	(hl)		; *** DIRECT chnl_Chip
+		jr	z,.flotin
+		ld	d,(hl)
+		ld	a,(iy+2)
+		or	c
 		cp	d
-		ret	z
+		jr	z,.busy
 .flotin_s:
 		rst	8
 		ld	d,0
@@ -1059,10 +1067,11 @@ setupchip:
 		ld	h,a
 		rst	8
 		ld	l,(iy)
-		ld	a,(hl)		; *** DIRECT chnl_Chip
-		or	a
+		or	(hl)		; *** DIRECT chnl_Chip
 		jr	z,.flotin
-		ld	d,(iy+2)
+		ld	d,(hl)
+		ld	a,(iy+2)
+		or	c
 		cp	d
 		jr	z,.busy
 .flotin:
@@ -1094,19 +1103,16 @@ setupchip:
 
 .do_chnl:
 		push	bc
-		call	.check_chip
+		call	.check_ins
 		cp	-1
 		jr	z,.no_chnl
+		call	.chip_swap	; check if tracker channel swapped chip
+		call	.check_chnl	; a - chip requested
+		cp	-1		; Ran out of chip channels.
+		jr	z,.ran_out
 		ld	(currInsPos),hl
-		call	.check_chnl
-		cp	-1
-		jr	z,.no_chnl
 		ld	(currTblPos),ix
-		ld	hl,(currInsPos)
-; 		ld	e,(hl)
-; 		call	.chip_swap
 		call	dac_fill
-
 		bit	1,(iy+chnl_Flags)
 		call	nz,.req_ins
 		bit	2,(iy+chnl_Flags)
@@ -1116,158 +1122,13 @@ setupchip:
 		call	nz,.req_eff
 		bit	0,(iy+chnl_Flags)
 		call	nz,.req_note
+.ran_out:
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
 		ld	(iy+chnl_Flags),a
 .no_chnl:
 		pop	bc
 		ret
-
-; TODO
-; bad idea.
-; .chip_swap:
-; 		ld	a,(iy+chnl_Chip)
-; 		or	a		; if == 0, stop
-; 		ret	z
-; 		ld	c,a
-; 		rst	8
-; 		and	11110000b
-; 		cp	e		; if channel is ours, ignore.
-; 		ret	z
-; 		ld	d,0
-; 		ld	b,0
-; 		cp	80h
-; 		jr	z,.noslc_psg
-; 		cp	90h
-; 		jr	z,.noslc_psgn
-; 		cp	0A0h
-; 		jr	z,.noslc_fm
-; 		cp	0B0h
-; 		jr	z,.noslc_fm3
-; 		cp	0C0h
-; 		jp	z,.noslc_dac
-; 		ret
-; .noslc_psg:
-; 		ld	a,c
-; 		and	0011b
-; 		ld	c,a
-; 		rst	8
-; 		ld	hl,tblPSG
-; 		add	a,a		; *08h
-; 		add	a,a
-; 		add	a,a
-; 		ld	e,a
-; 		add	hl,de
-; 		push	iy
-; 		pop	de
-; 		ld	a,(hl)
-; 		cp	e
-; 		ret	nz
-; 		inc	hl
-; 		rst	8
-; 		ld	a,(hl)
-; 		cp	d
-; 		ret	nz
-; 		inc	hl
-; 		ld	d,0
-; 		ld	a,(hl)
-; 		and	011b
-; 		ld	e,a
-; 		dec	hl
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-; 		ld	hl,psgcom
-; 		add	hl,de
-; 		ld	(hl),100b
-; 		ret
-; .noslc_psgn:
-; 		ld	hl,tblPSGN
-; 		push	iy
-; 		pop	de
-; 		ld	a,(hl)
-; 		cp	e
-; 		ret	nz
-; 		inc	hl
-; 		ld	a,(hl)
-; 		cp	d
-; 		ret	nz
-; 		rst	8
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-; 		ld	a,100b
-; 		ld	(psgcom+3),a
-; 		ret
-; .noslc_fm:
-; 		rst	8
-; 		ld	a,c
-; 		and	0111b
-; 		ld	c,a
-; 		rst	8
-; 		ld	hl,tblFM
-; 		add	a,a		; *08h
-; 		add	a,a
-; 		add	a,a
-; 		ld	e,a
-; 		add	hl,de
-; 		push	iy
-; 		pop	de
-; 		ld	a,(hl)
-; 		cp	e
-; 		ret	nz
-; 		inc	hl
-; 		rst	8
-; 		ld	a,(hl)
-; 		cp	d
-; 		ret	nz
-;
-; 	; same
-; 		ld	d,0
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-; 		ld	hl,fmcom
-; 		add	hl,bc
-; 		ld	(hl),100b
-; 		ret
-; .noslc_fm3:
-; 		ld	hl,tblFM3
-; 		push	iy
-; 		pop	de
-; 		ld	a,(hl)
-; 		cp	e
-; 		ret	nz
-; 		inc	hl
-; 		ld	a,(hl)
-; 		cp	d
-; 		ret	nz
-; 		rst	8
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-; 		ld	a,100b
-; 		ld	(fmcom+2),a
-; 		ret
-;
-; .noslc_dac:
-; 		ld	hl,tblFM6
-; 		push	iy
-; 		pop	de
-; 		ld	a,(hl)
-; 		cp	e
-; 		ret	nz
-; 		inc	hl
-; 		ld	a,(hl)
-; 		cp	d
-; 		ret	nz
-; 		rst	8
-; 		ld	(hl),0
-; 		dec	hl
-; 		ld	(hl),0
-; 		ld	a,100b
-; 		ld	(daccom),a
-; 		ret
 
 ; ----------------------------------------
 ; bit 1: Intrument
@@ -1605,7 +1466,7 @@ setupchip:
 ; --------------------------------
 ; FM Effect E
 ; --------------------------------
-; TODO: this is rushed.
+; TODO: cleanup the code mess
 
 .effFm_E:
 		ld	a,e
@@ -1639,7 +1500,6 @@ setupchip:
 ; --------------------------------
 ; FM Effect F
 ; --------------------------------
-; TODO: this is rushed.
 
 .effFm_F:
 		ld	a,e
@@ -1740,6 +1600,8 @@ setupchip:
 ; PSG Keyoff
 .poff:
 		ld	c,010b
+		ld	(hl),c
+		ret
 ; PSG Keycut
 .pcut:
 		ld	c,100b
@@ -1766,12 +1628,14 @@ setupchip:
 .note_psgn:
 		ld 	hl,psgcom+3
 		ld	a,(ix+2)
+		or	90h
 		ld	(iy+chnl_Chip),a
 		ld 	a,(ix+4)
 		ld	(psgHatMode),a
 		jr	.notepsg_c
 .note_psg:
 		ld	a,(ix+2)
+		or	80h
 		ld	(iy+chnl_Chip),a
 		ld	a,(ix+2)
 		rst	8
@@ -1899,38 +1763,6 @@ setupchip:
 		jp	z,.fm_keyoff
 		cp	-2
 		jp	z,.fm_keycut
-;
-; 		push	iy
-; 		pop	de
-; 		ld	a,(ix)
-; 		cp	e
-; 		jr	nz,.don_rev3
-; 		ld	a,(ix+1)
-; 		cp	d
-; 		jr	nz,.don_rev3
-; 		ld	a,(iy+chnl_Chip)
-; 		and	111b
-; 		cp	2
-; 		jr	z,.don_rev3
-; 		push	hl
-; 		ld	d,0
-; 		ld	e,a
-; 		ld	hl,fmcom	; shut same note on channel
-; 		add	hl,de
-; 		ld	(hl),100b
-; ; 		ld	hl,tblFM
-; ; 		ld	a,e
-; ; 		add	a,a		; *08h
-; ; 		add	a,a
-; ; 		add	a,a
-; ; 		ld	d,0
-; ; 		ld	e,a
-; ; 		add	hl,de
-; ; 		ld	(hl),0
-; ; 		inc	hl
-; ; 		ld	(hl),0
-; 		pop	hl
-; .don_rev3:
 
 		ld	(iy+chnl_Chip),0B0h	; Set as FM3 special
 		ld	d,27h
@@ -1965,7 +1797,7 @@ setupchip:
 		jr	z,.fm_keycut
 		ld	a,b			; Set chip as FM
 		and	111b
-		or	90h
+		or	0A0h
 		ld	(iy+chnl_Chip),a
 		ld	a,c
 		rst	8
@@ -2024,7 +1856,9 @@ setupchip:
 		ret
 .fm_keyoff:
 		ld	c,010b
-		jr	.fm_dlink
+		ld	(hl),c
+		ret
+; 		jr	.fm_dlink
 .fm_keycut:
 		ld	c,100b
 .fm_dlink:
@@ -2047,19 +1881,123 @@ setupchip:
 		ret
 
 ; ----------------------------------------
-; Checks which channel type is using
-; auto-set channel
+; Channel swap
+; ----------------------------------------
+
+.chip_swap:
+		bit	7,(iy+chnl_Chip)
+		ret	z
+		ld	c,a
+		ld	a,(iy+chnl_Chip)	; if == 0, first time.
+		ld	e,a
+		and	11110000b
+		cp	c
+		jr	z,.chip_out
+		ld	d,0
+		cp	80h
+		call	z,.psg_out
+		cp	90h
+		call	z,.psgn_out
+		cp	0A0h
+		call	z,.fm_out
+		cp	0B0h
+		call	z,.fm3_out
+		cp	0C0h
+		call	z,.dac_out
+.chip_out:
+		ld	a,c
+		ret
+.dac_out:
+		push	hl
+		ld	hl,daccom
+		ld	(hl),100b
+		ld	hl,tblFM6
+		call	.chp_unlk
+		pop	hl
+		ret
+.fm3_out:
+		push	hl
+		ld	hl,fmcom+2
+		ld	(hl),100b
+		ld	hl,tblFM3
+		call	.chp_unlk
+		pop	hl
+		ret
+.psgn_out:
+		push	hl
+		ld	hl,psgcom+3
+		ld	(hl),100b
+		ld	hl,tblPSGN
+		call	.chp_unlk
+		pop	hl
+		ret
+.psg_out:
+		push	hl
+		ld	a,e
+		and	011b
+		ld	e,a
+		ld	hl,psgcom
+		add	hl,de
+		ld	(hl),100b
+		ld	a,e
+		add	a,a
+		add	a,a
+		add	a,a
+		ld	e,a
+		ld	hl,tblPSG
+		add	hl,de
+		call	.chp_unlk
+		pop	hl
+		ret
+.fm_out:
+		push	hl
+		ld	a,e
+		and	111b
+		ld	e,a
+		ld	hl,fmcom
+		add	hl,de
+		ld	(hl),100b
+		ld	a,e
+		add	a,a
+		add	a,a
+		add	a,a
+		ld	e,a
+		ld	hl,tblFM
+		add	hl,de
+		call	.chp_unlk
+		pop	hl
+		ret
+.chp_unlk:
+		push	iy
+		pop	de
+		ld	a,(hl)
+		cp	e
+		ret	nz
+		inc	hl
+		ld	a,(hl)
+		cp	d
+		ret	nz
+		dec	hl
+		ld	(hl),0
+		inc	hl
+		ld	(hl),0
+		inc	hl	; skip id
+		inc	hl	; and pitch
+		ld	(hl),0	; reset 5 bytes of settings
+		inc	hl
+		ld	(hl),0
+		inc	hl
+		ld	(hl),0
+		inc	hl
+		ld	(hl),0
+		inc	hl
+		ld	(hl),0
+		ret
+
+; ----------------------------------------
+; Sets current instrument data
 ;
-; Returns:
-;  a - Table available (-1: full)
-; hl - Instrument data point
-; ix - Chip table
-;
-; If a != -1, THEN check (hl)
-; manually for these types:
-; (after AND with 11110000b)
-;
-;   -1 - Null instrument, exit.
+;   -1 - Null instrument
 ;  80h - PSG
 ;  90h - PSG Noise
 ; 0A0h - FM
@@ -2068,7 +2006,7 @@ setupchip:
 ; 0D0h - PWM (or extra)
 ; ----------------------------------------
 
-.check_chip:
+.check_ins:
 		ld	a,(iy+chnl_Ins)
 		dec	a		; minus 1
 		ret	m		; return as -1 if no ins is used.
@@ -2083,8 +2021,14 @@ setupchip:
 		ld	a,(hl)
 		ret
 
+; ----------------------------------------
+; Checks which channel type is using
+; auto-set channel
+;
+; a - sound chip
+; ----------------------------------------
+
 .check_chnl:
-		ld	a,(hl)		; a - intrument type
 		cp	-1		; if -1: Null
 		ret	z
 		rst	8
@@ -2111,7 +2055,7 @@ setupchip:
 		jp	z,.chk_tbln
 		cp	0C0h		; type DAC?
 		jp	z,.chk_tbln
-		jp	.chk_tbl
+		jr	.chk_tbl
 .bad_ins:
 		ld	a,-1
 		ret
@@ -2157,7 +2101,7 @@ setupchip:
 ; --------------------------------------------
 
 .chk_tbl:
-		ld	hl,0		; hl - Free slot point
+		ld	bc,0		; bc - Free slot point
 .next:
 		ld	a,(ix+1)	; Check MSB first
 		cp	-1		; End of list? (as WORD: 0FFxxh)
@@ -2170,21 +2114,13 @@ setupchip:
 		ld	a,(ix)
 		cp	e
 		jr	nz,.diffr
-; 		ld	a,(ix+2)	; type changed?
-; 		and	11110000b
-; 		cp	c		; then reroll
-; 		jr	nz,.newkey
 		xor	a		; return 0
 		ret
-; .newkey:
-; 		ld	(ix),0
-; 		ld	(ix+1),0
-; 		jr	$
 
 ; d - MSB to check for auto-priority
 .diffr:
-		ld	a,l		; already found link at hl?
-		or	h
+		ld	a,c		; already found link at bc?
+		or	b
 		jr	nz,.alrdfnd
 		rst	8
 		ld	e,(ix+1)	; Check if this link == 0
@@ -2206,8 +2142,8 @@ setupchip:
 		cp	d
 		jr	nc,.alrdfnd
 .fndlink:
-		push	ix		; hl - got new link
-		pop	hl
+		push	ix		; bc - got new link
+		pop	bc
 		rst	8
 .alrdfnd:
 		ld	de,8		; Next channel table
@@ -2216,15 +2152,15 @@ setupchip:
 
 ; free link slot
 .chkfree:
-		ld	a,l		; found free link?
-		or	h
+		ld	a,c		; found free link?
+		or	b
 		jr	z,.fndslot
 
 
 ; 		cp	d		; Same Channel MSB?
 ; 		jr	z,.fndslot	; If not, skip
 ; 		jr	c,.fndslot
-		push	hl
+		push	bc
 		pop	ix		; tell ix is the new slot
 		push	iy
 		pop	de		; and mark it on buffer
@@ -3554,44 +3490,37 @@ wavFreq_List:	dw 100h		; C-0
 
 	; Channel tables: 10h bytes
 	; 0  - Link addr (0000h = free, used chnls start from +0020h)
-	; 2  - Channel ID
-	; 	PSG: psgcom indexes
-	; 	 FM: BASE register ids + keys
-	; 3  - Copy of current Impulse-intrument
+	; 2  - Channel index (ID is set extrenally)
+	; 3  - Pitch
 	; 4+ - Channel specific...
 
 	; PSG (80h+)
 	;  4 - psgNoise mode
-
-tblPSG:		db 00h,00h,80h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,81h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,82h,00h,00h,00h,00h,00h	; Channel 3
+		align 10h
+tblPSG:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
+		db 00h,00h,01h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
 		dw -1	; end-of-list
-tblPSGN:	db 00h,00h,93h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
+tblPSGN:	db 00h,00h,03h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 
 	; FM: 90h+ FM3: 0A0h DAC: 0B0h
 	;  4 - Special mode (FM3: Special, FM6: DAC)
 	;  5 - 24-bit copy of ROM instrument pointer
-
-		align 10h
-tblFM:		db 00h,00h,0A0h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,0A1h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,0A3h,00h,00h,00h,00h,00h	; Channel 4
-		db 00h,00h,0A4h,00h,00h,00h,00h,00h	; Channel 5
-tblFM3:		db 00h,00h,0B2h,00h,00h,00h,00h,00h	; Channel 3
-tblFM6:		db 00h,00h,0C5h,00h,00h,00h,00h,00h	; Channel 6
+tblFM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
+		db 00h,00h,01h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,03h,00h,00h,00h,00h,00h	; Channel 4
+		db 00h,00h,04h,00h,00h,00h,00h,00h	; Channel 5
+tblFM3:		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
+tblFM6:		db 00h,00h,05h,00h,00h,00h,00h,00h	; Channel 6
 		dw -1	; end-of-list
-		dw -1
 
-
-
-tblPWM:		db 00h,00h,0D0h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,0D1h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,0D2h,00h,00h,00h,00h,00h	; Channel 3
-		db 00h,00h,0D3h,00h,00h,00h,00h,00h	; Channel 4
-		db 00h,00h,0D4h,00h,00h,00h,00h,00h	; Channel 5
-		db 00h,00h,0D5h,00h,00h,00h,00h,00h	; Channel 6
-		db 00h,00h,0D6h,00h,00h,00h,00h,00h	; Channel 7
+tblPWM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
+		db 00h,00h,01h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
+		db 00h,00h,03h,00h,00h,00h,00h,00h	; Channel 4
+		db 00h,00h,04h,00h,00h,00h,00h,00h	; Channel 5
+		db 00h,00h,05h,00h,00h,00h,00h,00h	; Channel 6
+		db 00h,00h,06h,00h,00h,00h,00h,00h	; Channel 7
 		dw -1
 
 	; PSG psuedo-controls
