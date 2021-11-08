@@ -52,14 +52,14 @@ trk_CachHeads	equ 27		; Buff'd Track heads
 trk_CachIns	equ 29
 
 ; Track data: 8 bytes only
-chnl_Chip	equ 0		; MUST BE at 0, some routines read here directly.
-chnl_Note	equ 1		; MUST BE at 1, same thing
+chnl_Chip	equ 0		; MUST BE at 0
+chnl_Note	equ 1
 chnl_Ins	equ 2
 chnl_Vol	equ 3
 chnl_EffId	equ 4
 chnl_EffArg	equ 5
-chnl_Flags	equ 6		; 00pp uuuu | pp-Panning(LR) u-Tracker update bits
-chnl_Type	equ 7		; Impulse note bits
+chnl_Type	equ 6		; Impulse-note bits
+chnl_Flags	equ 7
 
 ; --------------------------------------------------------
 ; Variables
@@ -306,7 +306,6 @@ drv_loop:
 		ld	l,a
 		push	hl
 		pop	iy
-
 		call	get_cmdbyte		; Get ticks
 		ld	(iy+trk_tickSet),a
 		call	get_cmdbyte		; Pattern data
@@ -335,7 +334,6 @@ drv_loop:
 		or	00100000b
 		ld	(iy+trk_status),a
 		jp	.next_cmd
-
 .trkpos:
 		dw trkBuff_0
 		dw trkBuff_1
@@ -768,10 +766,8 @@ updtrack:
 		push	de
 		push	bc
 		rst	8
-		call	.chktbl_sl		; search and unlink last used channels
-		ld	(ix+chnl_Flags),0	; Reset all flags
-		ld	(ix+chnl_Chip),0	; Remove chip, mark as floating
-		ld	(ix+chnl_Ins),0		; Set Null instrument.
+		call	.chktbl_sl			; search and unlink last used channels
+		ld	(ix+chnl_Ins),0
 		rst	8
 		pop	bc
 		pop	de
@@ -845,6 +841,9 @@ updtrack:
 		ld	a,(ix+chnl_Chip)
 		or	a
 		ret	z
+		ret	p
+		ld	(ix+chnl_Note),-1
+		ld	(ix+chnl_Flags),0001b
 		push	ix
 		pop	de
 		ld	c,a
@@ -965,27 +964,24 @@ setupchip:
 		ret	z
 		xor	a
 		ld	(flagResChip),a
-; 		rst	8		; TODO: special silence
-; 		ld	iy,tblFM6	; check for DAC
-; 		ld	ix,daccom
-; 		ld	b,0C0h
-; 		call	.silnc_psgn
-		rst	8
+; 		ld	iy,tblFM3
+; 		ld	ix,fmcom+2
+; 		ld	b,090h
+; 		call	.silnc_singl
+; 		rst	8
 		ld	iy,tblPSGN
 		ld	ix,psgcom+3
-		ld	c,90h
-		call	.silnc_psgn
+		ld	b,90h
+		call	.silnc_singl
 		rst	8
 		ld	iy,tblFM	; silence floating channels
 		ld	ix,fmcom	; includes FM3 special
 		ld	b,0A0h
-		ld	c,0C0h
 		call	.silnc_list
 		rst	8
 		ld	iy,tblPSG
 		ld	ix,psgcom
 		ld	b,080h
-		ld	c,0A0h
 		jr	.silnc_list
 .mk_chip:
 		ld	(currInsData),hl
@@ -1009,7 +1005,7 @@ setupchip:
 ; ix - chip com port
 ;  b - target ID
 ;  c - ignore ID
-.silnc_psgn:
+.silnc_singl:
 		ld	a,(iy+1)	; Get link MSB
 		rst	8
 		ld	h,a		; hl - link
@@ -1017,11 +1013,9 @@ setupchip:
 		ld	a,(hl)		; *** DIRECT chnl_Chip
 		ld	e,a
 		or	a
-		jr	z,.flotin_s
+		ret	nz
 		and	11110000b
-		cp	b
-		ret	z
-.flotin_s:
+
 		rst	8
 		ld	d,0
 		ld	a,(iy+2)
@@ -1052,17 +1046,12 @@ setupchip:
 		ld	a,(hl)		; *** DIRECT chnl_Chip
 		ld	e,a
 		or	a
-		jr	z,.flotin
-		and	11110000b
-		cp	c
-		jr	z,.busy
-		cp	b
-		jr	z,.busy
+		jp	nz,.busy
 .flotin:
 		rst	8
 		ld	d,0
 		ld	a,(iy+2)
-		and	111b
+		and	0111b
 		ld	e,a
 		rst	8
 		push	ix
@@ -1093,8 +1082,8 @@ setupchip:
 .do_chnl:
 		push	bc
 		call	.check_ins
-; 		cp	-1
-; 		jr	z,.no_chnl
+		cp	-1
+		jr	z,.no_chnl
 		call	.chip_swap	; check if tracker channel swapped chip
 		call	.check_chnl	; a - chip requested
 		cp	-1		; Ran out of chip channels.
@@ -1115,7 +1104,10 @@ setupchip:
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
 		ld	(iy+chnl_Flags),a
+		pop	bc
+		ret
 .no_chnl:
+		ld	(iy+chnl_Chip),0
 		pop	bc
 		ret
 
@@ -1611,6 +1603,12 @@ setupchip:
 		ld	e,a
 		ld 	a,(ix+4)
 		ld	(psgHatMode),a
+		and	011b
+		cp	011b
+		jr	nz,.np2_n
+		ld	a,100b
+		ld	(psgcom+2),a
+.np2_n:
 		ld	a,e
 		jr	.notepsg_fn
 .note_psg:
@@ -1631,13 +1629,13 @@ setupchip:
 		cp	011b
 		jr	nz,.notepsg_c
 		ld	(hl),100b	; key-cut PSG3 but dont unlink
+		ret
 .notepsg_c:
 		ld	a,(iy+chnl_Note)
 		cp	-2
 		jp	z,.pcut
 		cp	-1
 		jp	z,.poff
-
 .notepsg_fn:
 		rst	8
 		push	hl		; save psgcom
@@ -2828,7 +2826,7 @@ chip_env:
 		cp	2
 		jr	nz,.notfm3
 		ld	a,(fmSpcMode)
-		and	11000000b
+		and	01000000b
 		or	a
 		jr	z,.notfm3
 		rst	8
@@ -2844,6 +2842,7 @@ chip_env:
 		call	fm_send_1
 		djnz	.copyops
 .notfm3:
+
 		rst	8
 		ld	d,28h		; Keys
 		ld	a,(ix+01Fh)	; a - Read this ins keys
@@ -2934,7 +2933,6 @@ chip_env:
 		inc	hl
 		rst	8
 		ld	e,(hl)
-		inc	hl
 		ld	(ix+FMFRQH),d
 		ld	(ix+FMFRQL),e
 		pop	ix
@@ -3488,11 +3486,11 @@ wavFreq_List:	dw 100h		; C-0
 	; PSG (80h+)
 	;  4 - psgNoise mode
 		align 10h
-tblPSG:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,01h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
+tblPSG:		db 00h,00h,80h,00h,00h,00h,00h,00h	; Channel 1
+		db 00h,00h,81h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,82h,00h,00h,00h,00h,00h	; Channel 3
 		dw -1	; end-of-list
-tblPSGN:	db 00h,00h,03h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
+tblPSGN:	db 00h,00h,83h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
 
 	; FM: 90h+ FM3: 0A0h DAC: 0B0h
 	;  4 - Special mode (FM3: Special, FM6: DAC)
@@ -3573,6 +3571,8 @@ dDacFifoMid	db 0		; WAVE play halfway refill flag (00h/80h)
 x68ksrclsb	db 0		; transferRom temporal LSB
 x68ksrcmid	db 0		; transferRom temporal MID
 palMode		db 0
+marsBlock	db 0		; 1 - to disable PWM comm
+marsUpd		db 0		; update PWM sound
 flagResChip	db 0		; reset chips flag
 commZfifo	ds 40h		; Buffer for command requests from 68k (40h bytes, loops)
 
