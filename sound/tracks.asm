@@ -6,10 +6,10 @@
 ; ------------------------------------------------------------
 
 ; Null instrument
-gInsNull	macro
-		dc.b  -1,$00,$00,$00
-		dc.b $00,$00,$00,$00
-		endm
+gInsNull macro
+	dc.b  -1,$00,$00,$00
+	dc.b $00,$00,$00,$00
+	endm
 
 ; alv: attack level (00=high)
 ; atk: attack rate
@@ -21,18 +21,22 @@ gInsPsg	macro pitch,alv,atk,slv,dky,rrt
 	dc.b slv,dky,rrt,$00
 	endm
 
-; mode: noise mode (PSGN only)
+; mode: noise mode %tmm (PSGN only)
 gInsPsgN macro pitch,alv,atk,slv,dky,rrt,mode
-	dc.b $90,pitch,alv,atk
-	dc.b slv,dky,rrt,mode
+	dc.b $90|mode,pitch,alv,atk
+	dc.b slv,dky,rrt,0
 	endm
 
+; fmins - 24-bit ROM pointer to
+; patch data
 gInsFm macro pitch,fmins
 	dc.b $A0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
-; ex freq order: OP4 OP3 OP2 OP1
+; Same but for Channel 3 special, the last
+; 4 words set each OP's frequency in this order:
+; OP1 OP2 OP3 OP4
 gInsFm3	macro pitch,fmins
 	dc.b $B0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
@@ -113,32 +117,77 @@ GemaTrk_ins_TEST:
 ; 	gInsFm 0,FmIns_bass_kon
 
 GemaTrk_blk_TEST2:
-	binclude "sound/tracks/puyo2_blk.bin"
+	binclude "sound/tracks/kbb5_blk.bin"
 GemaTrk_patt_TEST2:
-	binclude "sound/tracks/puyo2_patt.bin"
+	binclude "sound/tracks/kbb5_patt.bin"
 GemaTrk_ins_TEST2:
-	gInsFm 0,FmIns_guitar_puy
-	gInsNull
-	gInsFm 0,FmIns_Bass_groove_2
-	gInsFm -12,FmIns_Brass_Puy
-	gInsDac +24,DacIns_SaurKick,0,0
+	gInsFm 0,FmIns_Bass_calm
 	gInsNull
 	gInsNull
-	gInsFm3   0,FmIns_Fm3_OpenHat
-	gInsDac +24,DacIns_CdSnare,0,0
+	gInsFm -12,FmIns_PianoM1
 	gInsNull
 	gInsNull
-	gInsNull
-	gInsNull
-	gInsFm -36,FmIns_Banjo_puy
-	gInsFm -12,FmIns_Trumpet_Puy
-	gInsFm 0,FmIns_guitar_puy_2
+	gInsFm -12,FmIns_PianoM1
+	gInsFm -12,FmIns_Trumpet_2
+	gInsFm -12,FmIns_Trumpet_puy
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
+	gInsNull
+	gInsFm -12,FmIns_PianoM1
+	gInsFm -24,FmIns_Trumpet_2
+	gInsFm -24,FmIns_Trumpet_2
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+
+; 	gInsDac +07,DacIns_Snare_Gem,0,0
+; 	gInsFm -12,FmIns_Trumpet_2
+; 	gInsFm -12,FmIns_Bass_groove
+; 	gInsDac +20,DacIns_SaurKick,0,0
+; 	gInsNull
+; 	gInsFm -12,FmIns_PianoM1
+; 	gInsPsg -12,$00,$00,$00,$02,$02
+; 	gInsPsgN  0,$10,$10,$00,$10,$40,%100
+; 	gInsNull
+; 	gInsFm  -24,FmIns_Brass_Eur,0
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+
+
+; 	gInsPsg   0,$40,$FF,$00,$10,$01
+; 	gInsDac +24,DacIns_SaurKick,0,0
+;
+; 	gInsFm 0,FmIns_Organ_M1
+; 	gInsNull
+; 	gInsDac +24,DacIns_CdSnare,0,0
+; 	gInsNull
+; 	gInsFm 0,FmIns_Trumpet_2
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
 
 ; GemaTrk_doom_blk:
 ; 	binclude "sound/tracks/doom_blk.bin"
