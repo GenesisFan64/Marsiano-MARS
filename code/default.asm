@@ -137,22 +137,22 @@ thisCode_Top:
 
 ; Mode 0 mainloop
 .mode0_loop:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyB,d7
+		beq.s	.noc_up
+		move.w	#1,d0
+		move.b	d0,(sysmars_reg+comm15)
+.noc_up:
 ; 		move.w	(Controller_1+on_press),d7
 ; 		btst	#bitJoyA,d7
-; 		beq.s	.noc_up
-; 		move.w	#1,d0
-; 		move.w	d0,(sysmars_reg+comm0)
-; .noc_up:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyA,d7
-		beq.s	.noc_d
-		move.l	#PCM_START,d0
-		move.l	#PCM_END-PCM_START,d1
-		moveq	#0,d2
-		move.w	#$100,d3
-		moveq	#1,d4
-		bsr	SoundReq_SetSample
-.noc_d:
+; 		beq.s	.noc_d
+; 		move.l	#PCM_START,d0
+; 		move.l	#PCM_END-PCM_START,d1
+; 		moveq	#0,d2
+; 		move.w	#$100,d3
+; 		moveq	#1,d4
+; 		bsr	SoundReq_SetSample
+; .noc_d:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
 		beq.s	.noc_c
@@ -218,7 +218,7 @@ thisCode_Top:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
 	dc.l 4
 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
-	dc.l 3
+	dc.l 7
 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
 	dc.l 3
 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
@@ -686,7 +686,7 @@ str_Status:
 str_Title:
 		dc.b "Marsiano/GEMA sound driver",$A
 		dc.b $A
-		dc.b "  Track 0:      B-stop C-play",$A
+		dc.b "  Track 0:",$A
 		dc.b "  Track 1:",0
 		align 2
 str_COMM:

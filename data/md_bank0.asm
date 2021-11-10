@@ -6,7 +6,6 @@
 ; Maximum size: $0FFFFF bytes per bank
 ; ----------------------------------------------------------------
 
-		align $8000
-PCM_START:	binclude "sound/TEST_MD.wav",$2C,$80000
-PCM_END:
+		align 2
+		dc.b "OTHER 68K DATA GOES HERE"
 

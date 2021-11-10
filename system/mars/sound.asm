@@ -338,9 +338,9 @@ MarsSound_Init:
 ; --------------------------------------------------------
 
 MarsSound_SetPwm:
-		stc	sr,r9
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		stc	sr,r9
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
@@ -374,7 +374,7 @@ MarsSound_SetPwm:
 		mov 	r0,@(mchnsnd_read,r8)
 		mov 	#1,r0
 		mov 	r0,@(mchnsnd_enbl,r8)
- 		ldc	r9,sr
+;  		ldc	r9,sr
 		rts
 		nop
 		align 4

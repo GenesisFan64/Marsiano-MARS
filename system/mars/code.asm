@@ -94,18 +94,15 @@ marsGbl_PlgnBuffNum	ds.w 1		; PolygonBuffer switch: READ/WRITE or WRITE/READ
 marsGbl_MstrReqDraw	ds.w 1
 marsGbl_CurrGfxMode	ds.w 1
 marsGbl_PzListCntr	ds.w 1		; Number of graphic pieces to draw
-
 marsGbl_VIntFlag_M	ds.w 1		; Sets to 0 if VBlank finished on Master CPU
 marsGbl_VIntFlag_S	ds.w 1		; Same thing but for the Slave CPU
 marsGbl_DivStop_M	ds.w 1		; Flag to tell Watchdog we are in the middle of hardware division
-
 marsGbl_CurrFb		ds.w 1		; Current framebuffer number (byte)
 marsGbl_PalDmaMidWr	ds.w 1		; Flag to tell we are in middle of transfering palette
 marsGbl_FbMaxLines	ds.w 1		; Max lines to output to screen (MAX: 240 lines)
-
 marsGbl_WdDrwTask	ds.w 1		; Current Drawing task for Watchdog
 marsGbl_WdDrwPause	ds.w 1		; Pause background drawing
-
+marsGbl_PwmCtrlUpd	ds.w 1		; Flag to update Pwm tracker channels
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -600,56 +597,139 @@ s_irq_pwm:
 
 s_irq_cmd:
 		stc	sr,@-r15
-		mov	r2,@-r15
-		mov	r3,@-r15
-; 		mov	r4,@-r15
 
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_sysreg+cmdintclr,r1
-		mov.w	r0,@r1
-		mov.w	@r1,r0			; ???
 
 ; ----------------------------------
 
 		mov	#$F0,r0			; Disable interrupts
 		ldc	r0,sr
-; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
-; 		mov.b	@r1,r0			; Clear DMA signal for MD
-; 		and	#%10111111,r0
-; 		mov.b	r0,@r1
-		mov	#RAM_Mars_DREQ,r1	; r1 - Output destination
-		mov	#$20004010,r2		; r2 - DREQ length address
-		mov	#_DMASOURCE0,r3		; r3 - DMA Channel 0
-		mov	#0,r0
-		mov	r0,@($30,r3)		; DMA Stop (_DMAOPERATION)
-		mov	r0,@($C,r3)		; _DMACHANNEL0
-		mov	#%0100010011100000,r0
-		mov	r0,@($C,r3)
-		mov	#$20004012,r0		; Source data (DREQ FIFO)
-		mov	r0,@(0,r3)
-		mov	r1,@(4,r3)
-		mov.w	@r2,r0
-		mov	r0,@(8,r3)
-		mov	#%0100010011100001,r0
-		mov	r0,@($C,r3)
-		mov	#1,r0
-		mov	r0,@($30,r3)		; DMA Start (_DMAOPERATION)
-; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
-; 		mov.b	@r1,r0			; Tell MD to push FIFO
-; 		or	#%01000000,r0
-; 		mov.b	r0,@r1
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+		mov	r9,@-r15
+		sts	pr,@-r15
+		mov	#MarsSnd_PwmControl,r9
+		mov	#_sysreg+comm15,r7
 
-		mov	#_sysreg+comm4,r2	; DEBUG
-		mov	#RAM_Mars_DREQ,r1
-		mov	@r1,r0
-		mov	r0,@r2
+		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
+		cmp/eq	#1,r0
+		bt	.cantupd
+	; First pass
+.wait_1:
+		mov.b	@r7,r0
+		and	#%00100000,r0
+		cmp/pl	r0
+		bf	.wait_1
+		mov	#7,r6
+		mov	#_sysreg+comm0,r8
+.copy_1:
+		mov.w	@r8+,r0
+		mov.w	r0,@r9
+		dt	r6
+		bf/s	.copy_1
+		add	#2,r9
+		mov.b	@r7,r0
+		and	#%11011111,r0
+		mov.b	r0,@r7
 
-; 		mov 	@r15+,r4
+	; Second pass
+.wait_2:
+		mov.b	@r7,r0
+		and	#%00100000,r0
+		cmp/pl	r0
+		bf	.wait_2
+		mov	#7,r6
+		mov	#_sysreg+comm0,r8
+.copy_2:
+		mov.w	@r8+,r0
+		mov.w	r0,@r9
+		dt	r6
+		bf/s	.copy_2
+		add	#2,r9
+		mov.b	@r7,r0
+		and	#%11011111,r0
+		mov.b	r0,@r7
+		mov.w	#1,r0
+		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
+.cantupd:
+
+; 		mov	#_sysreg+comm15,r14
+; 		mov.b	@r14,r0
+; 		cmp/pl	r0
+; 		bf	.no_wav
+; 		xor	r0,r0
+; 		mov.b	r0,@r14
+;
+
+
+; 		mov	#0,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%11|%10000000,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+
+; .no_wav:
+
+		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
+		mov.w	r0,@r1
+		mov.w	@r1,r0			; TODO: ver para que era esto
+		lds	@r15+,pr
+		mov 	@r15+,r9
+		mov 	@r15+,r8
+		mov 	@r15+,r7
+		mov 	@r15+,r6
+		mov 	@r15+,r5
+		mov 	@r15+,r4
 		mov 	@r15+,r3
 		mov 	@r15+,r2
+
+; ; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
+; ; 		mov.b	@r1,r0			; Clear DMA signal for MD
+; ; 		and	#%10111111,r0
+; ; 		mov.b	r0,@r1
+; 		mov	#RAM_Mars_DREQ,r1	; r1 - Output destination
+; 		mov	#$20004010,r2		; r2 - DREQ length address
+; 		mov	#_DMASOURCE0,r3		; r3 - DMA Channel 0
+; 		mov	#0,r0
+; 		mov	r0,@($30,r3)		; DMA Stop (_DMAOPERATION)
+; 		mov	r0,@($C,r3)		; _DMACHANNEL0
+; 		mov	#%0100010011100000,r0
+; 		mov	r0,@($C,r3)
+; 		mov	#$20004012,r0		; Source data (DREQ FIFO)
+; 		mov	r0,@(0,r3)
+; 		mov	r1,@(4,r3)
+; 		mov.w	@r2,r0
+; 		mov	r0,@(8,r3)
+; 		mov	#%0100010011100001,r0
+; 		mov	r0,@($C,r3)
+; 		mov	#1,r0
+; 		mov	r0,@($30,r3)		; DMA Start (_DMAOPERATION)
+; ; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
+; ; 		mov.b	@r1,r0			; Tell MD to push FIFO
+; ; 		or	#%01000000,r0
+; ; 		mov.b	r0,@r1
+;
+; 		mov	#_sysreg+comm4,r2	; DEBUG
+; 		mov	#RAM_Mars_DREQ,r1
+; 		mov	@r1,r0
+; 		mov	r0,@r2
+
+; 		mov 	@r15+,r4
+; 		mov 	@r15+,r3
+; 		mov 	@r15+,r2
 		ldc 	@r15+,sr
 		rts
 		nop
@@ -882,8 +962,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#720,r2
-		mov	#480,r3
+		mov	#976,r2
+		mov	#800,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1020,12 +1100,30 @@ mstr_gfx1_loop:
 ;  		mov.w	r0,@(marsGbl_PlgnBuffNum,gbr)
 ; .no_req:
 
-		mov	#-$4000,r8
+; 		mov	#rot_angle,r7
+; 		mov	@r7,r7
+; 		shll2	r7
+; 		mov	r7,r0
+; 		mov	#sin_table,r1
+; 		mov	#sin_table+$800,r2
+; 		mov	@(r0,r1),r3
+; 		mov	@(r0,r2),r4
+; 		mov	#4,r0
+; 		dmuls	r0,r3
+; 		sts	macl,r3
+; 		dmuls	r0,r4
+; 		sts	macl,r4
+; 		mov	#-4,r0
+; 		and	r0,r4
+; 		mov	#800,r0
+; 		add	r0,r4
+
+		mov	#$6000,r1
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
-		add	r8,r0
+		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
-		add	r8,r0
+		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
 
 	; ---------------------------------------
@@ -2117,9 +2215,9 @@ SH2_S_HotStart:
 		dt	r3
 		bf	.copy
 
-	; TODO: Disabled temporally
-; 		bsr	MarsSound_Init			; Init Sound
-; 		nop
+; 	; TODO: Disabled temporally
+		bsr	MarsSound_Init			; Init Sound
+		nop
 ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
 ; 		jsr	@r0
 ; 		nop
@@ -2135,36 +2233,20 @@ SH2_S_HotStart:
 .lel:		mov.b	@r1,r0
 		cmp/pz	r0
 		bt	.lel
-
+		xor	r0,r0
+		mov.b	r0,@r1
 		bra	slave_loop
 		nop
 		align 4
 		ltorg
 slave_loop:
-		mov	#_sysreg+comm0,r14
-		mov.w	@r14,r0
-		nop
-		cmp/pl	r0
-		bf	.no_wav
+		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
+		cmp/eq	#1,r0
+		bf	.no_upds
 		xor	r0,r0
-		mov.w	r0,@r14
+		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
+.no_upds:
 
-		nop
-		nop
-		nop
-		nop
-
-; 		mov	#0,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%11|%10000000,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
-.no_wav:
 		bra	slave_loop
 		nop
 		align 4
@@ -2767,6 +2849,8 @@ sizeof_marsram	ds.l 0
 
 			struct MarsRam_Sound
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+MarsSnd_PwmControl	ds.l 7
+
 ; MarsSnd_PwmTrkData	ds.b $80*2
 MarsSnd_PwmPlyData	ds.l 7
 sizeof_marssnd		ds.l 0

@@ -8,8 +8,17 @@
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Palettes
+; PWM instruments
 ; --------------------------------------------------------
+
+; TODO: separate file
+
+; gSmpl macro locate
+; .start
+; 	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
+; 	binclude locate,$2C	; actual data
+; .end
+; 	endm
 
 ; Palette_Intro:	binclude "data/mars/objects/mtrl/intro_pal.bin"
 ; 		align 4

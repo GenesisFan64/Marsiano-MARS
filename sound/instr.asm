@@ -3,6 +3,35 @@
 ; PSG, FM and DAC instruments go here
 ; ----------------------------------------------------------------
 
+; --------------------------------------------------------
+; DAC samples
+; --------------------------------------------------------
+
+; Special include macro for samples
+;
+; only for tracker songs.
+gSmpl macro locate
+.start
+	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
+	binclude locate,$2C	; actual data
+.end
+	endm
+
+DacIns_Magic2:
+	gSmpl "sound/instr/smpl/magic_2.wav"
+DacIns_Snare_Gem:
+	gSmpl "sound/instr/smpl/snare_lobo.wav"
+DacIns_CdSnare:
+	gSmpl "sound/instr/smpl/cd_snare.wav"
+DacIns_SaurKick:
+	gSmpl "sound/instr/smpl/sauron_kick.wav"
+DacIns_SaurSnare:
+	gSmpl "sound/instr/smpl/sauron_snare.wav"
+DacIns_String1:
+	gSmpl "sound/instr/smpl/string_1.wav"
+DacIns_LowString:
+	gSmpl "sound/instr/smpl/lowstring.wav"
+
 ; Normal FM ins: $20
 ; Special FM ins: $28
 
@@ -10,15 +39,12 @@ FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
-
 Fmins_Guitar_Heavy:
 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
 Fmins_Guitar_puy:
 		binclude "sound/instr/fm/guitar_puy.gsx",$2478,$20
 Fmins_Guitar_puy_2:
 		binclude "sound/instr/fm/guitar_puy_2.gsx",$2478,$20
-;
-
 FmIns_DrumKick_gem:
 		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
 ;
@@ -40,8 +66,8 @@ FmIns_Bass_calm:
 		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
 ; FmIns_Bass_heavy:
 ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
-; ; ; FmIns_Bass_ambient:
-; ; ; 		binclude "sound/instr/fm/bass_ambient.gsx",$2478,$20
+; FmIns_Bass_ambient:
+; 		binclude "sound/instr/fm/bass_ambient.gsx",$2478,$20
 ; ; ; FmIns_Brass_gummy:
 ; ; ; 		binclude "sound/instr/fm/brass_gummy.gsx",$2478,$20
 ; ; ; FmIns_Flaute_1:
@@ -94,12 +120,16 @@ FmIns_Organ_M1:
 ; ; 		binclude "sound/instr/fm/piano_small.gsx",$2478,$20
 ; ; FmIns_Piano:
 ; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+FmIns_Trumpet_1:
+		binclude "sound/instr/fm/trumpet_1.gsx",$2478,$20
 FmIns_Trumpet_2:
 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
 FmIns_Trumpet_kon:
 		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
 FmIns_Trumpet_puy:
 		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
+FmIns_Trumpet_carnival:
+		binclude "sound/instr/fm/trumpet_carnivl.gsx",$2478,$20
 
 ; ; ; FmIns_Bell_Glass:
 ; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
@@ -120,34 +150,7 @@ FmIns_Brass_Eur:
 		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
 FmIns_Brass_Puy:
 		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
-
 FmIns_Flaute_cave:
 		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
-
 FmIns_Banjo_puy:
 		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
-
-; --------------------------------------------------------
-; DAC samples
-; --------------------------------------------------------
-
-; Special include macro for samples
-;
-; only for tracker songs.
-gSmpl macro locate
-.start
-	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
-	binclude locate,$2C	; actual data
-.end
-	endm
-
-DacIns_Magic2:
-	gSmpl "sound/instr/smpl/magic_2.wav"
-DacIns_Snare_Gem:
-	gSmpl "sound/instr/smpl/snare_lobo.wav"
-DacIns_CdSnare:
-	gSmpl "sound/instr/smpl/cd_snare.wav"
-DacIns_SaurKick:
-	gSmpl "sound/instr/smpl/sauron_kick.wav"
-DacIns_SaurSnare:
-	gSmpl "sound/instr/smpl/sauron_snare.wav"
