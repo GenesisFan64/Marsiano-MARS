@@ -35,7 +35,7 @@ TESTMARS_BG:
 TESTMARS_BG_PAL:
 		binclude "data/mars/test_pal.bin"
 		align 4
-PWM_STEREO:	binclude "sound/TEST_MARS.wav",$2C,$100000
+PWM_STEREO:	binclude "sound/TEST_MARS.wav",$2C
 PWM_STEREO_e:
 		align 4
 ; PwmInsWav_SPHEAVY1:

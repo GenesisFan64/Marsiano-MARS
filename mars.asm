@@ -50,6 +50,8 @@ Z80_CODE:
 Z80_CODE_END:
 		align 2
 
+		include "sound/instr.asm"
+
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 68k code-banks for RAM
@@ -70,7 +72,6 @@ Default_Boot:
 	; First one is smaller than the rest...
 		phase $900000+*				; Only one currently
 		include "sound/tracks.asm"
-		include "sound/instr.asm"
 		include "data/md_bank0.asm"
 		dephase
 ; 		org $100000-4				; Fill this bank and

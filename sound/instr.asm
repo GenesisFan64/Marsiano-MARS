@@ -1,6 +1,9 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; PSG, FM and DAC instruments go here
+; PSG, FM, DAC and PWM instruments go here
+;
+; Any 68k BANK must be set externally if required.
+; (macros add the bank automaticly)
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -8,33 +11,36 @@
 ; --------------------------------------------------------
 
 ; Special include macro for samples
+; Works for both DAC and PWM
 ;
-; only for tracker songs.
-gSmpl macro locate
+; aligns by 4 so the sample can be used on 32X
+gSmpl macro locate,loop
 .start
 	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
+	dc.b ((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
 	binclude locate,$2C	; actual data
 .end
+	align 4
 	endm
 
+	align 4
 DacIns_Magic2:
-	gSmpl "sound/instr/smpl/magic_2.wav"
+	gSmpl "sound/instr/smpl/magic_2.wav",0
 DacIns_Snare_Gem:
-	gSmpl "sound/instr/smpl/snare_lobo.wav"
+	gSmpl "sound/instr/smpl/snare_lobo.wav",0
 DacIns_CdSnare:
-	gSmpl "sound/instr/smpl/cd_snare.wav"
+	gSmpl "sound/instr/smpl/cd_snare.wav",0
 DacIns_SaurKick:
-	gSmpl "sound/instr/smpl/sauron_kick.wav"
+	gSmpl "sound/instr/smpl/sauron_kick.wav",0
 DacIns_SaurSnare:
-	gSmpl "sound/instr/smpl/sauron_snare.wav"
+	gSmpl "sound/instr/smpl/sauron_snare.wav",0
 DacIns_String1:
-	gSmpl "sound/instr/smpl/string_1.wav"
+	gSmpl "sound/instr/smpl/string_1.wav",0
 DacIns_LowString:
-	gSmpl "sound/instr/smpl/lowstring.wav"
+	gSmpl "sound/instr/smpl/lowstring.wav",1200
 
 ; Normal FM ins: $20
 ; Special FM ins: $28
-
 FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:

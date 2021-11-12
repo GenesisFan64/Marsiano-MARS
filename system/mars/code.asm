@@ -619,12 +619,12 @@ s_irq_cmd:
 		mov	#MarsSnd_PwmControl,r9
 		mov	#_sysreg+comm15,r7
 
-		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
-		cmp/eq	#1,r0
-		bt	.cantupd
-	; First pass
+; 		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
+; 		cmp/eq	#1,r0
+; 		bt	.cantupd
+		mov	#4,r5			; number of passes
 .wait_1:
-		mov.b	@r7,r0
+		mov.b	@r7,r0			; wait first CLOCK
 		and	#%00100000,r0
 		cmp/pl	r0
 		bf	.wait_1
@@ -637,27 +637,11 @@ s_irq_cmd:
 		bf/s	.copy_1
 		add	#2,r9
 		mov.b	@r7,r0
-		and	#%11011111,r0
+		and	#%11011111,r0		; tell we are done
 		mov.b	r0,@r7
-
-	; Second pass
-.wait_2:
-		mov.b	@r7,r0
-		and	#%00100000,r0
-		cmp/pl	r0
-		bf	.wait_2
-		mov	#7,r6
-		mov	#_sysreg+comm0,r8
-.copy_2:
-		mov.w	@r8+,r0
-		mov.w	r0,@r9
-		dt	r6
-		bf/s	.copy_2
-		add	#2,r9
-		mov.b	@r7,r0
-		and	#%11011111,r0
-		mov.b	r0,@r7
-		mov.w	#1,r0
+		dt	r5
+		bf	.wait_1
+		mov.w	#1,r0			; request SOUND update to main loop
 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
 .cantupd:
 
@@ -670,16 +654,7 @@ s_irq_cmd:
 ;
 
 
-; 		mov	#0,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%11|%10000000,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
+
 
 ; .no_wav:
 
@@ -962,8 +937,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#976,r2
-		mov	#800,r3
+		mov	#640,r2
+		mov	#480,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1100,31 +1075,58 @@ mstr_gfx1_loop:
 ;  		mov.w	r0,@(marsGbl_PlgnBuffNum,gbr)
 ; .no_req:
 
-; 		mov	#rot_angle,r7
-; 		mov	@r7,r7
-; 		shll2	r7
-; 		mov	r7,r0
-; 		mov	#sin_table,r1
-; 		mov	#sin_table+$800,r2
-; 		mov	@(r0,r1),r3
-; 		mov	@(r0,r2),r4
-; 		mov	#4,r0
-; 		dmuls	r0,r3
-; 		sts	macl,r3
-; 		dmuls	r0,r4
-; 		sts	macl,r4
-; 		mov	#-4,r0
-; 		and	r0,r4
-; 		mov	#800,r0
-; 		add	r0,r4
+; 		mov	#rot_angle_2,r1
+; 		mov	@r1,r2
+; 		mov	r2,r4
+; 		mov	#$7FF,r3
+; 		add	#1,r4		; wave speed
+; 		and	r3,r4
+; 		mov	r4,@r1
+; 		mov	r2,r0
+; 		shll2	r0
+; 		mov	#sin_table,r3
+; 		mov	#sin_table+$800,r4
+; 		mov	@(r0,r3),r5
+; 		mov	@(r0,r4),r6
+;
+; 		mov	#640,r0		; wave max X
+; 		dmuls	r0,r5
+; 		sts	macl,r5
+; 		dmuls	r0,r6
+; 		sts	macl,r6
 
-		mov	#$6000,r1
+; 		mov	#0,r1
+; 		mov.w	@(marsGbl_Bg_DrwReqR,gbr),r0
+; 		or	r0,r1
+; 		mov.w	@(marsGbl_Bg_DrwReqL,gbr),r0
+; 		or	r0,r1
+; 		mov.w	@(marsGbl_Bg_DrwReqU,gbr),r0
+; 		or	r0,r1
+; 		mov.w	@(marsGbl_Bg_DrwReqD,gbr),r0
+; 		or	r0,r1
+; 		cmp/pl	r1
+; 		bt	.calm_down
+
+; 		mov	#(640/2)*16,r0
+; 		mov	r5,r0
+; 		add	r5,r0
+; 		mov	#$8000,r1
+; 		mov	@(marsGbl_Bg_Xpos,gbr),r0
+; 		add	r1,r0
+; 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
+; 		mov	r6,r0
+; 		mov	@(marsGbl_Bg_Ypos,gbr),r0
+; 		add	r1,r0
+; 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
+
+		mov	#$8000,r1
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
+.calm_down:
 
 	; ---------------------------------------
 	; Read 3rd-layer scroll values
@@ -1143,34 +1145,59 @@ mstr_gfx1_loop:
 	; Write linetable to current framebuffer
 	; ---------------------------------------
 
+		mov	#rot_angle,r1
+		mov	@r1,r2
+		mov	r2,r4
+		mov	#$7FF,r3
+		add	#32,r4		; wave speed
+		and	r3,r4
+		mov	r4,@r1
+
+		mov	#0,r3
+		mov	#0,r4
 		mov	#_framebuffer,r10
 		mov	#$200,r8			; TOP FB position
 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7	; Last line point
-		mov.w	@(marsGbl_FbMaxLines,gbr),r0	; Number of lines to show
-		mov	r0,r3
 		mov.w	@(marsGbl_Bg_YFbPos_U,gbr),r0
 		mov	#MSCRL_WIDTH,r6
 		mulu	r6,r0
 		sts	macl,r5
 		mov	@(marsGbl_Bg_FbBase,gbr),r0
-		mov	r0,r9
+		mov	r0,r1
+		mov	r1,r9
 		add	r5,r9
+		mov.w	@(marsGbl_FbMaxLines,gbr),r0	; Number of lines to show
+		mov	r0,r5
 .ln_loop:
-		mov	r9,r0
-		cmp/ge	r7,r0
+		mov	#$7FF,r3
+		mov	r2,r0
+		add	#16,r2		; wave distord
+		and	r3,r2
+		shll2	r0
+		mov	#sin_table,r3
+		mov	@(r0,r3),r4
+		mov	#8,r0		; wave max X
+		dmuls	r0,r4
+		sts	macl,r4
+		shlr16	r4
+		exts.w	r4,r4
+
+		mov	r9,r1
+		cmp/ge	r7,r1
 		bf	.xl_r
-		sub	r7,r0
+		sub	r7,r1
 .xl_r:
-		cmp/pz	r0
+		cmp/pz	r1
 		bt	.xl_l
-		add	r7,r0
+		add	r7,r1
 .xl_l:
-		mov	r0,r9
-		add	r6,r9
-		add	r8,r0		; add base pos
-		shlr	r0		; divide by 2
-		mov.w	r0,@r10		; send to FB's table
-		dt	r3
+		mov	r1,r9
+		add	r6,r9		; Add Y
+		add	r8,r1		; Add FB base pos
+		shlr	r1		; divide by 2 (shift reg does the missing bit 0)
+		add	r4,r1
+		mov.w	r1,@r10		; send to FB's table
+		dt	r5
 		bf/s	.ln_loop
 		add	#2,r10
 
@@ -1250,6 +1277,8 @@ mstgfx_exit:
 		nop
 		align 4
 		ltorg
+
+rot_angle_2:	dc.l 0
 
 ; Left/Right
 mstrgf0_lr:
@@ -2230,9 +2259,9 @@ SH2_S_HotStart:
 ; --------------------------------------------------------
 
 		mov	#_sysreg+comm15,r1
-.lel:		mov.b	@r1,r0
+.wait_s:	mov.b	@r1,r0
 		cmp/pz	r0
-		bt	.lel
+		bt	.wait_s
 		xor	r0,r0
 		mov.b	r0,@r1
 		bra	slave_loop
@@ -2240,12 +2269,165 @@ SH2_S_HotStart:
 		align 4
 		ltorg
 slave_loop:
+
+	; *** Read PWM control changes...
+	; for GEMA
 		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
 		cmp/eq	#1,r0
 		bf	.no_upds
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#0,r1			; r1 - PWM slot
+		mov	#MarsSnd_PwmControl,r14
+		mov	#7,r10
+.next_chnl:
+		mov.b	@r14,r0
+		and	#$FF,r0
+		cmp/eq	#0,r0
+		bt	.no_req
+		xor	r13,r13
+		mov.b	r13,@r14
+		cmp/eq	#4,r0
+		bt	.pwm_keycut
+		cmp/eq	#2,r0
+		bf	.no_keyoff
+.pwm_keycut:
+		mov	#0,r2
+		mov	#MarsSound_PwmEnable,r0
+		jsr	@r0
+		nop
+		bra	.no_req
+		nop
+
+	; Normal playback
+.no_keyoff:
+		cmp/eq	#$10,r0
+		bf	.no_pitchbnd
+		mov	r0,r7
+		mov	r14,r13		; Pitchbend
+		add	#2,r13
+		mov.b	@r13+,r0
+		and	#%11,r0
+		shll8	r0
+		mov	r0,r2
+		mov.b	@r13+,r0
+		and	#$FF,r0
+		or	r2,r0
+		mov	r0,r2
+		mov	#MarsSound_SetPwmPitch,r0
+		jsr	@r0
+		nop
+		mov	r7,r0
+.no_pitchbnd:
+		tst	#$20,r0
+		bt	.no_volumebnd
+		mov	r0,r7
+
+		mov	r14,r13
+		add	#2,r13
+		mov.b	@r13+,r0
+		and	#%11111100,r0
+		mov	r0,r2
+		mov	#MarsSound_SetVolume,r0
+		jsr	@r0
+		nop
+		mov	r7,r0
+.no_volumebnd:
+
+	; TODO: Change reading struct if
+	; it gets too CPU intensive
+		tst	#$01,r0		; key-on?
+		bt	.no_req
+		mov	r14,r13
+		add	#2,r13
+		mov.b	@r13+,r0	; r5 - Read pitch
+		mov	r0,r6
+		and	#%11,r0
+		shll8	r0
+		mov	r0,r5
+		mov.b	@r13+,r0
+		and	#$FF,r0
+		or	r5,r0
+		mov	r0,r5
+		mov	#CS1,r6
+		mov.b	@r13+,r0	; r2 - Get START point
+		and	#$FF,r0
+		shll16	r0
+		mov	r0,r3
+		mov.b	@r13+,r0
+		and	#$FF,r0
+		shll8	r0
+		mov	r0,r2
+		mov.b	@r13+,r0
+		and	#$FF,r0
+		or	r3,r0
+		or	r2,r0
+		mov	r0,r2
+		mov	r2,r4
+		or	r6,r2		; make start/end visible
+		mov.b	@r2+,r0		; get lenght
+		and	#$FF,r0
+		mov	r0,r3
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll8	r0
+		or	r0,r3
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll16	r0
+		add	r4,r3
+		or	r0,r3
+		or	r6,r3
+		mov.b	@r2+,r0		; get loop point
+		and	#$FF,r0
+		mov	r0,r4
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll8	r0
+		or	r0,r4
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll16	r0
+		or	r0,r4
+		mov	#%11111100,r0
+		and	r0,r6
+; 		mov	#0,r6
+		mov	#%011,r7	; LR, mono mode
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+.no_req:
+		add	#1,r1		; next PWM slot
+		dt	r10
+		bf/s	.next_chnl
+		add	#7,r14		; next PWM list
+		ldc	@r15+,sr
 .no_upds:
+	; *** END PWM control code
+
+
+	; Testing only
+		mov	#_sysreg+comm15,r1
+		mov.b	@r1,r0
+		cmp/eq	#1,r0
+		bf	.TEST_1
+		xor	r0,r0
+		mov.b	r0,@r1
+		mov	#0,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%111,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+
+.TEST_1:
 
 		bra	slave_loop
 		nop
@@ -2849,7 +3031,7 @@ sizeof_marsram	ds.l 0
 
 			struct MarsRam_Sound
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.l 7
+MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
 
 ; MarsSnd_PwmTrkData	ds.b $80*2
 MarsSnd_PwmPlyData	ds.l 7

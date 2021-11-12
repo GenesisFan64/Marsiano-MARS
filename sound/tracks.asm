@@ -5,7 +5,9 @@
 ; SOUND
 ; ------------------------------------------------------------
 
-; Null instrument
+; Instrument macros
+; do note that some 24-bit pointers add 90h to the MSB
+
 gInsNull macro
 	dc.b  -1,$00,$00,$00
 	dc.b $00,$00,$00,$00
@@ -30,7 +32,7 @@ gInsPsgN macro pitch,alv,atk,slv,dky,rrt,mode
 ; fmins - 24-bit ROM pointer to
 ; patch data
 gInsFm macro pitch,fmins
-	dc.b $A0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+	dc.b $A0,pitch,((fmins>>16)&$FF)|$90,((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
@@ -38,7 +40,7 @@ gInsFm macro pitch,fmins
 ; 4 words set each OP's frequency in this order:
 ; OP1 OP2 OP3 OP4
 gInsFm3	macro pitch,fmins
-	dc.b $B0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+	dc.b $B0,pitch,((fmins>>16)&$FF)|$90,((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
@@ -46,14 +48,14 @@ gInsFm3	macro pitch,fmins
 ;        the sample contains the LENGTH of the sample
 ; loop: Sample to jump to, 0-start
 ; flags: 0-dont loop, 1-loop
-gInsDac	macro pitch,start,loop,flags
-	dc.b $C0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
-	dc.b start&$FF,((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
+gInsDac	macro pitch,start,flags
+	dc.b $C0|flags,pitch,((start>>16)&$FF)|$90,((start>>8)&$FF)
+	dc.b start&$FF,0,0,0
 	endm
 
-gInsPwm	macro pitch,start,end,loop
-	dc.b $D0|flags,pitch,start&$FF,((start>>8)&$FF)
-	dc.b ((start>>16)&$FF),((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
+gInsPwm	macro pitch,start,flags
+	dc.b $D0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
+	dc.b start&$FF,0,0,0
 	endm
 
 ; ------------------------------------------------------------
@@ -103,7 +105,7 @@ GemaTrk_blk_TEST:
 GemaTrk_patt_TEST:
 	binclude "sound/tracks/test_patt.bin"
 GemaTrk_ins_TEST:
-	gInsDac 0,DacIns_Magic2,0,1
+	gInsPwm -5,DacIns_Magic2,0,1
 	gInsFm 0,FmIns_Trumpet_1
 ;
 ; 	gInsFm3   0,FmIns_Fm3_OpenHat
@@ -129,10 +131,10 @@ GemaTrk_blk_TEST2:
 GemaTrk_patt_TEST2:
 	binclude "sound/tracks/hill_patt.bin"
 GemaTrk_ins_TEST2:
-	gInsPsg +2,$70,$40,$30,$20,$00
+	gInsPsg +2,$40,$02,$30,$10,$00
 	gInsFm -10,FmIns_Trumpet_1
 	gInsPsgN 0,$00,$00,$00,$00,$04,%110
-	gInsDac -3,DacIns_LowString,1200,1
+	gInsDac -3,DacIns_LowString,1
 	gInsFm -8-12,FmIns_Ding_Toy
 	gInsFm -25,FmIns_Bass_3
 	gInsNull

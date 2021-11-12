@@ -179,7 +179,7 @@ MarsSound_ReadPwm:
 		mov	#$00FFFFFF,r1
 		mov 	r4,r3
 		shlr8	r3
-		tst	#%10000000,r0
+		tst	#%00000100,r0
 		bt	.mono_a
 		add	#-1,r1
 .mono_a
@@ -189,7 +189,7 @@ MarsSound_ReadPwm:
 		or	r1,r3
 		mov.b	@r3+,r1
 		mov	r1,r2
-		tst	#%10000000,r0
+		tst	#%00000100,r0
 		bt	.mono
 		mov.b	@r3+,r2
 		shll	r9
@@ -212,7 +212,7 @@ MarsSound_ReadPwm:
 		sts	macl,r4
 		shlr8	r4
 		sub	r4,r2
-		tst	#%00000010,r0		; TODO: temporal way to check L/R
+		tst	#%00000010,r0
 		bf	.no_l
 		mov	#$7F,r1
 .no_l:
@@ -394,34 +394,23 @@ MarsSound_SetPwm:
 ; --------------------------------------------------------
 
 MarsSound_SetPwmPitch:
-		stc	sr,r9
-		mov	#$F0,r0
-		ldc	r0,sr
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
 		sts	macl,r0
 		add 	r0,r8
-
 		mov	@(mchnsnd_enbl,r8),r0
 		cmp/eq	#1,r0
 		bf	.off_1
 		mov	@(mchnsnd_read,r8),r0
-; 		mov	#$FFFFFF00,r1
-; 		and	r1,r0
-; 		mov	r0,@(mchnsnd_read,r8)
 		mov	r2,@(mchnsnd_pitch,r8)
 .off_1:
- 		ldc	r9,sr
 		rts
 		nop
 		align 4
 
 ; --------------------------------------------------------
-; MarsSound_MulPwmPitch
-;
-; Set pitch data to 8 consecutive sound channels
-; starting from specific slot
+; MarsSound_SetVolume
 ;
 ; Input:
 ; r1 | Channel pitch slot 0
@@ -431,18 +420,45 @@ MarsSound_SetPwmPitch:
 ; r3,r4
 ; --------------------------------------------------------
 
-MarsSound_PwmEnable:
-		stc	sr,r9
-		mov	#$F0,r0
-		ldc	r0,sr
+MarsSound_SetVolume:
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
 		sts	macl,r0
 		add 	r0,r8
+		mov	@(mchnsnd_enbl,r8),r0
+		cmp/eq	#1,r0
+		bf	.off_1
+		mov	@(mchnsnd_read,r8),r0
+		mov	r2,@(mchnsnd_vol,r8)
+.off_1:
+		rts
+		nop
+		align 4
 
-		mov	r2,@(mchnsnd_enbl,r8)
- 		ldc	r9,sr
+; --------------------------------------------------------
+; MarsSound_PwmEnable
+;
+; Turns ON or OFF Current PWM slot
+;
+; Input:
+; r1 | Slot
+; r2 | Enable/Disable
+;
+; Uses:
+; r8
+; --------------------------------------------------------
+
+MarsSound_PwmEnable:
+		mov	#MarsSnd_PwmChnls,r8
+		mov 	#sizeof_sndchn,r0
+		mulu	r1,r0
+		sts	macl,r0
+		add 	r0,r8
+		mov 	r2,@(mchnsnd_enbl,r8)
+		mov 	#0,r0
+		mov 	r0,@(mchnsnd_read,r8)
+		mov 	r0,@(mchnsnd_bank,r8)
 		rts
 		nop
 		align 4

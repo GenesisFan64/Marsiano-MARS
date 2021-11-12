@@ -209,7 +209,7 @@ thisCode_Top:
 		bsr	.print_cursor
 .nor:
 		lea	str_COMM(pc),a0
-		move.l	#locate(0,2,7),d0
+		move.l	#locate(0,2,9),d0
 		bsr	Video_Print
 		rts
 
@@ -235,7 +235,7 @@ thisCode_Top:
 
 .print_cursor:
 		lea	str_Status(pc),a0
-		move.l	#locate(0,13,4),d0
+		move.l	#locate(0,19,4),d0
 		bsr	Video_Print
 		lea	str_Cursor(pc),a0
 		moveq	#0,d0
@@ -684,10 +684,12 @@ str_Status:
 		dc.l RAM_CurrTrack+2
 		align 2
 str_Title:
-		dc.b "Marsiano/GEMA sound driver",$A
+		dc.b "GEMA sound driver (Marsiano-MARS)",$A
 		dc.b $A
-		dc.b "  Track 0:",$A
-		dc.b "  Track 1:",0
+		dc.b "  Track slot 00:      B-STOP C-PLAY",$A
+		dc.b "  Track slot 01:",$A
+		dc.b "  Track 0/1 Fade out (B/C)",$A
+		dc.b "  Track 0/1 MVOL: ????",0
 		align 2
 str_COMM:
 		dc.b "\\w \\w \\w \\w",$A
