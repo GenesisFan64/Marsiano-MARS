@@ -22,7 +22,7 @@
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-MAX_TRKHEADS	equ 4*20	; Max track heads (Size,Pointer)
+MAX_TRKHEADS	equ 16*4	; Max track heads/blocks (Size,Pointer)
 ZSET_WTUNE	equ -24		; Manual adjustment for WAVE playback
 ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test WAVE playback
 
@@ -98,7 +98,7 @@ FMFRQH		equ	24
 FMFRQL		equ	30
 
 PWCOM		equ	0
-PWFLAGS		equ	8	; Output mode/bits
+PWOUTF		equ	8	; Output mode/bits
 PWPTH_V		equ	16	; Volume | Pitch MSB
 PWPHL		equ	24	; Pitch LSB
 PWINSH		equ	32	; 24-bit sample address
@@ -347,7 +347,7 @@ drv_loop:
 		ld	a,(iy+trk_status)
 		rst	8
 		or	11000000b		; Set Enable + REFILL flags
-		or	00100000b
+; 		or	00100000b
 		ld	(iy+trk_status),a
 		jp	.next_cmd
 .trkpos:
@@ -984,11 +984,11 @@ mars_scomm:
 		ld	(marsUpd),a
 
 	; TODO: a busy bit for comm15
-		ld	a,(iy+comm15)	; tell everyone
-		or	01000000b	; we are using the comms
-		ld	(iy+comm15),a	; for transfer
-.wait_cmd:	bit	1,(iy+3)	; CMD busy? (TODO: ver si bit funciona bien
-		jr	nz,.wait_cmd	; en Hardware)
+		ld	a,(iy+comm15)	; Tell to 68k we are using the COMMs
+		or	01000000b
+		ld	(iy+comm15),a
+.wait_cmd:	bit	1,(iy+3)	; CMD busy? (TODO: ver si usando BIT directo
+		jr	nz,.wait_cmd	; funciona bien en Hardware)
 		ld	(iy+3),10b	; Start CMD
 		ld	c,4		; c - Passes
 .next_pass:
@@ -1001,8 +1001,6 @@ mars_scomm:
 .next_comm:
 		ld	d,(ix)
 		ld	e,(ix+1)
-		ld	(ix),0
-		ld	(ix+1),0
 		inc	ix
 		inc	ix
 		rst	8
@@ -1022,7 +1020,13 @@ mars_scomm:
 		dec	c
 		jr	nz,.next_pass
 
-		ld	a,(iy+comm15)		; clear busy bit
+		ld	hl,pwmcom
+		ld	b,7
+.clrcom:
+		ld	(hl),0
+		inc	hl
+		djnz	.clrcom
+		ld	a,(iy+comm15)	; Now the COMMs are free again.
 		and	10011111b
 		ld	(iy+comm15),a
 		ret
@@ -1179,9 +1183,9 @@ setupchip:
 .do_chnl:
 		push	bc
 		call	.check_ins
-		call	.chip_swap	; check if tracker channel swapped chip
 		cp	-1
 		jr	z,.no_chnl
+		call	.chip_swap	; check if tracker channel swapped chip
 		call	.check_chnl	; a - chip requested
 		cp	-1		; Ran out of chip channels.
 		jr	z,.ran_out
@@ -1205,7 +1209,8 @@ setupchip:
 		pop	bc
 		ret
 .no_chnl:
-		ld	(iy+chnl_Chip),0
+		call	.chip_swap		; PWM gets problematic
+		ld	(iy+chnl_Chip),0	; if i dont check for swap on null instrument
 		pop	bc
 		ret
 
@@ -1238,7 +1243,8 @@ setupchip:
 ; --------------------------------
 
 .ins_pwm:
-		inc	hl		; skip id
+		ld	d,(hl)
+		inc	hl
 		ld	a,(hl)		; Save pitch
 		inc	hl
 		ld	(ix+3),a
@@ -1248,6 +1254,17 @@ setupchip:
 		ld	b,0
 		ld	c,a
 		add	ix,bc
+		ld	a,(ix+PWOUTF)	; get LOOP flag
+		and	111b
+		ld	c,a
+		ld	a,d
+		and	0001b
+		add	a,a		; move bit
+		add	a,a
+		add	a,a
+		or	c
+		ld	(ix+PWOUTF),a
+
 		ld	a,(hl)		; Grab the 24-bit address (BIG endian)
 		inc	hl
 		ld	(ix+PWINSH),a
@@ -1562,8 +1579,10 @@ setupchip:
 		rst	8
 		cp	0B0h			; FM Special
 		jr	z,.eff_fm
-		cp	0C0h			; FM Special
+		cp	0C0h			; DAC
 		jr	z,.eff_dac
+		cp	0D0h			; PWM
+		jr	z,.eff_pwm
 		ret
 
 ; --------------------------------
@@ -1598,6 +1617,18 @@ setupchip:
 		cp	6		; Effect F?
 		jp	z,.effDac_F
 		rst	8
+		cp	24		; Effect X?
+		jp	z,.effFm_X
+		ret
+.eff_pwm:
+		ld	a,d
+; 		cp	4		; Effect D?
+; 		jp	z,.effFm_D
+; 		cp	5		; Effect E?
+; 		jp	z,.effFm_E
+; 		rst	8
+; 		cp	6		; Effect F?
+; 		jp	z,.effFm_F
 		cp	24		; Effect X?
 		jp	z,.effFm_X
 		ret
@@ -1830,6 +1861,7 @@ setupchip:
 ; Effect X: Panning
 ; --------------------------------
 
+; PWM points here too.
 .effFm_X:
 		ld	a,e
 		rlca
@@ -1919,6 +1951,19 @@ setupchip:
 		or	d
 		ld	(ix+PWPTH_V),a
 		ld	(ix+PWPHL),e
+
+		ld	a,(ix+PWOUTF)
+		and	1100b			; Keep other bits
+		ld	c,a
+		ld	a,(iy+chnl_Flags)	; 00LR 0000
+		rrca
+		rrca
+		rrca
+		rrca
+		cpl
+		and	011b
+		or	c
+		ld	(ix+PWOUTF),a
 		ret
 
 ; PSG Keyoff
@@ -3969,7 +4014,7 @@ fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
 daccom:		db 0			; single byte for key on, off and cut
 
 	; Format:
-	; %00VP0CFO 00000slr vvvvvvpp pppppppp
+	; %00VP0CFO 0000Lslr vvvvvvpp pppppppp
 	; $ii,$ii,$ii
 	;
 	; iiiiii - 24-bit ROM sample pointer
@@ -3989,9 +4034,8 @@ daccom:		db 0			; single byte for key on, off and cut
 	;  v - Volume, 0-max
 	; lr - Left/Right output
 	;  s - Mono/Stereo bit
-	; *** NOTE ***
-	; all these values will be cleared after being
-	; sent to SH2
+	;  L - Loop flag
+	;
 pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut/other update bits
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback flags: Stereo Mode/Left/Right
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; Volume | Pitch MSB

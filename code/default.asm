@@ -218,7 +218,7 @@ thisCode_Top:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
 	dc.l 4
 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
-	dc.l 7
+	dc.l 5
 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
 	dc.l 3
 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
@@ -686,8 +686,8 @@ str_Status:
 str_Title:
 		dc.b "GEMA sound driver (Marsiano-MARS)",$A
 		dc.b $A
-		dc.b "  Track slot 00:      B-STOP C-PLAY",$A
-		dc.b "  Track slot 01:",$A
+		dc.b "  Track slot 00:",$A
+		dc.b "  Track slot 01:",0
 		dc.b "  Track 0/1 Fade out (B/C)",$A
 		dc.b "  Track 0/1 MVOL: ????",0
 		align 2

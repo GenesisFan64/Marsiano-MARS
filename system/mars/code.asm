@@ -937,8 +937,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#640,r2
-		mov	#480,r3
+		mov	#608,r2
+		mov	#432,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1119,9 +1119,9 @@ mstr_gfx1_loop:
 ; 		add	r1,r0
 ; 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
 
-		mov	#$8000,r1
+		mov	#-$8000,r1
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
-		add	r1,r0
+		sub	r1,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r1,r0
@@ -1149,7 +1149,7 @@ mstr_gfx1_loop:
 		mov	@r1,r2
 		mov	r2,r4
 		mov	#$7FF,r3
-		add	#32,r4		; wave speed
+		add	#8,r4		; wave speed
 		and	r3,r4
 		mov	r4,@r1
 
@@ -2342,7 +2342,11 @@ slave_loop:
 		tst	#$01,r0		; key-on?
 		bt	.no_req
 		mov	r14,r13
-		add	#8*2,r13	; skip COM and FLAGS
+		add	#8,r13		; skip COM
+		mov.b	@r13,r0
+		and	#%1111,r0
+		mov	r0,r7		; r7 - output settings
+		add	#8,r13
 		mov.b	@r13,r0		; r5 - Get pitch MSB bits
 		add	#8,r13
 		mov	r0,r6
@@ -2400,7 +2404,8 @@ slave_loop:
 		mov	#%11111100,r0
 		and	r0,r6
 ; 		mov	#0,r6
-		mov	#%011,r7	; LR, mono mode
+; 		mov	#%010,r7	; LR, mono mode
+
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
@@ -2421,7 +2426,11 @@ slave_loop:
 		bf	.TEST_1
 		xor	r0,r0
 		mov.b	r0,@r1
-		mov	#0,r1
+
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
+
+		mov	#1,r1
 		mov	#PWM_STEREO,r2
 		mov	#PWM_STEREO_e,r3
 		mov	#0,r4
@@ -2431,6 +2440,7 @@ slave_loop:
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
+		ldc	@r15+,sr
 
 .TEST_1:
 

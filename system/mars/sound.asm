@@ -161,8 +161,8 @@ MarsSound_ReadPwm:
 		mov 	@(mchnsnd_end,r8),r0
 		cmp/ge	r0,r4
 		bf	.read
-		mov 	@(mchnsnd_loop,r8),r0
-		cmp/eq	#-1,r0
+		mov 	@(mchnsnd_flags,r8),r0
+		tst	#%00001000,r0
 		bf	.loop_me
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_enbl,r8)
@@ -331,16 +331,13 @@ MarsSound_Init:
 ; r4 | Loop address (-1, dont loop)
 ; r5 | Pitch ($xxxxxx.xx)
 ; r6 | Volume
-; r7 | Flags (Currently: %xxxxxxLR)
+; r7 | Flags (Currently: %xxxxLSLR)
 ;
 ; Uses:
 ; r0,r8-r9
 ; --------------------------------------------------------
 
 MarsSound_SetPwm:
-; 		stc	sr,r9
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
@@ -356,8 +353,8 @@ MarsSound_SetPwm:
 		mov 	r7,@(mchnsnd_flags,r8)
 
 		mov 	r2,r0				; Set MSB
-		mov 	#$FF000000,r7
-		and 	r7,r0
+		mov 	#$FF000000,r9
+		and 	r9,r0
 		mov 	r0,@(mchnsnd_bank,r8)
 		mov 	r4,r0				; Set POINTS
 		cmp/eq	#-1,r0
@@ -374,7 +371,6 @@ MarsSound_SetPwm:
 		mov 	r0,@(mchnsnd_read,r8)
 		mov 	#1,r0
 		mov 	r0,@(mchnsnd_enbl,r8)
-;  		ldc	r9,sr
 		rts
 		nop
 		align 4

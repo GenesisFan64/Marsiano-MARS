@@ -39,6 +39,12 @@ DacIns_String1:
 DacIns_LowString:
 	gSmpl "sound/instr/smpl/lowstring.wav",1200
 
+SmpIns_PIANO_1:
+	gSmpl "sound/instr/smpl/PIANO__1.wav",-1
+SmpIns_SSTR162A:
+	gSmpl "sound/instr/smpl/SSTR162A.wav",284
+
+
 ; Normal FM ins: $20
 ; Special FM ins: $28
 FmIns_Fm3_OpenHat:

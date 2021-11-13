@@ -16,7 +16,7 @@ Video "driver" (on the 32X side):
 
 Notes/Issues:
 - Polygon rendering broken. Will have to rewrite it entirely
-- DAC Sound playback may probably slowdown if track is using too much channels.
+- DAC Sound playback may probably slowdown if track is using too much channels
 
 Please note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers

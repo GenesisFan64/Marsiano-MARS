@@ -107,61 +107,35 @@ GemaTrk_patt_TEST:
 GemaTrk_ins_TEST:
 	gInsPwm -5,DacIns_Magic2,0,1
 	gInsFm 0,FmIns_Trumpet_1
-;
-; 	gInsFm3   0,FmIns_Fm3_OpenHat
-; 	gInsFm3   0,FmIns_Fm3_ClosedHat
-; 	gInsFm 0,FmIns_Trumpet_2
-;
-;
-; 	gInsDac +5,DacIns_String1,0,1
-; ; 	gInsPsgN 0,$00,$00,$00,$00,$00,%000
-; ; 	gInsPsgN +24,$00,$00,$00,$00,$00,%011
-;
-; 	gInsFm    0,FmIns_Bass_groove
-; 	gInsFm3   0,FmIns_Fm3_OpenHat
-; 	gInsDac   0,DacIns_CdSnare,0,0
 
-; 	gInsFm3   0,FmIns_Fm3_ClosedHat
-; 	gInsFm3   0,FmIns_Fm3_OpenHat
-
-; 	gInsFm 0,FmIns_bass_kon
 
 GemaTrk_blk_TEST2:
-	binclude "sound/tracks/hill_blk.bin"
+	binclude "sound/tracks/yui_blk.bin"
 GemaTrk_patt_TEST2:
-	binclude "sound/tracks/hill_patt.bin"
+	binclude "sound/tracks/yui_patt.bin"
 GemaTrk_ins_TEST2:
-	gInsPsg +2,$40,$02,$30,$10,$00
-	gInsFm -10,FmIns_Trumpet_1
-	gInsPsgN 0,$00,$00,$00,$00,$04,%110
-	gInsDac -3,DacIns_LowString,1
-	gInsFm -8-12,FmIns_Ding_Toy
-	gInsFm -25,FmIns_Bass_3
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
+	gInsPwm -5,SmpIns_PIANO_1,0
+	gInsPwm -10,SmpIns_SSTR162A,1
+
+; HILLS
+; GemaTrk_blk_TEST2:
+; 	binclude "sound/tracks/hill_blk.bin"
+; GemaTrk_patt_TEST2:
+; 	binclude "sound/tracks/hill_patt.bin"
+; GemaTrk_ins_TEST2:
+; 	gInsPsg +2,$40,$02,$30,$10,$00
+; 	gInsFm -10,FmIns_Trumpet_1
+; 	gInsPsgN 0,$00,$00,$00,$00,$04,%110
+; 	gInsDac -3,DacIns_LowString,1;gInsPwm -3-6,DacIns_LowString,1
+; 	gInsFm -8-12,FmIns_Ding_Toy
+; 	gInsFm -25,FmIns_Bass_3
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
 
 ; 	gInsDac +07,DacIns_Snare_Gem,0,0
 ; 	gInsFm -12,FmIns_Trumpet_2
@@ -213,24 +187,24 @@ GemaTrk_ins_TEST2:
 ; 	gInsFm3   0,FmIns_Fm3_OpenHat
 ;
 ;
-GemaTrk_moon_blk:
-	binclude "sound/tracks/brinstar_blk.bin"
-GemaTrk_moon_patt:
-	binclude "sound/tracks/brinstar_patt.bin"
-GemaTrk_moon_ins:
-	gInsPsg   0,$40,$FF,$00,$10,$10
-	gInsPsgN  0,$00,$FF,$20,$10,$10,%100
-	gInsDac  +17,DacIns_CdSnare,0,0
-	gInsDac  +17,DacIns_CdSnare,0,0
-	gInsFm  -12,FmIns_Brass_Eur,0
-	gInsNull
-	gInsFm    0,FmIns_Bass_groove,0
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsFm  0,FmIns_Bass_calm,0
-	gInsPsg   0,$20,$10,$80,$00,$00
+; GemaTrk_moon_blk:
+; 	binclude "sound/tracks/brinstar_blk.bin"
+; GemaTrk_moon_patt:
+; 	binclude "sound/tracks/brinstar_patt.bin"
+; GemaTrk_moon_ins:
+; 	gInsPsg   0,$40,$FF,$00,$10,$10
+; 	gInsPsgN  0,$00,$FF,$20,$10,$10,%100
+; 	gInsDac  +17,DacIns_CdSnare,0,0
+; 	gInsDac  +17,DacIns_CdSnare,0,0
+; 	gInsFm  -12,FmIns_Brass_Eur,0
+; 	gInsNull
+; 	gInsFm    0,FmIns_Bass_groove,0
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsFm  0,FmIns_Bass_calm,0
+; 	gInsPsg   0,$20,$10,$80,$00,$00
 
 
 ; 	gInsFm  -24,FmIns_Bass_calm,0
