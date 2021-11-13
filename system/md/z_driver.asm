@@ -22,7 +22,7 @@
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-MAX_TRKHEADS	equ 4*26	; Max track heads (Size,Pointer)
+MAX_TRKHEADS	equ 4*20	; Max track heads (Size,Pointer)
 ZSET_WTUNE	equ -24		; Manual adjustment for WAVE playback
 ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test WAVE playback
 
@@ -1052,6 +1052,7 @@ setupchip:
 ; 		ld	b,0D0h
 		call	.silnc_list
 		ld	a,1
+		rst	8
 		ld	(marsUpd),a
 		ld	iy,tblFM6
 		ld	ix,daccom
@@ -1114,6 +1115,7 @@ setupchip:
 		pop	hl
 		add	hl,de
 		ld	a,(hl)		; already set?
+		and	0111b
 		or	a
 		ret	nz
 		ld	(hl),100b
@@ -1152,6 +1154,7 @@ setupchip:
 		pop	hl
 		add	hl,de
 		ld	a,(hl)		; already set?
+		and	0111b
 		or	a
 		ret	nz
 		ld	(hl),100b
@@ -1176,9 +1179,9 @@ setupchip:
 .do_chnl:
 		push	bc
 		call	.check_ins
+		call	.chip_swap	; check if tracker channel swapped chip
 		cp	-1
 		jr	z,.no_chnl
-		call	.chip_swap	; check if tracker channel swapped chip
 		call	.check_chnl	; a - chip requested
 		cp	-1		; Ran out of chip channels.
 		jr	z,.ran_out
@@ -1195,6 +1198,7 @@ setupchip:
 		bit	0,(iy+chnl_Flags)
 		call	nz,.req_note
 .ran_out:
+		rst	8
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
 		ld	(iy+chnl_Flags),a
@@ -2215,21 +2219,22 @@ setupchip:
 ; ----------------------------------------
 
 .chip_swap:
-		bit	7,(iy+chnl_Chip); if == 0, first time.
-		ret	z
 		ld	c,a		; c - New chip ID
 		and	11110000b
 		ld	b,a
 		ld	a,(iy+chnl_Chip)
+		rst	8
 		ld	e,a		; e - Old chip ID
 		and	11110000b
 		cp	b
 		jr	z,.chip_out
 		ld	d,a		; d - reuse last ID
+		rst	8
 		ld	a,c		; New chip-ins is null?
 		cp	-1
 		jr	nz,.from_nl
 		ld	a,e		; Reuse OLD ID
+		rst	8
 		and	11110000b
 		ld	d,a		; new id to check
 .from_nl:
@@ -2239,10 +2244,12 @@ setupchip:
 		call	z,.psg_out
 		cp	90h
 		call	z,.psgn_out
+		rst	8
 		cp	0A0h
 		call	z,.fm_out
 		cp	0B0h
 		call	z,.fm3_out
+		rst	8
 		cp	0C0h
 		call	z,.dac_out
 		cp	0D0h
@@ -3982,7 +3989,9 @@ daccom:		db 0			; single byte for key on, off and cut
 	;  v - Volume, 0-max
 	; lr - Left/Right output
 	;  s - Mono/Stereo bit
-
+	; *** NOTE ***
+	; all these values will be cleared after being
+	; sent to SH2
 pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut/other update bits
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback flags: Stereo Mode/Left/Right
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; Volume | Pitch MSB
