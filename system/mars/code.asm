@@ -2307,19 +2307,19 @@ slave_loop:
 		cmp/eq	#$10,r0
 		bf	.no_pitchbnd
 		mov	r0,r7
-		mov	r14,r13		; Pitchbend
-		add	#2,r13
-		mov.b	@r13+,r0
-		and	#%11,r0
-		shll8	r0
-		mov	r0,r2
-		mov.b	@r13+,r0
-		and	#$FF,r0
-		or	r2,r0
-		mov	r0,r2
-		mov	#MarsSound_SetPwmPitch,r0
-		jsr	@r0
-		nop
+; 		mov	r14,r13		; Pitchbend
+; 		add	#2,r13
+; 		mov.b	@r13+,r0
+; 		and	#%11,r0
+; 		shll8	r0
+; 		mov	r0,r2
+; 		mov.b	@r13+,r0
+; 		and	#$FF,r0
+; 		or	r2,r0
+; 		mov	r0,r2
+; 		mov	#MarsSound_SetPwmPitch,r0
+; 		jsr	@r0
+; 		nop
 		mov	r7,r0
 .no_pitchbnd:
 		tst	#$20,r0
@@ -2327,8 +2327,8 @@ slave_loop:
 		mov	r0,r7
 
 		mov	r14,r13
-		add	#2,r13
-		mov.b	@r13+,r0
+		add	#8*2,r13
+		mov.b	@r13,r0
 		and	#%11111100,r0
 		mov	r0,r2
 		mov	#MarsSound_SetVolume,r0
@@ -2342,26 +2342,31 @@ slave_loop:
 		tst	#$01,r0		; key-on?
 		bt	.no_req
 		mov	r14,r13
-		add	#2,r13
-		mov.b	@r13+,r0	; r5 - Read pitch
+		add	#8*2,r13	; skip COM and FLAGS
+		mov.b	@r13,r0		; r5 - Get pitch MSB bits
+		add	#8,r13
 		mov	r0,r6
 		and	#%11,r0
 		shll8	r0
 		mov	r0,r5
-		mov.b	@r13+,r0
+		mov.b	@r13,r0		; Pitch LSB
+		add	#8,r13
 		and	#$FF,r0
 		or	r5,r0
 		mov	r0,r5
 		mov	#CS1,r6
-		mov.b	@r13+,r0	; r2 - Get START point
+		mov.b	@r13,r0		; r2 - Get START point
+		add	#8,r13
 		and	#$FF,r0
 		shll16	r0
 		mov	r0,r3
-		mov.b	@r13+,r0
+		mov.b	@r13,r0
+		add	#8,r13
 		and	#$FF,r0
 		shll8	r0
 		mov	r0,r2
-		mov.b	@r13+,r0
+		mov.b	@r13,r0
+		add	#8,r13
 		and	#$FF,r0
 		or	r3,r0
 		or	r2,r0
@@ -2403,7 +2408,7 @@ slave_loop:
 		add	#1,r1		; next PWM slot
 		dt	r10
 		bf/s	.next_chnl
-		add	#7,r14		; next PWM list
+		add	#1,r14		; next PWM entry
 		ldc	@r15+,sr
 .no_upds:
 	; *** END PWM control code

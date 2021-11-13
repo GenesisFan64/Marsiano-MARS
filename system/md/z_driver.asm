@@ -90,11 +90,20 @@ FLG		equ	40
 TMR		equ	44
 PVOL		equ	48
 
+; FMCOM		equ	0
 FMKEYS		equ	6
 FMVOL		equ	12
 FMPAN 		equ	18
 FMFRQH		equ	24
 FMFRQL		equ	30
+
+PWCOM		equ	0
+PWFLAGS		equ	8	; Output mode/bits
+PWPTH_V		equ	16	; Volume | Pitch MSB
+PWPHL		equ	24	; Pitch LSB
+PWINSH		equ	32	; 24-bit sample address
+PWINSM		equ	40
+PWINSL		equ	48
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -920,7 +929,7 @@ updtrack:
 		ld	hl,tblFM
 .tlb_cont:
 		ld	a,c
-		and	0111b
+		and	000111b
 		rst	8
 		add	a,a		; *08h
 		add	a,a
@@ -1040,28 +1049,28 @@ setupchip:
 		ld	(flagResChip),a
 		ld	iy,tblPWM	; 32X only
 		ld	ix,pwmcom
-		ld	b,0D0h
+; 		ld	b,0D0h
 		call	.silnc_list
 		ld	a,1
 		ld	(marsUpd),a
 		ld	iy,tblFM6
 		ld	ix,daccom
-		ld	b,0C0h
+; 		ld	b,0C0h
 		call	.silnc_singl
 		rst	8
 		ld	iy,tblPSGN
 		ld	ix,psgcom+3
-		ld	b,90h
+; 		ld	b,90h
 		call	.silnc_singl
 		rst	8
 		ld	iy,tblFM	; silence floating channels
 		ld	ix,fmcom	; includes FM3 special
-		ld	b,0A0h
+; 		ld	b,0A0h
 		call	.silnc_list
 		rst	8
 		ld	iy,tblPSG
 		ld	ix,psgcom
-		ld	b,080h
+; 		ld	b,080h
 		jr	.silnc_list
 .mk_chip:
 		ld	(currInsData),hl
@@ -1134,9 +1143,9 @@ setupchip:
 
 .flotin:
 		rst	8
-		ld	d,0
 		ld	a,(iy+2)
-		and	111111b		;
+		and	000111b		;
+		ld	d,0
 		ld	e,a
 		rst	8
 		push	ix
@@ -1227,33 +1236,24 @@ setupchip:
 .ins_pwm:
 		inc	hl		; skip id
 		ld	a,(hl)		; Save pitch
+		inc	hl
 		ld	(ix+3),a
-		inc	hl
-		ld	c,(hl)		; Grab the 24-bit address
-		inc	hl		; big endian this time.
-		rst	8
-		ld	d,(hl)
-		inc	hl
-		ld	e,(hl)
-
-		ld	hl,pwmcom
 		ld	a,(ix+2)
-		and	111111b
-		push	bc
+		ld	ix,pwmcom	; ix - pwmcom
+		and	000111b
 		ld	b,0
 		ld	c,a
-		add	hl,bc
-		pop	bc
+		add	ix,bc
+		ld	a,(hl)		; Grab the 24-bit address (BIG endian)
 		inc	hl
+		ld	(ix+PWINSH),a
+		rst	8
+		ld	a,(hl)
 		inc	hl
+		ld	(ix+PWINSM),a
+		ld	a,(hl)
 		inc	hl
-		inc	hl
-		ld	a,c
-		ld	(hl),c
-		inc	hl
-		ld	(hl),d
-		inc	hl
-		ld	(hl),e
+		ld	(ix+PWINSL),a
 		ret
 
 ; --------------------------------
@@ -1462,14 +1462,14 @@ setupchip:
 .vol_pwm:
 		ld	bc,0
 		ld	a,(ix+2)
-		and	00111111b
+		and	00000111b
 		ld	c,a
 		rst	8
 		ld	ix,pwmcom
 		add	ix,bc
-		ld	a,(ix+2)
+		ld	a,(ix+PWPTH_V)
 		and	00000011b
-		ld	c,a
+		ld	c,a		; c - MSB Pitch bits
 		ld	a,(iy+chnl_Vol)
 		sub	a,40h
 		rst	8
@@ -1478,10 +1478,10 @@ setupchip:
 		add	a,a
 		jr	nc,.pvmuch
 		ld	a,-1
+		rst	8
 .pvmuch:
-; 		ld	(0),a
 		or	c
-		ld	(ix+2),a
+		ld	(ix+PWPTH_V),a
 		set	5,(ix)		; set volume update bit
 		ld	a,1
 		ld	(marsUpd),a
@@ -1786,7 +1786,7 @@ setupchip:
 		ld	l,(ix+DTL)
 		add	hl,de
 		ld	a,h
-		and	00111111b
+		and	00000111b
 		ld	h,a
 		rst	8
 		ld	(ix+DTH),h
@@ -1882,40 +1882,39 @@ setupchip:
 		ld	(marsUpd),a
 		ld	hl,pwmcom
 		ld	a,(ix+2)
-		and	111111b
-		ld	d,0
-		ld	e,a
-		add	hl,de
+		and	000111b
+		ld	b,0
+		ld	c,a
+		add	hl,bc
 		rst	8
 		ld	a,(iy+chnl_Note)
 		cp	-1
 		jp	z,.pwm_keyoff
 		cp	-2
 		jp	z,.pwm_keycut
-		ld	(iy+chnl_Chip),0D0h	; Set as DAC
 		ld	de,0
 		ld	e,(ix+3)		; Get pitch
 		add	a,e
 		add	a,a
 		rst	8
 		ld	e,a
+		ld	a,c
+		or	0D0h
+		ld	(iy+chnl_Chip),a	; Set as PWM
 		push	hl
+		pop	ix
 		ld	hl,wavFreq_List
 		add	hl,de
 		ld	e,(hl)
 		inc	hl
-		ld	d,(hl)		; max 111b
-		pop	hl
+		ld	d,(hl)		; note: max 111b
 		rst	8
-		set	0,(hl)		; Note-on
-		inc	hl
-		inc	hl		; skip LR and Volume bits
-		ld	a,(hl)		; Set frequency
-		and	11111000b
+		set	0,(ix)		; Note-on
+		ld	a,(ix+PWPTH_V)	; MSB: keep volume bits
+		and	11111100b
 		or	d
-		ld	(hl),d
-		inc	hl
-		ld	(hl),e
+		ld	(ix+PWPTH_V),a
+		ld	(ix+PWPHL),e
 		ret
 
 ; PSG Keyoff
@@ -2251,22 +2250,24 @@ setupchip:
 .chip_out:
 		ld	a,c
 		ret
+
 .pwm_out:
 		push	hl
 		ld	a,e
 		and	111b
 		ld	b,a
 		ld	e,a
-		add	a,a
 		rst	8
+		add	a,a
 		add	a,a
 		add	a,a
 		ld	e,a
 		ld	hl,tblPWM
 		add	hl,de
 		call	.chp_unlk
-; 		jr	nz,.p_out
+		rst	8
 		ld	d,0
+		ld	e,b
 		ld	hl,pwmcom
 		add	hl,de
 		ld	(hl),100b
@@ -2337,7 +2338,6 @@ setupchip:
 		add	hl,de
 		call	.chp_unlk
 		rst	8
-	; TODO: checar esto bien.
 		ld	d,0
 		ld	e,b
 		ld	hl,fmcom
@@ -2375,6 +2375,7 @@ setupchip:
 		inc	hl
 		ld	(hl),0
 		xor	a
+		or	a
 		ret
 
 ; ----------------------------------------
@@ -3279,7 +3280,7 @@ chip_env:
 		ld	d,a
 		rst	8
 		ld	a,(ix+1Dh)
-		and	00111111b
+		and	00000111b
 		ld	e,a
 		bit	2,c
 		call	z,fm_send_1
@@ -3648,7 +3649,6 @@ fmFreq_List:	dw 644
 		dw 1146
 		dw 1214
 
-; TODO: add a fine-tuner instead of using -1's
 psgFreq_List:
 		dw -1		; C-0 $0
 		dw -1
@@ -3920,14 +3920,13 @@ tblFM3:		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
 tblFM6:		db 00h,00h,05h,00h,00h,00h,00h,00h	; Channel 6
 		dw -1	; end-of-list
 
-	; notice the manual indexes...
 tblPWM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
-		db 00h,00h,07h,00h,00h,00h,00h,00h	; Channel 2
-		db 00h,00h,0Eh,00h,00h,00h,00h,00h	; Channel 3
-		db 00h,00h,15h,00h,00h,00h,00h,00h	; Channel 4
-		db 00h,00h,1Ch,00h,00h,00h,00h,00h	; Channel 5
-		db 00h,00h,23h,00h,00h,00h,00h,00h	; Channel 6
-		db 00h,00h,2Ah,00h,00h,00h,00h,00h	; Channel 7
+		db 00h,00h,01h,00h,00h,00h,00h,00h	; Channel 2
+		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
+		db 00h,00h,03h,00h,00h,00h,00h,00h	; Channel 4
+		db 00h,00h,04h,00h,00h,00h,00h,00h	; Channel 5
+		db 00h,00h,05h,00h,00h,00h,00h,00h	; Channel 6
+		db 00h,00h,06h,00h,00h,00h,00h,00h	; Channel 7
 		dw -1
 
 	; PSG psuedo-controls
@@ -3963,7 +3962,7 @@ fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
 daccom:		db 0			; single byte for key on, off and cut
 
 	; Format:
-	; %0000CFO lrtiiiii vvvvvvpp pppppppp
+	; %00VP0CFO 00000slr vvvvvvpp pppppppp
 	; $ii,$ii,$ii
 	;
 	; iiiiii - 24-bit ROM sample pointer
@@ -3972,6 +3971,8 @@ daccom:		db 0			; single byte for key on, off and cut
 	;          dc.b (actual data)
 	;
 	; Request bits:
+	; V - volume change
+	; P - pitch change
 	; C - keycut
 	; F - keyoff
 	; O - keyon
@@ -3980,24 +3981,15 @@ daccom:		db 0			; single byte for key on, off and cut
 	;  i - Instrument ID
 	;  v - Volume, 0-max
 	; lr - Left/Right output
-	;  t - Mono/Stereo bit
+	;  s - Mono/Stereo bit
 
-pwmcom:		dw 0000h,0000h
-		db 00h,00h,00h
-pwmcom_2:	dw 0000h,0000h
-		db 00h,00h,00h
-pwmcom_3:	dw 0000h,0000h
-		db 00h,00h,00h
-pwmcom_4:	dw 0000h,0000h
-		db 00h,00h,00h
-pwmcom_5:	dw 0000h,0000h
-		db 00h,00h,00h
-pwmcom_6:	dw 0000h,0000h
-		db 00h,00h,00h
-pwmcom_7:	dw 0000h,0000h
-		db 00h,00h,00h
-		dw 0000h,0000h		; filler, but it gets
-		db 00h,00h,00h		; sent too...
+pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut/other update bits
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback flags: Stereo Mode/Left/Right
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; Volume | Pitch MSB
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; Pitch LSB
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; 24-bit sample data location
+		db 00h,00h,00h,00h,00h,00h,00h,00h
+		db 00h,00h,00h,00h,00h,00h,00h,00h
 
 ; ====================================================================
 ; ----------------------------------------------------------------
