@@ -652,7 +652,7 @@ s_irq_cmd:
 
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
-		mov.w	@r1,r0			; TODO: ver para que era esto
+		mov.w	@r1,r0			; TODO: ver para que era este dummy read
 		lds	@r15+,pr
 		mov 	@r15+,r9
 		mov 	@r15+,r8
@@ -2263,7 +2263,10 @@ slave_loop:
 	; Process PWM-channel requests
 		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
 		cmp/eq	#1,r0
-		bf	.no_upds
+		bt	.pwm_upd
+		bra	.no_upds
+		nop
+.pwm_upd:
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
 		mov	#_sysreg+comm15,r1
@@ -2303,6 +2306,21 @@ slave_loop:
 		cmp/eq	#$10,r0
 		bf	.no_pitchbnd
 		mov	r0,r7
+
+		mov	r14,r13
+		add	#8*2,r13	; skip COM
+		mov.b	@r13,r0		; r1 - Get pitch MSB bits
+		add	#8,r13
+		mov	r0,r6
+		and	#%11,r0
+		shll8	r0
+		mov	r0,r2
+		mov.b	@r13,r0		; Pitch LSB
+		add	#8,r13
+		and	#$FF,r0
+		or	r2,r0
+		mov	r0,r2
+
 	; TODO
 ; 		mov	r14,r13		; Pitchbend
 ; 		add	#2,r13

@@ -176,12 +176,12 @@ MarsSound_ReadPwm:
 ; read wave
 .read:
 		mov 	@(mchnsnd_flags,r8),r0
-		mov	#$00FFFFFF,r1
+		mov	#$00FFFFFF,r1	; limit BYTE
 		mov 	r4,r3
 		shlr8	r3
 		tst	#%00000100,r0
 		bt	.mono_a
-		add	#-1,r1
+		add	#-1,r1		; limit WORD
 .mono_a
 		and	r1,r3
 		mov 	@(mchnsnd_bank,r8),r1
@@ -196,12 +196,22 @@ MarsSound_ReadPwm:
 .mono:
 		add	r9,r4
 		mov	r4,@(mchnsnd_read,r8)
-		mov	#$FF,r3
-		and	r3,r1
-		and	r3,r2
+		extu.b	r1,r1
+		extu.b	r2,r2
+; 		mov	#$FF,r3
+; 		and	r3,r1
+; 		and	r3,r2
 
-	; Volume goes down only.
-	; vol=0 normal
+	; r9 - volume decrement
+	; r0 - flags
+		tst	#%00000010,r0	; LEFT enabled?
+		bf	.no_l
+		mov	#$7F,r1		; Force LEFT off
+.no_l:
+		tst	#%00000001,r0	; RIGHT enabled?
+		bf	.no_r
+		mov	#$7F,r2		; Force RIGHT off
+.no_r:
 		mov	@(mchnsnd_vol,r8),r9
 		add	#1,r9
 		mulu	r9,r1
@@ -212,13 +222,6 @@ MarsSound_ReadPwm:
 		sts	macl,r4
 		shlr8	r4
 		sub	r4,r2
-		tst	#%00000010,r0
-		bf	.no_l
-		mov	#$7F,r1
-.no_l:
-		tst	#%00000001,r0
-		bf	.skip
-		mov	#$7F,r2
 .skip:
 		add	#1,r1
 		add	#1,r2
@@ -231,14 +234,14 @@ MarsSound_ReadPwm:
 	; ***This check is for emus only***
 	; It recreates what happens to the PWM
 	; in real hardware when it overflows
-		mov	#$3FF,r0
-		cmp/gt	r0,r5
-		bf	.lmuch
-		mov	r0,r5
-.lmuch:		cmp/gt	r0,r6
-		bf	.rmuch
-		mov	r0,r6
-.rmuch:
+; 		mov	#$3FF,r0
+; 		cmp/gt	r0,r5
+; 		bf	.lmuch
+; 		mov	r0,r5
+; .lmuch:	cmp/gt	r0,r6
+; 		bf	.rmuch
+; 		mov	r0,r6
+; .rmuch:
 		mov	#_sysreg+lchwidth,r3
 		mov	#_sysreg+rchwidth,r4
  		mov.w	r5,@r3
