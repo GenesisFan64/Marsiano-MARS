@@ -6,9 +6,6 @@
 ; Slot 1 can either overwrite chip channels or
 ; if possible grab unused slots
 ;
-; Maximum instruments:
-; 32 for BGM, 16 for SFX
-;
 ; WARNING: The sample playback has to be
 ; sync'd manually
 ; DAC sample rate is at the 18000hz range
@@ -49,9 +46,10 @@ trk_tickSet	equ 21		; Ticks set for this track
 trk_numTrks	equ 22		; Max tracks used
 trk_sizeIns	equ 23		; Max instruments used
 trk_rowPause	equ 24
-trk_CachNotes	equ 25		; Buff'd Track (100h bytes)
-trk_CachHeads	equ 27		; Buff'd Track heads
-trk_CachIns	equ 29
+trk_HdHalfway	equ 25		; Track heads reload byte
+trk_CachNotes	equ 26		; Buff'd Track (100h bytes)
+trk_CachHeads	equ 28		; Buff'd Track heads
+trk_CachIns	equ 30
 
 ; Track data: 8 bytes only
 chnl_Chip	equ 0		; MUST BE at 0
@@ -138,7 +136,7 @@ PWINSL		equ	48
 ; (check for FM6 manually)
 ; --------------------------------------------------------
 
-; NOTE: Currently this plays at 18000hz
+; NOTE: This plays at 18000hz
 		org	8
 dac_me:		exx			; <-- opcode changes between EXX(play) and RET(stop)
 		ex	af,af'		; get our alt A/F
@@ -431,12 +429,10 @@ get_cmdbyte:
 updtrack:
 		call	dac_fill
 		ld	iy,trkBuff_0		; BGM
-		ld	hl,trkHeads_0
 		rst	8
 		ld	de,insDataC_0
 		call	.read_track
 		ld	iy,trkBuff_1		; SFX
-		ld	hl,trkHeads_1
 		ld	de,insDataC_1
 		rst	8
 		call	.read_track
@@ -706,28 +702,40 @@ updtrack:
 		ld	l,80h			; quick reset trk_read
 		ld	(iy+trk_Read),l
 		ld	(iy+((trk_Read+1))),h
+
 		push	hl			; Save hl
 		ld	de,0
 		ld	e,a
+		rst	8
 		ld	l,(iy+trk_romBlk)	; Get block position
 		ld	h,(iy+(trk_romBlk+1))	; directly from ROM
 		ld	a,(iy+(trk_romBlk+2))
 		add	hl,de
 		adc	a,0
 		ld	b,a
+		rst	8
 		call	showRom
 		call	readRomB
 		cp	-1			; if block == -1, end
 		jp	z,.track_end
-
 		call	dac_fill
-		ld	l,(iy+trk_CachHeads)
-		ld	h,(iy+(trk_CachHeads+1))
-		add	a,a			; a * 04h
+
+	; a - head index
 		add	a,a
+		add	a,a
+		ld	d,0
 		ld	e,a
-		add	hl,de
+		ld	l,(iy+trk_romPatt)
 		rst	8
+		ld	h,(iy+(trk_romPatt+1))
+		ld	a,(iy+(trk_romPatt+2))
+		add	hl,de
+		adc	a,0
+		ld	de,trkHdOut
+		push	de
+		ld	bc,4
+		call	transferRom
+		pop	hl
 		ld	c,(hl)			; bc - new rows to process
 		inc	hl
 		ld	b,(hl)
@@ -738,6 +746,7 @@ updtrack:
 		rst	8
 		ld	(iy+trk_Rows),c		; Save this number of rows to buffer
 		ld	(iy+(trk_Rows+1)),b	; on Tick pauses
+		push	bc			; Save bc
 
 	; Recieve data to a half-section
 	; of the notes cache
@@ -755,9 +764,8 @@ updtrack:
 		ld	bc,080h			; bc - 080h
 		call	transferRom
 		rst	8
-		ld	c,(iy+trk_Rows)
-		ld	b,(iy+(trk_Rows+1))
-		pop	hl			; Get hl back
+		pop	bc			; Get bc back
+		pop	hl			; hl too.
 		xor	a			; return 0
 		ret
 
@@ -804,13 +812,13 @@ updtrack:
 		ld	c,(iy+trk_sizeIns)
 		call	transferRom
 		rst	8
-		ld	e,(iy+trk_CachHeads)	; de - Cache headers
-		ld	d,(iy+(trk_CachHeads+1))
-		ld	l,(iy+trk_romPatt)	; hl - ROM pattern data BASE
-		ld	h,(iy+(trk_romPatt+1))
-		ld	a,(iy+(trk_romPatt+2))
-		ld	bc,MAX_TRKHEADS
-		call	transferRom
+; 		ld	e,(iy+trk_CachHeads)	; de - Cache headers
+; 		ld	d,(iy+(trk_CachHeads+1))
+; 		ld	l,(iy+trk_romPatt)	; hl - ROM pattern data BASE
+; 		ld	h,(iy+(trk_romPatt+1))
+; 		ld	a,(iy+(trk_romPatt+2))
+; 		ld	bc,MAX_TRKHEADS
+; 		call	transferRom
 		ld	l,(iy+trk_CachNotes)	; Read first cache notes
 		ld	h,(iy+(trk_CachNotes+1))
 		ld	de,80h
@@ -958,7 +966,7 @@ updtrack:
 ; --------------------------------------------------------
 
 mars_scomm:
-		ld	hl,6000h	; Point bank closely
+		ld	hl,6000h	; Point BANK closely
 		rst	8		; to the 32X area
 		ld	(hl),0
 		ld	(hl),1
@@ -971,7 +979,7 @@ mars_scomm:
 		ld	(hl),0
 		ld	(hl),1
 		rst	8
-		ld	iy,5100h|8000h	; iy - mars sysreg area
+		ld	iy,5100h|8000h	; iy - mars sysreg
 		ld	ix,pwmcom
 		ld	a,(marsBlock)	; block MARS requests?
 		or	a
@@ -984,9 +992,11 @@ mars_scomm:
 		ld	(marsUpd),a
 
 	; TODO: a busy bit for comm15
-		ld	a,(iy+comm15)	; Tell to 68k we are using the COMMs
-		or	01000000b
-		ld	(iy+comm15),a
+.wait:
+		nop
+		ld	a,(iy+comm15)	; check if we got mid-process
+		bit	6,a		; wait until it finishes
+		jr	nz,.wait
 .wait_cmd:	bit	1,(iy+3)	; CMD busy? (TODO: ver si usando BIT directo
 		jr	nz,.wait_cmd	; funciona bien en Hardware)
 		ld	(iy+3),10b	; Start CMD
@@ -1009,26 +1019,26 @@ mars_scomm:
 		ld	(hl),e
 		inc	hl
 		djnz	.next_comm
-		ld	a,(iy+comm15)	; Send CLOCK to CMD
+		ld	a,(iy+comm15)	; Send CLOCK to Slave CMD
 		set	5,a
 		ld	(iy+comm15),a
 		rst	8
 .w_pass2:
-		ld	a,(iy+comm15)	; CMD Busy?
+		ld	a,(iy+comm15)	; CLOCK cleared?
 		bit	5,a
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass
-
+.error:
 		ld	hl,pwmcom
 		ld	b,7
 .clrcom:
 		ld	(hl),0
 		inc	hl
 		djnz	.clrcom
-		ld	a,(iy+comm15)	; Now the COMMs are free again.
-		and	10011111b
-		ld	(iy+comm15),a
+; 		ld	a,(iy+comm15)	; Now the COMMs are free again.
+; 		and	10011111b
+; 		ld	(iy+comm15),a
 		ret
 
 ; --------------------------------------------------------
@@ -2651,18 +2661,14 @@ gema_init:
 	; set each tracks' settings
 		ld	iy,trkBuff_0
 		ld	hl,trkData_0
-		ld	de,trkHeads_0
 		ld	a,-1			; maximum size
 		call	.set_it
 		ld	iy,trkBuff_1
 		ld	hl,trkData_1
-		ld	de,trkHeads_1
-		ld	a,8*16
+		ld	a,-1
 .set_it:
 		ld	(iy+trk_CachNotes),l
 		ld	(iy+(trk_CachNotes+1)),h
-		ld	(iy+trk_CachHeads),e
-		ld	(iy+(trk_CachHeads+1)),d
 		ld	(iy+trk_sizeIns),a
 
 	; a - priority
@@ -4049,8 +4055,6 @@ pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
-trkHeads_0	ds MAX_TRKHEADS	; Track heads (sizes and pointers)
-trkHeads_1	ds MAX_TRKHEADS	;
 commZfifo	ds 40h		; Buffer for command requests from 68k (40h bytes, loops)
 tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
 tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
@@ -4058,7 +4062,7 @@ psgHatMode	db 0
 fmSpcMode	db 0
 flagResChip	db 0		; reset chips flag
 insDataC_0	ds 8*32		; Instrument data for each Track slot
-insDataC_1	ds 8*16		; BGM max: 32, SFX max: 16
+insDataC_1	ds 8*32		; BGM max: 32, SFX max: 16
 
 dDacPntr	db 0,0,0	; WAVE play current ROM position
 dDacCntr	db 0,0,0	; WAVE play length counter
@@ -4072,6 +4076,7 @@ currInsPos	dw 0
 currTrkCtrl	dw 0
 x68ksrclsb	db 0		; transferRom temporal LSB
 x68ksrcmid	db 0		; transferRom temporal MID
+trkHdOut	ds 4		; Temporal header for reading current Track position
 
 		org 1B00h
 zStack:

@@ -605,8 +605,8 @@ s_irq_cmd:
 
 ; ----------------------------------
 
-		mov	#$F0,r0			; Disable interrupts
-		ldc	r0,sr
+; 		mov	#$F0,r0			; Disable interrupts
+; 		ldc	r0,sr
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -617,15 +617,13 @@ s_irq_cmd:
 		mov	r9,@-r15
 		sts	pr,@-r15
 		mov	#MarsSnd_PwmControl,r9
-		mov	#_sysreg+comm15,r7
-
-; 		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
-; 		cmp/eq	#1,r0
-; 		bt	.cantupd
+		mov	#_sysreg+comm15,r7	; control comm
 		mov	#4,r5			; number of passes
 .wait_1:
+		nop
+		nop
 		mov.b	@r7,r0			; wait first CLOCK
-		and	#%00100000,r0
+		and	#%00100000,r0		; from Z80
 		cmp/pl	r0
 		bf	.wait_1
 		mov	#7,r6
@@ -651,12 +649,6 @@ s_irq_cmd:
 ; 		bf	.no_wav
 ; 		xor	r0,r0
 ; 		mov.b	r0,@r14
-;
-
-
-
-
-; .no_wav:
 
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
@@ -1121,7 +1113,7 @@ mstr_gfx1_loop:
 
 		mov	#-$8000,r1
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
-		sub	r1,r0
+		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r1,r0
@@ -1149,7 +1141,7 @@ mstr_gfx1_loop:
 		mov	@r1,r2
 		mov	r2,r4
 		mov	#$7FF,r3
-		add	#8,r4		; wave speed
+		add	#4,r4		; wave speed
 		and	r3,r4
 		mov	r4,@r1
 
@@ -1171,12 +1163,12 @@ mstr_gfx1_loop:
 .ln_loop:
 		mov	#$7FF,r3
 		mov	r2,r0
-		add	#16,r2		; wave distord
+		add	#32,r2		; wave distord
 		and	r3,r2
 		shll2	r0
 		mov	#sin_table,r3
 		mov	@(r0,r3),r4
-		mov	#8,r0		; wave max X
+		mov	#4,r0		; wave max X
 		dmuls	r0,r4
 		sts	macl,r4
 		shlr16	r4
@@ -2243,8 +2235,6 @@ SH2_S_HotStart:
 		add 	#4,r2
 		dt	r3
 		bf	.copy
-
-; 	; TODO: Disabled temporally
 		bsr	MarsSound_Init			; Init Sound
 		nop
 ; 		mov	#MarsMdl_Init,r0		; REMINDER: 1 meter = $10000
@@ -2270,14 +2260,20 @@ SH2_S_HotStart:
 		ltorg
 slave_loop:
 
-	; *** Read PWM control changes...
-	; for GEMA
+	; Process PWM-channel requests
 		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
 		cmp/eq	#1,r0
 		bf	.no_upds
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
-		stc	sr,@-r15		; Interrupts OFF
+		mov	#_sysreg+comm15,r1
+		mov.b	@r1,r0			; Report to Z80 we are busy
+		or	#%01000000,r0
+		mov.b	r0,@r0
+		nop		; small sync delay
+		nop
+		nop
+		stc	sr,@-r15		; ALL Interrupts OFF
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#0,r1			; r1 - PWM slot
@@ -2307,6 +2303,7 @@ slave_loop:
 		cmp/eq	#$10,r0
 		bf	.no_pitchbnd
 		mov	r0,r7
+	; TODO
 ; 		mov	r14,r13		; Pitchbend
 ; 		add	#2,r13
 ; 		mov.b	@r13+,r0
@@ -2325,11 +2322,10 @@ slave_loop:
 		tst	#$20,r0
 		bt	.no_volumebnd
 		mov	r0,r7
-
 		mov	r14,r13
-		add	#8*2,r13
+		add	#8*2,r13	; point to volume values
 		mov.b	@r13,r0
-		and	#%11111100,r0
+		and	#%11111100,r0	; skip MSB pitch bits
 		mov	r0,r2
 		mov	#MarsSound_SetVolume,r0
 		jsr	@r0
@@ -2405,7 +2401,6 @@ slave_loop:
 		and	r0,r6
 ; 		mov	#0,r6
 ; 		mov	#%010,r7	; LR, mono mode
-
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
@@ -2415,8 +2410,16 @@ slave_loop:
 		bf/s	.next_chnl
 		add	#1,r14		; next PWM entry
 		ldc	@r15+,sr
+		mov	#_sysreg+comm15,r1
+		mov.b	@r1,r0		; Now we are free.
+		and	#%10111111,r0
+		mov.b	r0,@r0
+		nop		; small sync delay
+		nop
+		nop
 .no_upds:
 	; *** END PWM control code
+	; for GEMA
 
 
 	; Testing only
@@ -2429,19 +2432,17 @@ slave_loop:
 
 		stc	sr,@-r15		; Interrupts OFF
 		mov	#$F0,r0
-
-		mov	#1,r1
+		mov	#0,r1
 		mov	#PWM_STEREO,r2
 		mov	#PWM_STEREO_e,r3
 		mov	#0,r4
 		mov	#$100,r5
 		mov	#0,r6
-		mov	#%111,r7
+		mov	#%1111,r7
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
 		ldc	@r15+,sr
-
 .TEST_1:
 
 		bra	slave_loop

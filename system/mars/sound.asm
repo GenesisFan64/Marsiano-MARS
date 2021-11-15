@@ -328,7 +328,7 @@ MarsSound_Init:
 ; r1 | Channel
 ; r2 | Start address
 ; r3 | End address
-; r4 | Loop address (-1, dont loop)
+; r4 | Loop address (ignored if loop flag isn't set)
 ; r5 | Pitch ($xxxxxx.xx)
 ; r6 | Volume
 ; r7 | Flags (Currently: %xxxxLSLR)
