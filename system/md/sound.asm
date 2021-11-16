@@ -41,114 +41,6 @@ Sound_Init:
 ; Subroutines
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-; Sound_DMA_Pause
-;
-; Call this before doing any DMA task
-; --------------------------------------------------------
-
-Sound_DMA_Pause:
-		move.w	sr,-(sp)
-		or.w	#$700,sr
-.retry:
-		move.w	#$0100,(z80_bus).l		; Stop Z80
-.wait:
-		btst	#0,(z80_bus).l			; Wait for it
-		bne.s	.wait
-		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
-		move.w	#0,(z80_bus).l			; Resume Z80
-		tst.b	d7
-		beq.s	.safe
-		moveq	#68,d7
-		dbf	d7,*
-		bra.s	.retry
-.safe:
-		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
-		move.w	(sp)+,sr
-		rts
-
-; --------------------------------------------------------
-; Sound_DMA_Resume
-;
-; Call this after finishing DMA
-; --------------------------------------------------------
-
-Sound_DMA_Resume:
-		move.w	sr,-(sp)
-		or.w	#$700,sr
-		bsr	sndLockZ80
-		move.b	#0,(z80_cpu+commZRomBlk)
-		bsr	sndUnlockZ80
-		move.w	(sp)+,sr
-		rts
-
-; --------------------------------------------------------
-; Sound_Request_Word
-;
-; d0    - request id
-; d1    - argument
-; --------------------------------------------------------
-
-Sound_Request:
-		bsr	sndReq_Enter
-		move.w	d0,d7
-		bsr	sndReq_scmd
-		move.l	d1,d7
-		bsr	sndReq_sword
-		bra 	sndReq_Exit
-
-; --------------------------------------------------------
-; SoundReq_SetTrack
-;
-; d0 - Pattern data pointer
-; d1 - Block data pointer
-; d2 - Instrument data pointer
-; d3 - Ticks (Tempo is set separately)
-; d4 - Slot (0-2)
-; --------------------------------------------------------
-
-SoundReq_SetTrack:
-		bsr	sndReq_Enter
-		move.w	#$00,d7			; Command $00
-		bsr	sndReq_scmd
-		move.b	d4,d7			; d4 - Slot
-		bsr	sndReq_sbyte
-		move.b	d3,d7			; d3 - Ticks
-		bsr	sndReq_sbyte
-		move.l	d0,d7			; d0 - Patt data point
-		bsr	sndReq_saddr
-		move.l	d1,d7			; d1 - Block data point
-		bsr	sndReq_saddr
-		move.l	d2,d7			; d2 - Intrument data
-		bsr	sndReq_saddr
-		bra 	sndReq_Exit
-
-; --------------------------------------------------------
-; SoundReq_SetSample
-;
-; d0 - Sample pointer
-; d1 - length
-; d2 - loop point
-; d3 - Pitch ($01.00)
-; d4 - Flags (%00l l-loop enable)
-; --------------------------------------------------------
-
-SoundReq_SetSample:
-		bsr	sndReq_Enter
-		move.w	#$21,d7			; Command $21
-		bsr	sndReq_scmd
-		move.l	d0,d7
-		bsr	sndReq_saddr
-		move.l	d1,d7
-		bsr	sndReq_saddr
-		move.l	d2,d7
-		bsr	sndReq_saddr
-		move.l	d3,d7
-		bsr	sndReq_sword
-		move.l	d4,d7
-		bsr	sndReq_sbyte
-		bra 	sndReq_Exit
-
 ; ------------------------------------------------
 ; Lock Z80, get bus
 ; ------------------------------------------------
@@ -171,6 +63,8 @@ sndUnlockZ80:
 ; ------------------------------------------------
 ; 68k-to-z80 Sound request
 ; enter/exit routines
+;
+; d6 - commFifo index
 ; ------------------------------------------------
 
 sndReq_Enter:
@@ -228,3 +122,116 @@ sndReq_sbyte:
 		andi.b	#$3F,d6
 		move.b	d6,(a5)				; update commZWrite
 		rts
+
+; --------------------------------------------------------
+; Sound_DMA_Pause
+;
+; Call this before doing any DMA task
+; --------------------------------------------------------
+
+Sound_DMA_Pause:
+		move.w	sr,-(sp)
+		or.w	#$700,sr
+.retry:
+		move.w	#$0100,(z80_bus).l		; Stop Z80
+.wait:
+		btst	#0,(z80_bus).l			; Wait for it
+		bne.s	.wait
+		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
+		move.w	#0,(z80_bus).l			; Resume Z80
+		tst.b	d7
+		beq.s	.safe
+		moveq	#68,d7
+		dbf	d7,*
+		bra.s	.retry
+.safe:
+		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
+		move.w	(sp)+,sr
+		rts
+
+; --------------------------------------------------------
+; Sound_DMA_Resume
+;
+; Call this after finishing DMA
+; --------------------------------------------------------
+
+Sound_DMA_Resume:
+		move.w	sr,-(sp)
+		or.w	#$700,sr
+		bsr	sndLockZ80
+		move.b	#0,(z80_cpu+commZRomBlk)
+		bsr	sndUnlockZ80
+		move.w	(sp)+,sr
+		rts
+
+; --------------------------------------------------------
+; SoundReq_SetTrack
+;
+; a0:
+;  dc.l pattern_data
+;  dc.l block_data
+;  dc.l instrument_data
+;
+; d1 - Ticks
+; d2 - Tempo
+; d3 - Slot
+; --------------------------------------------------------
+
+Sound_TrkPlay:
+		bsr	sndReq_Enter
+		move.w	#$00,d7		; Command $00
+		bsr	sndReq_scmd
+		move.b	d2,d7		; d2 - Slot
+		bsr	sndReq_sbyte
+		move.b	d1,d7		; d1 - Ticks
+		bsr	sndReq_sbyte
+		move.l	(a0)+,d7	; d0 - Patt data point
+		bsr	sndReq_saddr
+		move.l	(a0)+,d7	; d1 - Block data point
+		bsr	sndReq_saddr
+		move.l	(a0)+,d7	; d2 - Intrument data
+		bsr	sndReq_saddr
+		bra 	sndReq_Exit
+
+; --------------------------------------------------------
+; SoundReq_StopTrack
+;
+; d1 - Slot
+; --------------------------------------------------------
+
+Sound_TrkStop:
+		bsr	sndReq_Enter
+		move.w	#$01,d7		; Command $01
+		bsr	sndReq_scmd
+		move.b	d1,d7		; d1 - Slot
+		bsr	sndReq_sbyte
+		bra 	sndReq_Exit
+
+; ; --------------------------------------------------------
+; ; SoundReq_StopTrack
+; ;
+; ; d1 - Slot
+; ; --------------------------------------------------------
+;
+; Sound_TrkStop:
+; 		bsr	sndReq_Enter
+; 		move.w	#$01,d7		; Command $01
+; 		bsr	sndReq_scmd
+; 		move.b	d1,d7		; d1 - Slot
+; 		bsr	sndReq_sbyte
+; 		bra 	sndReq_Exit
+;
+; ; --------------------------------------------------------
+; ; SoundReq_StopTrack
+; ;
+; ; d1 - Slot
+; ; --------------------------------------------------------
+;
+; Sound_TrkStop:
+; 		bsr	sndReq_Enter
+; 		move.w	#$01,d7		; Command $01
+; 		bsr	sndReq_scmd
+; 		move.b	d1,d7		; d1 - Slot
+; 		bsr	sndReq_sbyte
+; 		bra 	sndReq_Exit
+

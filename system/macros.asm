@@ -29,10 +29,13 @@ locate		function a,b,c,(c&$FF)|(b<<8&$FF00)|(a<<16&$FF0000)	; VDP locate: Layer|
 ; Macros
 ; ---------------------------------------------
 
+paddingSoFar set 0
+notZ80 function cpu,(cpu<>128)&&(cpu<>32988)
+
 ; -------------------------------------
 ; Reserve memory section
 ;
-; NOTE: This doesn't work on Z80
+; NOTE: This doesn't work for Z80
 ; -------------------------------------
 
 struct		macro thisinput			; Reserve memory address
@@ -57,8 +60,6 @@ finish		macro				; Then finish custom struct.
 ; (from s2disasm)
 ; -------------------------------------
 
-paddingSoFar set 0
-notZ80 function cpu,(cpu<>128)&&(cpu<>32988)
 org macro address
 	if notZ80(MOMCPU)
 		if address < *

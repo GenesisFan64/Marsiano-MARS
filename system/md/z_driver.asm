@@ -238,9 +238,9 @@ drv_loop:
 		cp	b
 		jr	z,drv_loop
 		call	get_cmdbyte
-		cp	-1			; Read -1 (Start of command)
+		cp	-1		; Get -1 (Start of command)
 		jr	nz,drv_loop
-		call	get_cmdbyte		; Read cmd number
+		call	get_cmdbyte	; Read cmd number
 		add	a,a
 		ld	hl,.list
 		ld	d,0
@@ -254,7 +254,7 @@ drv_loop:
 		jp	(hl)
 .list:
 		dw .cmnd_trkplay	; $00
-		dw .cmnd_0
+		dw .cmnd_trkstop
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0		; $04
@@ -285,9 +285,6 @@ drv_loop:
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
-		dw .cmnd_0		; $20
-		dw .cmnd_wav_set	; $21
-		dw .cmnd_wav_pitch	; $22
 
 ; --------------------------------------------------------
 ; Command list
@@ -305,21 +302,9 @@ drv_loop:
 ; Ticks
 ; 24-bit patt data
 ; 24-bit block data
-
 .cmnd_trkplay:
 		call	get_cmdbyte		; Get track slot
-		ld	hl,.trkpos
-		add	a,a
-		ld	d,0
-		ld	e,a
-		rst	8
-		add	hl,de
-		ld	a,(hl)
-		inc	hl
-		ld	h,(hl)
-		ld	l,a
-		push	hl
-		pop	iy
+		call	get_trkindx		; and read index iy
 		call	get_cmdbyte		; Get ticks
 		ld	(iy+trk_tickSet),a
 		call	get_cmdbyte		; Pattern data
@@ -345,48 +330,41 @@ drv_loop:
 		ld	a,(iy+trk_status)
 		rst	8
 		or	11000000b		; Set Enable + REFILL flags
-; 		or	00100000b
+		or	00100000b
 		ld	(iy+trk_status),a
 		jp	.next_cmd
+
+; --------------------------------------------------------
+; $02 - Set NEW track
+; --------------------------------------------------------
+
+.cmnd_trkstop:
+		call	get_cmdbyte		; Get track slot
+		call	get_trkindx		; and read index iy
+		ld	(iy+trk_status),0
+		call	track_out
+		jp	.next_cmd
+
+; --------------------------------------------------------
+; a - track index
+
+get_trkindx:
+		ld	hl,.trkpos
+		add	a,a
+		ld	d,0
+		ld	e,a
+		rst	8
+		add	hl,de
+		ld	a,(hl)
+		inc	hl
+		ld	h,(hl)
+		ld	l,a
+		push	hl
+		pop	iy
+		ret
 .trkpos:
 		dw trkBuff_0
 		dw trkBuff_1
-
-; --------------------------------------------------------
-; $21 - change current wave pitch
-; --------------------------------------------------------
-
-.cmnd_wav_set:
-		ld	iy,wave_Start
-		ld	b,3+3+3+3	; Start/End/Loop/Len+Flags(2+1)
-.loop:
-		call	get_cmdbyte
-		ld	(iy),a
-		inc	iy
-		djnz	.loop
-		call	dac_play
-		jp	.next_cmd
-
-; --------------------------------------------------------
-; $22 - change current wave pitch
-; --------------------------------------------------------
-
-.cmnd_wav_pitch:
-		exx
-		push	de
-		exx
-		pop	hl
-		rst	8
-		call	get_cmdbyte	; $00xx
-		ld	e,a
-		call	get_cmdbyte	; $xx00
-		ld	d,a
-		push	de
-		rst	8
-		exx
-		pop	de
-		exx
-		jp	drv_loop
 
 ; --------------------------------------------------------
 ; Read cmd byte, auto re-aligns to 7Fh
@@ -447,10 +425,10 @@ updtrack:
 ; ----------------------------------------
 
 .read_track:
-		ld	(currInsData),de	; save temporal InsData for loading
 		ld	b,(iy+trk_status)	; b - Track status
 		bit	7,b			; Active?
 		ret	z
+		ld	(currInsData),de	; save temporal InsData for loading
 		rst	8
 		ld	a,(currTickBits)	; a - Tick/Beat bits
 		bit	5,b			; This track uses Beats?
@@ -790,7 +768,7 @@ updtrack:
 		push	de
 		push	bc
 		rst	8
-		call	.chktbl_sl			; search and unlink last used channels
+		call	trkout_unlk		; search and unlink last used channels
 		ld	(ix+chnl_Ins),0
 		rst	8
 		pop	bc
@@ -833,29 +811,7 @@ updtrack:
 ; Automutes channels too.
 .track_end:
 		pop	hl			; Get hl back
-		push	iy
-		pop	ix
-		ld	de,20h
-		add	ix,de
-		rst	8
-		ld	de,8
-		ld	b,MAX_TRKCHN
-.clrfe:
-		ld	a,(ix+chnl_Chip)
-		or	a
-		jr	z,.no_chg
-		push	de
-		push	bc
-		call	.chktbl_sl
-		ld	(ix+chnl_Note),-2	; Force NOTECUT
-		ld	(ix+chnl_Flags),0001b
-		pop	bc
-		pop	de
-.no_chg:
-		add	ix,de
-		djnz	.clrfe
-; 		ld	a,1			; Request chip cleanup
-; 		ld	(flagResChip),a
+		call	track_out
 		rst	8
 		ld	(iy+trk_status),0	; Track status
 		ld	(iy+trk_rowPause),0
@@ -865,18 +821,41 @@ updtrack:
 		ret
 
 ; ----------------------------------------
-; Unlink current channel
-;
-; ix - current track channel
+; Delete all track data
 ; ----------------------------------------
 
-.chktbl_sl:
+track_out:
+		push	iy
+		pop	ix
+		ld	de,20h
+		add	ix,de
+		rst	8
+		ld	de,8
+		ld	b,MAX_TRKCHN
+.clrfe:
+		push	de
+		push	bc
+		call	trkout_unlk
+		pop	bc
+		pop	de
+		add	ix,de
+		djnz	.clrfe
+		ld	a,1			; Request chip cleanup
+		ld	(flagResChip),a
+		ret
+
+; ----------------------------------------
+; Unlink current channel
+; ----------------------------------------
+
+trkout_unlk:
 		ld	a,(ix+chnl_Chip)
 		or	a
 		ret	z
 		ret	p
-		ld	(ix+chnl_Note),-1
+		ld	(ix+chnl_Note),-2
 		ld	(ix+chnl_Flags),0001b
+; 		ld	(ix+chnl_Chip),0
 		push	ix
 		pop	de
 		ld	c,a
@@ -990,16 +969,18 @@ mars_scomm:
 		rst	8
 		xor	a
 		ld	(marsUpd),a
-
-	; TODO: a busy bit for comm15
 .wait:
 		nop
-		ld	a,(iy+comm15)	; check if we got mid-process
+		ld	a,(iy+comm15)	; check if we got mid-process and
 		bit	6,a		; wait until it finishes
 		jr	nz,.wait
-.wait_cmd:	bit	1,(iy+3)	; CMD busy? (TODO: ver si usando BIT directo
-		jr	nz,.wait_cmd	; funciona bien en Hardware)
-		ld	(iy+3),10b	; Start CMD
+.wait_cmd:
+		ld	a,(iy+3)
+		bit	1,a		; CMD busy?
+		jr	nz,.wait_cmd
+		ld	a,(iy+3)	; Start CMD
+		set	1,a
+		ld	(iy+3),a
 		ld	c,4		; c - Passes
 .next_pass:
 		push	iy
@@ -1019,12 +1000,12 @@ mars_scomm:
 		ld	(hl),e
 		inc	hl
 		djnz	.next_comm
-		ld	a,(iy+comm15)	; Send CLOCK to Slave CMD
+		ld	a,(iy+comm15)	; Send CLK to Slave CMD
 		set	5,a
 		ld	(iy+comm15),a
 		rst	8
 .w_pass2:
-		ld	a,(iy+comm15)	; CLOCK cleared?
+		ld	a,(iy+comm15)	; CLK cleared?
 		bit	5,a
 		jr	nz,.w_pass2
 		dec	c
@@ -1129,7 +1110,7 @@ setupchip:
 		pop	hl
 		add	hl,de
 		ld	a,(hl)		; already set?
-		and	0111b
+; 		and	0111b
 		or	a
 		ret	nz
 		ld	(hl),100b
@@ -1168,7 +1149,7 @@ setupchip:
 		pop	hl
 		add	hl,de
 		ld	a,(hl)		; already set?
-		and	0111b
+; 		and	0111b
 		or	a
 		ret	nz
 		ld	(hl),100b
@@ -1219,8 +1200,8 @@ setupchip:
 		pop	bc
 		ret
 .no_chnl:
-		call	.chip_swap		; PWM gets problematic
-		ld	(iy+chnl_Chip),0	; if i dont check for swap on null instrument
+		call	.chip_swap		; TODO: check if this breaks.
+		ld	(iy+chnl_Chip),0
 		pop	bc
 		ret
 
@@ -4076,7 +4057,7 @@ currInsPos	dw 0
 currTrkCtrl	dw 0
 x68ksrclsb	db 0		; transferRom temporal LSB
 x68ksrcmid	db 0		; transferRom temporal MID
-trkHdOut	ds 4		; Temporal header for reading current Track position
+trkHdOut	ds 4		; temporal Header for reading Track position/row count
 
 		org 1B00h
 zStack:

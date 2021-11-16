@@ -166,3 +166,6 @@ FmIns_Flaute_cave:
 		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
 FmIns_Banjo_puy:
 		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
+
+FmIns_Violin_gem:
+		binclude "sound/instr/fm/violin_gem.gsx",$2478,$20

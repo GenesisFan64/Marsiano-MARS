@@ -110,12 +110,39 @@ GemaTrk_ins_TEST:
 
 
 GemaTrk_blk_TEST2:
-	binclude "sound/tracks/yui_blk.bin"
+	binclude "sound/tracks/nokiaarab_blk.bin"
 GemaTrk_patt_TEST2:
-	binclude "sound/tracks/yui_patt.bin"
+	binclude "sound/tracks/nokiaarab_patt.bin"
 GemaTrk_ins_TEST2:
-	gInsPwm -5,SmpIns_PIANO_1,0
-	gInsPwm -10,SmpIns_SSTR162A,1
+	gInsNull
+	gInsFm -12,FmIns_Bass_calm
+	gInsPsg 0,$80,$00,$10,$40,$06
+	gInsNull
+	gInsFm -12,FmIns_Violin_gem
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsFm -12,FmIns_Trumpet_1
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
 
 ; HILLS
 ; GemaTrk_blk_TEST2:

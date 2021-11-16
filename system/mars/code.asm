@@ -929,8 +929,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#608,r2
-		mov	#432,r3
+		mov	#992,r2
+		mov	#736,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1111,10 +1111,11 @@ mstr_gfx1_loop:
 ; 		add	r1,r0
 ; 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
 
-		mov	#-$8000,r1
+		mov	#$8000,r1
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
+		mov	#$5000,r1
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
@@ -1141,7 +1142,7 @@ mstr_gfx1_loop:
 		mov	@r1,r2
 		mov	r2,r4
 		mov	#$7FF,r3
-		add	#4,r4		; wave speed
+		add	#8,r4		; wave speed
 		and	r3,r4
 		mov	r4,@r1
 
@@ -1163,12 +1164,12 @@ mstr_gfx1_loop:
 .ln_loop:
 		mov	#$7FF,r3
 		mov	r2,r0
-		add	#32,r2		; wave distord
+		add	#4,r2		; wave distord
 		and	r3,r2
 		shll2	r0
 		mov	#sin_table,r3
 		mov	@(r0,r3),r4
-		mov	#4,r0		; wave max X
+		mov	#8,r0		; wave max X
 		dmuls	r0,r4
 		sts	macl,r4
 		shlr16	r4
@@ -2361,9 +2362,12 @@ slave_loop:
 		and	#%1111,r0
 		mov	r0,r7		; r7 - output settings
 		add	#8,r13
+		mov.b	@r13,r0
+		and	#%11111100,r0	; skip MSB pitch bits
+		mov	r0,r6
 		mov.b	@r13,r0		; r5 - Get pitch MSB bits
 		add	#8,r13
-		mov	r0,r6
+; 		mov	r0,r6
 		and	#%11,r0
 		shll8	r0
 		mov	r0,r5
@@ -2372,7 +2376,7 @@ slave_loop:
 		and	#$FF,r0
 		or	r5,r0
 		mov	r0,r5
-		mov	#CS1,r6
+		mov	#CS1,r8
 		mov.b	@r13,r0		; r2 - Get START point
 		add	#8,r13
 		and	#$FF,r0
@@ -2390,7 +2394,7 @@ slave_loop:
 		or	r2,r0
 		mov	r0,r2
 		mov	r2,r4
-		or	r6,r2		; make start/end visible
+		or	r8,r2		; make start/end visible
 		mov.b	@r2+,r0		; get lenght
 		and	#$FF,r0
 		mov	r0,r3
@@ -2403,7 +2407,7 @@ slave_loop:
 		shll16	r0
 		add	r4,r3
 		or	r0,r3
-		or	r6,r3
+		or	r8,r3
 		mov.b	@r2+,r0		; get loop point
 		and	#$FF,r0
 		mov	r0,r4
@@ -2416,8 +2420,8 @@ slave_loop:
 		shll16	r0
 		or	r0,r4
 		mov	#%11111100,r0
-		and	r0,r6
-; 		mov	#0,r6
+		and	r0,r8
+; 		mov	#0,r8
 ; 		mov	#%010,r7	; LR, mono mode
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
@@ -2451,6 +2455,16 @@ slave_loop:
 		stc	sr,@-r15		; Interrupts OFF
 		mov	#$F0,r0
 		mov	#0,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%1111,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+		mov	#1,r1
 		mov	#PWM_STEREO,r2
 		mov	#PWM_STEREO_e,r3
 		mov	#0,r4

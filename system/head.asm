@@ -275,7 +275,7 @@ MARS_Entry:
 
 	; Transfer RAM-Common code
 		lea	MdRamCode(pc),a0		; Now copy ALL our 68k code to RAM, to prevent
-		lea	($FF0000),a1			; BUS-fighthing the ROM area (speed-up purposes)
+		lea	($FF0000),a1			; BUS-fighthing the ROM area
 		move.w	#((MdRamCode_end-MdRamCode))-1,d0
 .copyme:
 		move.b	(a0)+,(a1)+
