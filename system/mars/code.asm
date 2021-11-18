@@ -1138,13 +1138,13 @@ mstr_gfx1_loop:
 	; Write linetable to current framebuffer
 	; ---------------------------------------
 
-		mov	#rot_angle,r1
-		mov	@r1,r2
-		mov	r2,r4
-		mov	#$7FF,r3
-		add	#8,r4		; wave speed
-		and	r3,r4
-		mov	r4,@r1
+; 		mov	#rot_angle,r1
+; 		mov	@r1,r2
+; 		mov	r2,r4
+; 		mov	#$7FF,r3
+; 		add	#8,r4		; wave speed
+; 		and	r3,r4
+; 		mov	r4,@r1
 
 		mov	#0,r3
 		mov	#0,r4
@@ -1162,18 +1162,18 @@ mstr_gfx1_loop:
 		mov.w	@(marsGbl_FbMaxLines,gbr),r0	; Number of lines to show
 		mov	r0,r5
 .ln_loop:
-		mov	#$7FF,r3
-		mov	r2,r0
-		add	#4,r2		; wave distord
-		and	r3,r2
-		shll2	r0
-		mov	#sin_table,r3
-		mov	@(r0,r3),r4
-		mov	#8,r0		; wave max X
-		dmuls	r0,r4
-		sts	macl,r4
-		shlr16	r4
-		exts.w	r4,r4
+; 		mov	#$7FF,r3
+; 		mov	r2,r0
+; 		add	#4,r2		; wave distord
+; 		and	r3,r2
+; 		shll2	r0
+; 		mov	#sin_table,r3
+; 		mov	@(r0,r3),r4
+; 		mov	#8,r0		; wave max X
+; 		dmuls	r0,r4
+; 		sts	macl,r4
+; 		shlr16	r4
+; 		exts.w	r4,r4
 
 		mov	r9,r1
 		cmp/ge	r7,r1
@@ -2290,6 +2290,8 @@ slave_loop:
 		bt	.no_req
 		xor	r13,r13
 		mov.b	r13,@r14
+		mov	r0,r7
+		and	#%111,r0
 		cmp/eq	#4,r0
 		bt	.pwm_keycut
 		cmp/eq	#2,r0
@@ -2304,15 +2306,13 @@ slave_loop:
 
 	; Normal playback
 .no_keyoff:
-		cmp/eq	#$10,r0
-		bf	.no_pitchbnd
-		mov	r0,r7
-
+		mov	r7,r0
+		tst	#$10,r0
+		bt	.no_pitchbnd
 		mov	r14,r13
-		add	#8*2,r13	; skip COM
-		mov.b	@r13,r0		; r1 - Get pitch MSB bits
+		add	#8*2,r13	; skip COM and FLAGS
+		mov.b	@r13,r0		; r2 - Get pitch MSB bits
 		add	#8,r13
-		mov	r0,r6
 		and	#%11,r0
 		shll8	r0
 		mov	r0,r2
@@ -2321,23 +2321,11 @@ slave_loop:
 		and	#$FF,r0
 		or	r2,r0
 		mov	r0,r2
-
-	; TODO
-; 		mov	r14,r13		; Pitchbend
-; 		add	#2,r13
-; 		mov.b	@r13+,r0
-; 		and	#%11,r0
-; 		shll8	r0
-; 		mov	r0,r2
-; 		mov.b	@r13+,r0
-; 		and	#$FF,r0
-; 		or	r2,r0
-; 		mov	r0,r2
-; 		mov	#MarsSound_SetPwmPitch,r0
-; 		jsr	@r0
-; 		nop
-		mov	r7,r0
+		mov	#MarsSound_SetPwmPitch,r0
+		jsr	@r0
+		nop
 .no_pitchbnd:
+		mov	r7,r0
 		tst	#$20,r0
 		bt	.no_volumebnd
 		mov	r0,r7
@@ -2349,11 +2337,12 @@ slave_loop:
 		mov	#MarsSound_SetVolume,r0
 		jsr	@r0
 		nop
-		mov	r7,r0
 .no_volumebnd:
+
 
 	; TODO: Change reading struct if
 	; it gets too CPU intensive
+		mov	r7,r0
 		tst	#$01,r0		; key-on?
 		bt	.no_req
 		mov	r14,r13

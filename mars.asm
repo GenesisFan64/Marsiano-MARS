@@ -7,17 +7,24 @@
 		include	"system/md/const.asm"	; MD and MARS Variables
 		include	"system/md/map.asm"	; Genesis hardware map
 		include	"system/mars/map.asm"	; MARS map
-		
-; ====================================================================
-; ----------------------------------------------------------------
-; Header
-; ----------------------------------------------------------------
-
-		include	"system/head.asm"	; 32X Header and boot sequence
+		include	"system/head.asm"	; 32X header
 
 ; ====================================================================
+; ----------------------------------------------------------------
+; Main boot code
+; ----------------------------------------------------------------
+
+		lea	MdRamCode(pc),a0
+		lea	($FF0000),a1
+		move.w	#((MdRamCode_end-MdRamCode))-1,d0
+.copyme:
+		move.b	(a0)+,(a1)+
+		dbf	d0,.copyme
+		move.l	#RamCode_Default,d0
+		jmp	(System_JumpRamCode).l
+
 ; --------------------------------------------------------
-; All purpose 68k stored on RAM
+; Top-common code stored on RAM
 ; --------------------------------------------------------
 
 MdRamCode:
@@ -26,22 +33,21 @@ minfo_ram_s:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
-	if MOMPASS=6
+; 	if MOMPASS=6
 .here:
-		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
-	endif
+; 		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
+; 	endif
 RAMCODE_USER:
 		dephase
-
 MdRamCode_end:
 		align 2
 
-; ====================================================================
 ; ----------------------------------------------------------------
 ; Z80 code
+; Located at the 880000 area
 ; ----------------------------------------------------------------
 
-		align $80
+		align 4
 Z80_CODE:
 		include "system/md/z_driver.asm"
 		cpu 68000
@@ -49,24 +55,21 @@ Z80_CODE:
 		phase Z80_CODE+*
 Z80_CODE_END:
 		align 2
-
 		include "sound/instr.asm"
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 68k code-banks for RAM
-;
-; 880000 area: 512KB max
+; 68k code-sections for RAM
 ; ----------------------------------------------------------------
 
-Default_Boot:
+RamCode_Default:
 		phase RAMCODE_USER
 		include "code/default.asm"
 		dephase
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 68k DATA BANKs (at $900000) 1MB max
+; 68k DATA BANKs at $900000 1MB max
 ; ----------------------------------------------------------------
 
 	; First one is smaller than the rest...
@@ -97,7 +100,7 @@ Default_Boot:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; DMA transfer data, RV=1 only.
+; MD DMA transfer data, Set RV=1 first.
 ; ----------------------------------------------------------------
 
 		align 4

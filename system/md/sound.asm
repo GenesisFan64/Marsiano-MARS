@@ -126,7 +126,7 @@ sndReq_sbyte:
 ; --------------------------------------------------------
 ; Sound_DMA_Pause
 ;
-; Call this before doing any DMA task
+; Call this BEFORE doing any DMA task
 ; --------------------------------------------------------
 
 Sound_DMA_Pause:
@@ -152,7 +152,7 @@ Sound_DMA_Pause:
 ; --------------------------------------------------------
 ; Sound_DMA_Resume
 ;
-; Call this after finishing DMA
+; Call this AFTER finishing DMA
 ; --------------------------------------------------------
 
 Sound_DMA_Resume:
@@ -172,18 +172,20 @@ Sound_DMA_Resume:
 ;  dc.l block_data
 ;  dc.l instrument_data
 ;
-; d1 - Ticks
-; d2 - Tempo
-; d3 - Slot
+; d1 - Slot
+; d2 - Ticks
+; d3 - From block
 ; --------------------------------------------------------
 
 Sound_TrkPlay:
 		bsr	sndReq_Enter
 		move.w	#$00,d7		; Command $00
 		bsr	sndReq_scmd
-		move.b	d2,d7		; d2 - Slot
+		move.b	d1,d7		; d1 - Slot
 		bsr	sndReq_sbyte
-		move.b	d1,d7		; d1 - Ticks
+		move.b	d2,d7		; d2 - Ticks
+		bsr	sndReq_sbyte
+		move.b	d3,d7		; d3 - Ticks
 		bsr	sndReq_sbyte
 		move.l	(a0)+,d7	; d0 - Patt data point
 		bsr	sndReq_saddr
@@ -206,32 +208,4 @@ Sound_TrkStop:
 		move.b	d1,d7		; d1 - Slot
 		bsr	sndReq_sbyte
 		bra 	sndReq_Exit
-
-; ; --------------------------------------------------------
-; ; SoundReq_StopTrack
-; ;
-; ; d1 - Slot
-; ; --------------------------------------------------------
-;
-; Sound_TrkStop:
-; 		bsr	sndReq_Enter
-; 		move.w	#$01,d7		; Command $01
-; 		bsr	sndReq_scmd
-; 		move.b	d1,d7		; d1 - Slot
-; 		bsr	sndReq_sbyte
-; 		bra 	sndReq_Exit
-;
-; ; --------------------------------------------------------
-; ; SoundReq_StopTrack
-; ;
-; ; d1 - Slot
-; ; --------------------------------------------------------
-;
-; Sound_TrkStop:
-; 		bsr	sndReq_Enter
-; 		move.w	#$01,d7		; Command $01
-; 		bsr	sndReq_scmd
-; 		move.b	d1,d7		; d1 - Slot
-; 		bsr	sndReq_sbyte
-; 		bra 	sndReq_Exit
 

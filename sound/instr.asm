@@ -13,17 +13,17 @@
 ; Special include macro for samples
 ; Works for both DAC and PWM
 ;
-; aligns by 4 so the sample can be used on 32X
+; aligns by 4 at the end so the sample can be used on 32X
 gSmpl macro locate,loop
 .start
 	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
 	dc.b ((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
 	binclude locate,$2C	; actual data
 .end
-	align 4
+	align 4		; align 4 for pwm's
 	endm
 
-	align 4
+	align 4		; FIRST ALIGN FOR PWMs
 DacIns_Magic2:
 	gSmpl "sound/instr/smpl/magic_2.wav",0
 DacIns_Snare_Gem:
@@ -44,9 +44,29 @@ SmpIns_PIANO_1:
 SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",284
 
+SmpIns_Bell_Ice:
+	gSmpl "sound/instr/smpl/bell_ice.wav",0
+SmpIns_Brass1_Hi:
+	gSmpl "sound/instr/smpl/brass1_hi.wav",0
+SmpIns_Brass1_Low:
+	gSmpl "sound/instr/smpl/brass1_low.wav",0
+SmpIns_Forest_1:
+	gSmpl "sound/instr/smpl/forest1.wav",0
+SmpIns_Kick_jam:
+	gSmpl "sound/instr/smpl/kick_jam.wav",0
+SmpIns_Snare_jam:
+	gSmpl "sound/instr/smpl/snare_jam.wav",0
+SmpIns_SnrTom_1:
+	gSmpl "sound/instr/smpl/snrtom_1.wav",0
 
+; --------------------------------------------------------
+; FM instruments/patches
+; --------------------------------------------------------
+
+; Sizes
 ; Normal FM ins: $20
 ; Special FM ins: $28
+;
 FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:
@@ -166,6 +186,5 @@ FmIns_Flaute_cave:
 		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
 FmIns_Banjo_puy:
 		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
-
 FmIns_Violin_gem:
 		binclude "sound/instr/fm/violin_gem.gsx",$2478,$20

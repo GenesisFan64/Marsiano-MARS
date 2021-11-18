@@ -6,9 +6,9 @@
 ; Slot 1 can either overwrite chip channels or
 ; if possible grab unused slots
 ;
-; WARNING: The sample playback has to be
-; sync'd manually
-; DAC sample rate is at the 18000hz range
+; WARNING: DAC sample playback has to be sync'd manually
+; on every code change, sample rate is at the
+; 18000hz range
 ; --------------------------------------------------------
 
 		cpu Z80			; Set Z80 here
@@ -19,9 +19,8 @@
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-MAX_TRKHEADS	equ 16*4	; Max track heads/blocks (Size,Pointer)
-ZSET_WTUNE	equ -24		; Manual adjustment for WAVE playback
-ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test WAVE playback
+ZSET_WTUNE	equ -24		; Manual frequency adjustment for DAC WAVE playback
+ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test DAC playback
 
 ; --------------------------------------------------------
 ; Structs
@@ -307,6 +306,8 @@ drv_loop:
 		call	get_trkindx		; and read index iy
 		call	get_cmdbyte		; Get ticks
 		ld	(iy+trk_tickSet),a
+		call	get_cmdbyte		; Start block
+		ld	(iy+trk_setBlk),a
 		call	get_cmdbyte		; Pattern data
 		ld	(iy+trk_romPatt),a
 		call	get_cmdbyte
@@ -330,7 +331,7 @@ drv_loop:
 		ld	a,(iy+trk_status)
 		rst	8
 		or	11000000b		; Set Enable + REFILL flags
-		or	00100000b
+; 		or	00100000b	; TEMPORAL BEATS
 		ld	(iy+trk_status),a
 		jp	.next_cmd
 
@@ -587,6 +588,8 @@ updtrack:
 		call	z,.eff_A
 		cp	2		; Effect B: Position Jump
 		call	z,.eff_B	; *** a is trashed after this
+		cp	3		; Effect C: Pattern break
+		call	z,.eff_C
 		jp	.next_note
 
 ; ----------------------------------------
@@ -641,11 +644,11 @@ updtrack:
 ; ----------------------------------------
 ; Effect B: jump to a new block
 ;
-; Note: kills A, and also skips the
-; entire noteline.
+; ***SKIPS ENTIRE ROW***
 ; ----------------------------------------
 
 .eff_B:
+		push	af
 		ld	e,(ix+chnl_EffArg)	; e - Block SLOT to jump
 		ld 	(iy+trk_currBlk),e
 		rst	8
@@ -655,7 +658,18 @@ updtrack:
 		ld	(ix+chnl_EffId),0	; (failsafe)
 		ld	(ix+chnl_EffArg),0
 		ld	a,(iy+trk_currBlk)	; Jump to this new block
-		jr	.set_track
+		call	.set_track
+		pop	af
+		ret
+
+; ----------------------------------------
+; Effect C: Pattern break
+; ***works but it restarts***
+; ----------------------------------------
+
+.eff_C:
+		ld	bc,0		; clear rowcount
+					; then next track...
 
 ; ----------------------------------------
 ; If pattern finished, load the next one
@@ -725,6 +739,7 @@ updtrack:
 		ld	(iy+trk_Rows),c		; Save this number of rows to buffer
 		ld	(iy+(trk_Rows+1)),b	; on Tick pauses
 		push	bc			; Save bc
+		call	dac_fill
 
 	; Recieve data to a half-section
 	; of the notes cache
@@ -962,7 +977,7 @@ mars_scomm:
 		ld	ix,pwmcom
 		ld	a,(marsBlock)	; block MARS requests?
 		or	a
-		ret	nz
+		jr	nz,.blocked
 		ld	a,(marsUpd)	; update?
 		or	a
 		ret	z
@@ -1010,16 +1025,15 @@ mars_scomm:
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass
-.error:
+
+; clear COM bits
+.blocked:
 		ld	hl,pwmcom
 		ld	b,7
 .clrcom:
 		ld	(hl),0
 		inc	hl
 		djnz	.clrcom
-; 		ld	a,(iy+comm15)	; Now the COMMs are free again.
-; 		and	10011111b
-; 		ld	(iy+comm15),a
 		ret
 
 ; --------------------------------------------------------
@@ -1053,7 +1067,6 @@ setupchip:
 		ld	ix,daccom
 ; 		ld	b,0C0h
 		call	.silnc_singl
-		rst	8
 		ld	iy,tblPSGN
 		ld	ix,psgcom+3
 ; 		ld	b,90h
@@ -1063,7 +1076,6 @@ setupchip:
 		ld	ix,fmcom	; includes FM3 special
 ; 		ld	b,0A0h
 		call	.silnc_list
-		rst	8
 		ld	iy,tblPSG
 		ld	ix,psgcom
 ; 		ld	b,080h
@@ -1071,7 +1083,7 @@ setupchip:
 .mk_chip:
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
-		rst	8
+; 		rst	8
 		ld	de,20h
 		add	iy,de
 		ld	b,MAX_TRKCHN
@@ -1110,7 +1122,7 @@ setupchip:
 		pop	hl
 		add	hl,de
 		ld	a,(hl)		; already set?
-; 		and	0111b
+		and	0111b
 		or	a
 		ret	nz
 		ld	(hl),100b
@@ -1149,9 +1161,9 @@ setupchip:
 		pop	hl
 		add	hl,de
 		ld	a,(hl)		; already set?
-; 		and	0111b
+		and	0111b
 		or	a
-		ret	nz
+		jr	nz,.busy
 		ld	(hl),100b
 		ld	(iy),0
 		ld	(iy+1),0
@@ -1193,7 +1205,6 @@ setupchip:
 		bit	0,(iy+chnl_Flags)
 		call	nz,.req_note
 .ran_out:
-		rst	8
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
 		ld	(iy+chnl_Flags),a
@@ -1202,6 +1213,7 @@ setupchip:
 .no_chnl:
 		call	.chip_swap		; TODO: check if this breaks.
 		ld	(iy+chnl_Chip),0
+; 		ld	(ix+chnl_Flags),0
 		pop	bc
 		ret
 
@@ -1615,13 +1627,13 @@ setupchip:
 		ld	a,d
 ; 		cp	4		; Effect D?
 ; 		jp	z,.effFm_D
-; 		cp	5		; Effect E?
-; 		jp	z,.effFm_E
-; 		rst	8
-; 		cp	6		; Effect F?
-; 		jp	z,.effFm_F
+		cp	5		; Effect E?
+		jp	z,.effPwm_E
+		rst	8
+		cp	6		; Effect F?
+		jp	z,.effPwm_F
 		cp	24		; Effect X?
-		jp	z,.effFm_X
+		jp	z,.effFm_X	; recycle FM's panning
 		ret
 
 ; --------------------------------
@@ -1725,7 +1737,7 @@ setupchip:
 		ld	d,0
 		add	a,a
 		ld	e,a
-		jr	.freqinc_psg
+		jp	.freqinc_psg
 .effFm_E:
 		call	.grab_prtm
 		neg	a
@@ -1734,7 +1746,7 @@ setupchip:
 		ld	d,-1
 .e_neg:
 		ld	e,a
-		jr	.freqinc_fm
+		jp	.freqinc_fm
 .effDac_E:
 		call	.grab_prtm
 		neg	a
@@ -1744,6 +1756,18 @@ setupchip:
 .e_negd:
 		ld	e,a
 		jr	.freqinc_dac
+
+.effPwm_E:
+		call	.grab_prtm
+; 		sra	a
+; 		sra	a
+		neg	a
+		or	a
+		jr	z,.e_fnegd2
+		ld	d,-1
+.e_fnegd2:
+		ld	e,a
+		jr	.freqinc_pwm
 
 ; --------------------------------
 ; Effect F
@@ -1768,11 +1792,44 @@ setupchip:
 .effDac_F:
 		call	.grab_prtm
 		ld	e,a
+		jr	.freqinc_dac
+.effPwm_F:
+		call	.grab_prtm
+; 		sra	a
+; 		sra	a
+		ld	e,a
 
 ; --------------------------------
 ; For effects E and F:
 ;
 ; de - freq incr/decr
+
+.freqinc_pwm:
+		ld	a,(ix+2)
+		and	111b
+		ld	ix,pwmcom
+		ld	b,0
+		ld	c,a
+		rst	8
+		add	ix,bc
+		ld	a,(ix+PWPTH_V)
+		and	00000011b
+		ld	h,a
+		ld	l,(ix+PWPHL)
+		add	hl,de
+		ld	a,(ix+PWPTH_V)
+		and	11111100b
+		rst	8
+		or	h
+		ld	(ix+PWPTH_V),a
+		ld	(ix+PWPHL),l
+		ld	a,(ix)			; pitch bend request
+		or	00010000b
+		ld	(ix),a
+		ld	a,1
+		ld	(marsUpd),a
+		ret
+
 .freqinc_dac:
 		ld	hl,(wave_Pitch)		; tricky one...
 		add	hl,de
@@ -1934,15 +1991,18 @@ setupchip:
 		add	hl,de
 		ld	e,(hl)
 		inc	hl
-		ld	d,(hl)		; note: max 111b
+		ld	d,(hl)			; note: max 111b
 		rst	8
-		set	0,(ix)		; Note-on
-		ld	a,(ix+PWPTH_V)	; MSB: keep volume bits
+		set	0,(ix)			; Note-on
+		ld	a,d
+		bit	2,(iy+chnl_Flags)	; check if volume is being used
+		jr	z,.pwmn_kpv
+		ld	a,(ix+PWPTH_V)
 		and	11111100b
 		or	d
+.pwmn_kpv:
 		ld	(ix+PWPTH_V),a
 		ld	(ix+PWPHL),e
-
 		ld	a,(ix+PWOUTF)
 		and	1100b			; Keep other bits
 		ld	c,a
@@ -2002,6 +2062,9 @@ setupchip:
 		ld	(ix+1),0
 		ld	(ix+3),0	; pitch zero
 		ld	(iy+chnl_Chip),0
+		ld	a,(iy+chnl_Flags)
+		and	00001111b
+		ld	(iy+chnl_Flags),a
 		ret
 
 ; Play PSG note
@@ -2240,6 +2303,10 @@ setupchip:
 		ld	a,(ix)		; key on
 		or	00000001b
 		ld	(ix),a
+		bit	2,(iy+chnl_Flags)	; check if volume is being used
+		jr	nz,.fm_kpv
+		ld	(ix+FMVOL),0
+.fm_kpv:
 		ret
 .fm_keyoff:
 		ld	c,010b
@@ -2265,7 +2332,6 @@ setupchip:
 		cp	b
 		jr	z,.chip_out
 		ld	d,a		; d - reuse last ID
-		rst	8
 		ld	a,c		; New chip-ins is null?
 		cp	-1
 		jr	nz,.from_nl
@@ -2285,11 +2351,11 @@ setupchip:
 		call	z,.fm_out
 		cp	0B0h
 		call	z,.fm3_out
-		rst	8
 		cp	0C0h
 		call	z,.dac_out
 		cp	0D0h
 		call	z,.pwm_out
+		rst	8
 .chip_out:
 		ld	a,c
 		ret
@@ -2558,13 +2624,13 @@ setupchip:
 		ld	d,(ix+1)	; floating.
 		ld	e,(ix)
 		inc	de
+		rst	8
 		ld	a,(de)
 		pop	de
 		cp	-2
 		jr	z,.fndlink
 		cp	-1
 		jr	z,.fndlink
-		rst	8
 		ld	a,e		; Check if MSB is higher
 		cp	d
 		jr	nc,.alrdfnd
@@ -2642,11 +2708,11 @@ gema_init:
 	; set each tracks' settings
 		ld	iy,trkBuff_0
 		ld	hl,trkData_0
-		ld	a,-1			; maximum size
+		ld	a,8*24			; maximum size
 		call	.set_it
 		ld	iy,trkBuff_1
 		ld	hl,trkData_1
-		ld	a,-1
+		ld	a,8*24
 .set_it:
 		ld	(iy+trk_CachNotes),l
 		ld	(iy+(trk_CachNotes+1)),h
@@ -3811,6 +3877,8 @@ psgFreq_List:
  		dw 8h
 		dw 0
 
+; TODO: some of these freqs sound
+; wrong.
 wavFreq_List:	dw 100h		; C-0
 		dw 100h
 		dw 100h
@@ -3860,12 +3928,12 @@ wavFreq_List:	dw 100h		; C-0
 		dw 070h		; A#3
 		dw 075h		; B-3
 		dw 081h		; C-4 11025 -12
-		dw 088h		; C#4
-		dw 08Fh		; D-4
+		dw 087h		; C#4
+		dw 08Ch		; D-4
 		dw 09Ah		; D#4
-		dw 0A0h		; E-4
+		dw 09Fh		; E-4
 		dw 0ADh		; F-4
-		dw 0B5h		; F#4
+		dw 0B2h		; F#4
 		dw 0C0h		; G-4
 		dw 0CCh		; G#4
 		dw 0D7h		; A-4
@@ -4023,6 +4091,7 @@ daccom:		db 0			; single byte for key on, off and cut
 	;  s - Mono/Stereo bit
 	;  L - Loop flag
 	;
+	 align 8
 pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut/other update bits
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback flags: Stereo Mode/Left/Right
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; Volume | Pitch MSB
@@ -4042,8 +4111,8 @@ tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 psgHatMode	db 0
 fmSpcMode	db 0
 flagResChip	db 0		; reset chips flag
-insDataC_0	ds 8*32		; Instrument data for each Track slot
-insDataC_1	ds 8*32		; BGM max: 32, SFX max: 16
+insDataC_0	ds 8*24		; Instrument data for each Track slot
+insDataC_1	ds 8*24		; 8*MAX_INS
 
 dDacPntr	db 0,0,0	; WAVE play current ROM position
 dDacCntr	db 0,0,0	; WAVE play length counter

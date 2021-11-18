@@ -43,6 +43,9 @@ sizeof_mdglbl	ds.l 0
 
 thisCode_Top:
 		move.w	#$2700,sr
+		bsr	Sound_init
+		bsr	Video_init
+		bsr	System_Init
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 		move.w	#0,(RAM_MdlCurrMd).w
@@ -144,14 +147,21 @@ thisCode_Top:
 		add.w	#1,(a1)
 		bsr	.print_cursor
 .nor:
+
+
 		move.w	(Controller_1+on_press),d7
-		and.w	#JoyA+JoyB+JoyC,d7
+		and.w	#JoyC,d7
 		beq.s	.noc_c
-		move.w	(RAM_CurrSelc).w,d0
-		add.w	d0,d0
-		move.w	.tasklist(pc,d0.w),d0
-		jsr	.tasklist(pc,d0.w)
+		moveq	#0,d1
+		bsr	.procs_task
 .noc_c:
+		move.w	(Controller_1+on_press),d7
+		and.w	#JoyB,d7
+		beq.s	.nob_c
+		moveq	#1,d1
+		bsr	.procs_task
+.nob_c:
+
 ; 		lea	str_COMM(pc),a0
 ; 		move.l	#locate(0,2,9),d0
 ; 		bsr	Video_Print
@@ -168,6 +178,12 @@ thisCode_Top:
 		bsr	Video_Print
 		rts
 
+
+.procs_task:
+		move.w	(RAM_CurrSelc).w,d7
+		add.w	d7,d7
+		move.w	.tasklist(pc,d7.w),d7
+		jmp	.tasklist(pc,d7.w)
 .tasklist:
 		dc.w .task_00-.tasklist
 		dc.w .task_01-.tasklist
@@ -184,19 +200,16 @@ thisCode_Top:
 		move.w	(RAM_CurrTrack).w,d0
 		lsl.w	#4,d0
 		lea	(a0,d0.w),a0
-		move.w	$C(a0),d1
-		move.w	#0,d2
+		move.w	$C(a0),d2
+		moveq	#0,d3
 		bra	Sound_TrkPlay
 .task_01:
-		move.w	#0,d1
 		bra	Sound_TrkStop
 
 ; test playlist
 .playlist:
 	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
-	dc.w 4,0
-
-
+	dc.w 3,0
 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
 	dc.w 2,0
 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
@@ -326,7 +339,7 @@ str_COMM:
 		align 2
 
 ; ====================================================================
-
+; Report size
 	if MOMPASS=6
 .end:
 		message "This 68K RAM-CODE uses: \{.end-thisCode_Top}"
