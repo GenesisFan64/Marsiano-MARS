@@ -130,24 +130,20 @@ sndReq_sbyte:
 ; --------------------------------------------------------
 
 Sound_DMA_Pause:
-		move.w	sr,-(sp)
-		or.w	#$700,sr
+
 .retry:
-		move.w	#$0100,(z80_bus).l		; Stop Z80
-.wait:
-		btst	#0,(z80_bus).l			; Wait for it
-		bne.s	.wait
+		bsr	sndLockZ80
 		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
-		move.w	#0,(z80_bus).l			; Resume Z80
+		bsr	sndUnlockZ80
 		tst.b	d7
 		beq.s	.safe
 		moveq	#68,d7
 		dbf	d7,*
 		bra.s	.retry
 .safe:
+		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
-		move.w	(sp)+,sr
-		rts
+		bra	sndUnlockZ80
 
 ; --------------------------------------------------------
 ; Sound_DMA_Resume
@@ -156,12 +152,12 @@ Sound_DMA_Pause:
 ; --------------------------------------------------------
 
 Sound_DMA_Resume:
-		move.w	sr,-(sp)
-		or.w	#$700,sr
+; 		move.w	sr,-(sp)
+; 		or.w	#$700,sr
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
-		move.w	(sp)+,sr
+; 		move.w	(sp)+,sr
 		rts
 
 ; --------------------------------------------------------
@@ -172,40 +168,105 @@ Sound_DMA_Resume:
 ;  dc.l block_data
 ;  dc.l instrument_data
 ;
-; d1 - Slot
-; d2 - Ticks
-; d3 - From block
+; d0 - Slot
+; d1 - Ticks
+; d2 - From block
+; d3 - Flags: %00004321
+; 	1234 - Use global tempos 1,2,3 or 4
 ; --------------------------------------------------------
 
 Sound_TrkPlay:
 		bsr	sndReq_Enter
 		move.w	#$00,d7		; Command $00
 		bsr	sndReq_scmd
-		move.b	d1,d7		; d1 - Slot
+		move.b	d0,d7		; d0 - Slot
 		bsr	sndReq_sbyte
-		move.b	d2,d7		; d2 - Ticks
+		move.b	d1,d7		; d1 - Ticks
 		bsr	sndReq_sbyte
-		move.b	d3,d7		; d3 - Ticks
+		move.b	d2,d7		; d2 - Start block
 		bsr	sndReq_sbyte
-		move.l	(a0)+,d7	; d0 - Patt data point
+		move.b	d3,d7		; d3 - Flags
+		bsr	sndReq_sbyte
+		move.l	(a0)+,d7	; Patt data point
 		bsr	sndReq_saddr
-		move.l	(a0)+,d7	; d1 - Block data point
+		move.l	(a0)+,d7	; Block data point
 		bsr	sndReq_saddr
-		move.l	(a0)+,d7	; d2 - Intrument data
+		move.l	(a0)+,d7	; Intrument data
 		bsr	sndReq_saddr
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------
 ; SoundReq_StopTrack
 ;
-; d1 - Slot
+; d0 - Slot
 ; --------------------------------------------------------
 
 Sound_TrkStop:
 		bsr	sndReq_Enter
 		move.w	#$01,d7		; Command $01
 		bsr	sndReq_scmd
-		move.b	d1,d7		; d1 - Slot
+		move.b	d0,d7		; d0 - Slot
 		bsr	sndReq_sbyte
 		bra 	sndReq_Exit
 
+; --------------------------------------------------------
+; Sound_TrkPause
+;
+; d0 - Slot
+; --------------------------------------------------------
+
+Sound_TrkPause:
+		bsr	sndReq_Enter
+		move.w	#$02,d7		; Command $01
+		bsr	sndReq_scmd
+		move.b	d0,d7		; d0 - Slot
+		bsr	sndReq_sbyte
+		bra 	sndReq_Exit
+
+; --------------------------------------------------------
+; Sound_TrkResume
+;
+; d0 - Slot
+; --------------------------------------------------------
+
+Sound_TrkResume:
+		bsr	sndReq_Enter
+		move.w	#$03,d7		; Command $01
+		bsr	sndReq_scmd
+		move.b	d0,d7		; d0 - Slot
+		bsr	sndReq_sbyte
+		bra 	sndReq_Exit
+
+; --------------------------------------------------------
+; Sound_TrkTicks
+;
+; d0 - Slot
+; d1 - Ticks
+; --------------------------------------------------------
+
+Sound_TrkTicks:
+		bsr	sndReq_Enter
+		move.w	#$08,d7		; Command $08
+		bsr	sndReq_scmd
+		move.b	d0,d7		; d0 - Slot
+		bsr	sndReq_sbyte
+		move.b	d1,d7		; d1 - Ticks
+		bsr	sndReq_sbyte
+		bra 	sndReq_Exit
+
+; --------------------------------------------------------
+; Sound_GlbTempo
+;
+; d0 - Slot
+; d1 - Tempo (WORD)
+; --------------------------------------------------------
+
+Sound_GlbTempo:
+		bsr	sndReq_Enter
+		move.w	#$10,d7		; Command $10
+		bsr	sndReq_scmd
+		move.b	d0,d7		; d0 - Slot
+		bsr	sndReq_sbyte
+		move.w	d1,d7		; d1 - Tempo MSB
+		bsr	sndReq_sword
+		bra 	sndReq_Exit

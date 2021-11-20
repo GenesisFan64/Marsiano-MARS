@@ -668,16 +668,14 @@ Video_Copy:
 ; --------------------------------------------------------
 
 Video_LoadArt:
-		move.w	sp,d6
-		move.w	#$2700,sr
+		move.w	sr,-(sp)
+		or	#$700,sr
 		lea	(vdp_ctrl),a4
-		move.w	#$8100,d4
+		move.w	#$8100,d4		; DMA ON
 		move.b	(RAM_VdpRegs+1),d4
 		bset	#bitDmaEnbl,d4
 		move.w	d4,(a4)
-
-	; SIZE
-		move.w	d1,d4
+		move.w	d1,d4			; LENGTH
 		move.l	#$94009300,d5
 		lsr.w	#1,d4
 		move.b	d4,d5
@@ -686,9 +684,7 @@ Video_LoadArt:
 		move.b	d4,d5
 		swap	d5
 		move.l	d5,(a4)
-
-	; SOURCE
-		move.l	d0,d4
+		move.l	d0,d4			; SOURCE
   		lsr.l	#1,d4
  		move.l	#$96009500,d5
  		move.b	d4,d5
@@ -700,53 +696,55 @@ Video_LoadArt:
  		lsr.l	#8,d4
  		move.b	d4,d5
  		move.w	d5,(a4)
- 		
-	; DESTINATION
-		move.w	d2,d4
+		move.w	d2,d4			; DESTINATION
 		and.w	#$7FF,d4
 		lsl.w	#5,d4
 		move.w	d4,d5
 		and.l	#$3FE0,d4
 		ori.w	#$4000,d4
-		move.w	d4,(a4)				; First write
-		move.w	#$0100,(z80_bus).l		; Stop Z80
+
+
+	; First write
+	; d5 -
 		lsr.w	#8,d5
 		lsr.w	#6,d5
 		andi.w	#%11,d5
 		ori.w	#$80,d5
-.wait:
-		btst	#0,(z80_bus).l			; Wait for cpu
-		bne.s	.wait
-		move.l	d0,d4
-		swap	d4
-		lsr.w	#8,d4
-		cmp.b	#$FF,d4
+		move.l	d0,d7
+		swap	d7
+		lsr.w	#8,d7
+		cmp.b	#$FF,d7
 		beq.s	.from_ram
 
-; 		bsr	Sound_DMA_Pause
-	; TODO: interrupt both CPUS with a wait flag
-		move.w	(sysmars_reg+dreqctl).l,d4	; Set RV=1
-		or.w	#1,d4				; 68k ROM map moves to $000000, $880000/$900000=trash
-		move.w	d4,(sysmars_reg+dreqctl).l
+		move.w	#$0100,(z80_bus).l		; Stop Z80
+.wait:
+		btst	#0,(z80_bus).l			; Wait for it
+		bne.s	.wait
+
+		bsr	Sound_DMA_Pause
+		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
+		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
+		move.w	d7,(sysmars_reg+dreqctl).l
  		move.w	d5,-(sp)
-		move.w	(sp)+,(a4)			; Second write, CPU freezes until it DMA ends
+		move.w	d4,(a4)				; d4 - First word
+		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
 		move.w	(sysmars_reg+dreqctl).l,d4	; Set RV=0
 		and.w	#%11111110,d4			; 68k ROM map returns to $880000/$900000
 		move.w	d4,(sysmars_reg+dreqctl).l
-		move.w	#0,(z80_bus).l
-		move.w	#$8100,d4
+		move.w	#$8100,d4			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d4
 		move.w	d4,(a4)
-		move.w	d6,sr
-; 		bsr	Sound_DMA_Resume
-		rts
+		move.w	(sp)+,sr
+		bra	Sound_DMA_Resume
+
 .from_ram:
+		move.w	d4,(a4)
  		move.w	d5,-(sp)
 		move.w	(sp)+,(a4)			; Second write
 		move.w	#$8100,d4
 		move.b	(RAM_VdpRegs+1),d4
 		move.w	d4,(a4)
-		move.w	d6,sr
+		move.w	(sp)+,sr
 		rts
 
 ; ====================================================================

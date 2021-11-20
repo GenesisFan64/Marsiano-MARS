@@ -68,8 +68,8 @@ GemaTrk_patt_TEST:
 	binclude "sound/tracks/bemine_patt.bin"
 GemaTrk_ins_TEST:
 	gInsPwm -17,SmpIns_Bell_Ice,0
-	gInsPwm -17,SmpIns_Brass1_Hi,0
-	gInsPwm -17,SmpIns_Brass1_Low,0
+	gInsPwm -17,SmpIns_Brass1_Hi,1
+	gInsPwm -17,SmpIns_Brass1_Low,1
 	gInsFm  -24,FmIns_Bass_groove
 	gInsFm3   0,FmIns_Fm3_OpenHat
 	gInsPwm -17,SmpIns_Snare_jam,0
@@ -169,24 +169,24 @@ GemaTrk_ins_TEST2:
 	gInsNull
 
 ; HILLS
-; GemaTrk_blk_TEST2:
-; 	binclude "sound/tracks/hill_blk.bin"
-; GemaTrk_patt_TEST2:
-; 	binclude "sound/tracks/hill_patt.bin"
-; GemaTrk_ins_TEST2:
-; 	gInsPsg +2,$40,$02,$30,$10,$00
-; 	gInsFm -10,FmIns_Trumpet_1
-; 	gInsPsgN 0,$00,$00,$00,$00,$04,%110
-; 	gInsDac -3,DacIns_LowString,1;gInsPwm -3-6,DacIns_LowString,1
-; 	gInsFm -8-12,FmIns_Ding_Toy
-; 	gInsFm -25,FmIns_Bass_3
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
+GemaTrk_blk_HILLS:
+	binclude "sound/tracks/hill_blk.bin"
+GemaTrk_patt_HILLS:
+	binclude "sound/tracks/hill_patt.bin"
+GemaTrk_ins_HILLS:
+	gInsPsg +2,$40,$02,$30,$10,$00
+	gInsFm -10,FmIns_Trumpet_1
+	gInsPsgN 0,$00,$00,$00,$00,$04,%110
+	gInsDac -3,DacIns_LowString,1;gInsPwm -8,DacIns_LowString,1
+	gInsFm -8-12,FmIns_Ding_Toy
+	gInsFm -25,FmIns_Bass_3
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
 
 ; 	gInsDac +07,DacIns_Snare_Gem,0,0
 ; 	gInsFm -12,FmIns_Trumpet_2

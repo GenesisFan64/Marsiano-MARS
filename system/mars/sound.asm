@@ -81,6 +81,11 @@ MarsSound_ReadPwm:
 
 ; read wave
 .read:
+		mov	#_sysreg+dreqctl,r1	; Check for RV bit (just in case)
+		mov.w	@r1,r0
+		tst	#$01,r0
+		bf	.silent
+
 		mov 	@(mchnsnd_flags,r8),r0
 		mov	#$00FFFFFF,r1	; limit BYTE
 		mov 	r4,r3
@@ -255,6 +260,8 @@ MarsSound_Init:
 ; --------------------------------------------------------
 
 MarsSound_SetPwm:
+		stc	sr,@-r15
+		mov	#$F0,r0
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
@@ -288,6 +295,7 @@ MarsSound_SetPwm:
 		mov 	r0,@(mchnsnd_read,r8)
 		mov 	#1,r0
 		mov 	r0,@(mchnsnd_enbl,r8)
+		ldc	@r15+,sr
 		rts
 		nop
 		align 4
@@ -307,6 +315,8 @@ MarsSound_SetPwm:
 ; --------------------------------------------------------
 
 MarsSound_SetPwmPitch:
+		stc	sr,@-r15
+		mov	#$F0,r0
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
@@ -318,6 +328,7 @@ MarsSound_SetPwmPitch:
 		mov	@(mchnsnd_read,r8),r0
 		mov	r2,@(mchnsnd_pitch,r8)
 .off_1:
+		ldc	@r15+,sr
 		rts
 		nop
 		align 4
@@ -334,6 +345,8 @@ MarsSound_SetPwmPitch:
 ; --------------------------------------------------------
 
 MarsSound_SetVolume:
+		stc	sr,@-r15
+		mov	#$F0,r0
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
@@ -345,6 +358,7 @@ MarsSound_SetVolume:
 		mov	r2,r0
 		mov	r0,@(mchnsnd_vol,r8)
 .off_1:
+		ldc	@r15+,sr
 		rts
 		nop
 		align 4
@@ -363,6 +377,8 @@ MarsSound_SetVolume:
 ; --------------------------------------------------------
 
 MarsSound_PwmEnable:
+		stc	sr,@-r15
+		mov	#$F0,r0
 		mov	#MarsSnd_PwmChnls,r8
 		mov 	#sizeof_sndchn,r0
 		mulu	r1,r0
@@ -372,6 +388,7 @@ MarsSound_PwmEnable:
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_read,r8)
 		mov 	r0,@(mchnsnd_bank,r8)
+		ldc	@r15+,sr
 		rts
 		nop
 		align 4

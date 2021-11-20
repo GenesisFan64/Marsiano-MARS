@@ -6,5 +6,6 @@
 ; ----------------------------------------------------------------
 
 		align $8000
-		dc.b "MD DATA GOES HERE"
+ART_EMI:	binclude "data/md/sprites/emi_art.bin"
+ART_EMI_e:
 

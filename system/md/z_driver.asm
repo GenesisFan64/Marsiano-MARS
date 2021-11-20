@@ -252,23 +252,23 @@ drv_loop:
 		ld	l,a
 		jp	(hl)
 .list:
-		dw .cmnd_trkplay	; $00
-		dw .cmnd_trkstop
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0		; $04
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0		; $08
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0		; $0C
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0		; $10
+		dw .cmnd_trkplay	; $00 - Play
+		dw .cmnd_trkstop	; $01 - Stop
+		dw .cmnd_trkpause	; $02 - Pause
+		dw .cmnd_trkresume	; $03 - Resume
+		dw .cmnd_0		; $04 - Fade out
+		dw .cmnd_0		; $05 - Fade in
+		dw .cmnd_0		; $06 - Set master volume
+		dw .cmnd_0		; $07 -
+		dw .cmnd_trkticks	; $08 - Set ticks
+		dw .cmnd_0		; $09 -
+		dw .cmnd_0		; $0A -
+		dw .cmnd_0		; $0B -
+		dw .cmnd_0		; $0C -
+		dw .cmnd_0		; $0D -
+		dw .cmnd_0		; $0E -
+		dw .cmnd_0		; $0F -
+		dw .cmnd_trktempo	; $10 - Set global tempo
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
@@ -308,6 +308,9 @@ drv_loop:
 		ld	(iy+trk_tickSet),a
 		call	get_cmdbyte		; Start block
 		ld	(iy+trk_setBlk),a
+		call	get_cmdbyte		; Flag bits
+		or	11000000b		; Enable + First fill bits
+		ld	(iy+trk_status),a
 		call	get_cmdbyte		; Pattern data
 		ld	(iy+trk_romPatt),a
 		call	get_cmdbyte
@@ -328,15 +331,10 @@ drv_loop:
 		ld	(iy+(trk_romIns+2)),a
 		ld	a,1
 		ld	(iy+trk_tickTmr),a
-		ld	a,(iy+trk_status)
-		rst	8
-		or	11000000b		; Set Enable + REFILL flags
-; 		or	00100000b	; TEMPORAL BEATS
-		ld	(iy+trk_status),a
 		jp	.next_cmd
 
 ; --------------------------------------------------------
-; $02 - Set NEW track
+; $02 - STOP track
 ; --------------------------------------------------------
 
 .cmnd_trkstop:
@@ -344,6 +342,53 @@ drv_loop:
 		call	get_trkindx		; and read index iy
 		ld	(iy+trk_status),0
 		call	track_out
+		jp	.next_cmd
+
+; --------------------------------------------------------
+; $03 - Pause track
+; --------------------------------------------------------
+
+.cmnd_trkpause:
+		call	get_cmdbyte		; Get track slot
+		call	get_trkindx		; and read index iy
+		res	7,(iy+trk_status)
+; 		call	track_out
+		jp	.next_cmd
+
+; --------------------------------------------------------
+; $04 - Resume track
+; --------------------------------------------------------
+
+.cmnd_trkresume:
+		call	get_cmdbyte		; Get track slot
+		call	get_trkindx		; and read index iy
+		set	7,(iy+trk_status)
+; 		call	track_out
+		jp	.next_cmd
+
+; --------------------------------------------------------
+; $08 - Set tricks
+; --------------------------------------------------------
+
+.cmnd_trkticks:
+		call	get_cmdbyte		; Get track slot
+		call	get_trkindx		; and read index iyc
+		call	get_cmdbyte
+		ld	(iy+trk_tickSet),a
+		ld	(iy+trk_tickTmr),a
+		jp	.next_cmd
+
+; --------------------------------------------------------
+; $10 - Set global tempo
+; --------------------------------------------------------
+
+.cmnd_trktempo:
+		call	get_cmdbyte		; Get track slot
+		call	get_trkindx		; and read index iyc
+		call	get_cmdbyte
+		ld	(sbeatPtck),a
+		call	get_cmdbyte
+		ld	(sbeatPtck+1),a
 		jp	.next_cmd
 
 ; --------------------------------------------------------
@@ -432,7 +477,7 @@ updtrack:
 		ld	(currInsData),de	; save temporal InsData for loading
 		rst	8
 		ld	a,(currTickBits)	; a - Tick/Beat bits
-		bit	5,b			; This track uses Beats?
+		bit	0,b			; This track uses Beats?
 		jr	z,.sfxmd		; Nope
 		bit	1,a			; BEAT passed?
 		ret	z
@@ -445,6 +490,8 @@ updtrack:
 		rst	8
 		or	a
 		ret	nz			; If != 0, exit
+		bit	5,b			; Effect-requested track set?
+		call	nz,.effect_fill
 		bit	6,b			; Restart/First time?
 		call	nz,.first_fill
 		ld	a,(iy+trk_tickSet)	; Set new tick timer
@@ -643,8 +690,6 @@ updtrack:
 
 ; ----------------------------------------
 ; Effect B: jump to a new block
-;
-; ***SKIPS ENTIRE ROW***
 ; ----------------------------------------
 
 .eff_B:
@@ -657,8 +702,7 @@ updtrack:
 		ld	(iy+trk_rowPause),0	; Reset rowpause
 		ld	(ix+chnl_EffId),0	; (failsafe)
 		ld	(ix+chnl_EffArg),0
-		ld	a,(iy+trk_currBlk)	; Jump to this new block
-		call	.set_track
+		set	5,(iy+trk_status)	; set fill-from-effect flag on exit
 		pop	af
 		ret
 
@@ -767,6 +811,14 @@ updtrack:
 ; to next track.
 ; ----------------------------------------
 
+.effect_fill:
+		call	dac_fill
+		res	5,b			; Reset FILL flag
+		ld	(iy+trk_status),b
+		call	.go_effect
+		ret
+
+; returns bc as row counter
 .first_fill:
 		call	dac_fill
 		res	6,b			; Reset FILL flag
@@ -785,6 +837,8 @@ updtrack:
 		rst	8
 		call	trkout_unlk		; search and unlink last used channels
 		ld	(ix+chnl_Ins),0
+		ld	(ix+chnl_Note),-2
+		ld	(ix+chnl_Flags),1
 		rst	8
 		pop	bc
 		pop	de
@@ -795,7 +849,9 @@ updtrack:
 		ld	(flagResChip),a
 		ld	(iy+trk_rowPause),0	; Reset row timer
 		ld	a,(iy+trk_setBlk)	; Set current block
-		ld 	(iy+trk_currBlk),a	;
+		ld 	(iy+trk_currBlk),a
+
+.go_effect:
 		rst	8			; First cache fills
 		ld	l,(iy+trk_romIns)	; Recieve almost 100h of instrument pointers
 		ld	h,(iy+(trk_romIns+1))	; NOTE: transferRom can't do 100h
@@ -851,6 +907,11 @@ track_out:
 		push	de
 		push	bc
 		call	trkout_unlk
+		ld	(ix+chnl_Note),-2
+		ld	a,(ix+chnl_Flags)
+		and	11110000b
+		or	1
+		ld	(ix+chnl_Flags),a
 		pop	bc
 		pop	de
 		add	ix,de
@@ -868,9 +929,6 @@ trkout_unlk:
 		or	a
 		ret	z
 		ret	p
-		ld	(ix+chnl_Note),-2
-		ld	(ix+chnl_Flags),0001b
-; 		ld	(ix+chnl_Chip),0
 		push	ix
 		pop	de
 		ld	c,a
@@ -919,8 +977,6 @@ trkout_unlk:
 		ld	a,c
 		cp	90h
 		ret	z
-		ld	a,0
-		ld	(psgHatMode),a
 		rst	8
 		ret
 ; FM
@@ -2062,9 +2118,9 @@ setupchip:
 		ld	(ix+1),0
 		ld	(ix+3),0	; pitch zero
 		ld	(iy+chnl_Chip),0
-		ld	a,(iy+chnl_Flags)
-		and	00001111b
-		ld	(iy+chnl_Flags),a
+; 		ld	a,(iy+chnl_Flags)
+; 		and	11001111b
+; 		ld	(iy+chnl_Flags),a
 		ret
 
 ; Play PSG note
@@ -2708,11 +2764,11 @@ gema_init:
 	; set each tracks' settings
 		ld	iy,trkBuff_0
 		ld	hl,trkData_0
-		ld	a,8*24			; maximum size
+		ld	a,8*16			; maximum size
 		call	.set_it
 		ld	iy,trkBuff_1
 		ld	hl,trkData_1
-		ld	a,8*24
+		ld	a,8*16
 .set_it:
 		ld	(iy+trk_CachNotes),l
 		ld	(iy+(trk_CachNotes+1)),h
@@ -2812,7 +2868,7 @@ showRom:
 ; a - byte recieved
 ; --------------------------------------------------------
 
-; ALL this mess just to read one byte without bothering
+; ALL this code just to read one byte without bothering
 ; the DMA from the 68k side
 
 readRomB:
@@ -2828,7 +2884,11 @@ readRomB:
 		ret
 .wait:
 		res	0,(ix+1)	; Not reading ROM
-.w2:		rst	8
+.w2:
+		rst	8
+		nop
+		nop
+		rst	8
 		bit	0,(ix)		; Is ROM free from 68K?
 		jr	nz,.w2
 		set	0,(ix+1)	; Reading ROM again.
@@ -2959,18 +3019,20 @@ transferRom:
 		rst	8
 		nop
 		nop
+		rst	8
 		bit	0,(ix)		; 68k finished?
 		jr	nz,.x68kpwtlp
 		set	0,(ix+1)	; Set Z80 read flag again, and return
 		jr	.x68klpcont
 
-; or on last piece
+; or in the last piece
 .x68klstwt:
 		res	0,(ix+1)	; Tell 68k we are out, waiting.
 .x68klstwtlp:
 		rst	8
 		nop
 		nop
+		rst	8
 		bit	0,(ix)		; 68k finished?
 		jr	nz,.x68klstwtlp
 		set	0,(ix+1)	; Set Z80 read flag again, and return
@@ -3004,6 +3066,11 @@ chip_env:
 		ld	(iy+LEV),-1		; reset level
 		ld	(iy+FLG),1		; and update
 		ld	(iy+MODE),0		; envelope off
+		ld	a,e
+		cp	4
+		jr	nz,.ckof
+		ld	a,0
+		ld	(psgHatMode),a
 		rst	8
 .ckof:
 		bit	1,c			; bit 1 - key off
@@ -3013,6 +3080,11 @@ chip_env:
 		jr	z,.ckon
 		ld	(iy+FLG),1		; psg update flag
 		ld	(iy+MODE),100b		; set envelope mode 100b
+		ld	a,e
+		cp	4
+		jr	nz,.ckon
+		ld	a,0
+		ld	(psgHatMode),a
 		rst	8
 .ckon:
 		bit	0,c			; bit 0 - key on
@@ -3913,7 +3985,7 @@ wavFreq_List:	dw 100h		; C-0
 		dw 100h
 		dw 100h
 		dw 100h
-		dw 100h
+		dw 036h
 		dw 03Bh
 		dw 03Eh		; C-3 5512
 		dw 043h		; C#3
@@ -3931,7 +4003,7 @@ wavFreq_List:	dw 100h		; C-0
 		dw 087h		; C#4
 		dw 08Ch		; D-4
 		dw 09Ah		; D#4
-		dw 09Fh		; E-4
+		dw 09Eh		; E-4
 		dw 0ADh		; F-4
 		dw 0B2h		; F#4
 		dw 0C0h		; G-4
@@ -4111,8 +4183,8 @@ tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 psgHatMode	db 0
 fmSpcMode	db 0
 flagResChip	db 0		; reset chips flag
-insDataC_0	ds 8*24		; Instrument data for each Track slot
-insDataC_1	ds 8*24		; 8*MAX_INS
+insDataC_0	ds 8*16		; Instrument data for each Track slot
+insDataC_1	ds 8*16		; 8*MAX_INS
 
 dDacPntr	db 0,0,0	; WAVE play current ROM position
 dDacCntr	db 0,0,0	; WAVE play length counter

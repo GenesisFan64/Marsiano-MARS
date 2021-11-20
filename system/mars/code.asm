@@ -597,7 +597,6 @@ s_irq_pwm:
 
 s_irq_cmd:
 		stc	sr,@-r15
-
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -605,8 +604,6 @@ s_irq_cmd:
 
 ; ----------------------------------
 
-; 		mov	#$F0,r0			; Disable interrupts
-; 		ldc	r0,sr
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -634,22 +631,14 @@ s_irq_cmd:
 		dt	r6
 		bf/s	.copy_1
 		add	#2,r9
-		mov.b	@r7,r0
-		and	#%11011111,r0		; tell we are done
+		mov.b	@r7,r0			; tell Z80 CLK finished
+		and	#%11011111,r0
 		mov.b	r0,@r7
 		dt	r5
 		bf	.wait_1
 		mov.w	#1,r0			; request SOUND update to main loop
 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
 .cantupd:
-
-; 		mov	#_sysreg+comm15,r14
-; 		mov.b	@r14,r0
-; 		cmp/pl	r0
-; 		bf	.no_wav
-; 		xor	r0,r0
-; 		mov.b	r0,@r14
-
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 		mov.w	@r1,r0			; TODO: ver para que era este dummy read
@@ -662,6 +651,11 @@ s_irq_cmd:
 		mov 	@r15+,r4
 		mov 	@r15+,r3
 		mov 	@r15+,r2
+		ldc 	@r15+,sr
+		rts
+		nop
+		align 4
+		ltorg
 
 ; ; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
 ; ; 		mov.b	@r1,r0			; Clear DMA signal for MD
@@ -697,11 +691,6 @@ s_irq_cmd:
 ; 		mov 	@r15+,r4
 ; 		mov 	@r15+,r3
 ; 		mov 	@r15+,r2
-		ldc 	@r15+,sr
-		rts
-		nop
-		align 4
-		ltorg
 
 ; =================================================================
 ; ------------------------------------------------
@@ -929,8 +918,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#992,r2
-		mov	#736,r3
+		mov	#320,r2
+		mov	#320,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1115,7 +1104,7 @@ mstr_gfx1_loop:
 		mov	@(marsGbl_Bg_Xpos,gbr),r0
 		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
-		mov	#$5000,r1
+		mov	#$8000,r1
 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 		add	r1,r0
 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
@@ -1138,13 +1127,13 @@ mstr_gfx1_loop:
 	; Write linetable to current framebuffer
 	; ---------------------------------------
 
-; 		mov	#rot_angle,r1
-; 		mov	@r1,r2
-; 		mov	r2,r4
-; 		mov	#$7FF,r3
-; 		add	#8,r4		; wave speed
-; 		and	r3,r4
-; 		mov	r4,@r1
+		mov	#rot_angle,r1
+		mov	@r1,r2
+		mov	r2,r4
+		mov	#$7FF,r3
+		add	#8,r4		; wave speed
+		and	r3,r4
+		mov	r4,@r1
 
 		mov	#0,r3
 		mov	#0,r4
@@ -1162,18 +1151,18 @@ mstr_gfx1_loop:
 		mov.w	@(marsGbl_FbMaxLines,gbr),r0	; Number of lines to show
 		mov	r0,r5
 .ln_loop:
-; 		mov	#$7FF,r3
-; 		mov	r2,r0
-; 		add	#4,r2		; wave distord
-; 		and	r3,r2
-; 		shll2	r0
-; 		mov	#sin_table,r3
-; 		mov	@(r0,r3),r4
-; 		mov	#8,r0		; wave max X
-; 		dmuls	r0,r4
-; 		sts	macl,r4
-; 		shlr16	r4
-; 		exts.w	r4,r4
+		mov	#$7FF,r3
+		mov	r2,r0
+		add	#8,r2		; wave distord
+		and	r3,r2
+		shll2	r0
+		mov	#sin_table,r3
+		mov	@(r0,r3),r4
+		mov	#16,r0		; wave max X
+		dmuls	r0,r4
+		sts	macl,r4
+		shlr16	r4
+		exts.w	r4,r4
 
 		mov	r9,r1
 		cmp/ge	r7,r1
@@ -2271,14 +2260,12 @@ slave_loop:
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
 		mov	#_sysreg+comm15,r1
-		mov.b	@r1,r0			; Report to Z80 we are busy
+		mov.b	@r1,r0			; Report to Z80 that we are busy
 		or	#%01000000,r0
 		mov.b	r0,@r0
-		nop		; small sync delay
+		nop				; small sync delay
 		nop
 		nop
-		stc	sr,@-r15		; ALL Interrupts OFF
-		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#0,r1			; r1 - PWM slot
 		mov	#MarsSnd_PwmControl,r14
@@ -2420,7 +2407,6 @@ slave_loop:
 		dt	r10
 		bf/s	.next_chnl
 		add	#1,r14		; next PWM entry
-		ldc	@r15+,sr
 		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0		; Now we are free.
 		and	#%10111111,r0
@@ -2441,29 +2427,29 @@ slave_loop:
 		xor	r0,r0
 		mov.b	r0,@r1
 
-		stc	sr,@-r15		; Interrupts OFF
-		mov	#$F0,r0
-		mov	#0,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%1111,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
-		mov	#1,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%1111,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
-		ldc	@r15+,sr
+; 		stc	sr,@-r15		; Interrupts OFF
+; 		mov	#$F0,r0
+; 		mov	#0,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%1111,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#1,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%1111,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+; 		ldc	@r15+,sr
 .TEST_1:
 
 		bra	slave_loop
