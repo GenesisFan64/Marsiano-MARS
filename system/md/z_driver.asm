@@ -1045,13 +1045,8 @@ mars_scomm:
 		ld	a,(iy+comm15)	; check if we got mid-process and
 		bit	6,a		; wait until it finishes
 		jr	nz,.wait
-.wait_cmd:
-		ld	a,(iy+3)
-		bit	1,a		; CMD busy?
-		jr	nz,.wait_cmd
-		ld	a,(iy+3)	; Start CMD
-		set	1,a
-		ld	(iy+3),a
+		set	6,a
+		ld	(iy+comm15),a
 		ld	c,4		; c - Passes
 .next_pass:
 		push	iy

@@ -613,31 +613,31 @@ s_irq_cmd:
 		mov	r8,@-r15
 		mov	r9,@-r15
 		sts	pr,@-r15
-		mov	#MarsSnd_PwmControl,r9
-		mov	#_sysreg+comm15,r7	; control comm
-		mov	#4,r5			; number of passes
-.wait_1:
-		nop
-		nop
-		mov.b	@r7,r0			; wait first CLOCK
-		and	#%00100000,r0		; from Z80
-		cmp/pl	r0
-		bf	.wait_1
-		mov	#7,r6
-		mov	#_sysreg+comm0,r8
-.copy_1:
-		mov.w	@r8+,r0
-		mov.w	r0,@r9
-		dt	r6
-		bf/s	.copy_1
-		add	#2,r9
-		mov.b	@r7,r0			; tell Z80 CLK finished
-		and	#%11011111,r0
-		mov.b	r0,@r7
-		dt	r5
-		bf	.wait_1
-		mov.w	#1,r0			; request SOUND update to main loop
-		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
+; 		mov	#MarsSnd_PwmControl,r9
+; 		mov	#_sysreg+comm15,r7	; control comm
+; 		mov	#4,r5			; number of passes
+; .wait_1:
+; 		nop
+; 		nop
+; 		mov.b	@r7,r0			; wait first CLOCK
+; 		and	#%00100000,r0		; from Z80
+; 		cmp/pl	r0
+; 		bf	.wait_1
+; 		mov	#7,r6
+; 		mov	#_sysreg+comm0,r8
+; .copy_1:
+; 		mov.w	@r8+,r0
+; 		mov.w	r0,@r9
+; 		dt	r6
+; 		bf/s	.copy_1
+; 		add	#2,r9
+; 		mov.b	@r7,r0			; tell Z80 CLK finished
+; 		and	#%11011111,r0
+; 		mov.b	r0,@r7
+; 		dt	r5
+; 		bf	.wait_1
+; 		mov.w	#1,r0			; request SOUND update to main loop
+; 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
 .cantupd:
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
@@ -2248,25 +2248,41 @@ SH2_S_HotStart:
 		nop
 		align 4
 		ltorg
-slave_loop:
 
-	; Process PWM-channel requests
-		mov.w	@(marsGbl_PwmCtrlUpd,gbr),r0
-		cmp/eq	#1,r0
-		bt	.pwm_upd
-		bra	.no_upds
+
+
+slave_loop:
+		mov	#_sysreg+comm15,r7	; control comm
+		mov.b	@r7,r0
+		and	#%01000000,r0
+		cmp/pl	r0
+		bf	.non_zero
+		bra	.slv_noupd
 		nop
-.pwm_upd:
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
-		mov	#_sysreg+comm15,r1
-		mov.b	@r1,r0			; Report to Z80 that we are busy
-		or	#%01000000,r0
-		mov.b	r0,@r0
-		nop				; small sync delay
+.non_zero:
+		mov	#MarsSnd_PwmControl,r9
+		mov	#4,r5			; number of passes
+.wait_1:
 		nop
 		nop
-		ldc	r0,sr
+		mov.b	@r7,r0			; wait first CLOCK
+		and	#%00100000,r0		; from Z80
+		cmp/pl	r0
+		bf	.wait_1
+		mov	#7,r6
+		mov	#_sysreg+comm0,r8
+.copy_1:
+		mov.w	@r8+,r0
+		mov.w	r0,@r9
+		dt	r6
+		bf/s	.copy_1
+		add	#2,r9
+		mov.b	@r7,r0			; tell Z80 CLK finished
+		and	#%11011111,r0
+		mov.b	r0,@r7
+		dt	r5
+		bf	.wait_1
+
 		mov	#0,r1			; r1 - PWM slot
 		mov	#MarsSnd_PwmControl,r14
 		mov	#7,r10
@@ -2410,47 +2426,45 @@ slave_loop:
 		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0		; Now we are free.
 		and	#%10111111,r0
-		mov.b	r0,@r0
-		nop		; small sync delay
-		nop
-		nop
-.no_upds:
-	; *** END PWM control code
-	; for GEMA
-
-
-	; Testing only
-		mov	#_sysreg+comm15,r1
-		mov.b	@r1,r0
-		cmp/eq	#1,r0
-		bf	.TEST_1
-		xor	r0,r0
 		mov.b	r0,@r1
+.slv_noupd:
 
-; 		stc	sr,@-r15		; Interrupts OFF
-; 		mov	#$F0,r0
-; 		mov	#0,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%1111,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
-; 		mov	#1,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%1111,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
-; 		ldc	@r15+,sr
-.TEST_1:
+; 	; *** END PWM control code
+; 	; for GEMA
+;
+;
+; 	; Testing only
+; 		mov	#_sysreg+comm15,r1
+; 		mov.b	@r1,r0
+; 		cmp/eq	#1,r0
+; 		bf	.TEST_1
+; 		xor	r0,r0
+; 		mov.b	r0,@r1
+;
+; ; 		stc	sr,@-r15		; Interrupts OFF
+; ; 		mov	#$F0,r0
+; ; 		mov	#0,r1
+; ; 		mov	#PWM_STEREO,r2
+; ; 		mov	#PWM_STEREO_e,r3
+; ; 		mov	#0,r4
+; ; 		mov	#$100,r5
+; ; 		mov	#0,r6
+; ; 		mov	#%1111,r7
+; ; 		mov	#MarsSound_SetPwm,r0
+; ; 		jsr	@r0
+; ; 		nop
+; ; 		mov	#1,r1
+; ; 		mov	#PWM_STEREO,r2
+; ; 		mov	#PWM_STEREO_e,r3
+; ; 		mov	#0,r4
+; ; 		mov	#$100,r5
+; ; 		mov	#0,r6
+; ; 		mov	#%1111,r7
+; ; 		mov	#MarsSound_SetPwm,r0
+; ; 		jsr	@r0
+; ; 		nop
+; ; 		ldc	@r15+,sr
+; .TEST_1:
 
 		bra	slave_loop
 		nop
