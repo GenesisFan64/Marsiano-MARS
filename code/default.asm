@@ -135,7 +135,7 @@ thisCode_Top:
 		lsr.w	#8,d7
 		btst	#bitJoyY,d7
 		beq.s	.noc_up
-		move.w	#1,d0
+		moveq	#1,d0
 		move.b	d0,(sysmars_reg+comm15)
 .noc_up:
 

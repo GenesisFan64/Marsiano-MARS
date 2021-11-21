@@ -6,7 +6,8 @@
 ; ------------------------------------------------------------
 
 ; Instrument macros
-; do note that some 24-bit pointers add 90h to the MSB
+;
+; NOTE: The FM macros add $900000 to the pointer address
 
 gInsNull macro
 	dc.b  -1,$00,$00,$00
@@ -54,8 +55,8 @@ gInsDac	macro pitch,start,flags
 	endm
 
 gInsPwm	macro pitch,start,flags
-	dc.b $D0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
-	dc.b start&$FF,0,0,0
+	dc.b $D0|flags,pitch,((start>>24)&$FF),((start>>16)&$FF)
+	dc.b ((start>>8)&$FF),start&$FF,0,0
 	endm
 
 ; ------------------------------------------------------------

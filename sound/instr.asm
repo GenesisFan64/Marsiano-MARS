@@ -1,14 +1,13 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; PSG, FM, DAC and PWM instruments go here
+; PSG, FM, DAC and PWM instruments
 ;
-; Any 68k BANK must be set externally if required.
-; (macros add the bank automaticly)
+; Any 68k BANK ($880000 or $900000) must be set externally.
+; (macros add the bank automaticly for DAC)
+;
+; PWM Samples can be stored here BUT if the MD performs
+; any DMA (which sets the RV bit) the sample data will be gone.
 ; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; DAC samples
-; --------------------------------------------------------
 
 ; Special include macro for samples
 ; Works for both DAC and PWM
@@ -24,6 +23,11 @@ gSmpl macro locate,loop
 	endm
 
 	align 4		; FIRST ALIGN FOR PWMs
+
+; --------------------------------------------------------
+; DAC samples
+; --------------------------------------------------------
+
 DacIns_Magic2:
 	gSmpl "sound/instr/smpl/magic_2.wav",0
 DacIns_Snare_Gem:
@@ -38,26 +42,10 @@ DacIns_String1:
 	gSmpl "sound/instr/smpl/string_1.wav",0
 DacIns_LowString:
 	gSmpl "sound/instr/smpl/lowstring.wav",1200
-
 SmpIns_PIANO_1:
 	gSmpl "sound/instr/smpl/PIANO__1.wav",-1
 SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",284
-
-SmpIns_Bell_Ice:
-	gSmpl "sound/instr/smpl/bell_ice.wav",0
-SmpIns_Brass1_Hi:
-	gSmpl "sound/instr/smpl/brass1_hi.wav",0
-SmpIns_Brass1_Low:
-	gSmpl "sound/instr/smpl/brass1_low.wav",0
-SmpIns_Forest_1:
-	gSmpl "sound/instr/smpl/forest1.wav",0
-SmpIns_Kick_jam:
-	gSmpl "sound/instr/smpl/kick_jam.wav",0
-SmpIns_Snare_jam:
-	gSmpl "sound/instr/smpl/snare_jam.wav",0
-SmpIns_SnrTom_1:
-	gSmpl "sound/instr/smpl/snrtom_1.wav",0
 
 ; --------------------------------------------------------
 ; FM instruments/patches

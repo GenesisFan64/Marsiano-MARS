@@ -2248,15 +2248,46 @@ SH2_S_HotStart:
 		nop
 		align 4
 		ltorg
-
-
-
 slave_loop:
+
+		mov	#_sysreg+comm15,r1
+		mov.b	@r1,r0
+		and	#$01,r0
+		cmp/eq	#1,r0
+		bf	.TEST_1
+		xor	r0,r0
+		mov.b	r0,@r1
+
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
+		mov	#0,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%1111,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+; 		mov	#1,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%1111,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+		ldc	@r15+,sr
+.TEST_1:
+
 		mov	#_sysreg+comm15,r7	; control comm
 		mov.b	@r7,r0
 		and	#%01000000,r0
-		cmp/pl	r0
-		bf	.non_zero
+		cmp/eq	#%01000000,r0
+		bt	.non_zero
 		bra	.slv_noupd
 		nop
 .non_zero:
@@ -2313,7 +2344,7 @@ slave_loop:
 		tst	#$10,r0
 		bt	.no_pitchbnd
 		mov	r14,r13
-		add	#8*2,r13	; skip COM and FLAGS
+		add	#8,r13		; skip COM
 		mov.b	@r13,r0		; r2 - Get pitch MSB bits
 		add	#8,r13
 		and	#%11,r0
@@ -2333,7 +2364,7 @@ slave_loop:
 		bt	.no_volumebnd
 		mov	r0,r7
 		mov	r14,r13
-		add	#8*2,r13	; point to volume values
+		add	#8,r13		; point to volume values
 		mov.b	@r13,r0
 		and	#%11111100,r0	; skip MSB pitch bits
 		mov	r0,r2
@@ -2350,17 +2381,14 @@ slave_loop:
 		bt	.no_req
 		mov	r14,r13
 		add	#8,r13		; skip COM
+
 		mov.b	@r13,r0
-		and	#%1111,r0
-		mov	r0,r7		; r7 - output settings
 		add	#8,r13
-		mov.b	@r13,r0
+		mov	r0,r5
 		and	#%11111100,r0	; skip MSB pitch bits
 		mov	r0,r6
-		mov.b	@r13,r0		; r5 - Get pitch MSB bits
-		add	#8,r13
-; 		mov	r0,r6
-		and	#%11,r0
+		mov	r5,r0		; r5 - Get pitch MSB bits
+		and	#%00000011,r0
 		shll8	r0
 		mov	r0,r5
 		mov.b	@r13,r0		; Pitch LSB
@@ -2368,8 +2396,17 @@ slave_loop:
 		and	#$FF,r0
 		or	r5,r0
 		mov	r0,r5
-		mov	#CS1,r8
-		mov.b	@r13,r0		; r2 - Get START point
+
+		mov.b	@r13,r0		; flags | SH2 BANK
+		add	#8,r13
+		mov	r0,r7
+		and	#%1111,r0
+		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
+		shll16	r8
+		shll8	r8
+		shlr2	r7
+		shlr2	r7
+		mov.b	@r13,r0		; r2 - START point
 		add	#8,r13
 		and	#$FF,r0
 		shll16	r0
@@ -2385,9 +2422,9 @@ slave_loop:
 		or	r3,r0
 		or	r2,r0
 		mov	r0,r2
-		mov	r2,r4
-		or	r8,r2		; make start/end visible
-		mov.b	@r2+,r0		; get lenght
+		mov	r2,r4		; r4 - START copy
+		or	r8,r2		; add CS2
+		mov.b	@r2+,r0		; r3 - Length
 		and	#$FF,r0
 		mov	r0,r3
 		mov.b	@r2+,r0
@@ -2397,9 +2434,9 @@ slave_loop:
 		mov.b	@r2+,r0
 		and	#$FF,r0
 		shll16	r0
-		add	r4,r3
 		or	r0,r3
-		or	r8,r3
+		add	r4,r3		; add end+start
+		or	r8,r3		; add CS2
 		mov.b	@r2+,r0		; get loop point
 		and	#$FF,r0
 		mov	r0,r4
@@ -2413,8 +2450,6 @@ slave_loop:
 		or	r0,r4
 		mov	#%11111100,r0
 		and	r0,r8
-; 		mov	#0,r8
-; 		mov	#%010,r7	; LR, mono mode
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
@@ -2428,44 +2463,6 @@ slave_loop:
 		and	#%10111111,r0
 		mov.b	r0,@r1
 .slv_noupd:
-
-; 	; *** END PWM control code
-; 	; for GEMA
-;
-;
-; 	; Testing only
-; 		mov	#_sysreg+comm15,r1
-; 		mov.b	@r1,r0
-; 		cmp/eq	#1,r0
-; 		bf	.TEST_1
-; 		xor	r0,r0
-; 		mov.b	r0,@r1
-;
-; ; 		stc	sr,@-r15		; Interrupts OFF
-; ; 		mov	#$F0,r0
-; ; 		mov	#0,r1
-; ; 		mov	#PWM_STEREO,r2
-; ; 		mov	#PWM_STEREO_e,r3
-; ; 		mov	#0,r4
-; ; 		mov	#$100,r5
-; ; 		mov	#0,r6
-; ; 		mov	#%1111,r7
-; ; 		mov	#MarsSound_SetPwm,r0
-; ; 		jsr	@r0
-; ; 		nop
-; ; 		mov	#1,r1
-; ; 		mov	#PWM_STEREO,r2
-; ; 		mov	#PWM_STEREO_e,r3
-; ; 		mov	#0,r4
-; ; 		mov	#$100,r5
-; ; 		mov	#0,r6
-; ; 		mov	#%1111,r7
-; ; 		mov	#MarsSound_SetPwm,r0
-; ; 		jsr	@r0
-; ; 		nop
-; ; 		ldc	@r15+,sr
-; .TEST_1:
-
 		bra	slave_loop
 		nop
 		align 4
@@ -3034,6 +3031,7 @@ s_irq_custom:
 sin_table	binclude "system/mars/data/sinedata.bin"
 		align 4
 		include "data/mars_sdram.asm"
+		include "sound/instr_sdram.asm"		; PWM samples on SDRAM
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -3057,7 +3055,7 @@ sizeof_marsram	ds.l 0
 
 .here:
 	if MOMPASS=6
-		message "MARS RAM from \{((SH2_RAM)&$FFFFFF)} to \{((.here)&$FFFFFF)}"
+		message "MARS RAM: \{((SH2_RAM)&$FFFFFF)} to \{((.here)&$FFFFFF)}"
 	endif
 		finish
 
@@ -3068,10 +3066,7 @@ sizeof_marsram	ds.l 0
 
 			struct MarsRam_Sound
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
-
-; MarsSnd_PwmTrkData	ds.b $80*2
-MarsSnd_PwmPlyData	ds.l 7
+MarsSnd_PwmControl	ds.b 8*7	; 8 bytes per channel, 4  (only 7 are usable)
 sizeof_marssnd		ds.l 0
 			finish
 
@@ -3082,12 +3077,12 @@ sizeof_marssnd		ds.l 0
 
 			struct MarsRam_Video
 RAM_Mars_Palette	ds.w 256			; Indexed palette
-RAM_Mars_DREQ		ds.w 256			; 256 WORDS of MD communication
-RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
-RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
+; RAM_Mars_DREQ		ds.w 256			; 256 WORDS of MD communication
+; RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
+; RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
 ; RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
-RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 0
-RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 1
+; RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 0
+; RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 1
 RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Pieces list
 RAM_Mars_VdpDrwList_e	ds.l 0				; (end-of-list label)
 RAM_Mars_Plgn_ZList_0	ds.l MAX_MPLGN*2		; Z value / foward faces

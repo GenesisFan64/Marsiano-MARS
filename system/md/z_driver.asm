@@ -95,9 +95,9 @@ FMFRQH		equ	24
 FMFRQL		equ	30
 
 PWCOM		equ	0
-PWOUTF		equ	8	; Output mode/bits
-PWPTH_V		equ	16	; Volume | Pitch MSB
-PWPHL		equ	24	; Pitch LSB
+PWPTH_V		equ	8	; Volume | Pitch MSB
+PWPHL		equ	16	; Pitch LSB
+PWOUTF		equ	24	; Output mode/bits | SH2 view area (ROM or SDRAM)
 PWINSH		equ	32	; 24-bit sample address
 PWINSM		equ	40
 PWINSL		equ	48
@@ -1297,7 +1297,7 @@ setupchip:
 ; --------------------------------
 
 .ins_pwm:
-		ld	d,(hl)
+		ld	d,(hl)		; d - Flags
 		inc	hl
 		ld	a,(hl)		; Save pitch
 		inc	hl
@@ -1308,17 +1308,19 @@ setupchip:
 		ld	b,0
 		ld	c,a
 		add	ix,bc
-		ld	a,(ix+PWOUTF)	; get LOOP flag
-		and	111b
-		ld	c,a
+		ld	a,(hl)		; SH2 BANK
+		inc	hl
+		and	00001111b
+		ld	b,a
+		ld	a,(ix+PWOUTF)
+		and	11110000b	; filter flags
+		ld	c,a		; keep them as c
 		ld	a,d
-		and	0001b
-		add	a,a		; move bit
-		add	a,a
-		add	a,a
+		and	0001b		; TODO: STEREO BIT
+		rlca
 		or	c
+		or	b
 		ld	(ix+PWOUTF),a
-
 		ld	a,(hl)		; Grab the 24-bit address (BIG endian)
 		inc	hl
 		ld	(ix+PWINSH),a
@@ -2055,15 +2057,11 @@ setupchip:
 		ld	(ix+PWPTH_V),a
 		ld	(ix+PWPHL),e
 		ld	a,(ix+PWOUTF)
-		and	1100b			; Keep other bits
+		and	11001111b		; Keep other bits
 		ld	c,a
 		ld	a,(iy+chnl_Flags)	; 00LR 0000
-		rrca
-		rrca
-		rrca
-		rrca
 		cpl
-		and	011b
+		and	00110000b
 		or	c
 		ld	(ix+PWOUTF),a
 		ret
