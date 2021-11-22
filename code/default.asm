@@ -126,7 +126,7 @@ thisCode_Top:
 		lea	str_Title(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
-		move.w	#$8080,(sysmars_reg+comm14)
+		move.b	#$80,(sysmars_reg+comm14)
 		bsr	.print_cursor
 
 ; Mode 0 mainloop
@@ -309,8 +309,10 @@ thisCode_Top:
 
 ; test playlist
 .playlist:
-	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
+	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
 	dc.w $A,0
+	dc.l GemaTrk_patt_iguana,GemaTrk_blk_iguana,GemaTrk_ins_iguana
+	dc.w 3,1
 	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
 	dc.w 7,0
 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2

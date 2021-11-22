@@ -10,7 +10,7 @@
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-		align $100				; (GENS emulator only)
+		align $80				; (GENS emulator only)
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Stop Z80
 		move.b	#1,(z80_reset).l		; Reset
@@ -130,8 +130,6 @@ sndReq_sbyte:
 ; --------------------------------------------------------
 
 Sound_DMA_Pause:
-
-.retry:
 		bsr	sndLockZ80
 		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
 		bsr	sndUnlockZ80
@@ -139,7 +137,7 @@ Sound_DMA_Pause:
 		beq.s	.safe
 		moveq	#68,d7
 		dbf	d7,*
-		bra.s	.retry
+		bra.s	Sound_DMA_Pause
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80

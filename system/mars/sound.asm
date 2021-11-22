@@ -9,7 +9,6 @@ MAX_PWMCHNL	equ	7
 		struct 0
 mchnsnd_enbl	ds.l 1
 mchnsnd_read	ds.l 1		; 0 - off
-mchnsnd_cache	ds.l 1		; cache reading point (TODO)
 mchnsnd_bank	ds.l 1		; CS0-3 OR value
 mchnsnd_start	ds.l 1
 mchnsnd_end	ds.l 1
@@ -17,7 +16,6 @@ mchnsnd_loop	ds.l 1
 mchnsnd_pitch	ds.l 1
 mchnsnd_flags	ds.l 1		; %SLR S-wave format mono/stereo | LR-wave output bits
 mchnsnd_vol	ds.l 1
-mchnsnd_halfway	ds.l 1		; $0000/$8000
 sizeof_sndchn	ds.l 0
 		finish
 
@@ -44,8 +42,8 @@ MarsSound_ReadPwm:
 
 ; ------------------------------------------------
 ;
-; .retry:
-		mov	#$C0000000,r10
+;
+		mov	#MarsSnd_PwmControl,r10
 		mov	#MarsSnd_PwmChnls,r9	; r9 - Channel list
 		mov 	#MAX_PWMCHNL,r8		; r8 - Number of channels
 		mov 	#0,r7			; r7 - RIGHT BASE wave
@@ -63,8 +61,11 @@ MarsSound_ReadPwm:
 
 	; Check for end OR
 		mov 	@(mchnsnd_read,r9),r4
+		mov	r4,r3
 		mov 	@(mchnsnd_end,r9),r0
-		cmp/ge	r0,r4
+		shlr8	r3
+		shlr8	r0
+		cmp/hs	r0,r3
 		bf	.read
 		mov 	@(mchnsnd_flags,r9),r0
 		tst	#%00001000,r0
@@ -82,20 +83,25 @@ MarsSound_ReadPwm:
 ; r4 - WAVE READ pointer
 .read:
 		mov 	@(mchnsnd_flags,r9),r5
-		mov 	@(mchnsnd_bank,r9),r0
+		mov 	@(mchnsnd_bank,r9),r2
 		mov	#CS1,r1
-		cmp/eq	r1,r0
-		bf	.not_rom
-		mov	#$80,r0
-		mov	r0,r1
-		mov	r0,r3
+		cmp/eq	r1,r2
+		bf/s	.not_rom
+		mov	r5,r0			; return flags to r0
 		mov	#_sysreg+dreqctl,r2	; Check for RV bit
 		mov.w	@r2,r0			; If set, play silent
 		tst	#$01,r0
-		bf/s	.from_rv
+		bt/s	.not_rom
 		mov	r5,r0
+		mov	#$80,r1
+		mov	#$80,r3
+		bra	.from_rv
+		mov	r5,r0
+
+; Play as normal
+; r0 - flags
+; r4 - READ pointer
 .not_rom:
-		mov	r5,r0
 		mov	#$00FFFFFF,r1	; limit BYTE
 		mov 	r4,r3
 		shlr8	r3
@@ -118,6 +124,7 @@ MarsSound_ReadPwm:
 .mono:
 		add	r5,r4
 		mov	r4,@(mchnsnd_read,r9)
+
 		mov	#$FF,r3
 		and	r3,r1
 		and	r3,r2
@@ -153,6 +160,8 @@ MarsSound_ReadPwm:
 		add	r1,r6
 		add	r2,r7
 		add	#sizeof_sndchn,r9
+		mov	#$200,r0
+		add	r0,r10
 		dt	r8
 		bf	.loop
 
@@ -215,11 +224,8 @@ MarsSound_ReadPwm:
 ; --------------------------------------------------------
 ; Init Sound PWM
 ;
-; Frequency values:
 ; 23011361 NTSC
 ; 22801467 PAL
-;
-; NOTE: cycle causes a CLICK to sound
 ; --------------------------------------------------------
 
 MarsSound_Init:
@@ -235,7 +241,6 @@ MarsSound_Init:
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
-
 		mov	#0,r0
 		mov	#MarsSnd_PwmChnls,r1
 		mov	#MAX_PWMCHNL,r2
@@ -245,6 +250,14 @@ MarsSound_Init:
 		dt	r2
 		bf/s	.clr_enbl
 		add	r3,r1
+		mov	#$80808080,r1
+		mov	#MarsSnd_PwmCache,r2
+		mov	#($200*MAX_PWMCHNL)/4,r3
+.copy_base:
+		mov	r1,@r2
+		dt	r3
+		bf/s	.copy_base
+		add	#4,r2
 		ldc	@r15+,gbr
 		lds	@r15+,pr
 		rts
@@ -263,10 +276,10 @@ MarsSound_Init:
 ; r4 | Loop address
 ; r5 | Pitch ($xxxxxx.xx)
 ; r6 | Volume
-; r7 | Flags (Currently: %xxxxLSLR)
+; r7 | Flags (Currently: %xxxFLSLR)
 ;
 ; Uses:
-; r0,r8-r9
+; r0,r7-r9
 ; --------------------------------------------------------
 
 MarsSound_SetPwm:
@@ -284,12 +297,6 @@ MarsSound_SetPwm:
 		mov 	r5,@(mchnsnd_pitch,r8)
 		mov 	r6,@(mchnsnd_vol,r8)
 		mov 	r7,@(mchnsnd_flags,r8)
-		mov	r1,r9
-		shll8	r9
-		mov	r9,r7
-		shll8	r9
-		mov	r9,@(mchnsnd_cache,r8)		; MAXIMUM $07
-
 		mov 	r2,r0				; Set MSB
 		mov 	#$FF000000,r9
 		and 	r9,r0
@@ -311,20 +318,87 @@ MarsSound_SetPwm:
 		mov 	#1,r0
 		mov 	r0,@(mchnsnd_enbl,r8)
 
-	; First cache fill
-		mov	#$C0000000,r0
-		add	r0,r7
-		mov	#$100/4,r8
-.cachfirst:	mov	@r9+,r0
-		mov	r0,@r7
-		dt	r8
-		bf/s	.cachfirst
-		add	#4,r7
-
+; 		mov	r1,r0
+; 		shll8	r0
+; 		mov	r0,r9
+; 		shll8	r0
+; 		mov	r0,@(mchnsnd_cchread,r8)
+; 		mov	#$C0000000,r0
+; 		or	r0,r9
+; 		mov	#$100/4,r8
+; .copycach:
+; 		mov	@r2+,r0
+; 		mov	r0,@r9
+; 		dt	r8
+; 		bf/s	.copycach
+; 		add	#4,r9
 ; 		ldc	@r15+,sr
 		rts
 		nop
 		align 4
+
+; ; --------------------------------------------------------
+; ; MarsSound_Refill
+; ;
+; ; Call this if MD wants to do DMA, which sets RV=1
+; ; starting from specific slot
+; ;
+; ; Uses:
+; ; r1-r8
+; ; --------------------------------------------------------
+;
+; MarsSnd_Refill:
+; 		mov	#MarsSnd_PwmChnls,r8
+; 		mov	#MAX_PWMCHNL,r6
+; 		mov	#sizeof_sndchn,r7
+; 		mov	#$C0000000,r5
+; .next_one:
+; 		mov	@(mchnsnd_enbl,r8),r0
+; 		cmp/eq	#1,r0
+; 		bf	.not_activ
+; 		mov	@(mchnsnd_read,r8),r4
+; 		mov	@(mchnsnd_cchread,r8),r3
+; 		mov	@(mchnsnd_bank,r8),r0
+; 		shlr8	r4
+; 		shlr8	r3
+; 		add	r0,r4
+; 		add	r5,r3
+; 		mov	#$100,r2
+; 		mov	#$000000FF,r1
+; .copy_now:
+; 		mov.b	@r4,r0
+; 		mov.b	r0,@r3
+; 		add	#1,r3
+; 		and	r1,r3
+; 		or	r5,r3
+; 		dt	r2
+; 		bf/s	.copy_now
+; 		add	#1,r4
+; .not_activ:
+; 		mov	#$100,r0
+; 		add	r0,r5
+; 		dt	r6
+; 		bf/s	.next_one
+; 		add	r7,r8
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
+
+; 		mov 	#sizeof_sndchn,r0
+; 		mulu	r1,r0
+; 		sts	macl,r0
+; 		add 	r0,r8
+; 		mov	@(mchnsnd_enbl,r8),r0
+; 		cmp/eq	#1,r0
+; 		bf	.off_1
+; ; 		mov	@(mchnsnd_read,r8),r0
+; 		mov	r2,@(mchnsnd_pitch,r8)
+; .off_1:
+; ; 		ldc	@r15+,sr
+; 		rts
+; 		nop
+; 		align 4
 
 ; --------------------------------------------------------
 ; MarsSound_MulPwmPitch

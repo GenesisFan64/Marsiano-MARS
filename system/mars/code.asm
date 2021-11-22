@@ -638,7 +638,7 @@ s_irq_cmd:
 ; 		bf	.wait_1
 ; 		mov.w	#1,r0			; request SOUND update to main loop
 ; 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
-.cantupd:
+; .cantupd:
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 		mov.w	@r1,r0			; TODO: ver para que era este dummy read
@@ -886,10 +886,11 @@ SH2_M_HotStart:
 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 
 		mov	#_sysreg+comm14,r1
-.lel:		mov.b	@r1,r0
+.clr_mstr:	mov.b	@r1,r0
 		cmp/pz	r0
-		bt	.lel
-
+		bt	.clr_mstr
+		xor	r0,r0
+		mov.b	r0,@r1
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	master_loop
@@ -1260,7 +1261,8 @@ mstgfx_exit:
 		align 4
 		ltorg
 
-rot_angle_2:	dc.l 0
+; 		align 4
+; rot_angle_2:	dc.l 0
 
 ; Left/Right
 mstrgf0_lr:
@@ -2238,26 +2240,25 @@ SH2_S_HotStart:
 ; Loop
 ; --------------------------------------------------------
 
-		mov	#_sysreg+comm15,r1
-.wait_s:	mov.b	@r1,r0
-		cmp/pz	r0
-		bt	.wait_s
-		xor	r0,r0
-		mov.b	r0,@r1
+; 		mov	#_sysreg+comm15,r1
+; .wait_s:	mov.b	@r1,r0
+; 		cmp/pz	r0
+; 		bt	.wait_s
+; 		and	#$7F,r0
+; 		mov.b	r0,@r1
 		bra	slave_loop
 		nop
 		align 4
 		ltorg
 slave_loop:
-
 		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0
 		and	#$01,r0
-		cmp/eq	#1,r0
-		bf	.TEST_1
-		xor	r0,r0
+		cmp/eq	#0,r0
+		bt	.TEST_1
+		and	#%11111110,r0
+; 		xor	r0,r0
 		mov.b	r0,@r1
-
 		stc	sr,@-r15		; Interrupts OFF
 		mov	#$F0,r0
 		mov	#0,r1
@@ -2270,47 +2271,55 @@ slave_loop:
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
-; 		mov	#1,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%1111,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
+		mov	#1,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%1111,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
 		ldc	@r15+,sr
 .TEST_1:
 
-		mov	#_sysreg+comm15,r7	; control comm
-		mov.b	@r7,r0
-		and	#%01000000,r0
-		cmp/eq	#%01000000,r0
-		bt	.non_zero
+	; *** GEMA PWM PLAYBACK DRIVER ***
+	; comm15: %BFCxxxxx
+	; B - Update PWM bit
+	; F - MID-ROM refill bit
+	;     any DMA on 68k
+	; C - data "clock" bit from Z80, copies data stored
+	;     on comm0,2,4,6,8,10,12 to PwmControl in pieces
+	;     (hardcoded to 4 passes on both Z80 and here)
+		mov	#_sysreg+comm15,r9	; control comm
+		mov.b	@r9,r0
+		and	#%10000000,r0
+		cmp/eq	#0,r0
+		bf	.non_zero
 		bra	.slv_noupd
 		nop
 .non_zero:
-		mov	#MarsSnd_PwmControl,r9
+		mov	#MarsSnd_PwmControl,r7
 		mov	#4,r5			; number of passes
 .wait_1:
 		nop
 		nop
-		mov.b	@r7,r0			; wait first CLOCK
+		mov.b	@r9,r0			; wait first CLOCK
 		and	#%00100000,r0		; from Z80
-		cmp/pl	r0
-		bf	.wait_1
+		cmp/eq	#0,r0
+		bt	.wait_1
 		mov	#7,r6
 		mov	#_sysreg+comm0,r8
 .copy_1:
 		mov.w	@r8+,r0
-		mov.w	r0,@r9
+		mov.w	r0,@r7
 		dt	r6
 		bf/s	.copy_1
-		add	#2,r9
-		mov.b	@r7,r0			; tell Z80 CLK finished
+		add	#2,r7
+		mov.b	@r9,r0			; reset CLOCK
 		and	#%11011111,r0
-		mov.b	r0,@r7
+		mov.b	r0,@r9
 		dt	r5
 		bf	.wait_1
 
@@ -2337,8 +2346,6 @@ slave_loop:
 		nop
 		bra	.no_req
 		nop
-
-	; Normal playback
 .no_keyoff:
 		mov	r7,r0
 		tst	#$10,r0
@@ -2400,12 +2407,12 @@ slave_loop:
 		mov.b	@r13,r0		; flags | SH2 BANK
 		add	#8,r13
 		mov	r0,r7
+		shlr2	r7
+		shlr2	r7
 		and	#%1111,r0
 		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
 		shll16	r8
 		shll8	r8
-		shlr2	r7
-		shlr2	r7
 		mov.b	@r13,r0		; r2 - START point
 		add	#8,r13
 		and	#$FF,r0
@@ -2423,7 +2430,8 @@ slave_loop:
 		or	r2,r0
 		mov	r0,r2
 		mov	r2,r4		; r4 - START copy
-		or	r8,r2		; add CS2
+		add	r8,r2		; add CS2
+
 		mov.b	@r2+,r0		; r3 - Length
 		and	#$FF,r0
 		mov	r0,r3
@@ -2436,7 +2444,8 @@ slave_loop:
 		shll16	r0
 		or	r0,r3
 		add	r4,r3		; add end+start
-		or	r8,r3		; add CS2
+		add	r8,r3		; add CS2
+
 		mov.b	@r2+,r0		; get loop point
 		and	#$FF,r0
 		mov	r0,r4
@@ -2460,27 +2469,31 @@ slave_loop:
 		add	#1,r14		; next PWM entry
 		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0		; Now we are free.
-		and	#%10111111,r0
+		and	#%00111111,r0
 		mov.b	r0,@r1
 .slv_noupd:
+	; *** END
+
 		bra	slave_loop
 		nop
 		align 4
 		ltorg
 
+
+; this_polygon:
+; 		dc.w $8000
+; 		dc.w 320
+; 		dc.l TESTMARS_BG
+; dest_data:	dc.w  32,-32
+; 		dc.w -32,-32
+; 		dc.w -32, 32
+; 		dc.w  32, 32
+; 		dc.w 274, 79
+; 		dc.w 199, 79
+; 		dc.w 199,142-1
+; 		dc.w 274,142-1
+
 		align 4
-this_polygon:
-		dc.w $8000
-		dc.w 320
-		dc.l TESTMARS_BG
-dest_data:	dc.w  32,-32
-		dc.w -32,-32
-		dc.w -32, 32
-		dc.w  32, 32
-		dc.w 274, 79
-		dc.w 199, 79
-		dc.w 199,142-1
-		dc.w 274,142-1
 rot_angle	dc.l 0
 ;
 ;
@@ -3066,7 +3079,8 @@ sizeof_marsram	ds.l 0
 
 			struct MarsRam_Sound
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b 8*7	; 8 bytes per channel, 4  (only 7 are usable)
+MarsSnd_PwmCache	ds.b $200*MAX_PWMCHNL
+MarsSnd_PwmControl	ds.b 8*MAX_PWMCHNL		; 8 bytes per channel
 sizeof_marssnd		ds.l 0
 			finish
 

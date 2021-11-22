@@ -63,11 +63,42 @@ gInsPwm	macro pitch,start,flags
 ; PWM pitches:
 ; -17 - 8000
 
-GemaTrk_blk_TEST:
+GemaTrk_blk_iguana:
+	binclude "sound/tracks/iguana_blk.bin"
+GemaTrk_patt_iguana:
+	binclude "sound/tracks/iguana_patt.bin"
+GemaTrk_ins_iguana:
+	gInsPwm -17,SmpIns_Beats_1,0
+	gInsPwm -17,SmpIns_Beats_2,0
+	gInsPwm -17,SmpIns_KickFunk,0
+	gInsPwm -17,SmpIns_SnareClash,0
+	gInsPwm -17,SmpIns_Atmosphere_1,1
+	gInsPwm -17,SmpIns_Lead_Guitar,1
+	gInsPwm -17,SmpIns_ViolinIguan,0
+	gInsPwm -17,SmpIns_Revolution,0
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+
+GemaTrk_blk_bemine:
 	binclude "sound/tracks/bemine_blk.bin"
-GemaTrk_patt_TEST:
+GemaTrk_patt_bemine:
 	binclude "sound/tracks/bemine_patt.bin"
-GemaTrk_ins_TEST:
+GemaTrk_ins_bemine:
 	gInsPwm -17,SmpIns_Bell_Ice,0
 	gInsPwm -17,SmpIns_Brass1_Hi,1
 	gInsPwm -17,SmpIns_Brass1_Low,1

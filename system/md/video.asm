@@ -659,9 +659,9 @@ Video_Copy:
 ; --------------------------------------------------------
 ; Load graphics using DMA
 ;
-; d0 | LONG - Art data
+; d0 | LONG - Graphics data
 ; d1 | WORD - Size
-; d2 | WORD - VRAM (cell)
+; d2 | WORD - VRAM destination (in cells)
 ; 
 ; Uses:
 ; d4-d5,a4
@@ -702,10 +702,6 @@ Video_LoadArt:
 		move.w	d4,d5
 		and.l	#$3FE0,d4
 		ori.w	#$4000,d4
-
-
-	; First write
-	; d5 -
 		lsr.w	#8,d5
 		lsr.w	#6,d5
 		andi.w	#%11,d5
@@ -715,21 +711,15 @@ Video_LoadArt:
 		lsr.w	#8,d7
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
-
-		move.w	#$0100,(z80_bus).l		; Stop Z80
-.wait:
-		btst	#0,(z80_bus).l			; Wait for it
-		bne.s	.wait
-
 		bsr	Sound_DMA_Pause
-		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
-		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
+		move.w	(sysmars_reg+dreqctl).l,d7
+		or.w	#%00000001,d7			; Set RV=1
 		move.w	d7,(sysmars_reg+dreqctl).l
  		move.w	d5,-(sp)
-		move.w	d4,(a4)				; d4 - First word
-		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
-		move.w	(sysmars_reg+dreqctl).l,d4	; Set RV=0
-		and.w	#%11111110,d4			; 68k ROM map returns to $880000/$900000
+		move.w	d4,(a4)				; *** d4 - First write
+		move.w	(sp)+,(a4)			; *** d5 - Second write (from stack)
+		move.w	(sysmars_reg+dreqctl).l,d4
+		and.w	#%11111110,d4			; Set RV=0
 		move.w	d4,(sysmars_reg+dreqctl).l
 		move.w	#$8100,d4			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d4
