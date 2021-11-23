@@ -2257,7 +2257,6 @@ slave_loop:
 		cmp/eq	#0,r0
 		bt	.TEST_1
 		and	#%11111110,r0
-; 		xor	r0,r0
 		mov.b	r0,@r1
 		stc	sr,@-r15		; Interrupts OFF
 		mov	#$F0,r0
@@ -2287,11 +2286,26 @@ slave_loop:
 	; *** GEMA PWM PLAYBACK DRIVER ***
 	; comm15: %BFCxxxxx
 	; B - Update PWM bit
-	; F - MID-ROM refill bit
-	;     any DMA on 68k
+	; F - PWM Refill flag for mid-reading
 	; C - data "clock" bit from Z80, copies data stored
 	;     on comm0,2,4,6,8,10,12 to PwmControl in pieces
 	;     (hardcoded to 4 passes on both Z80 and here)
+		mov	#_sysreg+comm15,r9	; control comm
+		mov.b	@r9,r0
+		and	#%01000000,r0
+		cmp/eq	#%01000000,r0
+		bf	.non_refill
+		stc	sr,@-r15
+		mov	#$F0,r0			; Disable interrupts
+		ldc	r0,sr
+		mov	#MarsSnd_Refill,r0
+		jsr	@r0
+		nop
+		mov.b	@r9,r0
+		and	#%10111111,r0
+		mov.b	r0,@r9
+		ldc	@r15+,sr
+.non_refill:
 		mov	#_sysreg+comm15,r9	; control comm
 		mov.b	@r9,r0
 		and	#%10000000,r0
@@ -2300,6 +2314,9 @@ slave_loop:
 		bra	.slv_noupd
 		nop
 .non_zero:
+		stc	sr,@-r15
+		mov	#$F0,r0			; Disable interrupts
+		ldc	r0,sr
 		mov	#MarsSnd_PwmControl,r7
 		mov	#4,r5			; number of passes
 .wait_1:
@@ -2322,6 +2339,7 @@ slave_loop:
 		mov.b	r0,@r9
 		dt	r5
 		bf	.wait_1
+		ldc	@r15+,sr
 
 		mov	#0,r1			; r1 - PWM slot
 		mov	#MarsSnd_PwmControl,r14
@@ -2469,7 +2487,7 @@ slave_loop:
 		add	#1,r14		; next PWM entry
 		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0		; Now we are free.
-		and	#%00111111,r0
+		and	#%01111111,r0
 		mov.b	r0,@r1
 .slv_noupd:
 	; *** END
