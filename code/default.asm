@@ -135,7 +135,7 @@ thisCode_Top:
 		lsr.w	#8,d7
 		btst	#bitJoyY,d7
 		beq.s	.noc_up
-		moveq	#1,d0
+		move.w	#1,d0
 		move.b	d0,(sysmars_reg+comm15)
 .noc_up:
 
@@ -309,10 +309,8 @@ thisCode_Top:
 
 ; test playlist
 .playlist:
-	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
+	dc.l GemaTrk_patt_TEST,GemaTrk_blk_TEST,GemaTrk_ins_TEST
 	dc.w $A,0
-	dc.l GemaTrk_patt_iguana,GemaTrk_blk_iguana,GemaTrk_ins_iguana
-	dc.w 3,1
 	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
 	dc.w 7,0
 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2

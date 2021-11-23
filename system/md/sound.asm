@@ -130,6 +130,8 @@ sndReq_sbyte:
 ; --------------------------------------------------------
 
 Sound_DMA_Pause:
+
+.retry:
 		bsr	sndLockZ80
 		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
 		bsr	sndUnlockZ80
@@ -137,18 +139,10 @@ Sound_DMA_Pause:
 		beq.s	.safe
 		moveq	#68,d7
 		dbf	d7,*
-		bra.s	Sound_DMA_Pause
+		bra.s	.retry
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
-		move.b	(sysmars_reg+comm15),d7
-		bset	#6,d7
-		move.b	d7,(sysmars_reg+comm15)
-
-.wait_res:
-		move.b	(sysmars_reg+comm15),d7
-		btst	#6,d7
-		bne.s	.wait_res
 		bra	sndUnlockZ80
 
 ; --------------------------------------------------------

@@ -167,7 +167,7 @@ wave_Flags	db 0			; WAVE playback flags (%10x: 1 loop / 0 no loop)
 palMode		db 0
 marsBlock	db 0		; 1 - to disable PWM comm
 marsUpd		db 0		; update PWM sound
-sbeatPtck	dw 208+4		; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 208-22	; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 
 ; --------------------------------------------------------
@@ -1042,11 +1042,10 @@ mars_scomm:
 		ld	(marsUpd),a
 .wait:
 		nop
-		ld	a,(iy+comm15)
-		and	11000000b	; check for both BUSY and FILL bits
-		or	a
+		ld	a,(iy+comm15)	; check if we got mid-process and
+		bit	6,a		; wait until it finishes
 		jr	nz,.wait
-		set	7,a		; set BUSY bit
+		set	6,a
 		ld	(iy+comm15),a
 		ld	c,4		; c - Passes
 .next_pass:
@@ -1072,7 +1071,7 @@ mars_scomm:
 		ld	(iy+comm15),a
 		rst	8
 .w_pass2:
-		ld	a,(iy+comm15)	; CLK done?
+		ld	a,(iy+comm15)	; CLK cleared?
 		bit	5,a
 		jr	nz,.w_pass2
 		dec	c
@@ -1318,7 +1317,7 @@ setupchip:
 		ld	c,a		; keep them as c
 		ld	a,d
 		and	0001b		; TODO: STEREO BIT
-		rra
+		rlca
 		or	c
 		or	b
 		ld	(ix+PWOUTF),a

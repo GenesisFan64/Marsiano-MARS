@@ -1,13 +1,14 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; PSG, FM, DAC and PWM instruments
+; PSG, FM, DAC and PWM instruments go here
 ;
-; Any 68k BANK ($880000 or $900000) must be set externally.
-; (macros add the bank automaticly for DAC)
-;
-; PWM Samples can be stored here BUT if the MD performs
-; any DMA (which sets the RV bit) the sample data will be gone.
+; Any 68k BANK must be set externally if required.
+; (macros add the bank automaticly)
 ; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; DAC samples
+; --------------------------------------------------------
 
 ; Special include macro for samples
 ; Works for both DAC and PWM
@@ -23,11 +24,6 @@ gSmpl macro locate,loop
 	endm
 
 	align 4		; FIRST ALIGN FOR PWMs
-
-; --------------------------------------------------------
-; DAC samples
-; --------------------------------------------------------
-
 DacIns_Magic2:
 	gSmpl "sound/instr/smpl/magic_2.wav",0
 DacIns_Snare_Gem:
@@ -42,10 +38,13 @@ DacIns_String1:
 	gSmpl "sound/instr/smpl/string_1.wav",0
 DacIns_LowString:
 	gSmpl "sound/instr/smpl/lowstring.wav",1200
+
 SmpIns_PIANO_1:
 	gSmpl "sound/instr/smpl/PIANO__1.wav",-1
 SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",284
+
+
 
 ; --------------------------------------------------------
 ; FM instruments/patches
