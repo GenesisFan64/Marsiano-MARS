@@ -85,11 +85,8 @@ thisCode_Top:
 		btst	#bitVint,d4
 		beq.s	.loop
 		bsr	System_Input
+	; Visual updates go here
 		add.l	#1,(RAM_Framecount).l
-.inside:	move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		bne.s	.inside
-
 		bsr	thisMode_Sprites
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.w	(RAM_BgCamCurr).l,d0
@@ -98,6 +95,10 @@ thisCode_Top:
 		move.w	d0,(vdp_data).l
 		asr.w	#1,d0
 		move.w	d0,(vdp_data).l
+.inside:	move.w	(vdp_ctrl),d4
+		btst	#bitVint,d4
+		bne.s	.inside
+	; Main loop is back
 		move.w	(RAM_MdlCurrMd).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0

@@ -9,6 +9,7 @@ MAX_PWMCHNL	equ	7
 		struct 0
 mchnsnd_enbl	ds.l 1
 mchnsnd_read	ds.l 1		; 0 - off
+mchnsnd_cchread	ds.l 1
 mchnsnd_bank	ds.l 1		; CS0-3 OR value
 mchnsnd_start	ds.l 1
 mchnsnd_end	ds.l 1
@@ -19,183 +20,8 @@ mchnsnd_vol	ds.l 1
 sizeof_sndchn	ds.l 0
 		finish
 
-; ====================================================================
-; ----------------------------------------------------------------
-; Mars PWM playback (Runs on PWM interrupt)
-;
-; READ/START/END/LOOP points are floating values (xxxxxx.00)
-;
-; r0-r9 only
-; ----------------------------------------------------------------
-
-; NUMCHANNELS	equ	4
-; PWMSIZE		equ	2	; number of elemts in the PWM structure
-;
-; PWMADDRESS	equ	4
-;
-; process_pwm:
-;
-
-MarsSound_ReadPwm:
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
-		mov	r6,@-r15
-		mov	r7,@-r15
-		mov	r8,@-r15
-		mov	r9,@-r15
-		sts	macl,@-r15
-
-; ------------------------------------------------
-;
-; .retry:
-		mov 	#0,r5			; LEFT start
-		mov 	#0,r6			; RIGHT start
-		mov	#MarsSnd_PwmChnls,r8
-		mov 	#MAX_PWMCHNL,r7
-.loop:
-		mov	@(mchnsnd_enbl,r8),r0
-		cmp/eq	#0,r0
-		bf	.on
-.silent:
-		mov	#$7F,r0
-		mov	r0,r2
-		bra	.skip
-		mov	r0,r1
-.on:
-		mov 	@(mchnsnd_read,r8),r4
-		mov 	@(mchnsnd_end,r8),r0
-		cmp/ge	r0,r4
-		bf	.read
-		mov 	@(mchnsnd_flags,r8),r0
-		tst	#%00001000,r0
-		bf	.loop_me
-		mov 	#0,r0
-		mov 	r0,@(mchnsnd_enbl,r8)
-		bra	.silent
-		nop
-.loop_me:
-		mov 	@(mchnsnd_start,r8),r4
-		add	r0,r4
-
-; read wave
-.read:
-		mov	#_sysreg+dreqctl,r1	; Check for RV bit (just in case)
-		mov.w	@r1,r0
-		tst	#$01,r0
-		bf	.silent
-
-		mov 	@(mchnsnd_flags,r8),r0
-		mov	#$00FFFFFF,r1	; limit BYTE
-		mov 	r4,r3
-		shlr8	r3
-		tst	#%00000100,r0
-		bt	.mono_a
-		add	#-1,r1		; limit WORD
-.mono_a
-		and	r1,r3
-		mov 	@(mchnsnd_bank,r8),r1
-		mov 	@(mchnsnd_pitch,r8),r9
-		or	r1,r3
-		mov.b	@r3+,r1
-		mov	r1,r2
-		tst	#%00000100,r0
-		bt	.mono
-		mov.b	@r3+,r2
-		shll	r9
-.mono:
-		add	r9,r4
-		mov	r4,@(mchnsnd_read,r8)
-		mov	#$FF,r3
-		and	r3,r1
-		and	r3,r2
-; 		mov	r1,r3
-; 		mov	r2,r4
-; 		shlr	r3
-; 		shlr	r4
-;
-		tst	#%00000010,r0	; LEFT enabled?
-		bf	.no_l
-		mov	#$7F,r1		; Force LEFT off
-.no_l:
-		tst	#%00000001,r0	; RIGHT enabled?
-		bf	.no_r
-		mov	#$7F,r2		; Force RIGHT off
-.no_r:
-		mov	@(mchnsnd_vol,r8),r9
-		cmp/pl	r9
-		bf	.skip
-		add	#1,r9
-		mulu	r9,r1
-		sts	macl,r4
-		shlr8	r4
-		sub	r4,r1
-		mulu	r9,r2
-		sts	macl,r4
-		shlr8	r4
-		sub	r4,r2
-		mov	#$7F,r3		; align wav to pwm
-		mulu	r9,r3
-		sts	macl,r3
-		shlr8	r3
-		add	r3,r1
-		add	r3,r2
-.skip:
-		add	#1,r1
-		add	#1,r2
-		add	r1,r5
-		add	r2,r6
-		add	#sizeof_sndchn,r8
-		dt	r7
-		bf	.loop
-
-	; ***This check is for emus only***
-	; It recreates what happens to the PWM
-	; in real hardware when it overflows
-; 		mov	#$3FF,r0
-; 		cmp/gt	r0,r5
-; 		bf	.lmuch
-; 		mov	r0,r5
-; .lmuch:	cmp/gt	r0,r6
-; 		bf	.rmuch
-; 		mov	r0,r6
-; .rmuch:
-		mov	#_sysreg+lchwidth,r3
-		mov	#_sysreg+rchwidth,r4
- 		mov.w	r5,@r3
- 		mov.w	r6,@r4
-; 		mov	#_sysreg+monowidth,r3	; Not needed on HW
-; 		mov.b	@r3,r0
-; 		tst	#$80,r0
-; 		bf	.retry
-
-		lds	@r15+,macl
-		mov	@r15+,r9
-		mov	@r15+,r8
-		mov	@r15+,r7
-		mov	@r15+,r6
-		mov	@r15+,r5
-		mov	@r15+,r4
-		mov	@r15+,r3
-		mov	@r15+,r2
-		rts
-		nop
-		align 4
-		ltorg
-
-; ; ====================================================================
-; ; ----------------------------------------------------------------
-; ; Mars PWM control (Runs on VBlank)
-; ; ----------------------------------------------------------------
-;
-; MarsSound_Run:
-; 		sts	pr,@-r15
-;
-; 		lds	@r15+,pr
-; 		rts
-; 		nop
-; 		align 4
+; *** PWM INTERRUPT MOVED TO SLAVE'S CACHE (see cache.asm)
+; Perfoms better in there.
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -385,9 +211,139 @@ MarsSound_PwmEnable:
 		nop
 		align 4
 
-; ====================================================================
+; --------------------------------------------------------
+; MarsSound_Refill
+;
+; Call this if MD wants to do DMA, which sets RV=1
+; starting from specific slot
+;
+; Uses:
+; r1-r8
+; --------------------------------------------------------
 
-; 		include "data/sound/instr_sdram.asm"
+MarsSnd_Refill:
+		mov	#MarsSnd_PwmChnls,r8
+		mov	#MAX_PWMCHNL,r6
+		mov	#sizeof_sndchn,r7
+		mov	#MarsSnd_PwmCache,r5
+.next_one:
+		mov	@(mchnsnd_enbl,r8),r0
+		cmp/eq	#0,r0
+		bt	.not_activ
+		mov	@(mchnsnd_bank,r8),r2
+		mov	#CS1,r0
+		cmp/eq	r0,r2
+		bf	.not_activ
+		mov	@(mchnsnd_read,r8),r4	; r4 - OLD READ pos
+		mov	r4,r3
+		shlr8	r3
+		add	r2,r3
+		mov	r5,r1
+		mov	#$80,r2
+.copy_now:
+		mov.b	@r3+,r0
+		mov.b	r0,@r1
+		dt	r2
+		bf/s	.copy_now
+		add	#1,r1
+		mov	#0,r1
+		mov	@(mchnsnd_enbl,r8),r0	; Finished?
+		cmp/eq	#1,r0
+		bf	.not_enbl
+		mov	@(mchnsnd_read,r8),r0
+		sub	r4,r0
+		cmp/pl	r0
+		bf	.got_low
+		mov	r0,r1
+.got_low:
+		mov	r1,@(mchnsnd_cchread,r8)
+; 		mov	#-1,r0
+; 		mov	r0,@(mchnsnd_enbl,r8)	; Set MINUS mode
+.not_enbl:
+
+; 		mov	#_DMASOURCE0,r1
+; 		mov	#_DMAOPERATION,r2
+; 		mov	r0,@r1			; set source address
+; 		add	#4,r1
+; 		mov	r5,@r1			; set destination address
+; 		add	#4,r1
+; 		mov	#$100,r0
+; 		mov	r0,@r1			; set length
+; 		add	#4,r1
+; 		mov	#0,r0
+; 		mov	r0,@r2			; Stop OPERATION
+; 		xor	r0,r0
+; 		mov	r0,@r1			; clear TE bit
+; 		mov	#%0101001011100001,r0	; transfer mode bits, ON
+; 		mov	r0,@r1			; load mode
+; 		stc	sr,@-r15
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov	#1,r0
+; 		mov	r0,@r2			; Start OPERATION
+; .wait_dma:
+; 		mov	@r1,r0
+; 		and	#%10,r0
+; 		tst	r0,r0
+; 		bt	.wait_dma
+; 		ldc	@r15+,sr
+; 		mov	@r1,r0
+; 		mov	#-1,r2
+; 		and	r2,r0
+; 		mov	r0,@r1
+
+	; Trick: check if READ pointer changed mid-tranfer
+	; r4 - OLD
+	; r3 - NEW
+	;
+	; TODO: check what happens if it loops.
+
+
+; 		mov	#_DMAOPERATION,r1
+; 		mov	#0,r0
+; 		mov	r0,@r1			; Start OPERATION
+; 		mov	#_DMACHANNEL0,r1
+; 		xor	r0,r0
+; 		mov	r0,@r1
+; 		mov	#%0101011011100000,r0	; transfer mode bits, but OFF
+; 		mov	r0,@r1
+
+; 		mov	#$100,r2
+; 		mov	#$000000FF,r1
+; .copy_now:
+; 		mov.b	@r4,r0
+; 		mov.b	r0,@r3
+; 		add	#1,r3
+; 		and	r1,r3
+; 		add	r5,r3
+; 		dt	r2
+; 		bf/s	.copy_now
+; 		add	#1,r4
+.not_activ:
+		mov	#$80,r0
+		add	r0,r5
+		dt	r6
+		bf/s	.next_one
+		add	r7,r8
+		rts
+		nop
+		align 4
+		ltorg
+
+; 		mov 	#sizeof_sndchn,r0
+; 		mulu	r1,r0
+; 		sts	macl,r0
+; 		add 	r0,r8
+; 		mov	@(mchnsnd_enbl,r8),r0
+; 		cmp/eq	#1,r0
+; 		bf	.off_1
+; ; 		mov	@(mchnsnd_read,r8),r0
+; 		mov	r2,@(mchnsnd_pitch,r8)
+; .off_1:
+; ; 		ldc	@r15+,sr
+; 		rts
+; 		nop
+; 		align 4
 
 ; ====================================================================
 

@@ -1043,7 +1043,7 @@ mars_scomm:
 .wait:
 		nop
 		ld	a,(iy+comm15)	; check if we got mid-process and
-		bit	6,a		; wait until it finishes
+		and	01100000b	; wait for both BUSY and FILL
 		jr	nz,.wait
 		set	6,a
 		ld	(iy+comm15),a
@@ -1067,12 +1067,12 @@ mars_scomm:
 		inc	hl
 		djnz	.next_comm
 		ld	a,(iy+comm15)	; Send CLK to Slave CMD
-		set	5,a
+		set	4,a
 		ld	(iy+comm15),a
 		rst	8
 .w_pass2:
 		ld	a,(iy+comm15)	; CLK cleared?
-		bit	5,a
+		bit	4,a
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass

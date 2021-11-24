@@ -143,6 +143,13 @@ Sound_DMA_Pause:
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
+		move.b	(sysmars_reg+comm15),d7
+		bset	#5,d7
+		move.b	d7,(sysmars_reg+comm15)
+.wait_mars:
+		move.b	(sysmars_reg+comm15),d7
+		btst	#5,d7
+		bne.s	.wait_mars
 		bra	sndUnlockZ80
 
 ; --------------------------------------------------------

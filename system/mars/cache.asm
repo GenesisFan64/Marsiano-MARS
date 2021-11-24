@@ -52,7 +52,6 @@ drwtsk_01:
 		mov	r9,@-r15
 		sts	macl,@-r15
 
-
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
 		mov.w   r0,@r1
@@ -821,12 +820,233 @@ CACHE_SLAVE:
 		phase $C0000000
 ; ------------------------------------------------
 
-	; code goes here...
+MarsSnd_PwmCache	ds.b $80*MAX_PWMCHNL
+
+; ------------------------------------------------
+; Mars PWM playback (Runs on PWM interrupt)
+; r0-r10 only
+; ------------------------------------------------
+
+; **** CRITICAL ROUTINE, MUST BE FAST ***
+
+MarsSound_ReadPwm:
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+		mov	r9,@-r15
+		mov	r10,@-r15
+		sts	macl,@-r15
+
+; ------------------------------------------------
+
+; 		mov	#MarsSnd_Active,r1
+; 		mov	#1,r0
+; 		mov	r0,@r1
+		mov	#MarsSnd_PwmCache,r10
+		mov	#MarsSnd_PwmChnls,r9	; r9 - Channel list
+		mov 	#MAX_PWMCHNL,r8		; r8 - Number of channels
+		mov 	#0,r7			; r7 - RIGHT BASE wave
+		mov 	#0,r6			; r6 - LEFT BASE wave
+.loop:
+		mov	@(mchnsnd_enbl,r9),r0	; Channel enabled? (non-Zero)
+		cmp/eq	#0,r0
+		bf	.on
+.silent:
+		mov	#$7F,r0
+		mov	r0,r2
+		bra	.skip
+		mov	r0,r1
+.on:
+		mov 	@(mchnsnd_read,r9),r4
+		mov	r4,r3
+		mov 	@(mchnsnd_end,r9),r0
+		mov	#$00FFFFFF,r1
+		shlr8	r3
+		shlr8	r0
+		and	r1,r3
+		and	r1,r0
+		cmp/hs	r0,r3
+		bf	.read
+		mov 	@(mchnsnd_flags,r9),r0
+		tst	#%00001000,r0
+		bf	.loop_me
+		mov 	#0,r0
+		mov 	r0,@(mchnsnd_enbl,r9)
+		bra	.silent
+		nop
+.loop_me:
+		mov	@(mchnsnd_loop,r9),r0
+		mov 	@(mchnsnd_start,r9),r4
+		add	r0,r4
+
+; read wave
+; r4 - WAVE READ pointer
+.read:
+		mov 	@(mchnsnd_pitch,r9),r5	; Check if sample is on ROM
+		mov 	@(mchnsnd_bank,r9),r2
+		mov	#CS1,r0
+		cmp/eq	r0,r2
+		bf	.not_rom
+		mov	#MarsSnd_RvBackup,r0
+		mov	@r0,r0
+		cmp/eq	#1,r0			; MINUS Mode requested from REFILL?
+		bt	.not_rom
+		mov	#_sysreg+dreqctl,r0	; Check if ROM is back on.
+		mov.w	@r0,r0
+		tst	#$01,r0
+		bf	.not_rom
+		mov	#MarsSnd_RvBackup,r0
+		mov	#0,r1
+		mov	r1,@r0
+.on_here:
+; 		mov	#_sysreg+dreqctl,r0	; TESTING ONLY
+; 		mov.w	@r0,r0			; If we got here on RV=1 something
+; 		tst	#$01,r0			; went wrong. (Note: affects CS3)
+; 		bf	*
+
+	; r1 - left WAV
+	; r3 - right WAV
+	; r4 - original READ point
+	; r5 - Pitch
+		mov 	@(mchnsnd_flags,r9),r0
+		mov	r5,r1
+		tst	#%00000100,r0
+		bt	.mono_c
+		shll	r1
+.mono_c:
+		mov	@(mchnsnd_cchread,r9),r3
+		mov	r3,r2
+		add	r1,r3
+		mov	#$7FFF,r1
+		and	r1,r3
+		mov	r3,@(mchnsnd_cchread,r9)
+		shlr8	r2
+		mov	r2,r3
+		add	r10,r3
+		mov.b	@r3+,r1
+		mov.b	@r3+,r3		; null if using MONO mode
+; 		mov	#$FF,r3
+; 		mov	r2,r1
+; 		add	r10,r1
+; 		mov.b	@r1,r1
+; 		add	#1,r2
+; 		and	r3,r2
+; 		mov	r2,r3
+; 		add	r10,r3
+; 		mov.b	@r3,r3
+		bra	.from_rv
+		nop
+
+; Play as normal
+; r0 - flags
+; r4 - READ pointer
+.not_rom:
+		mov 	@(mchnsnd_flags,r9),r0
+		mov 	r4,r3
+		shlr8	r3
+		mov	#$00FFFFFF,r1
+		tst	#%00000100,r0
+		bt	.mono_a
+		add	#-1,r1
+.mono_a:
+		and	r1,r3
+		or	r2,r3
+		mov.b	@r3+,r1
+		mov.b	@r3+,r3
+.from_rv:
+		mov	r1,r2
+		tst	#%00000100,r0
+		bt	.mono
+		mov	r3,r2
+		shll	r5
+.mono:
+		add	r5,r4
+		mov	r4,@(mchnsnd_read,r9)
+		mov	#$FF,r3
+		and	r3,r1
+		and	r3,r2
+		tst	#%00000010,r0	; LEFT enabled?
+		bf	.no_l
+		mov	#$7F,r1		; Force LEFT off
+.no_l:
+		tst	#%00000001,r0	; RIGHT enabled?
+		bf	.no_r
+		mov	#$7F,r2		; Force RIGHT off
+.no_r:
+		mov	@(mchnsnd_vol,r9),r0
+		cmp/pl	r0
+		bf	.skip
+		add	#1,r0
+		mulu	r0,r1
+		sts	macl,r4
+		shlr8	r4
+		sub	r4,r1
+		mulu	r0,r2
+		sts	macl,r4
+		shlr8	r4
+		sub	r4,r2
+		mov	#$7F,r4		; align wave to pwm
+		mulu	r0,r4
+		sts	macl,r4
+		shlr8	r4
+		add	r4,r1
+		add	r4,r2
+.skip:
+		add	#1,r1
+		add	#1,r2
+		add	r1,r6
+		add	r2,r7
+		mov	#$100,r0
+		add	r0,r10
+		dt	r8
+		bf/s	.loop
+		add	#sizeof_sndchn,r9
+
+	; ***This check is for emus only***
+	; It recreates what happens to the PWM
+	; in real hardware when it overflows
+; 		mov	#$3FF,r0
+; 		cmp/gt	r0,r5
+; 		bf	.lmuch
+; 		mov	r0,r5
+; .lmuch:	cmp/gt	r0,r6
+; 		bf	.rmuch
+; 		mov	r0,r6
+; .rmuch:
+		mov	#_sysreg+lchwidth,r1	; Write WAVE result
+		mov	#_sysreg+rchwidth,r2
+ 		mov.w	r6,@r1
+ 		mov.w	r7,@r2
+; 		mov	#_sysreg+monowidth,r3	; Works fine without this...
+; 		mov.b	@r3,r0
+; 		tst	#$80,r0
+; 		bf	.retry
+
+; 		mov	#MarsSnd_Active,r1
+; 		mov	#0,r0
+; 		mov	r0,@r1
+		lds	@r15+,macl
+		mov	@r15+,r10
+		mov	@r15+,r9
+		mov	@r15+,r8
+		mov	@r15+,r7
+		mov	@r15+,r6
+		mov	@r15+,r5
+		mov	@r15+,r4
+		mov	@r15+,r3
+		mov	@r15+,r2
+		rts
+		nop
+		align 4
+		ltorg
 
 ; ------------------------------------------------
 		align 4
-Cach_CurrPlygn	ds.b sizeof_polygn	; Current polygon in modelread
-Cach_TestTimer	dc.l 0
+MarsSnd_RvBackup	ds.l 1
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF
