@@ -51,7 +51,6 @@ MarsSound_Init:
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
-
 		mov	#0,r0
 		mov	#MarsSnd_PwmChnls,r1
 		mov	#MAX_PWMCHNL,r2
@@ -79,7 +78,10 @@ MarsSound_Init:
 ; r4 | Loop address (ignored if loop flag isn't set)
 ; r5 | Pitch ($xxxxxx.xx)
 ; r6 | Volume
-; r7 | Flags (Currently: %xxxxLSLR)
+; r7 | Flags (Currently: %xxxxslLR)
+;      LR - output
+;      l - LOOP flag
+;      s - Sample is in stereo
 ;
 ; Uses:
 ; r0,r8-r9
@@ -234,12 +236,21 @@ MarsSnd_Refill:
 		mov	#0,r1
 		mov	r1,@(mchnsnd_cchread,r8)
 		mov	r5,r1
-		mov	#$80,r2
+		mov	#$80/4,r2
 		mov	@(mchnsnd_read,r8),r4	; r4 - OLD READ pos
 		mov	r4,r3
 		shlr8	r3
 		add	r0,r3
 .copy_now:
+		mov.b	@r3+,r0
+		mov.b	r0,@r1
+		add	#1,r1
+		mov.b	@r3+,r0
+		mov.b	r0,@r1
+		add	#1,r1
+		mov.b	@r3+,r0
+		mov.b	r0,@r1
+		add	#1,r1
 		mov.b	@r3+,r0
 		mov.b	r0,@r1
 		dt	r2

@@ -53,6 +53,10 @@ gInsDac	macro pitch,start,flags
 	dc.b start&$FF,0,0,0
 	endm
 
+; flags:
+; %00SL
+; S - Sample is in stereo
+; L - Loop sample
 gInsPwm	macro pitch,start,flags
 	dc.b $D0|flags,pitch,((start>>24)&$FF),((start>>16)&$FF)
 	dc.b ((start>>8)&$FF),start&$FF,0,0
@@ -68,8 +72,8 @@ GemaTrk_patt_TEST:
 	binclude "sound/tracks/bemine_patt.bin"
 GemaTrk_ins_TEST:
 	gInsPwm -17,SmpIns_Bell_Ice,0
-	gInsPwm -17,SmpIns_Brass1_Hi,0
-	gInsPwm -17,SmpIns_Brass1_Low,0
+	gInsPwm -17,SmpIns_Brass1_Hi,%01
+	gInsPwm -17,SmpIns_Brass1_Low,%01
 	gInsFm  -24,FmIns_Bass_groove
 	gInsFm3   0,FmIns_Fm3_OpenHat
 	gInsPwm -17,SmpIns_Snare_jam,0

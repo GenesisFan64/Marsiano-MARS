@@ -134,17 +134,43 @@ thisCode_Top:
 .mode0_loop:
 		move.w	(Controller_1+on_press),d7
 		lsr.w	#8,d7
-		btst	#bitJoyY,d7
+		btst	#bitJoyZ,d7
 		beq.s	.noc_up
 		move.w	#1,d0
 		move.b	d0,(sysmars_reg+comm15)
 .noc_up:
+		move.w	(Controller_1+on_press),d7
+		lsr.w	#8,d7
+		btst	#bitJoyY,d7
+		beq.s	.noy
+		cmp.w	#1,(RAM_CurrIndx).w
+		beq.	.noy
+		add.w	#1,(RAM_CurrIndx).w
+		bsr	.print_cursor
+.noy:
+		move.w	(Controller_1+on_hold),d7
+		lsr.w	#8,d7
+		btst	#bitJoyX,d7
+		beq.s	.nox
+		tst.w	(RAM_CurrIndx).w
+		beq.s	.nox
+		sub.w	#1,(RAM_CurrIndx).w
+		bsr	.print_cursor
+.nox:
+
+; 		move.w	(Controller_1+on_press),d7
+; 		lsr.w	#8,d7
+; 		btst	#bitJoyY,d7
+; 		beq.s	.noc_up
+; 		move.w	#1,d0
+; 		move.b	d0,(sysmars_reg+comm15)
+; .noc_up:
 
 		move.w	#0,d0
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyDown,d7
 		beq.s	.noz_down
-		add.l	#$10000,(RAM_EmiPosY).w
+		add.l	#$14000,(RAM_EmiPosY).w
 		move.w	d0,(RAM_EmiChar).w
 		move.w	#1,(RAM_EmiUpd).w
 ; 		bsr	thisMode_Sprites
@@ -154,7 +180,7 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.noz_up
-		add.l	#-$10000,(RAM_EmiPosY).w
+		add.l	#-$14000,(RAM_EmiPosY).w
 		move.w	d0,(RAM_EmiChar).w
 		move.w	#1,(RAM_EmiUpd).w
 ; 		bsr	thisMode_Sprites
@@ -164,7 +190,7 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.noz_r
-		add.l	#$10000,(RAM_EmiPosX).w
+		add.l	#$14000,(RAM_EmiPosX).w
 		move.w	d0,(RAM_EmiChar).w
 		move.w	#1,(RAM_EmiUpd).w
 ; 		bsr	thisMode_Sprites
@@ -174,7 +200,7 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyLeft,d7
 		beq.s	.noz_l
-		add.l	#-$10000,(RAM_EmiPosX).w
+		add.l	#-$14000,(RAM_EmiPosX).w
 		move.w	d0,(RAM_EmiChar).w
 		move.w	#1,(RAM_EmiUpd).w
 ; 		bsr	thisMode_Sprites
@@ -212,18 +238,12 @@ thisCode_Top:
 		move.w	(Controller_1+on_hold),d7
 		and.w	#JoyB,d7
 		beq.s	.nob
-; 		cmp.w	#1,(RAM_CurrIndx).w
-; 		beq.	.nob
-; 		add.w	#1,(RAM_CurrIndx).w
-; 		bsr	.print_cursor
 		add.w	#1,(a1)
 		bsr	.print_cursor
 .nob:
 		move.w	(Controller_1+on_hold),d7
 		and.w	#JoyA,d7
 		beq.s	.noa
-; 		tst.w	(RAM_CurrIndx).w
-; 		beq.s	.noa
 		sub.w	#1,(a1)
 		bsr	.print_cursor
 .noa:
@@ -507,8 +527,8 @@ str_Title:
 		dc.b "Track index -----",$A,$A
 		dc.b "  Sound_TrkPlay",$A
 		dc.b "  Sound_TrkStop",$A
-		dc.b "  Sound_TrkPause",$A
-		dc.b "  Sound_TrkResume",$A
+		dc.b "  Sound_TrkPause**",$A
+		dc.b "  Sound_TrkResume**",$A
 		dc.b "  Sound_TrkTicks",$A
 		dc.b "  Sound_GlbTempo",0
 		align 2

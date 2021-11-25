@@ -2280,36 +2280,50 @@ slave_loop:
 ; 		mov	#MarsSound_SetPwm,r0
 ; 		jsr	@r0
 ; 		nop
-; 		mov	#1,r1
-; 		mov	#PWM_STEREO,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%1111,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
+		mov	#0,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%1011,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+		mov	#1,r1
+		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO_e,r3
+		mov	#0,r4
+		mov	#$100,r5
+		mov	#0,r6
+		mov	#%1011,r7
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
 		ldc	@r15+,sr
 .TEST_1:
 
 	; *** GEMA PWM DRIVER
-	; %BCFRxxxx
-	; B - BUSY, tells Z80 we are processing channels
-	; F - FILL, requests to copy a small amount of sample data
-	;     so wave playback keeps playing when the Genesis is
-	;     doing it's DMA transfers, set R bit after
-	;     F is cleared
-	; C - CLOCK:
-	;     First set BUSY to 1, the Z80 will copy the pwmcom
-	;     buffer to comms 0,2,4,6,8,10,12 then it sets
-	;     this bit to transfer those bytes to the
-	;     MarsSnd_PwmControl buffer, in packs of 4 (hardcoded
-	;     on both CPUs), clears when it finished processing
-	; R - PWM wave-backup mode, MUST set FILL bit first.
-	;     to read from stored samples
+	; %RCIOxxxx
+	; R - REQUEST
+	;     Request new PWM channels to play from the Z80,
+	;     requires usage of the next bit:
+	; C - CLOCK, for the Z80-to-SH2 transfer part
+	;     The Z80 will copy the pwmcom buffer to
+	;     comms 0,2,4,6,8,10,12, write CLOCK and the SH2 side
+	;     will copy those bytes to the MarsSnd_PwmControl buffer
+	;     in packs of 4 (hardcoded on both CPUs),
+	;     clears when it finished processing
+	; I - PWM RV-protection enter
+	;     Makes a temporal backup of the playing sample in
+	;     CACHE and sets a RV-backup flag so it keeps playing
+	;     the sample even if the Genesis side is doing DMA
+	;     (Only for samples stored in the ROM area)
+	; O - PWM RV-protection exit
+	;     Set this after ALL DMA task from the Genesis side
+	;     are finished.
 	;
-	; other bits are free to use
+	; xxxx bits are free to use
 	;
 		mov	#_sysreg+comm15,r9	; control comm
 		mov.b	@r9,r0
@@ -2320,6 +2334,7 @@ slave_loop:
 		bra	.no_ztrnsfr
 		nop
 .non_zero:
+	; TRANSFER START
 		mov	#MarsSnd_PwmControl,r7
 		mov	#4,r5			; number of passes
 .wait_1:
@@ -2416,7 +2431,7 @@ slave_loop:
 		add	#8,r13
 		mov	r0,r5
 		and	#%11111100,r0	; skip MSB pitch bits
-		mov	r0,r6
+		mov	r0,r6		; r6 - Volume
 		mov	r5,r0		; r5 - Get pitch MSB bits
 		and	#%00000011,r0
 		shll8	r0
@@ -2429,7 +2444,7 @@ slave_loop:
 
 		mov.b	@r13,r0		; flags | SH2 BANK
 		add	#8,r13
-		mov	r0,r7
+		mov	r0,r7		; r7 - Flags
 		and	#%1111,r0
 		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
 		shll16	r8

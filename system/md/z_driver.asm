@@ -1040,13 +1040,22 @@ mars_scomm:
 		rst	8
 		xor	a
 		ld	(marsUpd),a
-.wait:
+.wait_enter:
 		nop
-		ld	a,(iy+comm15)	; check if we got mid-process and
-		and	10100000b	; wait for both BUSY and FILL
-		jr	nz,.wait
+		ld	a,(iy+comm15)	; check if we got mid-process
+		and	10110000b
+		or	a
+		jr	nz,.wait_enter
 		set	7,a
 		ld	(iy+comm15),a
+		nop
+		nop
+.wait_other:
+		nop
+		ld	a,(iy+comm15)
+		and	00110000b
+		or	a
+		jr	nz,.wait_other
 		ld	c,4		; c - Passes
 .next_pass:
 		push	iy
@@ -1311,13 +1320,14 @@ setupchip:
 		ld	a,(hl)		; SH2 BANK
 		inc	hl
 		and	00001111b
-		ld	b,a
+		ld	b,a		; b - Section, ROM or SDRAM
 		ld	a,(ix+PWOUTF)
-		and	11110000b	; filter flags
-		ld	c,a		; keep them as c
+		and	00110000b	; keep flag LR
+		ld	c,a		; save them as C
 		ld	a,d
-		and	0001b		; TODO: STEREO BIT
-		rlca
+		and	00000011b	; Stereo|Loop bits
+		rrca			; carry...
+		rrca
 		or	c
 		or	b
 		ld	(ix+PWOUTF),a

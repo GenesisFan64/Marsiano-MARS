@@ -39,6 +39,6 @@ SmpIns_SnrTom_1:
 
 ; --------------------------------------------------------
 
-; PWM_STEREO:	binclude "sound/TEST_MARS.wav",$2C,$240000
-; PWM_STEREO_e:
-; 		align 4
+PWM_STEREO:	binclude "sound/TEST_MARS.wav",$2C,$300000
+PWM_STEREO_e:
+		align 4

@@ -869,7 +869,7 @@ MarsSound_ReadPwm:
 		cmp/hs	r0,r3
 		bf	.read
 		mov 	@(mchnsnd_flags,r9),r0
-		tst	#%00001000,r0
+		tst	#%00000100,r0
 		bf	.loop_me
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_enbl,r9)
@@ -901,7 +901,7 @@ MarsSound_ReadPwm:
 	; r5 - Pitch
 		mov 	@(mchnsnd_flags,r9),r0
 		mov	r5,r1
-		tst	#%00000100,r0
+		tst	#%00001000,r0
 		bt	.mono_c
 		shll	r1
 .mono_c:
@@ -933,7 +933,7 @@ MarsSound_ReadPwm:
 		mov 	r4,r3
 		shlr8	r3
 		mov	#$00FFFFFF,r1
-		tst	#%00000100,r0
+		tst	#%00001000,r0
 		bt	.mono_a
 		add	#-1,r1
 .mono_a:
@@ -946,7 +946,7 @@ MarsSound_ReadPwm:
 ; 		bt	*
 .from_rv:
 		mov	r1,r2
-		tst	#%00000100,r0
+		tst	#%00001000,r0
 		bt	.mono
 		mov	r3,r2
 		shll	r5
