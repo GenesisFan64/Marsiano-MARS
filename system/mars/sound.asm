@@ -91,19 +91,13 @@ MarsSound_SetPwm:
 		mulu	r1,r0
 		sts	macl,r0
 		add 	r0,r8
-; 		stc	sr,@-r15
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_enbl,r8)
-; 		ldc	@r15+,sr
-		mov 	r0,@(mchnsnd_read,r8)
-		mov 	r0,@(mchnsnd_bank,r8)
-
+; 		mov 	r0,@(mchnsnd_read,r8)
+; 		mov 	r0,@(mchnsnd_bank,r8)
 		mov 	r5,@(mchnsnd_pitch,r8)
 		mov 	r6,@(mchnsnd_vol,r8)
 		mov 	r7,@(mchnsnd_flags,r8)
-
 		mov 	r2,r0				; Set MSB
 		mov 	#$FF000000,r9
 		and 	r9,r0
@@ -221,44 +215,45 @@ MarsSound_PwmEnable:
 ; r1-r8
 ; --------------------------------------------------------
 
+; PWM interrupt is still enabled while doing this.
+
 MarsSnd_Refill:
 		mov	#MarsSnd_PwmChnls,r8
 		mov	#MAX_PWMCHNL,r6
 		mov	#sizeof_sndchn,r7
 		mov	#MarsSnd_PwmCache,r5
 .next_one:
-		mov	@(mchnsnd_enbl,r8),r0
-		cmp/eq	#0,r0
-		bt	.not_activ
-		mov	@(mchnsnd_bank,r8),r2
-		mov	#CS1,r0
-		cmp/eq	r0,r2
+		mov	@(mchnsnd_enbl,r8),r0	; Finished already?
+		cmp/eq	#1,r0
+		bf	.not_enbl
+		mov	@(mchnsnd_bank,r8),r0
+		mov	#CS1,r2
+		cmp/eq	r2,r0
 		bf	.not_activ
+
+		mov	#0,r1
+		mov	r1,@(mchnsnd_cchread,r8)
+		mov	r5,r1
+		mov	#$80,r2
 		mov	@(mchnsnd_read,r8),r4	; r4 - OLD READ pos
 		mov	r4,r3
 		shlr8	r3
-		add	r2,r3
-		mov	r5,r1
-		mov	#$80,r2
+		add	r0,r3
 .copy_now:
 		mov.b	@r3+,r0
 		mov.b	r0,@r1
 		dt	r2
 		bf/s	.copy_now
 		add	#1,r1
-		mov	#0,r1
-		mov	@(mchnsnd_enbl,r8),r0	; Finished?
-		cmp/eq	#1,r0
-		bf	.not_enbl
-		mov	@(mchnsnd_read,r8),r0
-		sub	r4,r0
-		cmp/pl	r0
-		bf	.got_low
-		mov	r0,r1
-.got_low:
-		mov	r1,@(mchnsnd_cchread,r8)
-; 		mov	#-1,r0
-; 		mov	r0,@(mchnsnd_enbl,r8)	; Set MINUS mode
+
+; 		mov	#0,r1
+; 		mov	@(mchnsnd_enbl,r8),r0	; Finished already?
+; 		cmp/eq	#1,r0
+; 		bf	.got_low
+; 		mov	@(mchnsnd_read,r8),r1
+; 		sub	r4,r1
+; .got_low:
+; 		mov	r1,@(mchnsnd_cchread,r8)
 .not_enbl:
 
 ; 		mov	#_DMASOURCE0,r1
@@ -291,34 +286,6 @@ MarsSnd_Refill:
 ; 		mov	#-1,r2
 ; 		and	r2,r0
 ; 		mov	r0,@r1
-
-	; Trick: check if READ pointer changed mid-tranfer
-	; r4 - OLD
-	; r3 - NEW
-	;
-	; TODO: check what happens if it loops.
-
-
-; 		mov	#_DMAOPERATION,r1
-; 		mov	#0,r0
-; 		mov	r0,@r1			; Start OPERATION
-; 		mov	#_DMACHANNEL0,r1
-; 		xor	r0,r0
-; 		mov	r0,@r1
-; 		mov	#%0101011011100000,r0	; transfer mode bits, but OFF
-; 		mov	r0,@r1
-
-; 		mov	#$100,r2
-; 		mov	#$000000FF,r1
-; .copy_now:
-; 		mov.b	@r4,r0
-; 		mov.b	r0,@r3
-; 		add	#1,r3
-; 		and	r1,r3
-; 		add	r5,r3
-; 		dt	r2
-; 		bf/s	.copy_now
-; 		add	#1,r4
 .not_activ:
 		mov	#$80,r0
 		add	r0,r5

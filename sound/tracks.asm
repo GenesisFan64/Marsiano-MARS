@@ -68,8 +68,8 @@ GemaTrk_patt_TEST:
 	binclude "sound/tracks/bemine_patt.bin"
 GemaTrk_ins_TEST:
 	gInsPwm -17,SmpIns_Bell_Ice,0
-	gInsPwm -17,SmpIns_Brass1_Hi,1
-	gInsPwm -17,SmpIns_Brass1_Low,1
+	gInsPwm -17,SmpIns_Brass1_Hi,0
+	gInsPwm -17,SmpIns_Brass1_Low,0
 	gInsFm  -24,FmIns_Bass_groove
 	gInsFm3   0,FmIns_Fm3_OpenHat
 	gInsPwm -17,SmpIns_Snare_jam,0

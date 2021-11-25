@@ -38,13 +38,10 @@ DacIns_String1:
 	gSmpl "sound/instr/smpl/string_1.wav",0
 DacIns_LowString:
 	gSmpl "sound/instr/smpl/lowstring.wav",1200
-
 SmpIns_PIANO_1:
 	gSmpl "sound/instr/smpl/PIANO__1.wav",-1
 SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",284
-
-
 
 ; --------------------------------------------------------
 ; FM instruments/patches

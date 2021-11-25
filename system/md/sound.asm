@@ -143,7 +143,7 @@ Sound_DMA_Pause:
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
-		move.b	(sysmars_reg+comm15),d7
+		move.b	(sysmars_reg+comm15),d7		; Request PWM Backup
 		bset	#5,d7
 		move.b	d7,(sysmars_reg+comm15)
 .wait_mars:
@@ -163,6 +163,13 @@ Sound_DMA_Resume:
 ; 		or.w	#$700,sr
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
+		move.b	(sysmars_reg+comm15),d7		; Request PWM Restore
+		bset	#4,d7
+		move.b	d7,(sysmars_reg+comm15)
+.wait_mars:
+		move.b	(sysmars_reg+comm15),d7
+		btst	#4,d7
+		bne.s	.wait_mars
 		bsr	sndUnlockZ80
 ; 		move.w	(sp)+,sr
 		rts

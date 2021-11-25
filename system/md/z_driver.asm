@@ -97,7 +97,7 @@ FMFRQL		equ	30
 PWCOM		equ	0
 PWPTH_V		equ	8	; Volume | Pitch MSB
 PWPHL		equ	16	; Pitch LSB
-PWOUTF		equ	24	; Output mode/bits | SH2 view area (ROM or SDRAM)
+PWOUTF		equ	24	; Output mode/bits | SH2 section (ROM $02 or SDRAM $06)
 PWINSH		equ	32	; 24-bit sample address
 PWINSM		equ	40
 PWINSL		equ	48
@@ -1043,9 +1043,9 @@ mars_scomm:
 .wait:
 		nop
 		ld	a,(iy+comm15)	; check if we got mid-process and
-		and	01100000b	; wait for both BUSY and FILL
+		and	10100000b	; wait for both BUSY and FILL
 		jr	nz,.wait
-		set	6,a
+		set	7,a
 		ld	(iy+comm15),a
 		ld	c,4		; c - Passes
 .next_pass:
@@ -1067,12 +1067,12 @@ mars_scomm:
 		inc	hl
 		djnz	.next_comm
 		ld	a,(iy+comm15)	; Send CLK to Slave CMD
-		set	4,a
+		set	6,a
 		ld	(iy+comm15),a
 		rst	8
 .w_pass2:
 		ld	a,(iy+comm15)	; CLK cleared?
-		bit	4,a
+		bit	6,a
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass

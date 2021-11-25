@@ -843,9 +843,6 @@ MarsSound_ReadPwm:
 
 ; ------------------------------------------------
 
-; 		mov	#MarsSnd_Active,r1
-; 		mov	#1,r0
-; 		mov	r0,@r1
 		mov	#MarsSnd_PwmCache,r10
 		mov	#MarsSnd_PwmChnls,r9	; r9 - Channel list
 		mov 	#MAX_PWMCHNL,r8		; r8 - Number of channels
@@ -876,6 +873,8 @@ MarsSound_ReadPwm:
 		bf	.loop_me
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_enbl,r9)
+		mov	@(mchnsnd_start,r9),r0
+		mov	r0,@(mchnsnd_start,r9)
 		bra	.silent
 		nop
 .loop_me:
@@ -891,22 +890,10 @@ MarsSound_ReadPwm:
 		mov	#CS1,r0
 		cmp/eq	r0,r2
 		bf	.not_rom
-		mov	#MarsSnd_RvBackup,r0
-		mov	@r0,r0
-		cmp/eq	#1,r0			; MINUS Mode requested from REFILL?
-		bt	.not_rom
-		mov	#_sysreg+dreqctl,r0	; Check if ROM is back on.
-		mov.w	@r0,r0
-		tst	#$01,r0
+		mov	#MarsSnd_RvMode,r1
+		mov	@r1,r0
+		cmp/eq	#1,r0
 		bf	.not_rom
-		mov	#MarsSnd_RvBackup,r0
-		mov	#0,r1
-		mov	r1,@r0
-.on_here:
-; 		mov	#_sysreg+dreqctl,r0	; TESTING ONLY
-; 		mov.w	@r0,r0			; If we got here on RV=1 something
-; 		tst	#$01,r0			; went wrong. (Note: affects CS3)
-; 		bf	*
 
 	; r1 - left WAV
 	; r3 - right WAV
@@ -918,26 +905,13 @@ MarsSound_ReadPwm:
 		bt	.mono_c
 		shll	r1
 .mono_c:
-		mov	@(mchnsnd_cchread,r9),r3
-		mov	r3,r2
-		add	r1,r3
-		mov	#$7FFF,r1
-		and	r1,r3
-		mov	r3,@(mchnsnd_cchread,r9)
+		mov	@(mchnsnd_cchread,r9),r2
 		shlr8	r2
-		mov	r2,r3
-		add	r10,r3
-		mov.b	@r3+,r1
-		mov.b	@r3+,r3		; null if using MONO mode
-; 		mov	#$FF,r3
-; 		mov	r2,r1
-; 		add	r10,r1
-; 		mov.b	@r1,r1
-; 		add	#1,r2
-; 		and	r3,r2
-; 		mov	r2,r3
-; 		add	r10,r3
-; 		mov.b	@r3,r3
+		mov	#$7F,r1
+		and	r1,r2
+		add	r10,r2
+		mov.b	@r2+,r1
+		mov.b	@r2+,r3			; null in MONO samples
 		bra	.from_rv
 		nop
 
@@ -945,6 +919,16 @@ MarsSound_ReadPwm:
 ; r0 - flags
 ; r4 - READ pointer
 .not_rom:
+; 		mov	#_sysreg+comm15,r0	; *** TESTING
+; 		mov.w	@r0,r0
+; 		and	#%00010000,r0
+; 		tst	r0,r0
+; 		bf	*
+; 		mov	#_sysreg+dreqctl,r0
+; 		mov.w	@r0,r0
+; 		tst	#$01,r0
+; 		bf	*			; *** TESTING
+
 		mov 	@(mchnsnd_flags,r9),r0
 		mov 	r4,r3
 		shlr8	r3
@@ -957,6 +941,9 @@ MarsSound_ReadPwm:
 		or	r2,r3
 		mov.b	@r3+,r1
 		mov.b	@r3+,r3
+; 		mov	#$7F,r2
+; 		cmp/eq	r2,r1
+; 		bt	*
 .from_rv:
 		mov	r1,r2
 		tst	#%00000100,r0
@@ -966,6 +953,9 @@ MarsSound_ReadPwm:
 .mono:
 		add	r5,r4
 		mov	r4,@(mchnsnd_read,r9)
+		mov	@(mchnsnd_cchread,r9),r3
+		add	r5,r3
+		mov	r3,@(mchnsnd_cchread,r9)
 		mov	#$FF,r3
 		and	r3,r1
 		and	r3,r2
@@ -1000,7 +990,7 @@ MarsSound_ReadPwm:
 		add	#1,r2
 		add	r1,r6
 		add	r2,r7
-		mov	#$100,r0
+		mov	#$80,r0
 		add	r0,r10
 		dt	r8
 		bf/s	.loop
@@ -1025,10 +1015,6 @@ MarsSound_ReadPwm:
 ; 		mov.b	@r3,r0
 ; 		tst	#$80,r0
 ; 		bf	.retry
-
-; 		mov	#MarsSnd_Active,r1
-; 		mov	#0,r0
-; 		mov	r0,@r1
 		lds	@r15+,macl
 		mov	@r15+,r10
 		mov	@r15+,r9
@@ -1046,8 +1032,8 @@ MarsSound_ReadPwm:
 
 ; ------------------------------------------------
 		align 4
-MarsSnd_RvBackup	ds.l 1
-
+MarsSnd_RvMode	ds.l 1
+MarsSnd_Active	ds.l 1
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF
 CACHE_SLAVE_E:

@@ -2261,43 +2261,61 @@ slave_loop:
 		stc	sr,@-r15		; Interrupts OFF
 		mov	#$F0,r0
 		mov	#0,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
+		mov	#SmpIns_Bell_Ice+6,r2
+		mov	#SmpIns_Bell_Ice+$3B2A,r3
 		mov	#0,r4
-		mov	#$100,r5
+		mov	#$80,r5
 		mov	#0,r6
-		mov	#%1111,r7
+		mov	#%1011,r7
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
-		mov	#1,r1
-		mov	#PWM_STEREO,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%1111,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
+; 		mov	#1,r1
+; 		mov	#SmpIns_Brass1_Low+6,r2
+; 		mov	#SmpIns_Brass1_Low+$3FD8,r3
+; 		mov	#0,r4
+; 		mov	#$30,r5
+; 		mov	#0,r6
+; 		mov	#%1011,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#1,r1
+; 		mov	#PWM_STEREO,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%1111,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
 		ldc	@r15+,sr
 .TEST_1:
 
-	; *** TRANSFER START
-	; %xBFCxxxx
-	; B - BUSY (tell we are processing requests)
-	; F - FILL flag, request a copy of a small section
-	;     WAVE data from ROM as backup when the Genesis is
-	;     performing it's DMA transfers
+	; *** GEMA PWM DRIVER
+	; %BCFRxxxx
+	; B - BUSY, tells Z80 we are processing channels
+	; F - FILL, requests to copy a small amount of sample data
+	;     so wave playback keeps playing when the Genesis is
+	;     doing it's DMA transfers, set R bit after
+	;     F is cleared
 	; C - CLOCK:
-	;     Z80 side puts the data to transfer on
-	;     comms 0,2,4,6,8,10,12 then it sets this bit
-	;     then this code will process those comms and
-	;     store them in PwmControl buffer
+	;     First set BUSY to 1, the Z80 will copy the pwmcom
+	;     buffer to comms 0,2,4,6,8,10,12 then it sets
+	;     this bit to transfer those bytes to the
+	;     MarsSnd_PwmControl buffer, in packs of 4 (hardcoded
+	;     on both CPUs), clears when it finished processing
+	; R - PWM wave-backup mode, MUST set FILL bit first.
+	;     to read from stored samples
+	;
+	; other bits are free to use
+	;
 		mov	#_sysreg+comm15,r9	; control comm
 		mov.b	@r9,r0
-		and	#%01000000,r0
-		cmp/eq	#%01000000,r0
+		mov	#%10000000,r1
+		and	r1,r0
+		cmp/eq	r1,r0
 		bt	.non_zero
 		bra	.no_ztrnsfr
 		nop
@@ -2308,7 +2326,7 @@ slave_loop:
 		nop
 		nop
 		mov.b	@r9,r0			; wait first CLOCK
-		and	#%00010000,r0		; from Z80
+		and	#%01000000,r0		; from Z80
 		cmp/pl	r0
 		bf	.wait_1
 		mov	#7,r6
@@ -2320,7 +2338,7 @@ slave_loop:
 		bf/s	.copy_1
 		add	#2,r7
 		mov.b	@r9,r0			; tell Z80 CLK finished
-		and	#%11101111,r0
+		and	#%10111111,r0
 		mov.b	r0,@r9
 		dt	r5
 		bf	.wait_1
@@ -2472,33 +2490,41 @@ slave_loop:
 		add	#1,r14		; next PWM entry
 		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0		; Now we are free.
-		and	#%10111111,r0
+		and	#%01111111,r0
 		mov.b	r0,@r1
 .no_ztrnsfr:
+
+	; PWM backup enter/exit bits
+	; In case Genesis side wants to do
+	; DMA transfers
+		mov	#_sysreg+comm15,r9
 		mov.b	@r9,r0
 		and	#%00100000,r0
 		cmp/eq	#%00100000,r0
-		bf	.no_refill
-.make_sure:	mov	#_sysreg+dreqctl,r0
-		mov.w	@r0,r0
-		tst	#$01,r0
-		bf	.make_sure
+		bf	.refill_in
 		mov	#MarsSnd_Refill,r0
 		jsr	@r0
 		nop
-		stc	sr,@-r15		; Interrupts OFF
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov	#MarsSnd_RvBackup,r1
+		mov	#MarsSnd_RvMode,r1
 		mov	#1,r0
 		mov	r0,@r1
 		mov.b	@r9,r0			; Refill is ready.
 		and	#%11011111,r0
 		mov.b	r0,@r9
-		ldc	@r15+,sr
-.no_refill:
-	; *** END PWM control code
-	; for GEMA
+.refill_in:
+		mov	#_sysreg+comm15,r9
+		mov.b	@r9,r0
+		and	#%00010000,r0
+		cmp/eq	#%00010000,r0
+		bf	.refill_out
+		mov	#MarsSnd_RvMode,r1
+		mov	#0,r0
+		mov	r0,@r1
+		mov.b	@r9,r0
+		and	#%11101111,r0
+		mov.b	r0,@r9
+.refill_out:
+	; *** END PWM driver for GEMA
 
 		bra	slave_loop
 		nop
@@ -2506,18 +2532,18 @@ slave_loop:
 		ltorg
 
 		align 4
-this_polygon:
-		dc.w $8000
-		dc.w 320
-		dc.l TESTMARS_BG
-dest_data:	dc.w  32,-32
-		dc.w -32,-32
-		dc.w -32, 32
-		dc.w  32, 32
-		dc.w 274, 79
-		dc.w 199, 79
-		dc.w 199,142-1
-		dc.w 274,142-1
+; this_polygon:
+; 		dc.w $8000
+; 		dc.w 320
+; 		dc.l TESTMARS_BG
+; dest_data:	dc.w  32,-32
+; 		dc.w -32,-32
+; 		dc.w -32, 32
+; 		dc.w  32, 32
+; 		dc.w 274, 79
+; 		dc.w 199, 79
+; 		dc.w 199,142-1
+; 		dc.w 274,142-1
 rot_angle	dc.l 0
 ;
 ;

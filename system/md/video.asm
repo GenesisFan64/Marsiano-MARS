@@ -402,7 +402,7 @@ Video_Print:
 
 	; get value
 		move.w	4(a5),d6
-		
+
 		cmp.w	#1,d6		; byte?
 		bne.s	.vbyte
 		move.b	(a4),d4
@@ -715,11 +715,6 @@ Video_LoadArt:
 		lsr.w	#8,d7
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
-
-		move.w	#$0100,(z80_bus).l		; Stop Z80
-.wait:
-		btst	#0,(z80_bus).l			; Wait for it
-		bne.s	.wait
 
 		bsr	Sound_DMA_Pause
 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
