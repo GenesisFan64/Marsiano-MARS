@@ -209,7 +209,63 @@ System_Random:
 		move.l	d4,(RAM_SysRandVal).l
 		move.l	d4,d0
 		rts
-		
+
+; --------------------------------------------------------
+; System_SineWave_Cos / System_SineWave
+;
+; Read sinewave value
+;
+; Input:
+; d0 | WORD - Tan
+; d1 | WORD - Multiply by
+;
+; Output:
+; d2 | WORD - Result
+; --------------------------------------------------------
+
+System_SineWave_Cos:
+		movem.w	d0,-(sp)
+		moveq	#0,d2
+		add.b	#$40,d0
+		move.b	d0,d2
+		asl.b	#1,d2
+		move.w	MdSys_SineData(pc,d2.w),d2
+		mulu.w	d1,d2
+		or.b	d0,d0
+		bpl.s	.dont_neg
+		neg.l	d2
+.dont_neg:
+		movem.w	(sp)+,d0
+		rts
+
+System_SineWave:
+		movem.w	d0,-(sp)
+		and.w	#$7F,d0
+		asl.w	#1,d0
+		move.w	MdSys_SineData(pc,d0.w),d2
+		mulu.w	d1,d2
+		movem.w	(sp)+,d0
+		subq.l	#8,d2
+		or.b	d0,d0
+		bpl.s	.dont_neg
+		neg.l	d2
+.dont_neg:
+		rts
+
+MdSys_SineData:	dc.w 0,	6, $D, $13, $19, $1F, $26, $2C,	$32, $38, $3E
+		dc.w $44, $4A, $50, $56, $5C, $62, $68,	$6D, $73, $79
+		dc.w $7E, $84, $89, $8E, $93, $98, $9D,	$A2, $A7, $AC
+		dc.w $B1, $B5, $B9, $BE, $C2, $C6, $CA,	$CE, $D1, $D5
+		dc.w $D8, $DC, $DF, $E2, $E5, $E7, $EA,	$ED, $EF, $F1
+		dc.w $F3, $F5, $F7, $F8, $FA, $FB, $FC,	$FD, $FE, $FF
+		dc.w $FF, $100,	$100, $100, $100, $100,	$FF, $FF, $FE
+		dc.w $FD, $FC, $FB, $FA, $F8, $F7, $F5,	$F3, $F1, $EF
+		dc.w $ED, $EA, $E7, $E5, $E2, $DF, $DC,	$D8, $D5, $D1
+		dc.w $CE, $CA, $C6, $C2, $BE, $B9, $B5,	$B1, $AC, $A7
+		dc.w $A2, $9D, $98, $93, $8E, $89, $84,	$7E, $79, $73
+		dc.w $6D, $68, $62, $5C, $56, $50, $4A,	$44, $3E, $38
+		dc.w $32, $2C, $26, $1F, $19, $13, $D, 6
+
 ; --------------------------------------------------------
 ; System_SetInts
 ;
@@ -222,7 +278,7 @@ System_Random:
 ; d4
 ;
 ; Notes:
-; Writing $00 or a negative number will skip change
+; Writing 0 or a negative number will skip change
 ; to the interrupt pointer
 ; --------------------------------------------------------
 
@@ -527,4 +583,4 @@ HInt_Default:
 ; System data
 ; ----------------------------------------------------------------
 
-; Stuff like Sinewave data for MD will go here.
+

@@ -6,6 +6,8 @@
 ; ----------------------------------------------------------------
 
 		align $8000
+ART_TESTBOARD:	binclude "data/md/bg/board_art.bin"
+ART_TESTBOARD_e:
 ART_EMI:	binclude "data/md/sprites/emi_art.bin"
 ART_EMI_e:
 

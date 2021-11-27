@@ -919,7 +919,7 @@ master_loop:
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
 		mov	#320,r2
-		mov	#320,r3
+		mov	#240,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -1131,7 +1131,7 @@ mstr_gfx1_loop:
 		mov	@r1,r2
 		mov	r2,r4
 		mov	#$7FF,r3
-		add	#8,r4		; wave speed
+		add	#16,r4		; wave speed
 		and	r3,r4
 		mov	r4,@r1
 
@@ -1153,12 +1153,12 @@ mstr_gfx1_loop:
 .ln_loop:
 		mov	#$7FF,r3
 		mov	r2,r0
-		add	#8,r2		; wave distord
+		add	#16,r2		; wave distord
 		and	r3,r2
 		shll2	r0
 		mov	#sin_table,r3
 		mov	@(r0,r3),r4
-		mov	#16,r0		; wave max X
+		mov	#8,r0		; wave max X
 		dmuls	r0,r4
 		sts	macl,r4
 		shlr16	r4
@@ -2281,22 +2281,22 @@ slave_loop:
 ; 		jsr	@r0
 ; 		nop
 		mov	#0,r1
-		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO+6,r2
 		mov	#PWM_STEREO_e,r3
 		mov	#0,r4
 		mov	#$100,r5
 		mov	#0,r6
-		mov	#%1011,r7
+		mov	#%1111,r7
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop
 		mov	#1,r1
-		mov	#PWM_STEREO,r2
+		mov	#PWM_STEREO+6,r2
 		mov	#PWM_STEREO_e,r3
 		mov	#0,r4
 		mov	#$100,r5
 		mov	#0,r6
-		mov	#%1011,r7
+		mov	#%1111,r7
 		mov	#MarsSound_SetPwm,r0
 		jsr	@r0
 		nop

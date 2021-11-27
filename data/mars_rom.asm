@@ -36,9 +36,14 @@ SmpIns_Snare_jam:
 	gSmpl "sound/instr/smpl/snare_jam.wav",0
 SmpIns_SnrTom_1:
 	gSmpl "sound/instr/smpl/snrtom_1.wav",0
+SmpIns_PIANO_1:
+	gSmpl "sound/instr/smpl/PIANO__1.wav",0
+SmpIns_SSTR162A:
+	gSmpl "sound/instr/smpl/SSTR162A.wav",0
 
 ; --------------------------------------------------------
 
-PWM_STEREO:	binclude "sound/TEST_MARS.wav",$2C,$300000
+PWM_STEREO:
+	gSmpl "sound/TEST_MARS.wav",0
 PWM_STEREO_e:
-		align 4
+	align 4

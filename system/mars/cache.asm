@@ -873,14 +873,19 @@ MarsSound_ReadPwm:
 		bf	.loop_me
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_enbl,r9)
-		mov	@(mchnsnd_start,r9),r0
-		mov	r0,@(mchnsnd_start,r9)
+; 		mov	@(mchnsnd_start,r9),r0
+; 		mov	r0,@(mchnsnd_start,r9)
 		bra	.silent
 		nop
 .loop_me:
-		mov	@(mchnsnd_loop,r9),r0
+		mov 	@(mchnsnd_flags,r9),r0
+		mov	@(mchnsnd_loop,r9),r1
 		mov 	@(mchnsnd_start,r9),r4
-		add	r0,r4
+		tst	#%00001000,r0
+		bt	.mono_l
+		shll	r1
+.mono_l:
+		add	r1,r4
 
 ; read wave
 ; r4 - WAVE READ pointer

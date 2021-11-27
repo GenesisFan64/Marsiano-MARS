@@ -38,10 +38,6 @@ DacIns_String1:
 	gSmpl "sound/instr/smpl/string_1.wav",0
 DacIns_LowString:
 	gSmpl "sound/instr/smpl/lowstring.wav",1200
-SmpIns_PIANO_1:
-	gSmpl "sound/instr/smpl/PIANO__1.wav",-1
-SmpIns_SSTR162A:
-	gSmpl "sound/instr/smpl/SSTR162A.wav",284
 
 ; --------------------------------------------------------
 ; FM instruments/patches
@@ -55,6 +51,9 @@ FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
+FmIns_Fm3_Explosion:
+		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
+
 Fmins_Guitar_Heavy:
 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
 Fmins_Guitar_puy:
@@ -80,8 +79,8 @@ FmIns_PianoM1:
 ; ; ; 		binclude "sound/instr/fm/bass_gum.gsx",$2478,$20
 FmIns_Bass_calm:
 		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
-; FmIns_Bass_heavy:
-; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
+FmIns_Bass_heavy:
+		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; FmIns_Bass_ambient:
 ; 		binclude "sound/instr/fm/bass_ambient.gsx",$2478,$20
 ; ; ; FmIns_Brass_gummy:
@@ -172,3 +171,4 @@ FmIns_Banjo_puy:
 		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
 FmIns_Violin_gem:
 		binclude "sound/instr/fm/violin_gem.gsx",$2478,$20
+

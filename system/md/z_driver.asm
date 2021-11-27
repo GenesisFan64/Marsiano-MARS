@@ -167,7 +167,7 @@ wave_Flags	db 0			; WAVE playback flags (%10x: 1 loop / 0 no loop)
 palMode		db 0
 marsBlock	db 0		; 1 - to disable PWM comm
 marsUpd		db 0		; update PWM sound
-sbeatPtck	dw 208-22	; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 224	; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 
 ; --------------------------------------------------------
@@ -230,7 +230,7 @@ drv_loop:
 		call	mars_scomm
 		rst	8
 .next_cmd:
-		call	dac_fill		; Critical for syncing wave
+		call	dac_fill	; Critical for syncing wave
 		ld	a,(commZWrite)
 		ld	b,a
 		ld	a,(commZRead)
@@ -245,7 +245,7 @@ drv_loop:
 		ld	d,0
 		ld	e,a
 		add	hl,de
-		rst	8
+		call	dac_fill
 		ld	a,(hl)
 		inc	hl
 		ld	h,(hl)
@@ -707,13 +707,22 @@ updtrack:
 		ret
 
 ; ----------------------------------------
-; Effect C: Pattern break
-; ***works but it restarts***
+; Effect C: Pattern break/exit (custom)
+; ***Not exactly as in Impulse but
+; moves to the next block
+;
+; If set to -1 it will end the track,
+; so you can put multiple SFX into the
+; track file and call them by block.
+;
+; USE THE EFFECT ONLY
 ; ----------------------------------------
 
 .eff_C:
-		ld	bc,0		; clear rowcount
-					; then next track...
+		ld	bc,0			; clear rowcount
+		ld	a,(ix+chnl_EffArg)	; Arg is 0FFh?
+		cp	-1			; Use it as track-end (for SFX)
+		jp	z,.trkend_effC
 
 ; ----------------------------------------
 ; If pattern finished, load the next one
@@ -882,6 +891,7 @@ updtrack:
 ; Automutes channels too.
 .track_end:
 		pop	hl			; Get hl back
+.trkend_effC:
 		call	track_out
 		rst	8
 		ld	(iy+trk_status),0	; Track status
@@ -1101,7 +1111,6 @@ mars_scomm:
 ; --------------------------------------------------------
 
 setupchip:
-		call	dac_fill
 		ld	hl,insDataC_0
 		ld	iy,trkBuff_0		; iy - Tracker channels
 		call	.mk_chip
@@ -1141,6 +1150,9 @@ setupchip:
 ; 		ld	b,080h
 		jr	.silnc_list
 .mk_chip:
+		ld	a,(iy+trk_status)
+		or	a
+		ret	p
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
 ; 		rst	8
@@ -1264,6 +1276,11 @@ setupchip:
 		call	nz,.req_eff
 		bit	0,(iy+chnl_Flags)
 		call	nz,.req_note
+; 		ld	a,(iy+chnl_Flags)	; Instrument+effect also allowed.
+; 		and	1010b
+; 		or	a
+; 		call	nz,.req_note
+
 .ran_out:
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
@@ -1687,6 +1704,8 @@ setupchip:
 		jp	z,.effFm_X
 		ret
 .eff_pwm:
+		ld	a,1
+		ld	(marsUpd),a
 		ld	a,d
 ; 		cp	4		; Effect D?
 ; 		jp	z,.effFm_D

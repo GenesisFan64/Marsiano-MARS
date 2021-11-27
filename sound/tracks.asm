@@ -66,11 +66,45 @@ gInsPwm	macro pitch,start,flags
 ; PWM pitches:
 ; -17 - 8000
 
+; ------------------------------------------------------------
+; SFX tracks
+; ------------------------------------------------------------
+
+GemaTrkData_Sfx:
+	dc.l GemaSfxPat_Boom
+	dc.l GemaSfxBlk_Boom
+	dc.l GemaSfxIns_Boom
+
+GemaSfxBlk_Boom:
+	binclude "sound/tracks/sfx_boom_blk.bin"
+GemaSfxPat_Boom:
+	binclude "sound/tracks/sfx_boom_patt.bin"
+GemaSfxIns_Boom:
+	gInsFm3 0,FmIns_Fm3_Explosion
+	gInsFm 0,FmIns_Ding_toy
+
 GemaTrk_blk_TEST:
-	binclude "sound/tracks/bemine_blk.bin"
+	binclude "sound/tracks/test_blk.bin"
 GemaTrk_patt_TEST:
-	binclude "sound/tracks/bemine_patt.bin"
+	binclude "sound/tracks/test_patt.bin"
 GemaTrk_ins_TEST:
+	gInsPwm 0,PWM_STEREO,%0011
+
+; 	gInsPwm -17,SmpIns_Bell_Ice,0
+; 	gInsPwm -17,SmpIns_Brass1_Hi,%01
+; 	gInsPwm -17,SmpIns_Brass1_Low,%01
+; 	gInsFm  -24,FmIns_Bass_groove
+; 	gInsFm3   0,FmIns_Fm3_OpenHat
+; 	gInsPwm -17,SmpIns_Snare_jam,0
+; 	gInsPwm -17,SmpIns_Kick_jam,0
+; 	gInsPwm -17,SmpIns_SnrTom_1,0
+; 	gInsPwm -17,SmpIns_Forest_1,0
+
+GemaTrk_blk_BeMine:
+	binclude "sound/tracks/bemine_blk.bin"
+GemaTrk_patt_BeMine:
+	binclude "sound/tracks/bemine_patt.bin"
+GemaTrk_ins_BeMine:
 	gInsPwm -17,SmpIns_Bell_Ice,0
 	gInsPwm -17,SmpIns_Brass1_Hi,%01
 	gInsPwm -17,SmpIns_Brass1_Low,%01
