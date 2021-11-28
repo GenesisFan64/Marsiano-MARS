@@ -84,11 +84,35 @@ GemaSfxIns_Boom:
 	gInsFm 0,FmIns_Ding_toy
 
 GemaTrk_blk_TEST:
-	binclude "sound/tracks/test_blk.bin"
+	binclude "sound/tracks/kid_blk.bin"
 GemaTrk_patt_TEST:
-	binclude "sound/tracks/test_patt.bin"
+	binclude "sound/tracks/kid_patt.bin"
 GemaTrk_ins_TEST:
-	gInsPwm 0,PWM_STEREO,%0011
+	gInsFm -12,FmIns_Bass_groove_gem
+	gInsFm -12,FmIns_Guitar_gem
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+
 
 ; 	gInsPwm -17,SmpIns_Bell_Ice,0
 ; 	gInsPwm -17,SmpIns_Brass1_Hi,%01

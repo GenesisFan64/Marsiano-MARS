@@ -43,7 +43,7 @@ SmpIns_SSTR162A:
 
 ; --------------------------------------------------------
 
-PWM_STEREO:
-	gSmpl "sound/TEST_MARS.wav",0
-PWM_STEREO_e:
-	align 4
+; PWM_STEREO:
+; 	gSmpl "sound/TEST_MARS.wav",0
+; PWM_STEREO_e:
+; 	align 4

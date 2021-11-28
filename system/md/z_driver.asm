@@ -228,9 +228,10 @@ drv_loop:
 		rst	8
 .neither:
 		call	mars_scomm
+		call	get_tick
 		rst	8
 .next_cmd:
-		call	dac_fill	; Critical for syncing wave
+; 		call	dac_fill	; Critical for syncing wave
 		ld	a,(commZWrite)
 		ld	b,a
 		ld	a,(commZRead)
@@ -245,7 +246,7 @@ drv_loop:
 		ld	d,0
 		ld	e,a
 		add	hl,de
-		call	dac_fill
+; 		call	dac_fill
 		ld	a,(hl)
 		inc	hl
 		ld	h,(hl)
@@ -331,6 +332,7 @@ drv_loop:
 		ld	(iy+(trk_romIns+2)),a
 		ld	a,1
 		ld	(iy+trk_tickTmr),a
+		rst	8
 		jp	.next_cmd
 
 ; --------------------------------------------------------
@@ -3040,7 +3042,6 @@ transferRom:
 .x68kpwtlp:
 		rst	8
 		nop
-		nop
 		rst	8
 		bit	0,(ix)		; 68k finished?
 		jr	nz,.x68kpwtlp
@@ -3052,7 +3053,6 @@ transferRom:
 		res	0,(ix+1)	; Tell 68k we are out, waiting.
 .x68klstwtlp:
 		rst	8
-		nop
 		nop
 		rst	8
 		bit	0,(ix)		; 68k finished?

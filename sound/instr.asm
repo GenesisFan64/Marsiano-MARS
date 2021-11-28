@@ -54,6 +54,8 @@ FmIns_Fm3_ClosedHat:
 FmIns_Fm3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
 
+FmIns_Guitar_gem:
+		binclude "sound/instr/fm/guitar_gem.gsx",$2478,$20
 Fmins_Guitar_Heavy:
 		binclude "sound/instr/fm/guitar_heavy.gsx",$2478,$20
 Fmins_Guitar_puy:
@@ -62,7 +64,8 @@ Fmins_Guitar_puy_2:
 		binclude "sound/instr/fm/guitar_puy_2.gsx",$2478,$20
 FmIns_DrumKick_gem:
 		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
-;
+
+
 ; FmIns_DrumKick:
 ; 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
 ; FmIns_DrumSnare:
@@ -103,6 +106,8 @@ FmIns_Bass_groove:
 		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
 FmIns_Bass_groove_2:
 		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
+FmIns_Bass_groove_gem:
+		binclude "sound/instr/fm/bass_groove_gem.gsx",$2478,$20
 FmIns_Bass_italo:
 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
 FmIns_Bass_kon:

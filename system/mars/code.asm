@@ -2280,26 +2280,26 @@ slave_loop:
 ; 		mov	#MarsSound_SetPwm,r0
 ; 		jsr	@r0
 ; 		nop
-		mov	#0,r1
-		mov	#PWM_STEREO+6,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%1111,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
-		mov	#1,r1
-		mov	#PWM_STEREO+6,r2
-		mov	#PWM_STEREO_e,r3
-		mov	#0,r4
-		mov	#$100,r5
-		mov	#0,r6
-		mov	#%1111,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
+; 		mov	#0,r1
+; 		mov	#PWM_STEREO+6,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%1111,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#1,r1
+; 		mov	#PWM_STEREO+6,r2
+; 		mov	#PWM_STEREO_e,r3
+; 		mov	#0,r4
+; 		mov	#$100,r5
+; 		mov	#0,r6
+; 		mov	#%1111,r7
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
 		ldc	@r15+,sr
 .TEST_1:
 
