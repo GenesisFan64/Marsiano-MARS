@@ -481,15 +481,15 @@ thisCode_Top:
 ; test playlist
 MasterTrkList:
 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
-	dc.w 7,0
+	dc.w $A,0
 	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
 	dc.w 7,0
-	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
-	dc.w 2,1
-	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
-	dc.w 3,1
-	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
-	dc.w 1,1
+; 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
+; 	dc.w 2,1
+; 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
+; 	dc.w 3,1
+; 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
+; 	dc.w 1,1
 	align 2
 
 ; ====================================================================
@@ -986,7 +986,7 @@ MD_FifoMars:
 str_Title:
 		dc.b "Project MARSIANO           (MODE)",$A
 		dc.b "                         GEMA Tester",$A
-		dc.b "Checando cuanto aguanta",$A
+		dc.b "Checando que no se trabe",$A
 		dc.b "el driver de sonido",0
 		align 2
 

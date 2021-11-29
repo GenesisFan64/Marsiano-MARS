@@ -323,6 +323,7 @@ drv_loop:
 		call	get_cmdbyte
 		ld	(iy+(trk_romBlk+1)),a
 		call	get_cmdbyte
+		call	get_tick
 		ld	(iy+(trk_romBlk+2)),a
 		call	get_cmdbyte		; Instrument data
 		ld	(iy+trk_romIns),a
@@ -397,7 +398,7 @@ drv_loop:
 ; a - track index
 
 get_trkindx:
-		ld	hl,.trkpos
+		ld	hl,trkPointers
 		add	a,a
 		ld	d,0
 		ld	e,a
@@ -410,7 +411,9 @@ get_trkindx:
 		push	hl
 		pop	iy
 		ret
-.trkpos:
+
+; MANUAL POINTERS FOR TRACK BUFFERS
+trkPointers:
 		dw trkBuff_0
 		dw trkBuff_1
 
@@ -741,12 +744,12 @@ updtrack:
 ; hl - trk_read on halfway
 .set_track:
 		rst	8
-		ld	(iy+trk_Halfway),0	; Reset halfway
+		ld	(iy+trk_Halfway),80h	; Reset halfway
 ; 		ld	l,(iy+trk_CachNotes)	; Set trk_read point on halfway
 ; 		ld	h,(iy+(trk_CachNotes+1))
 ; 		ld	de,80h
 ; 		add	hl,de
-		ld	l,80h			; quick reset trk_read
+		ld	l,0			; quick reset trk_read
 		ld	(iy+trk_Read),l
 		ld	(iy+((trk_Read+1))),h
 
@@ -780,24 +783,45 @@ updtrack:
 		adc	a,0
 		ld	de,trkHdOut
 		push	de
-		ld	bc,4
+		ld	bc,6			; thispoint, rowcount, nextpoint
 		call	transferRom
 		pop	hl
-		ld	c,(hl)			; bc - new rows to process
-		inc	hl
-		ld	b,(hl)
-		inc	hl
-		ld	e,(hl)			; de - pointer increment (+increment by this)
+		ld	e,(hl)			; de - pointer increment
 		inc	hl
 		ld	d,(hl)
+		inc	hl
+		ld	c,(hl)			; bc - row count
+		inc	hl
+		ld	b,(hl)
 		rst	8
 		ld	(iy+trk_Rows),c		; Save this number of rows to buffer
 		ld	(iy+(trk_Rows+1)),b	; on Tick pauses
 		push	bc			; Save bc
 		call	dac_fill
 
-	; Recieve data to a half-section
-	; of the notes cache
+	; Detect pattern size... last moment addition
+	; for patterns lower than 80h.
+	; This saves cycles if using SFX
+	; hl - next pattern point (includes final)
+	; de - this pattern
+	; bc - final size for transferRom
+		ld	a,(trkHdOut+4)	; hl - de
+		ld	l,a
+		ld	a,(trkHdOut+5)
+		ld	h,a
+		ccf			; remove carry first
+		sbc	hl,de
+		ld	a,h		; h == 0?
+		or	a
+; 		jp	m,$
+		jr	nz,.szmuch
+		bit	7,l
+		jr	z,.szgood
+.szmuch:
+		ld	hl,080h		; bc - max transfer size 080h
+.szgood:
+		ld	b,h
+		ld	c,l
 		ld	l,(iy+trk_romPatt)	; hl - ROM pattern data pointer
 		ld	h,(iy+(trk_romPatt+1))
 		ld	a,(iy+(trk_romPatt+2))
@@ -885,7 +909,7 @@ updtrack:
 		add	hl,de
 		ld	(iy+trk_Read),l
 		ld	(iy+((trk_Read+1))),h
-		call	dac_fill
+; 		call	dac_fill
 		ld	a,(iy+trk_currBlk)
 		jp	.set_track
 
@@ -1717,7 +1741,7 @@ setupchip:
 		cp	6		; Effect F?
 		jp	z,.effPwm_F
 		cp	24		; Effect X?
-		jp	z,.effFm_X	; recycle FM's panning
+		jp	z,.effPwm_X	; recycle FM's panning
 		ret
 
 ; --------------------------------
@@ -1994,7 +2018,7 @@ setupchip:
 ; --------------------------------
 
 ; PWM points here too.
-.effFm_X:
+.effPwm_X:
 		ld	a,e
 		rlca
 		rlca
@@ -2009,6 +2033,50 @@ setupchip:
 		and	11001111b
 		or	e
 		ld	(iy+chnl_Flags),a
+		ret
+
+; PWM points here too.
+.effFm_X:
+		ld	a,(ix+2)
+		and	111b
+		ld	b,0
+		ld	c,a
+		ld	ix,fmcom
+		add	ix,bc
+		ld	a,e
+		rlca
+		rlca
+		and	00000011b
+		ld	hl,.fmpan_list
+		ld	de,0
+		ld	e,a
+		rst	8
+		add	hl,de
+		ld	e,(hl)
+		ld	a,(iy+chnl_Flags)
+		and	11001111b
+		or	e
+		ld	(iy+chnl_Flags),a
+		ld	a,(iy+chnl_Flags)
+		add	a,a		; move LR bits
+		add	a,a
+		cpl
+		and	11000000b	; Set Panning ENABLE bits
+		ld	(ix+FMPAN),a
+
+; 		ld	a,(iy+chnl_Flags)
+; 		add	a,a		; move LR bits
+; 		add	a,a
+; 		cpl
+; 		and	11000000b	; Set Panning ENABLE bits
+; 		ld	(ix+FMPAN),a
+; 		ld	e,11110000b	; ALLOWED keys (TEMPORAL)
+; 		rst	8
+; 		ld	(ix+FMKEYS),e
+		ld	a,(ix)		; key on
+		or	01000000b
+		ld	(ix),a
+
 		ret
 .fmpan_list:
 		db 00010000b	; 000h
@@ -2291,7 +2359,7 @@ setupchip:
 		call	fm_send_1
 		push	hl
 		pop	ix
-		jr	.fm_setkon
+		jr	.fm_chnlkon
 ; Normal FM
 .note_fm:
 		ld	a,(iy+chnl_Note)
@@ -2370,7 +2438,7 @@ setupchip:
 		ld	(ix+FMFRQH),d	; Save freq MSB
 		ld	(ix+FMFRQL),e	; Save freq LSB
 		pop	de
-.fm_setkon:
+.fm_chnlkon:
 		ld	a,(iy+chnl_Flags)
 		add	a,a		; move LR bits
 		add	a,a
@@ -2381,13 +2449,15 @@ setupchip:
 		rst	8
 		ld	(ix+FMKEYS),e
 		ld	a,(ix)		; key on
-		or	00000001b
+		or	01000001b
 		ld	(ix),a
 		bit	2,(iy+chnl_Flags)	; check if volume is being used
 		jr	nz,.fm_kpv
 		ld	(ix+FMVOL),0
 .fm_kpv:
 		ret
+
+; keyoff/cut
 .fm_keyoff:
 		ld	c,010b
 		ld	(hl),c
@@ -3286,33 +3356,30 @@ chip_env:
 	; iy - FM com
 	; ix - FM current instrument data
 	;  c - FM channel ID
+
+	; First 3 normal channels
+	; c - 00h
 		ld	iy,fmcom
 		ld	ix,fmins_com
-		ld	bc,0
-		call	.fm_set		; Channel 1
-		rst	8
+		ld	bc,0300h
+.nextfm_1:	push	bc
+		call	.fm_chnl	; Channel 1
+		pop	bc
 		ld	de,28h
+		rst	8
 		add	ix,de		; Next ins data
 		inc	iy		; Next com
 		inc	c		; Next id
-		call	.fm_set		; Channel 2
-		ld	de,28h
-		add	ix,de
-		inc	iy
-		inc	c
-		rst	8
-		call	.fm_set		; Channel 3
-		ld	de,28h
-		add	ix,de
-		inc	iy
+		djnz	.nextfm_1
 
+	; c - 04h
 		ld	bc,4
-		call	.fm_set		; Channel 4
+		call	.fm_chnl	; Channel 4
 		ld	de,28h
 		add	ix,de
 		inc	iy
 		inc	c
-		call	.fm_set		; Channel 5
+		call	.fm_chnl	; Channel 5
 		rst	8
 		ld	a,(daccom)	; Channel 6 / DAC
 		ld	e,a
@@ -3336,7 +3403,7 @@ chip_env:
 		ld	a,(ix)
 		inc	iy
 		inc	c
-		jr	.fm_set			; Channel 6 (normal)
+		jr	.fm_chnl			; Channel 6 (normal)
 .req_dac:
 		ld	d,0B6h			; Panning for DAC
 		ld	a,((fmcom+5)+FMPAN)	; Reuse FM6's panning
@@ -3374,7 +3441,7 @@ chip_env:
 	; i - instrument update
 	;
 	; c/o/p key cut, key off, key on
-.fm_set:
+.fm_chnl:
 		ld	a,(iy)		; Get comm bits
 		or	a
 		ret	z
@@ -3393,6 +3460,8 @@ chip_env:
 		call	nz,.fm_insupd
 		bit	5,b		; Volume-update bit? (%0010xxxx)
 		call	nz,.fm_volupd	;
+		bit	6,b		; Panning update bit? (%0100xxxx)
+		call	nz,.fm_panupd
 		bit	0,b		; Key-on (001b) bit?
 		ret	z
 	; freq update
@@ -3429,14 +3498,8 @@ chip_env:
 		rst	8
 		inc	d
 		inc	d
-		ld	e,(ix+1Dh)
-		ld	a,(iy+FMPAN)
-		and	11000000b
-		or	e
-		ld	e,a
-		bit	2,c
-		call	nz,fm_send_2
-		call	z,fm_send_1
+; 		call	.fm_panset
+
 	; For Special FM3 mode it just copy-pastes regs
 	; from a separate list
 		ld	a,c		; FM3 special check
@@ -3489,6 +3552,23 @@ chip_env:
 		ld	e,c
 		ld	d,28h
 		jp	fm_send_1
+
+; d - 0B4h+
+.fm_panupd:
+		ld	a,c
+		and	11b
+		or	0B4h
+		ld	d,a
+.fm_panset:
+		ld	e,(ix+1Dh)
+		ld	a,(iy+FMPAN)
+		and	11000000b
+		or	e
+		ld	e,a
+		bit	2,c
+		call	nz,fm_send_2
+		call	z,fm_send_1
+		ret
 
 ; CPU-intense
 ; only call this if needed
@@ -3563,7 +3643,7 @@ chip_env:
 .fm_volupd:
 		push	bc
 		ld	b,(iy+FMVOL)
-.fm_setvol:
+.fm_chnlvol:
 		push	ix
 		ld	a,(ix+1Ch)
 		and	111b
@@ -4220,7 +4300,7 @@ currInsPos	dw 0
 currTrkCtrl	dw 0
 x68ksrclsb	db 0		; transferRom temporal LSB
 x68ksrcmid	db 0		; transferRom temporal MID
-trkHdOut	ds 4		; temporal Header for reading Track position/row count
+trkHdOut	ds 6		; temporal Header for reading Track position/row count
 
 		org 1B00h
 zStack:

@@ -76,16 +76,17 @@ if len(sys.argv) > 2:
 buff_Notes = [0]*(MAX_CHAN)				# mode, note, instr, volume, effects
 
 # build BLOCKS
-# TODO: manual user LOOP
 input_file.seek(addr_BlockList)
 for b in range(0,OrdNum):
 	a = ord(input_file.read(1))
 	out_blocks.write(bytes([a]))
 
 # build patterns
-curr_PattInc = 0					# OUT header counter
+curr_PattInc = 0				# OUT header counter
 numof_Patt   = PatNum
-out_patterns.write(bytes(numof_Patt*4))			# make room for pointers
+out_patterns.write(bytes(numof_Patt*4))		# make room for pointers
+out_patterns.write(bytes([0x00,0x00]))		# one more for size detection
+
 while numof_Patt:
 	input_file.seek(addr_PattList)
 	addr_PattList += 4
@@ -99,9 +100,9 @@ while numof_Patt:
 	out_patterns.seek(curr_PattInc)
 	pattrn_start = b
 	# set point to pattern, size is set below
-	out_patterns.write(bytes([sizeof_Rows&0xFF,(sizeof_Rows>>8)&0xFF]))
 	out_patterns.write(bytes([pattrn_start&0xFF,(pattrn_start>>8)&0xFF]))
-
+	out_patterns.write(bytes([sizeof_Rows&0xFF,(sizeof_Rows>>8)&0xFF]))
+	last_pattrstart = pattrn_start
 
 	# ****************************************
 	out_patterns.seek(b)
@@ -177,7 +178,14 @@ while numof_Patt:
 	# Next block
 	curr_PattInc += 4
 	numof_Patt -= 1
-		
+
+
+# last size...
+b = out_patterns.tell()
+out_patterns.seek(curr_PattInc)
+a = b
+out_patterns.write(bytes([a&0xFF,(a>>8)&0xFF]))
+
 # ----------------------------
 # End
 # ----------------------------
