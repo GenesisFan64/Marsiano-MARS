@@ -18,7 +18,7 @@
 ; User settings
 ; --------------------------------------------------------
 
-MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
+MAX_TRKCHN	equ 18		; Max internal tracker channels (4PSG + 6FM + 7PWM)
 ZSET_WTUNE	equ -24		; Manual frequency adjustment for DAC WAVE playback
 ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test DAC playback
 
@@ -39,7 +39,7 @@ trk_Rows	equ 14		; Current track length
 trk_Halfway	equ 16		; Only 00h or 80h
 trk_currBlk	equ 17		; Current block
 trk_setBlk	equ 18		; Start on this block
-trk_status	equ 19		; %ERBx xxxx | E-enabled / R-Init|Restart track / B-use global beats
+trk_status	equ 19		; %ERPB xxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats
 trk_tickTmr	equ 20		; Ticks timer
 trk_tickSet	equ 21		; Ticks set for this track
 trk_numTrks	equ 22		; Max tracks used
@@ -109,7 +109,7 @@ PWINSL		equ	48
 
 		di			; Disable interrputs
 		im	1		; Interrupt mode 1
-		ld	sp,zStack	; Set stack at the end of Z80
+		ld	sp,2000h	; Set stack at the end of Z80
 		jr	z80_init	; Jump to z80_init
 
 ; --------------------------------------------------------
@@ -354,7 +354,7 @@ drv_loop:
 .cmnd_trkpause:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iy
-		res	7,(iy+trk_status)
+		res	7,(iy+trk_status)	; Slot OFF
 ; 		call	track_out
 		jp	.next_cmd
 
@@ -365,7 +365,7 @@ drv_loop:
 .cmnd_trkresume:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iy
-		set	7,(iy+trk_status)
+		set	7,(iy+trk_status)	; Slot ON
 ; 		call	track_out
 		jp	.next_cmd
 
@@ -479,7 +479,7 @@ updtrack:
 		ld	b,(iy+trk_status)	; b - Track status
 		bit	7,b			; Active?
 		ret	z
-		ld	(currInsData),de	; save temporal InsData for loading
+		ld	(currInsData),de	; save temporal InsData
 		rst	8
 		ld	a,(currTickBits)	; a - Tick/Beat bits
 		bit	0,b			; This track uses Beats?
@@ -655,22 +655,37 @@ updtrack:
 
 .inc_cpatt:
 		inc	l
+		ld	a,(iy+trk_status)	; Increment-fill enabled?
+		and	00010000b
+		or	a
+		ret	z
+		rst	8
 		ld	a,(iy+trk_Halfway)
 		xor	l
 		and	080h			; Check for 00h/80h
 		ret	z
-		call	dac_fill		; refill requested
+		rst	8
+		ld	a,(commZRomBlk)		; Got mid-DMA?
+		or	a
+		jr	z,.grab_asap
+		ld	a,l			; Last chance
+		and	07Fh
+		cp	070h
+		ret	c
+.grab_asap:
+		call	dac_fill		; refill request
 		ld	a,(iy+trk_Halfway)	; +80h to halfway
 		ld	d,h
 		ld	e,a
+		rst	8
 		add 	a,080h
 		ld	(iy+trk_Halfway),a
 		push	hl
 		push	bc
 		ld	bc,80h			; 80h size + increment value
-		rst	8
 		ld	l,(iy+trk_romPattRd)
 		ld	h,(iy+(trk_romPattRd+1))
+		rst	8
 		ld	a,(iy+(trk_romPattRd+2))
 		add	hl,bc
 		adc	a,0
@@ -678,7 +693,6 @@ updtrack:
 		ld	(iy+(trk_romPattRd+1)),h
 		ld	(iy+(trk_romPattRd+2)),a
 		call	transferRom
-		rst	8
 		pop	bc
 		pop	hl
 		ret
@@ -768,7 +782,6 @@ updtrack:
 		call	readRomB
 		cp	-1			; if block == -1, end
 		jp	z,.track_end
-		call	dac_fill
 
 	; a - head index
 		add	a,a
@@ -811,6 +824,8 @@ updtrack:
 		ld	h,a
 		ccf			; remove carry first
 		sbc	hl,de
+		ld	c,(iy+trk_status)
+		res	4,c
 		ld	a,h		; h == 0?
 		or	a
 ; 		jp	m,$
@@ -818,8 +833,10 @@ updtrack:
 		bit	7,l
 		jr	z,.szgood
 .szmuch:
-		ld	hl,080h		; bc - max transfer size 080h
+		ld	hl,080h			; bc - max transfer size 080h
+		set	4,c
 .szgood:
+		ld	(iy+trk_status),c
 		ld	b,h
 		ld	c,l
 		ld	l,(iy+trk_romPatt)	; hl - ROM pattern data pointer
@@ -833,7 +850,7 @@ updtrack:
 		ld	(iy+(trk_romPattRd+2)),a
 		ld	d,(iy+(trk_Read+1))	; de - destination to data CACHE
 		ld	e,(iy+trk_Read)
-		ld	bc,080h			; bc - 080h
+; 		ld	bc,080h			; bc - 080h
 		call	transferRom
 		rst	8
 		pop	bc			; Get bc back
@@ -848,7 +865,7 @@ updtrack:
 
 .effect_fill:
 		call	dac_fill
-		res	5,b			; Reset FILL flag
+		res	5,b			; Reset refill-from-effect flag
 		ld	(iy+trk_status),b
 		call	.go_effect
 		ret
@@ -872,8 +889,8 @@ updtrack:
 		rst	8
 		call	trkout_unlk		; search and unlink last used channels
 		ld	(ix+chnl_Ins),0
-		ld	(ix+chnl_Note),-2
-		ld	(ix+chnl_Flags),1
+; 		ld	(ix+chnl_Note),-2
+; 		ld	(ix+chnl_Flags),1
 		rst	8
 		pop	bc
 		pop	de
@@ -943,11 +960,15 @@ track_out:
 		push	de
 		push	bc
 		call	trkout_unlk
+		ld	a,(ix+chnl_Chip)
+		or	a
+		jr	z,.nochip
 		ld	(ix+chnl_Note),-2
 		ld	a,(ix+chnl_Flags)
 		and	11110000b
 		or	1
 		ld	(ix+chnl_Flags),a
+.nochip:
 		pop	bc
 		pop	de
 		add	ix,de
@@ -3357,30 +3378,27 @@ chip_env:
 	; ix - FM current instrument data
 	;  c - FM channel ID
 
-	; First 3 normal channels
-	; c - 00h
+
 		ld	iy,fmcom
 		ld	ix,fmins_com
-		ld	bc,0300h
+		ld	bc,0500h
 .nextfm_1:	push	bc
 		call	.fm_chnl	; Channel 1
 		pop	bc
 		ld	de,28h
-		rst	8
-		add	ix,de		; Next ins data
-		inc	iy		; Next com
-		inc	c		; Next id
-		djnz	.nextfm_1
-
-	; c - 04h
-		ld	bc,4
-		call	.fm_chnl	; Channel 4
-		ld	de,28h
 		add	ix,de
 		inc	iy
-		inc	c
-		call	.fm_chnl	; Channel 5
 		rst	8
+		inc	c
+		ld	a,c
+		cp	3		; c == 3?
+		jr	nz,.nomidc
+		inc	c
+		rst	8
+.nomidc:
+		djnz	.nextfm_1
+
+	; Special check for Channel 6
 		ld	a,(daccom)	; Channel 6 / DAC
 		ld	e,a
 		xor	a
@@ -3436,9 +3454,11 @@ chip_env:
 ;  c - FM chip ID
 ; ----------------------------------------
 
-	; 00vi 0cop
-	; v - volume update
-	; i - instrument update
+	; 0pvi 0cop
+	; pvi - update bits:
+	;      volume(v)
+	;      instrument(i)
+	;      panning(p)
 	;
 	; c/o/p key cut, key off, key on
 .fm_chnl:
@@ -4176,6 +4196,9 @@ wavFreq_List:	dw 100h		; C-0
 
 ; --------------------------------------------------------
 
+; trkPan_0	db MAX_TRKCHN
+; trkPan_1	db MAX_TRKCHN
+
 	; Channel tables: 10h bytes
 	; 0  - Link addr (0000h = free, used chnls start from +0020h)
 	; 2  - Channel index (ID is set extrenally)
@@ -4279,33 +4302,33 @@ pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
+insDataC_0	ds 8*16		; Instrument data for each Track slot
+insDataC_1	ds 8*16		; 8*MAX_INS
 commZfifo	ds 40h		; Buffer for command requests from 68k (40h bytes, loops)
+
+		org 1B00h
+dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
+trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
+trkData_1	ds 100h
+trkBuff_0	ds 20h+(MAX_TRKCHN*8)	; Track control (first 20h) + channels (8h each)
+trkGlbl_0	ds MAX_TRKCHN		; External panning bytes
+	; *** MERGED VARS TO SAVE SPACE
+trkHdOut	ds 6			; temporal Header for reading Track position/row count
+x68ksrclsb	db 0			; transferRom temporal LSB
+x68ksrcmid	db 0			; transferRom temporal MID
+currTickBits	db 0			; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
+currInsData	dw 0
+currTblPos	dw 0
+currInsPos	dw 0
+currTrkCtrl	dw 0
+dDacPntr	db 0,0,0	; WAVE play current ROM position
+dDacCntr	db 0,0,0	; WAVE play length counter
+dDacFifoMid	db 0		; WAVE play halfway refill flag (00h/80h)
 tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
 tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 psgHatMode	db 0
 fmSpcMode	db 0
 flagResChip	db 0		; reset chips flag
-insDataC_0	ds 8*16		; Instrument data for each Track slot
-insDataC_1	ds 8*16		; 8*MAX_INS
-
-dDacPntr	db 0,0,0	; WAVE play current ROM position
-dDacCntr	db 0,0,0	; WAVE play length counter
-dDacFifoMid	db 0		; WAVE play halfway refill flag (00h/80h)
-
-; Temporal variables
-currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
-currInsData	dw 0
-currTblPos	dw 0
-currInsPos	dw 0
-currTrkCtrl	dw 0
-x68ksrclsb	db 0		; transferRom temporal LSB
-x68ksrcmid	db 0		; transferRom temporal MID
-trkHdOut	ds 6		; temporal Header for reading Track position/row count
-
-		org 1B00h
-zStack:
-dWaveBuff	ds 100h		; WAVE data buffer: 100h bytes, updates every 80h
-trkBuff_0	ds 100h		; Track control (first 20h) + channels (8h each)
-trkBuff_1	ds 100h		; Must be aligned so priority check works (TODO, use a flag instea)
-trkData_0	ds 100h		; Track note-cache buffers: 100h bytes, updates every 80h
-trkData_1	ds 100h
+trkBuff_1	ds 20h+(MAX_TRKCHN*8)
+trkGlbl_1	ds MAX_TRKCHN
+; Stack area
