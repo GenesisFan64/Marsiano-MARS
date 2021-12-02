@@ -657,6 +657,140 @@ Video_Copy:
 ; --------------------------------------------------------
 
 ; --------------------------------------------------------
+; Video_DmaBlast
+;
+; Process DMA tasks from an array
+; **CALL THIS DURING VBLANK ONLY**
+;
+; Uses:
+; a4,d4-d7
+; --------------------------------------------------------
+
+; Format
+; $94xx,$93xx,$95xx,$96xx,$97xx
+; $40000080 (vdp destination + dma bit)
+
+
+Video_DmaBlast:
+		lea	(vdp_ctrl),a4
+		lea	(RAM_VdpDmaList).w,a3
+		move.w	#$8100,d7			; DMA ON
+		move.b	(RAM_VdpRegs+1),d7
+		bset	#bitDmaEnbl,d7
+		move.w	d7,(a4)
+		bsr	Sound_DMA_Pause
+		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
+		or.w	#%00000001,d7
+		move.w	d7,(sysmars_reg+dreqctl).l
+
+.next:		tst.w	(RAM_VdpDmaIndx).w
+		beq.s	.end
+		move.l	(a3),(a4)			; Size
+		clr.l	(a3)+
+		move.l	(a3),(a4)			; Source
+		clr.l	(a3)+
+		move.w	(a3),(a4)
+		clr.w	(a3)+
+		move.w	(a3),d6				; Destination
+		clr.w	(a3)+
+		move.w	(a3),d5
+		clr.w	(a3)+
+; 		bsr	Sound_DMA_Pause
+; 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
+; 		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
+; 		move.w	d7,(sysmars_reg+dreqctl).l
+		move.w	d6,(a4)
+		move.w	d5,(a4)
+; 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=0
+; 		and.w	#%11111110,d7
+; 		move.w	d7,(sysmars_reg+dreqctl).l
+; 		bsr	Sound_DMA_Resume
+		sub.w	#7*2,(RAM_VdpDmaIndx).w
+		bra.s	.next
+.end:
+		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=0
+		and.w	#%11111110,d7
+		move.w	d7,(sysmars_reg+dreqctl).l
+		bsr	Sound_DMA_Resume
+		move.w	#$8100,d7			; DMA OFF
+		move.b	(RAM_VdpRegs+1).w,d7
+		move.w	d7,(a4)
+		rts
+
+; --------------------------------------------------------
+; Sets a new DMA transfer task to the Blast list
+;
+; *** IF USING VBLANK INTERRUPT DISABLE IT TEMPORALLY
+; BEFORE GETTING HERE ***
+;
+; d0 | LONG - Art data
+; d1 | WORD - Size
+; d2 | WORD - VRAM (as cells)
+;
+; Uses:
+; a4,d4-d7
+; --------------------------------------------------------
+
+Video_DmaSet:
+		lea	(RAM_VdpDmaList).w,a6
+		move.w	(RAM_VdpDmaIndx).w,d7
+		adda	d7,a6
+		add.w	#7*2,d7
+		move.w	d7,(RAM_VdpDmaIndx).w
+
+		move.w	d1,d7			; LENGTH
+		move.l	#$94009300,d6
+		lsr.w	#1,d7
+		move.b	d7,d6
+		swap	d6
+		lsr.w	#8,d7
+		move.b	d7,d6
+		swap	d6
+		move.l	d6,(a6)+
+
+		move.l	d0,d7			; SOURCE
+  		lsr.l	#1,d7
+ 		move.l	#$96009500,d6
+ 		move.b	d7,d6
+ 		lsr.l	#8,d7
+ 		swap	d6
+ 		move.b	d7,d6
+ 		move.l	d6,(a6)+
+ 		move.w	#$9700,d6
+ 		lsr.l	#8,d7
+ 		move.b	d7,d6
+ 		move.w	d6,(a6)+
+		move.w	d2,d7			; DESTINATION
+		and.w	#$7FF,d7
+		lsl.w	#5,d7
+		move.w	d7,d6
+		and.l	#$3FE0,d7
+		ori.w	#$4000,d7
+		lsr.w	#8,d6
+		lsr.w	#6,d6
+		andi.w	#%11,d6
+		ori.w	#$80,d6
+		move.w	d7,(a6)+
+		move.w	d6,(a6)+
+		rts
+
+; 		bsr	Sound_DMA_Pause
+; 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
+; 		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
+; 		move.w	d7,(sysmars_reg+dreqctl).l
+;  		move.w	d5,-(sp)
+; 		move.w	d4,(a4)				; d4 - First word
+; 		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
+; 		move.w	(sysmars_reg+dreqctl).l,d4	; Set RV=0
+; 		and.w	#%11111110,d4			; 68k ROM map returns to $880000/$900000
+; 		move.w	d4,(sysmars_reg+dreqctl).l
+; 		move.w	#$8100,d4			; DMA OFF
+; 		move.b	(RAM_VdpRegs+1),d4
+; 		move.w	d4,(a4)
+; 		move.w	(sp)+,sr
+; 		bra	Sound_DMA_Resume
+
+; --------------------------------------------------------
 ; Load graphics using DMA
 ;
 ; d0 | LONG - Art data
@@ -664,7 +798,7 @@ Video_Copy:
 ; d2 | WORD - VRAM (cell)
 ; 
 ; Uses:
-; d4-d5,a4
+; d4-d7,a4
 ; --------------------------------------------------------
 
 Video_LoadArt:
@@ -754,22 +888,21 @@ list_vdpregs:
 		dc.b (($D000)>>10)		; Window  at VRAM $D000 (%00xxxxy0)
 		dc.b (($E000)>>13)		; BackGrd at VRAM $E000 (%00000xxx)
 		dc.b (($F800)>>9)		; Sprites at VRAM $F800 (%0xxxxxxy)
-		dc.b $00			; Nothing
+		dc.b $00			; Unused
 		dc.b $00			; Background color: 0
-		dc.b $00			; Nothing
-		dc.b $00			; Nothing
+		dc.b $00			; Unused
+		dc.b $00			; Unused
 		dc.b $00			; HInt value
 		dc.b (%000|%00)			; No ExtInt, Scroll: VSCR:full HSCR:full
 		dc.b $81			; H40, No shadow mode, Normal resolution
 		dc.b (($FC00)>>10)		; HScroll at VRAM $FC00 (%00xxxxxx)
-		dc.b $00			; Nothing
+		dc.b $00			; Unused
 		dc.b $02			; VDP Auto increment by $02
 		dc.b (%00<<4)|%01		; Layer size: V32 H64
 		dc.b $00
 		dc.b $00
 		align 2
-ASCII_PAL:	;binclude "engine/shared/ascii_pal.bin"
-		dc.w $0000,$0EEE,$0CCC,$0AAA,$0888,$0444,$000E,$0008
+ASCII_PAL:	dc.w $0000,$0EEE,$0CCC,$0AAA,$0888,$0444,$000E,$0008
 		dc.w $00EE,$0088,$00E0,$0080,$0E00,$0800,$0000,$0000
 ASCII_PAL_e:
 ASCII_FONT:	binclude "system/md/data/font.bin"

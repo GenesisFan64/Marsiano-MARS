@@ -7,5 +7,9 @@
 ; ----------------------------------------------------------------
 
 		align 2
-		dc.b "OTHER 68K DATA GOES HERE"
-
+MAP_FGTEST:
+		binclude "data/md/bg/fg_map.bin"
+		align 2
+MAP_BGTEST:
+		binclude "data/md/bg/bg_map.bin"
+		align 2

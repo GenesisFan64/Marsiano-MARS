@@ -882,8 +882,6 @@ MarsVideo_SetWatchdog:
 .mde1:
 		mov	#Cach_LR_Lines,r1		; L/R lines to process
 		mov	r2,@r1
-
-	; Mode2
 		mov	#_framebuffer+$200,r0
 		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
 		mov	#Cach_Xadd,r1

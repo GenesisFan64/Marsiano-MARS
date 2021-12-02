@@ -119,8 +119,8 @@ def cell_list_filter(in_x,in_y):
 # Init
 # -------------------------------------------------
 
-max_width      = 32
-max_height     = 48
+max_width      = 64
+max_height     = 64
 cell_used      = 0
 vram_entry     = 0
 frame_size     = 0
@@ -281,10 +281,10 @@ while frames:
       frame_pos = offset + (seek_cell(cell_x_find,cell_y_find))
 
       # TEMPORAL
-      #is_blank = check_cell(frame_pos)
-     # if is_blank > 0:
-      cell_list.append(cell_x_find)
-      cell_list.append(cell_y_find)
+      is_blank = check_cell(frame_pos)
+      if is_blank > 0:
+       cell_list.append(cell_x_find)
+       cell_list.append(cell_y_find)
 
       cell_used += 1
       cell_y_find += 1
@@ -548,8 +548,8 @@ while frames:
 
   # --- even ---
   #output_mapd.write("\n")
-  output_mapd.write("\t\teven")
-  output_mapd.write("\n")
+  #output_mapd.write("\t\teven")
+  #output_mapd.write("\n")
 
 # ----------------------------
 # Next frame

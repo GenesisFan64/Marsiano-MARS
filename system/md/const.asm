@@ -4,8 +4,7 @@
 ; ----------------------------------------------------------------
 
 ; MD to MARS Task transfer settings
-MAX_MDTSKARG	equ 8			; MAX MD task arguments (FIXED)
-MAX_MDTASKS	equ 16			; MAX requests from MD to here
+MAX_MDDMATSK	equ 16			; MAX DMA transfers
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -112,11 +111,9 @@ sizeof_input	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdSystem
+RAM_MdMarsDreq	ds.l 128			; RAM sent to Master CPU using DREQ
 RAM_InputData	ds.b sizeof_input*4		; Input data section
-RAM_SaveData	ds.b $200			; Save data cache (for SRAM)
-RAM_MdMarsTskM	ds.l MAX_MDTSKARG*MAX_MDTASKS	; Queue task list for MASTER SH2
-RAM_MdMarsTskS	ds.l MAX_MDTSKARG*MAX_MDTASKS	; Queue task list for SLAVE SH2
-RAM_MdMarsTsSgl	ds.l MAX_MDTSKARG		; Single task request for 32X, shared for both Mst and Slv
+RAM_SaveData	ds.b $200			; SRAM data cache
 RAM_FrameCount	ds.l 1				; Global frame counter
 RAM_SysRandVal	ds.l 1				; Random value
 RAM_SysRandSeed	ds.l 1				; Randomness seed
@@ -145,6 +142,9 @@ sizeof_mdsnd	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdVideo
+RAM_SpriteData	ds.w 8*70		; Sprite cache
+RAM_VdpDmaList	ds.w 7*MAX_MDDMATSK
+RAM_VdpDmaIndx	ds.w 1
 RAM_VidPrntVram	ds.w 1			; Default VRAM location for ASCII text used by Video_Print
 RAM_VidPrntList	ds.w 3*64		; Video_Print list: Address, Type
 RAM_VdpRegs	ds.b 24			; VDP Register cache

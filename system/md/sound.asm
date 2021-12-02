@@ -46,9 +46,9 @@ Sound_Init:
 ; ------------------------------------------------
 
 sndLockZ80:
-		move.w	#$0100,(z80_bus).l		; Stop Z80
+		move.w	#$0100,(z80_bus).l
 .wait:
-		btst	#0,(z80_bus).l			; Wait for it
+		btst	#0,(z80_bus).l
 		bne.s	.wait
 		rts
 
@@ -127,11 +127,15 @@ sndReq_sbyte:
 ; Sound_DMA_Pause
 ;
 ; Call this BEFORE doing any DMA task
+;
+; Uses:
+; d7
 ; --------------------------------------------------------
 
 Sound_DMA_Pause:
 
 .retry:
+		swap	d7
 		bsr	sndLockZ80
 		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
 		bsr	sndUnlockZ80
@@ -156,6 +160,7 @@ Sound_DMA_Pause:
 .wait_mars:	move.b	(sysmars_reg+comm15),d7		; Wait for BUSY/CLOCK and
 		and.w	#%11100000,d7			; BACKUP
 		bne.s	.wait_mars
+		swap	d7
 		rts
 
 ; --------------------------------------------------------

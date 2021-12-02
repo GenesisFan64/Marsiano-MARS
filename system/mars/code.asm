@@ -918,8 +918,8 @@ master_loop:
 		mov	#240,r0
 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#320,r2
-		mov	#240,r3
+		mov	#384,r2
+		mov	#224,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -950,7 +950,6 @@ mstr_gfx1_loop:
 		mov	#_vdpreg+shift,r1
 		and	#1,r0
 		mov.w	r0,@r1				; Write OLD value & 1
-
 		mov.w	@(marsGbl_Bg_DrwReqFull,gbr),r0
 		cmp/pl	r0
 		bf	.no_redraw
@@ -959,6 +958,25 @@ mstr_gfx1_loop:
 		bsr	MarsVideo_DrawAllBg
 		nop
 .no_redraw:
+
+	; TEST movement from 68k
+		mov	#_sysreg+comm14,r1
+		mov.b	@r1,r0
+		and	#$01,r0
+		cmp/eq	#0,r0
+		bt	.TEST_1
+		and	#%11111110,r0
+		mov.b	r0,@r1
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#$4000,r1
+		mov	@(marsGbl_Bg_Xpos,gbr),r0
+		add	r1,r0
+		mov	r0,@(marsGbl_Bg_Xpos,gbr)
+		ldc	@r15+,sr
+.TEST_1:
+
 ; 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
 ; 		cmp/eq	#0,r0
 ; 		bt	.no_num
@@ -1099,15 +1117,15 @@ mstr_gfx1_loop:
 ; 		mov	@(marsGbl_Bg_Ypos,gbr),r0
 ; 		add	r1,r0
 ; 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
-
-		mov	#$8000,r1
-		mov	@(marsGbl_Bg_Xpos,gbr),r0
-		add	r1,r0
-		mov	r0,@(marsGbl_Bg_Xpos,gbr)
-		mov	#$8000,r1
-		mov	@(marsGbl_Bg_Ypos,gbr),r0
-		add	r1,r0
-		mov	r0,@(marsGbl_Bg_Ypos,gbr)
+;
+; 		mov	#$1000,r1
+; 		mov	@(marsGbl_Bg_Xpos,gbr),r0
+; 		add	r1,r0
+; 		mov	r0,@(marsGbl_Bg_Xpos,gbr)
+; 		mov	#$1000,r1
+; 		mov	@(marsGbl_Bg_Ypos,gbr),r0
+; 		add	r1,r0
+; 		mov	r0,@(marsGbl_Bg_Ypos,gbr)
 .calm_down:
 
 	; ---------------------------------------
@@ -1127,13 +1145,13 @@ mstr_gfx1_loop:
 	; Write linetable to current framebuffer
 	; ---------------------------------------
 
-		mov	#rot_angle,r1
-		mov	@r1,r2
-		mov	r2,r4
-		mov	#$7FF,r3
-		add	#16,r4		; wave speed
-		and	r3,r4
-		mov	r4,@r1
+; 		mov	#rot_angle,r1
+; 		mov	@r1,r2
+; 		mov	r2,r4
+; 		mov	#$7FF,r3
+; 		add	#4,r4		; wave speed
+; 		and	r3,r4
+; 		mov	r4,@r1
 
 		mov	#0,r3
 		mov	#0,r4
@@ -1151,18 +1169,18 @@ mstr_gfx1_loop:
 		mov.w	@(marsGbl_FbMaxLines,gbr),r0	; Number of lines to show
 		mov	r0,r5
 .ln_loop:
-		mov	#$7FF,r3
-		mov	r2,r0
-		add	#16,r2		; wave distord
-		and	r3,r2
-		shll2	r0
-		mov	#sin_table,r3
-		mov	@(r0,r3),r4
-		mov	#8,r0		; wave max X
-		dmuls	r0,r4
-		sts	macl,r4
-		shlr16	r4
-		exts.w	r4,r4
+; 		mov	#$7FF,r3
+; 		mov	r2,r0
+; 		add	#16,r2		; wave distord
+; 		and	r3,r2
+; 		shll2	r0
+; 		mov	#sin_table,r3
+; 		mov	@(r0,r3),r4
+; 		mov	#8,r0		; wave max X
+; 		dmuls	r0,r4
+; 		sts	macl,r4
+; 		shlr16	r4
+; 		exts.w	r4,r4
 
 		mov	r9,r1
 		cmp/ge	r7,r1
@@ -1177,7 +1195,7 @@ mstr_gfx1_loop:
 		add	r6,r9		; Add Y
 		add	r8,r1		; Add FB base pos
 		shlr	r1		; divide by 2 (shift reg does the missing bit 0)
-		add	r4,r1
+; 		add	r4,r1
 		mov.w	r1,@r10		; send to FB's table
 		dt	r5
 		bf/s	.ln_loop
@@ -1185,14 +1203,42 @@ mstr_gfx1_loop:
 
 	; ---------------------------------------
 
-		mov	#_CCR,r3			; <-- Required for Watchdog
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r3
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r3
-		mov	#MarsVideo_SetWatchdog,r0
-		jsr	@r0
-		nop
+	; Vars that require reset
+		mov	#MSCRL_HEIGHT,r2
+		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+		and	#$7F,r0
+		cmp/eq	#1,r0
+		bt	.mde1
+		mov	#224,r2
+.mde1:
+		mov	#Cach_LR_Lines,r1		; L/R lines to process
+		mov	r2,@r1
+		mov	#_framebuffer+$200,r0
+		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
+		mov	#Cach_Xadd,r1
+		mov	#Cach_Yadd,r2
+		mov.w	@(marsGbl_Bg_Xscale,gbr),r0
+		shll8	r0
+		mov	r0,@r1
+		mov.w	@(marsGbl_Bg_Yscale,gbr),r0
+		shll8	r0
+		mov	r0,@r2
+		mov.w	@(marsGbl_Bg_XbgInc_L,gbr),r0
+		mov	#Cach_Xpos,r1
+		mov	r0,@r1
+		mov.w	@(marsGbl_Bg_YbgInc_U,gbr),r0
+		shll16	r0
+		mov	#Cach_Ycurr,r1
+		mov	r0,@r1
+
+; 		mov	#_CCR,r3			; <-- Required for Watchdog
+; 		mov	#%00001000,r0			; Two-way mode
+; 		mov.w	r0,@r3
+; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+; 		mov.w	r0,@r3
+; 		mov	#MarsVideo_SetWatchdog,r0
+; 		jsr	@r0
+; 		nop
 
 ; 	Start slicing polygons
 ; 	r14 - Polygon pointers list

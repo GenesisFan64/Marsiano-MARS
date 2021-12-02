@@ -8,7 +8,7 @@ Sound, Genesis and 32X:
 - It uses the channel-link system, It automaticly picks the available soundchip channel to play. Can autodetect special features (DAC and FM3 special) and swap sound chips in the same Impulse-channel
 - Two playback slots: Second slot has priority for SFX sound effects, it can temporally override channels used by the first slot
 - PSG soundchip: supports effects like Attack and Release, can autodetect if the NOISE channel uses Tone3(frequency-steal) mode
-- YM2616 soundchip: DAC sample playback at 18000hz aprox. with pitch changes, supports FM3 special mode for extra frequencies
+- YM2612 soundchip: DAC sample playback at 18000hz aprox. with pitch changes, supports FM3 special mode for extra frequencies
 - 32X: Supports PWM, 7 psuedo channels are available to use with Pitch, Volume and other effects
 
 Video driver:
