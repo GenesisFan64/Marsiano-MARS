@@ -3178,7 +3178,7 @@ sizeof_marsram	ds.l 0
 
 .here:
 	if MOMPASS=6
-		message "MARS RAM from \{((SH2_RAM)&$FFFFFF)} to \{((.here)&$FFFFFF)}"
+		message "SH2 MARS RAM from \{((SH2_RAM)&$FFFFFF)} to \{((.here)&$FFFFFF)}"
 	endif
 		finish
 

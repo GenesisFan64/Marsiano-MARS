@@ -47,7 +47,6 @@ RAM_CurrTempo	ds.w 1
 RAM_WindowCurr	ds.w 1
 RAM_WindowNew	ds.w 1
 ; RAM_BoardBlocks	dc.b 6*6
-sizeof_mdglbl	ds.l 0
 		finish
 
 ; ====================================================================

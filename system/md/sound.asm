@@ -143,6 +143,9 @@ Sound_DMA_Pause:
 		moveq	#68,d7
 		dbf	d7,*
 		bra.s	.retry
+	; TODO: ver si necesito un timeout...
+		;rts
+
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
@@ -189,16 +192,19 @@ Sound_DMA_Resume:
 ; --------------------------------------------------------
 ; SoundReq_SetTrack
 ;
-; a0:
-;  dc.l pattern_data
-;  dc.l block_data
-;  dc.l instrument_data
+; a0 - Pointers to Pattern, Blocks and Instruments:
+;  	dc.l pattern_data
+;  	dc.l block_data
+;  	dc.l instrument_data
 ;
 ; d0 - Slot
 ; d1 - Ticks
 ; d2 - From block
 ; d3 - Flags: %00004321
 ; 	1234 - Use global tempos 1,2,3 or 4
+;
+; Uses:
+; d6-d7,a5-a6
 ; --------------------------------------------------------
 
 Sound_TrkPlay:

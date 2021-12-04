@@ -11,7 +11,7 @@ MAX_MDDMATSK	equ 16			; MAX DMA transfers
 ; Settings
 ; --------------------------------------------------------
 
-MDRAM_START	equ $FFFF8800		; Start of working MD RAM (below it is free for CODE or decompression output)
+MDRAM_START	equ $FFFF8800		; Start of working MD RAM (below that is for CODE or decompression output)
 MAX_MDERAM	equ $800		; MAX RAM for current screen mode (title,menu,or gameplay...)
 varNullVram	equ $7FF		; Default Blank tile for some video routines
 

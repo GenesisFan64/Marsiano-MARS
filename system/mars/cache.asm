@@ -805,7 +805,7 @@ Cach_LnDrw_S	ds.l 0			; Read this backwards (<--)
 CACHE_MASTER_E:
 		align 4
 	if MOMPASS=6
-		message "MASTER CACHE uses: \{(CACHE_MASTER_E-CACHE_MASTER)}"
+		message "SH2 MASTER CACHE uses: \{(CACHE_MASTER_E-CACHE_MASTER)}"
 	endif
 
 ; ====================================================================
@@ -1044,5 +1044,5 @@ MarsSnd_Active	ds.l 1
 CACHE_SLAVE_E:
 		align 4
 	if MOMPASS=6
-		message "SLAVE CACHE uses: \{(CACHE_SLAVE_E-CACHE_SLAVE)}"
+		message "SH2 SLAVE CACHE uses: \{(CACHE_SLAVE_E-CACHE_SLAVE)}"
 	endif

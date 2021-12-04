@@ -8,6 +8,7 @@
 		include	"system/md/map.asm"	; Genesis hardware map
 		include	"system/mars/map.asm"	; MARS map
 		include	"system/head.asm"	; 32X header
+		include "code/global.asm"	; Global user variables for the Genesis
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -33,10 +34,6 @@ minfo_ram_s:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
-; 	if MOMPASS=6
-.here:
-; 		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
-; 	endif
 RAMCODE_USER:
 		dephase
 MdRamCode_end:
