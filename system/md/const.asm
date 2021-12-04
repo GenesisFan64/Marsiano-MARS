@@ -7,48 +7,24 @@
 MAX_MDDMATSK	equ 16			; MAX DMA transfers
 
 ; ====================================================================
-; ----------------------------------------------------------------
-; MD Sound
-; ----------------------------------------------------------------
+; --------------------------------------------------------
+; Settings
+; --------------------------------------------------------
+
+MDRAM_START	equ $FFFF8800		; Start of working MD RAM (below it is free for CODE or decompression output)
+MAX_MDERAM	equ $800		; MAX RAM for current screen mode (title,menu,or gameplay...)
+varNullVram	equ $7FF		; Default Blank tile for some video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD Video
+; Structures
 ; ----------------------------------------------------------------
 
-; ------------------------------------------------
-; vdp_ctrl READ bits
-; ------------------------------------------------
-
-bitHint		equ 2
-bitVint		equ 3
-bitDma		equ 1
-
-; ------------------------------------------------
-; VDP register variables
-; ------------------------------------------------
-
-; Register $80
-HVStop		equ $02
-HintEnbl	equ $10
-bitHVStop	equ 1
-bitHintEnbl	equ 4
-
-; Register $81
-DispEnbl 	equ $40
-VintEnbl 	equ $20
-DmaEnbl		equ $10
-bitDispEnbl	equ 6
-bitVintEnbl	equ 5
-bitDmaEnbl	equ 4
-bitV30		equ 3
-
-; ====================================================================
 ; --------------------------------------------------------
-; Contoller reading (call System_Input first)
+; Variables
 ; --------------------------------------------------------
 
-; structure is below
+; Read as (Controller_1)
 Controller_1	equ RAM_InputData
 Controller_2	equ RAM_InputData+sizeof_input
 
@@ -81,20 +57,6 @@ bitJoyZ		equ 0
 bitJoyY		equ 1
 bitJoyX		equ 2
 bitJoyMode	equ 3
-
-; ====================================================================
-; --------------------------------------------------------
-; Settings
-; --------------------------------------------------------
-
-MDRAM_START	equ $FFFF8800		; Start of working MD RAM (below it is free for CODE or decompression output)
-MAX_MDERAM	equ $800		; MAX RAM for current screen mode (title,menu,or gameplay...)
-varNullVram	equ $7FF		; Default Blank tile for some video routines
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Structures
-; ----------------------------------------------------------------
 
 ; Controller buffer data (after calling System_Input)
 		struct 0

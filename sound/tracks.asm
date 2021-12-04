@@ -5,9 +5,14 @@
 ; SOUND
 ; ------------------------------------------------------------
 
+; PWM pitches:
+; -17 - 8000
+
 ; Instrument macros
 ; do note that some 24-bit pointers add 90h to the MSB
-
+;
+; TODO: this might fail to work. if possible use ALL instruments
+; on your tracks
 gInsNull macro
 	dc.b  -1,$00,$00,$00
 	dc.b $00,$00,$00,$00
@@ -23,48 +28,51 @@ gInsPsg	macro pitch,alv,atk,slv,dky,rrt
 	dc.b slv,dky,rrt,$00
 	endm
 
-; mode: noise mode %tmm (PSGN only)
+; same arguments as gInsPsg, but for the last one:
+; mode: noise mode %tmm (PSGN only) t-Bass(0)|Noise(1) mm-Clock(0)|Clock/2(1)|Clock/4(2)|Tone3(3)
 gInsPsgN macro pitch,alv,atk,slv,dky,rrt,mode
 	dc.b $90|mode,pitch,alv,atk
 	dc.b slv,dky,rrt,0
 	endm
 
-; fmins - 24-bit ROM pointer to
-; patch data
+; fmins - 24-bit ROM pointer to patch data
+; automaticly sets to the $900000 area
 gInsFm macro pitch,fmins
 	dc.b $A0,pitch,((fmins>>16)&$FF)|$90,((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
-; Same but for Channel 3 special, the last
-; 4 words set each OP's frequency in this order:
-; OP1 OP2 OP3 OP4
+; Same as gInsFm
+; But the last 4 words are manually-set frequencies
+; for each operator in this order: OP1 OP2 OP3 OP4
 gInsFm3	macro pitch,fmins
 	dc.b $B0,pitch,((fmins>>16)&$FF)|$90,((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
-; start: Pointer to sample data, the first 3 bytes of
-;        the sample contains the LENGTH of the sample
-; loop: Sample to jump to, 0-start
-; flags: 0-dont loop, 1-loop
+; start: Pointer to sample data:
+;        dc.b end,end,end	; 24-bit LENGTH of the sample
+;        dc.b loop,loop,loop	; 24-bit Loop point
+;        dc.b (sound data)	; Then the actual sound data
+;
+; flags: %0-dont loop, %1-loop
 gInsDac	macro pitch,start,flags
 	dc.b $C0|flags,pitch,((start>>16)&$FF)|$90,((start>>8)&$FF)
 	dc.b start&$FF,0,0,0
 	endm
 
-; flags:
-; %00SL
-; S - Sample is in stereo
-; L - Loop sample
+; start: Pointer to sample data:
+;        dc.b end,end,end	; 24-bit LENGTH of the sample
+;        dc.b loop,loop,loop	; 24-bit Loop point
+;        dc.b (sound data)	; Then the actual sound data
+;
+; flags: %00SL
+;        L - Loop sample
+;        S - Sample is in stereo
 gInsPwm	macro pitch,start,flags
 	dc.b $D0|flags,pitch,((start>>24)&$FF),((start>>16)&$FF)
 	dc.b ((start>>8)&$FF),start&$FF,0,0
 	endm
-
-; ------------------------------------------------------------
-; PWM pitches:
-; -17 - 8000
 
 ; ------------------------------------------------------------
 ; SFX tracks
@@ -82,36 +90,6 @@ GemaSfxIns_Boom:
 	gInsFm3 0,FmIns_Fm3_Explosion
 	gInsPsgN 0,$00,$00,$00,$00,$02,%110
 	gInsFm 0,FmIns_Ding_toy
-
-; GemaTrk_blk_TEST:
-; 	binclude "sound/tracks/kid_blk.bin"
-; GemaTrk_patt_TEST:
-; 	binclude "sound/tracks/kid_patt.bin"
-; GemaTrk_ins_TEST:
-; 	gInsFm -12,FmIns_Bass_groove_gem
-; 	gInsFm -12,FmIns_Guitar_gem
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
 
 GemaTrk_blk_BeMine:
 	binclude "sound/tracks/bemine_blk.bin"
@@ -144,7 +122,6 @@ GemaTrk_ins_BeMine:
 	gInsNull
 	gInsNull
 
-; HILLS
 GemaTrk_blk_HILLS:
 	binclude "sound/tracks/hill_blk.bin"
 GemaTrk_patt_HILLS:

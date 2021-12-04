@@ -1,22 +1,26 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; SH2 ROM user data
-; 
+; SH2 ROM data
+;
 ; If your data is too much for SDRAM, place it here.
-; Note that this section will be gone if the Genesis side is
-; perfoming a DMA ROM-to-VDP Transfer (setting RV=1)
-; 
-; Note: Reading data from here is slow on hardware
+; BUT keep in mind that this entire section will be gone
+; if the Genesis performs DMA-to-VDP Transfers
+; which requires RV=1 (Revert ROM to original position)
+; ***EMULATORS IGNORE THIS LIMITATION***
+;
+; Only access here on these conditions:
+; - Stop all tracks that use PWM samples
+; - If you wanna keep any tracks active: set 1 to marsBlock
+;   in the Z80 driver, all tracks will continue playing
+;   only with PSG and FM instruments
+;   (TODO: check how it peforms)
+;
+; The PWM samples are safe to use with the implementation
+; of a sample-backup routine that the 68K requests before
+; doing DMA
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-
-TESTMARS_BG:
-		binclude "data/mars/test_art.bin"
-		align 4
-TESTMARS_BG_PAL:
-		binclude "data/mars/test_pal.bin"
-		align 4
+	align 4
 
 ; --------------------------------------------------------
 ; PWM samples
@@ -42,8 +46,9 @@ SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",0
 
 ; --------------------------------------------------------
+; Other
+; --------------------------------------------------------
 
-; PWM_STEREO:
-; 	gSmpl "sound/TEST_MARS.wav",0
-; PWM_STEREO_e:
-; 	align 4
+TESTMARS_BG:
+	binclude "data/mars/test_art.bin"
+	align 4

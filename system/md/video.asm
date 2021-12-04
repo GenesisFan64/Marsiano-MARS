@@ -3,6 +3,33 @@
 ; MD Video
 ; ----------------------------------------------------------------
 
+; ------------------------------------------------
+; vdp_ctrl READ bits
+; ------------------------------------------------
+
+bitHint		equ 2
+bitVint		equ 3
+bitDma		equ 1
+
+; ------------------------------------------------
+; VDP register variables
+; ------------------------------------------------
+
+; Register $80
+HVStop		equ $02
+HintEnbl	equ $10
+bitHVStop	equ 1
+bitHintEnbl	equ 4
+
+; Register $81
+DispEnbl 	equ $40
+VintEnbl 	equ $20
+DmaEnbl		equ $10
+bitDispEnbl	equ 6
+bitVintEnbl	equ 5
+bitDmaEnbl	equ 4
+bitV30		equ 3
+
 ; --------------------------------------------------------
 ; Init Video
 ; 
@@ -11,24 +38,23 @@
 ; --------------------------------------------------------
 
 Video_Init:		
-		lea	(RAM_MdVideo),a0	; Clear RAM
-		moveq	#0,d0
-		move.w	#(sizeof_mdvid-RAM_MdVideo)-1,d1
+		lea	(RAM_MdVideo),a6	; Clear RAM
+		moveq	#0,d6
+		move.w	#(sizeof_mdvid-RAM_MdVideo)-1,d7
 .clrram:
-		move.b	d0,(a0)+
-		dbf	d1,.clrram
-
-		lea	list_vdpregs(pc),a0	; Init registers
-		lea	(RAM_VdpRegs).w,a1
-		lea	(vdp_ctrl),a2
-		move.w	#$8000,d0
-		move.w	#19-1,d1
+		move.b	d6,(a6)+
+		dbf	d7,.clrram
+		lea	list_vdpregs(pc),a6	; Init registers
+		lea	(RAM_VdpRegs).w,a5
+		lea	(vdp_ctrl),a4
+		move.w	#$8000,d6
+		move.w	#19-1,d7
 .loop:
-		move.b	(a0)+,d0
-		move.b	d0,(a1)+
-		move.w	d0,(a2)
-		add.w	#$100,d0
-		dbf	d1,.loop
+		move.b	(a6)+,d6
+		move.b	d6,(a5)+
+		move.w	d6,(a4)
+		add.w	#$100,d6
+		dbf	d7,.loop
 .exit:
 		rts
 
@@ -40,86 +66,90 @@ Video_Init:
 ; --------------------------------------------------------
 ; Video_Clear
 ; 
-; Clear all video data
+; Clear all video data from VRAM
 ; --------------------------------------------------------
 
 Video_Clear:
-		move.w	#0,d0			; Clear until $57F
-		move.w	#$57F*$20,d1
-		move.w	#0,d2
+		move.w	#0,d0			; Clears until $57F
+		move.w	#0,d1
+		move.w	#$57F*$20,d2
 		bsr	Video_Fill
-		move.w	#$FFF,d1		; FG/BG size
-		move.b	(RAM_VdpRegs+2).l,d2	; FG
-		andi.w	#%111000,d2
-		lsl.w	#8,d2
-		lsl.w	#2,d2
+
+		move.w	#$FFF,d2		; FG/BG size
+		move.b	(RAM_VdpRegs+2).l,d1	; FG
+		andi.w	#%111000,d1
+		lsl.w	#8,d1
+		lsl.w	#2,d1
 		bsr	Video_Fill
-		move.b	(RAM_VdpRegs+3).l,d2	; BG
-		andi.w	#%000111,d2
-		lsl.w	#8,d2
-		lsl.w	#5,d2
-		bsr	Video_Fill	
-		move.w	#$FFF,d1		; WD Size
-		move.b	(RAM_VdpRegs+4).l,d2	; Window
-		andi.w	#%111110,d2
-		lsl.w	#8,d2
-		lsl.w	#2,d2
+		move.b	(RAM_VdpRegs+3).l,d1	; BG
+		andi.w	#%000111,d1
+		lsl.w	#8,d1
+		lsl.w	#5,d1
+		bsr	Video_Fill
+
+		move.w	#$FFF,d2		; WD Size
+		move.b	(RAM_VdpRegs+4).l,d1	; Window
+		andi.w	#%111110,d1
+		lsl.w	#8,d1
+		lsl.w	#2,d1
 		bra	Video_Fill
 		
 ; ---------------------------------
 ; Video_Update
 ; 
-; Copy our RAM reg settings to
-; VDP from $80 to $90
+; Sends register data specified
+; in RAM to VDP
+; from regs $80 to $90
 ; 
 ; Uses:
-; d4-d5,a4-a5
+; d6-d7,a5-a6
 ; ---------------------------------
 
 Video_Update:
-		lea	(RAM_VdpRegs).w,a4
+		lea	(RAM_VdpRegs).w,a6
 		lea	(vdp_ctrl),a5
-		move.w	#$8000,d4
-		move.w	#17-1,d5
+		move.w	#$8000,d6
+		move.w	#17-1,d7
 .loop:
-		move.b	(a4)+,d4
-		move.w	d4,(a5)
-		add.w	#$100,d4
-		dbf	d5,.loop
+		move.b	(a6)+,d6
+		move.w	d6,(a5)
+		add.w	#$100,d6
+		dbf	d7,.loop
 .exit:
 		rts
 		
 ; --------------------------------------------------------
 ; Video_LoadPal
-; Load palette to VDP directly, waits VBLANK
+; Load palette to VDP directly
 ; 
 ; Input:
 ; a0 - Palette data
-; d0 - Start at
-; d1 - Num of colors - 1
+; d0 - Start position
+; d1 - Number of colors
 ; 
 ; Uses:
-; a4,d4
+; d5-d7,a6
 ; 
 ; Note:
-; It will show dots on screen
+; It waits for VBlank so the CRAM dots doesn't get
+; in the middle of the screen.
 ; --------------------------------------------------------
 
 Video_LoadPal:
-		lea	(vdp_data),a4
-		moveq	#0,d4
-		move.w	d0,d4
-		add.w	d4,d4
-		ori.w	#$C000,d4
-		swap	d4
-		move.l	d4,4(a4)
-		move.w	d1,d4
-.outv: 		move.w	4(a4),d5
-		btst	#bitVint,d5
+		lea	(vdp_data),a6
+		moveq	#0,d7
+		move.w	d0,d7
+		add.w	d7,d7
+		ori.w	#$C000,d7
+		swap	d7
+		move.l	d7,4(a6)
+		move.w	d1,d7
+.outv: 		move.w	4(a6),d6
+		btst	#bitVint,d6
 		beq.s	.outv
 .loop:
-		move.w	(a0)+,(a4)
-		dbf	d4,.loop
+		move.w	(a0)+,(a6)
+		dbf	d7,.loop
 		rts
 		
 ; --------------------------------------------------------
@@ -131,18 +161,20 @@ Video_LoadPal:
 ; d0 | LONG - 00|Layer|X|Y, locate(lyr,x,y)  
 ; d1 | LONG - Width|Height (cells),  mapsize(x,y)
 ; d2 | WORD - VRAM
-
+;
+; Can autodetect layer size setting
+;
 ; Uses:
-; a4-a5,d4-d7
+; d4-d7,a6
 ; --------------------------------------------------------
 
 Video_LoadMap:
-		lea	(vdp_data),a4
+		lea	(vdp_data),a6
 		bsr	vid_PickLayer
 		move.w	d1,d5		; Start here
 .yloop:
 		swap	d5
-		move.l	d4,4(a4)
+		move.l	d4,4(a6)
 		move.l	d1,d7
 		swap	d7
 .xloop:
@@ -166,113 +198,113 @@ Video_LoadMap:
 		or.w	d7,d5
 .nodble:
 		swap	d7
-		move.w	d5,(a4)
+		move.w	d5,(a6)
 		dbf	d7,.xloop
 		add.l	d6,d4
 		swap	d5
 		dbf	d5,.yloop
 		rts
 
-; --------------------------------------------------------
-; Video_LoadMap_Vert
-; 
-; Load map data, Vertical order
-; 
-; a0 - Map data
-; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
-; d1 | LONG - Width|Height (cells),  mapsize(x,y)
-; d2 | WORD - VRAM
-
-; Uses:
-; a4-a5,d4-d7
-; --------------------------------------------------------
-
-Video_LoadMap_Vert:
-		lea	(vdp_data),a4
-		bsr	vid_PickLayer
-		move.l	d1,d5		; Start here
-		swap	d5
-.xloop:
-		swap	d5
-		move.l	d4,-(sp)
-		move.w	d1,d7
-		btst	#2,(RAM_VdpRegs+$C).l
-		beq.s	.yloop
-		lsr.w	#1,d7
-.yloop:
-		move.l	d4,4(a4)
-		move.w	(a0),d5
-		cmp.w	#-1,d5
-		bne.s	.nonull
-		move.w	#varNullVram,d5
-		bra.s	.cont
-.nonull:
-		add.w	d2,d5
-.cont:
-		swap	d7
-		adda	#2,a0
-		btst	#2,(RAM_VdpRegs+$C).l
-		beq.s	.nodble
-		adda	#2,a0
-		move.w	d5,d7
-		lsr.w	#1,d7
-		and.w	#$7FF,d7
-		and.w	#$F800,d5
-		or.w	d7,d5
-.nodble:
-		swap	d7
-		move.w	d5,(a4)
-		add.l	d6,d4
-		dbf	d7,.yloop
-.outdbl:
-		move.l	(sp)+,d4
-		add.l	#$20000,d4
-		swap	d5
-		dbf	d5,.xloop
-		rts
+; ; --------------------------------------------------------
+; ; Video_LoadMap_Vert
+; ;
+; ; Load map data, Vertical order
+; ;
+; ; a0 - Map data
+; ; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
+; ; d1 | LONG - Width|Height (cells),  mapsize(x,y)
+; ; d2 | WORD - VRAM
+;
+; ; Uses:
+; ; a4-a5,d4-d7
+; ; --------------------------------------------------------
+;
+; Video_LoadMap_Vert:
+; 		lea	(vdp_data),a4
+; 		bsr	vid_PickLayer
+; 		move.l	d1,d5		; Start here
+; 		swap	d5
+; .xloop:
+; 		swap	d5
+; 		move.l	d4,-(sp)
+; 		move.w	d1,d7
+; 		btst	#2,(RAM_VdpRegs+$C).l
+; 		beq.s	.yloop
+; 		lsr.w	#1,d7
+; .yloop:
+; 		move.l	d4,4(a4)
+; 		move.w	(a0),d5
+; 		cmp.w	#-1,d5
+; 		bne.s	.nonull
+; 		move.w	#varNullVram,d5
+; 		bra.s	.cont
+; .nonull:
+; 		add.w	d2,d5
+; .cont:
+; 		swap	d7
+; 		adda	#2,a0
+; 		btst	#2,(RAM_VdpRegs+$C).l
+; 		beq.s	.nodble
+; 		adda	#2,a0
+; 		move.w	d5,d7
+; 		lsr.w	#1,d7
+; 		and.w	#$7FF,d7
+; 		and.w	#$F800,d5
+; 		or.w	d7,d5
+; .nodble:
+; 		swap	d7
+; 		move.w	d5,(a4)
+; 		add.l	d6,d4
+; 		dbf	d7,.yloop
+; .outdbl:
+; 		move.l	(sp)+,d4
+; 		add.l	#$20000,d4
+; 		swap	d5
+; 		dbf	d5,.xloop
+; 		rts
 		
-; --------------------------------------------------------
-; Video_AutoMap_Vert
-; 
-; Make automatic map, Vertical order
-; 
-; MCD: Use this to make a virtual screen
-; for Stamps
-; 
-; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
-; d1 | LONG - Width|Height (cells),  mapsize(x,y)
-; d2 | WORD - VRAM
-
-; Uses:
-; a4-a5,d4-d7
-; --------------------------------------------------------
-
-; TODO: double interlace
-Video_AutoMap_Vert:
-		lea	(vdp_data),a4
-		bsr	vid_PickLayer
-		move.w	d2,d7		; Start here
-		move.l	d1,d5
-		swap	d5
-.xloop:
-		swap	d5
-		move.l	d4,-(sp)
-		move.w	d1,d5
-		btst	#2,(RAM_VdpRegs+$C).l
-		beq.s	.yloop
-		lsr.w	#1,d5
-.yloop:
-		move.l	d4,4(a4)
-		move.w	d7,(a4)
-		add.w	#1,d7
-		add.l	d6,d4
-		dbf	d5,.yloop
-
-		move.l	(sp)+,d4
-		add.l	#$20000,d4
-		swap	d5
-		dbf	d5,.xloop
-		rts
+; ; --------------------------------------------------------
+; ; Video_AutoMap_Vert
+; ;
+; ; Make automatic map, Vertical order
+; ;
+; ; MCD: Use this to make a virtual screen
+; ; for Stamps
+; ;
+; ; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
+; ; d1 | LONG - Width|Height (cells),  mapsize(x,y)
+; ; d2 | WORD - VRAM
+;
+; ; Uses:
+; ; a4-a5,d4-d7
+; ; --------------------------------------------------------
+;
+; ; TODO: double interlace
+; Video_AutoMap_Vert:
+; 		lea	(vdp_data),a4
+; 		bsr	vid_PickLayer
+; 		move.w	d2,d7		; Start here
+; 		move.l	d1,d5
+; 		swap	d5
+; .xloop:
+; 		swap	d5
+; 		move.l	d4,-(sp)
+; 		move.w	d1,d5
+; 		btst	#2,(RAM_VdpRegs+$C).l
+; 		beq.s	.yloop
+; 		lsr.w	#1,d5
+; .yloop:
+; 		move.l	d4,4(a4)
+; 		move.w	d7,(a4)
+; 		add.w	#1,d7
+; 		add.l	d6,d4
+; 		dbf	d5,.yloop
+;
+; 		move.l	(sp)+,d4
+; 		add.l	#$20000,d4
+; 		swap	d5
+; 		dbf	d5,.xloop
+; 		rts
 
 ; --------------------------------------------------------
 ; Video_PrintInit
@@ -286,29 +318,35 @@ Video_PrintInit:
 		move.w	#$F,d1
 		bsr	Video_LoadPal
 		move.l	#ASCII_FONT,d0
-		move.w	#ASCII_FONT_e-ASCII_FONT,d1
-		move.w	#$580|$6000,d2
-		move.w	d2,(RAM_VidPrntVram).w
+		move.w	#$580*$20,d1
+		move.w	#ASCII_FONT_e-ASCII_FONT,d2
+		move.w	#$580|$6000,d3
+		move.w	d3,(RAM_VidPrntVram).w
 		bra	Video_LoadArt
 
 ; --------------------------------------------------------
 ; Video_Print
-; 
+;
 ; Prints string to layer
 ; requires ASCII font
 ; 
-; a0 - string data
+; a0 - string data + RAM address to peek (optional)
 ; d0 | LONG - 00|Lyr|X|Y, locate(lyr,x,y)
 ; 
-; Notes:
-; "//b" - Show BYTE value
-; "//w" - Show WORD value
-; "//l" - Show LONG value
+; Special characters:
+; "//b" - Shows BYTE value
+; "//w" - Shows WORD value
+; "//l" - Shows LONG value
 ;   $0A - Next line
 ;   $00 - End of line
-; 
+;
+; After $00, put your RAM addresses in LONGS
+; don't forget to put align 2 at the end.
+;
+; CALL Video_PrintInit ONCE to use this feature.
+;
 ; Uses:
-; a4-a6,d4-d7
+; d4-d7,a4-a6
 ; --------------------------------------------------------
 
 Video_Print:
@@ -380,6 +418,9 @@ Video_Print:
 ; t - value type
 ; --------------------------------------------------------
 
+; reading byte by byte because longs doens't get
+; aligned after $00...
+
 		moveq	#0,d4
 		moveq	#0,d5
 		moveq	#0,d6
@@ -387,7 +428,6 @@ Video_Print:
 .nextv:
 		tst.l	(a5)
 		beq	.nothing
-
 	; grab value
 		moveq	#0,d4
 		move.b	(a0)+,d4
@@ -402,7 +442,6 @@ Video_Print:
 
 	; get value
 		move.w	4(a5),d6
-
 		cmp.w	#1,d6		; byte?
 		bne.s	.vbyte
 		move.b	(a4),d4
@@ -536,57 +575,54 @@ vid_PickLayer:
 ; 
 ; Fill data to VRAM
 ;
-; d0 | WORD - Fill data
-; d1 | WORD - Size
-; d2 | WORD - VRAM
+; d0 | WORD - Bytes to fill
+; d1 | WORD - VRAM position
+; d2 | WORD - Size
+;
+; Uses:
+; d6-d7,a6
 ; --------------------------------------------------------
 
 Video_Fill:
-		lea	(vdp_ctrl),a4
-		
-		move.w	#$8100,d4
-		move.b	(RAM_VdpRegs+1),d4
-		bset	#bitDmaEnbl,d4
-		move.w	d4,(a4)
-.dmaw:		move.w	(a4),d4
-		btst	#bitDma,d4
+		lea	(vdp_ctrl),a6
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1),d7
+		bset	#bitDmaEnbl,d7
+		move.w	d7,(a6)
+.dmaw:		move.w	(a6),d7
+		btst	#bitDma,d7
 		bne.s	.dmaw
-		move.w	#$8F01,(a4)		; Increment $01
-
-	; SIZE
-		move.w	d1,d4
-		move.l	#$94009300,d5
-		lsr.w	#1,d4
-		move.b	d4,d5
-		swap	d5
-		lsr.w	#8,d4
-		move.b	d4,d5
-		swap	d5
-		move.l	d5,(a4)
-		move.w	#$9780,(a4)		; DMA Fill bit
-
-	; DESTINATION
-		move.l	d2,d4
-; 		lsl.w	#5,d4
-		move.w	d4,d5
-		andi.w	#$3FFF,d5
-		ori.w	#$4000,d5
-		swap	d5
-		move.w	d4,d5
-		lsr.w	#8,d5
-		lsr.w	#6,d5
-		andi.w	#%11,d5
-		ori.w	#$80,d5
-		move.l	d5,(a4)
-		move.w	d0,-4(a4)
-.dmawe:		move.w	(a4),d4
-		btst	#bitDma,d4
+		move.w	#$8F01,(a6)	; Increment $01
+		move.w	d2,d7		; d2 - Size
+		move.l	#$94009300,d6
+		lsr.w	#1,d7
+		move.b	d7,d6
+		swap	d6
+		lsr.w	#8,d7
+		move.b	d7,d6
+		swap	d6
+		move.l	d6,(a6)
+		move.w	#$9780,(a6)	; DMA Fill mode
+		move.w	d1,d7		; d1 - Destination
+; 		lsl.w	#5,d7
+		move.w	d7,d6
+		andi.w	#$3FFF,d6
+		ori.w	#$4000,d6
+		swap	d6
+		move.w	d7,d6
+		lsr.w	#8,d6
+		lsr.w	#6,d6
+		andi.w	#%11,d6
+		ori.w	#$80,d6
+		move.l	d6,(a6)
+		move.w	d0,-4(a6)
+.dmawe:		move.w	(a6),d7
+		btst	#bitDma,d7
 		bne.s	.dmawe
-
-		move.w	#$8F02,(a4)		; Increment $02
-		move.w	#$8100,d4
-		move.b	(RAM_VdpRegs+1),d4
-		move.w	d4,(a4)
+		move.w	#$8F02,(a6)	; Increment $02
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1),d7
+		move.w	d7,(a6)
 		rts
 
 ; --------------------------------------------------------
@@ -595,61 +631,63 @@ Video_Fill:
 ; Copy VRAM data to another location
 ;
 ; d0 | WORD - VRAM Source
-; d1 | WORD - Size
-; d2 | WORD - VRAM Destination
+; d1 | WORD - VRAM Destination
+; d2 | WORD - Size
+;
+; Uses:
+; d6-d7,a6
 ; --------------------------------------------------------
 
+; TODO: test if this works again...
+
 Video_Copy:
-		lea	(vdp_ctrl),a4
-		
-		move.w	#$8100,d4
-		move.b	(RAM_VdpRegs+1),d4
-		bset	#bitDmaEnbl,d4
-		move.w	d4,(a4)
-.dmaw:		move.w	(a4),d4
-		btst	#bitDma,d4
+		lea	(vdp_ctrl),a6
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1),d7
+		bset	#bitDmaEnbl,d7
+		move.w	d7,(a6)
+.dmaw:		move.w	(a6),d7
+		btst	#bitDma,d7
 		bne.s	.dmaw
-		move.w	#$8F01,(a4)		; Increment $01
-		move.w	d1,d4			; SIZE
-		move.l	#$94009300,d5
-		lsr.w	#1,d4
-		move.b	d4,d5
-		swap	d5
-		lsr.w	#8,d4
-		move.b	d4,d5
-		swap	d5
-		move.l	d5,(a4)
-		move.l	#$96009500,d5		; SOURCE
-		move.w	d0,d4
-		move.b	d4,d5
-		swap	d5
-		lsr.w	#8,d4
-		move.b	d4,d5
-		move.l	d5,(a4)
-		move.w	#$97C0,(a4)		; DMA Fill bit
-		move.l	d2,d4			; DESTINATION
-; 		lsl.w	#5,d4
-		move.w	d4,d5
-		andi.w	#$3FFF,d5
-		ori.w	#$4000,d5
-		swap	d5
-		move.w	d4,d5
-		lsr.w	#8,d5
-		lsr.w	#6,d5
-		andi.w	#%11,d5
-		ori.w	#$C0,d5
-		move.l	d5,(a4)
-		move.w	d0,-4(a4)
-.dmawe:		move.w	(a4),d4
-		btst	#bitDma,d4
+		move.w	#$8F01,(a6)		; Increment $01
+		move.w	d2,d7			; SIZE
+		move.l	#$94009300,d6
+		lsr.w	#1,d7
+		move.b	d7,d6
+		swap	d6
+		lsr.w	#8,d7
+		move.b	d7,d6
+		swap	d6
+		move.l	d6,(a6)
+		move.l	#$96009500,d6		; SOURCE
+		move.w	d0,d7
+		move.b	d7,d6
+		swap	d6
+		lsr.w	#8,d7
+		move.b	d7,d6
+		move.l	d6,(a6)
+		move.w	#$97C0,(a6)		; DMA Copy mode
+		move.l	d2,d7			; DESTINATION
+; 		lsl.w	#5,d7
+		move.w	d7,d6
+		andi.w	#$3FFF,d6
+		ori.w	#$4000,d6
+		swap	d6
+		move.w	d7,d6
+		lsr.w	#8,d6
+		lsr.w	#6,d6
+		andi.w	#%11,d6
+		ori.w	#$C0,d6
+		move.l	d6,(a6)
+		move.w	d1,-4(a6)
+.dmawe:		move.w	(a6),d7
+		btst	#bitDma,d7
 		bne.s	.dmawe
-
-		move.w	#$8F02,(a4)		; Increment $02
-		move.w	#$8100,d4
-		move.b	(RAM_VdpRegs+1),d4
-		move.w	d4,(a4)
+		move.w	#$8F02,(a6)		; Increment $02
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1),d7
+		move.w	d7,(a6)
 		rts
-
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -659,17 +697,16 @@ Video_Copy:
 ; --------------------------------------------------------
 ; Video_DmaBlast
 ;
-; Process DMA tasks from an array
+; Process DMA tasks from a predefined list in RAM
 ; **CALL THIS DURING VBLANK ONLY**
 ;
 ; Uses:
-; a4,d4-d7
+; d5-d7,a3-a6
 ; --------------------------------------------------------
 
-; Format
-; $94xx,$93xx,$95xx,$96xx,$97xx
+; Entry format:
+; $94xx,$93xx,$95xx,$96xx,$97xx (SIZE,SOURCE)
 ; $40000080 (vdp destination + dma bit)
-
 
 Video_DmaBlast:
 		lea	(vdp_ctrl),a4
@@ -678,7 +715,7 @@ Video_DmaBlast:
 		move.b	(RAM_VdpRegs+1),d7
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a4)
-		bsr	Sound_DMA_Pause
+		bsr	Sound_DMA_Pause			; Request Z80 stop and SH2 backup
 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
 		or.w	#%00000001,d7
 		move.w	d7,(sysmars_reg+dreqctl).l
@@ -711,7 +748,7 @@ Video_DmaBlast:
 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=0
 		and.w	#%11111110,d7
 		move.w	d7,(sysmars_reg+dreqctl).l
-		bsr	Sound_DMA_Resume
+		bsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a4)
@@ -720,15 +757,14 @@ Video_DmaBlast:
 ; --------------------------------------------------------
 ; Sets a new DMA transfer task to the Blast list
 ;
-; *** IF USING VBLANK INTERRUPT DISABLE IT TEMPORALLY
-; BEFORE GETTING HERE ***
+; *** ONLY CALL THIS OUTSIDE OF VBLANK ***
 ;
 ; d0 | LONG - Art data
-; d1 | WORD - Size
-; d2 | WORD - VRAM (as cells)
+; d1 | WORD - VRAM location
+; d2 | WORD - Size
 ;
 ; Uses:
-; a4,d4-d7
+; d6-d7,a6
 ; --------------------------------------------------------
 
 Video_DmaSet:
@@ -737,8 +773,7 @@ Video_DmaSet:
 		adda	d7,a6
 		add.w	#7*2,d7
 		move.w	d7,(RAM_VdpDmaIndx).w
-
-		move.w	d1,d7			; LENGTH
+		move.w	d2,d7			; Length
 		move.l	#$94009300,d6
 		lsr.w	#1,d7
 		move.b	d7,d6
@@ -747,8 +782,7 @@ Video_DmaSet:
 		move.b	d7,d6
 		swap	d6
 		move.l	d6,(a6)+
-
-		move.l	d0,d7			; SOURCE
+		move.l	d0,d7			; Source
   		lsr.l	#1,d7
  		move.l	#$96009500,d6
  		move.b	d7,d6
@@ -760,9 +794,9 @@ Video_DmaSet:
  		lsr.l	#8,d7
  		move.b	d7,d6
  		move.w	d6,(a6)+
-		move.w	d2,d7			; DESTINATION
-		and.w	#$7FF,d7
-		lsl.w	#5,d7
+		move.w	d1,d7			; Destination
+; 		and.w	#$7FF,d7
+; 		lsl.w	#5,d7
 		move.w	d7,d6
 		and.l	#$3FE0,d7
 		ori.w	#$4000,d7
@@ -774,72 +808,55 @@ Video_DmaSet:
 		move.w	d6,(a6)+
 		rts
 
-; 		bsr	Sound_DMA_Pause
-; 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
-; 		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
-; 		move.w	d7,(sysmars_reg+dreqctl).l
-;  		move.w	d5,-(sp)
-; 		move.w	d4,(a4)				; d4 - First word
-; 		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
-; 		move.w	(sysmars_reg+dreqctl).l,d4	; Set RV=0
-; 		and.w	#%11111110,d4			; 68k ROM map returns to $880000/$900000
-; 		move.w	d4,(sysmars_reg+dreqctl).l
-; 		move.w	#$8100,d4			; DMA OFF
-; 		move.b	(RAM_VdpRegs+1),d4
-; 		move.w	d4,(a4)
-; 		move.w	(sp)+,sr
-; 		bra	Sound_DMA_Resume
-
 ; --------------------------------------------------------
-; Load graphics using DMA
+; Load graphics using DMA, direct
 ;
 ; d0 | LONG - Art data
-; d1 | WORD - Size
-; d2 | WORD - VRAM (cell)
-; 
+; d1 | WORD - VRAM location
+; d2 | WORD - Size
+;
+; *** For faster transfers wait for VBlank first ***
+;
 ; Uses:
-; d4-d7,a4
+; d5-d7,a4-a6
 ; --------------------------------------------------------
 
 Video_LoadArt:
 		move.w	sr,-(sp)
 		or	#$700,sr
 		lea	(vdp_ctrl),a4
-		move.w	#$8100,d4		; DMA ON
-		move.b	(RAM_VdpRegs+1),d4
-		bset	#bitDmaEnbl,d4
-		move.w	d4,(a4)
-		move.w	d1,d4			; LENGTH
+		move.w	#$8100,d6		; DMA ON
+		move.b	(RAM_VdpRegs+1),d6
+		bset	#bitDmaEnbl,d6
+		move.w	d6,(a4)
+		move.w	d2,d6			; Length
 		move.l	#$94009300,d5
-		lsr.w	#1,d4
-		move.b	d4,d5
+		lsr.w	#1,d6
+		move.b	d6,d5
 		swap	d5
-		lsr.w	#8,d4
-		move.b	d4,d5
+		lsr.w	#8,d6
+		move.b	d6,d5
 		swap	d5
 		move.l	d5,(a4)
-		move.l	d0,d4			; SOURCE
-  		lsr.l	#1,d4
+		move.l	d0,d6			; Source
+  		lsr.l	#1,d6
  		move.l	#$96009500,d5
- 		move.b	d4,d5
- 		lsr.l	#8,d4
+ 		move.b	d6,d5
+ 		lsr.l	#8,d6
  		swap	d5
- 		move.b	d4,d5
+ 		move.b	d6,d5
  		move.l	d5,(a4)
  		move.w	#$9700,d5
- 		lsr.l	#8,d4
- 		move.b	d4,d5
+ 		lsr.l	#8,d6
+ 		move.b	d6,d5
  		move.w	d5,(a4)
-		move.w	d2,d4			; DESTINATION
-		and.w	#$7FF,d4
-		lsl.w	#5,d4
-		move.w	d4,d5
-		and.l	#$3FE0,d4
-		ori.w	#$4000,d4
+		move.w	d1,d6			; Destination
+; 		and.w	#$7FF,d6
+; 		lsl.w	#5,d6
+		move.w	d6,d5
+		and.l	#$3FE0,d6
+		ori.w	#$4000,d6
 
-
-	; First write
-	; d5 -
 		lsr.w	#8,d5
 		lsr.w	#6,d5
 		andi.w	#%11,d5
@@ -849,23 +866,23 @@ Video_LoadArt:
 		lsr.w	#8,d7
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
-
 		bsr	Sound_DMA_Pause
 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
 		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
 		move.w	d7,(sysmars_reg+dreqctl).l
  		move.w	d5,-(sp)
-		move.w	d4,(a4)				; d4 - First word
+		move.w	d6,(a4)				; d6 - First word
 		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
-		move.w	(sysmars_reg+dreqctl).l,d4	; Set RV=0
-		and.w	#%11111110,d4			; 68k ROM map returns to $880000/$900000
-		move.w	d4,(sysmars_reg+dreqctl).l
-		move.w	#$8100,d4			; DMA OFF
-		move.b	(RAM_VdpRegs+1),d4
-		move.w	d4,(a4)
+		move.w	(sysmars_reg+dreqctl).l,d6	; Set RV=0
+		and.w	#%11111110,d6			; 68k ROM map returns to $880000/$900000
+		move.w	d6,(sysmars_reg+dreqctl).l
+		move.w	#$8100,d6			; DMA OFF
+		move.b	(RAM_VdpRegs+1),d6
+		move.w	d6,(a4)
 		move.w	(sp)+,sr
 		bra	Sound_DMA_Resume
 
+; TODO: check if Source RAM transfers are safe without turining off Z80
 .from_ram:
 		move.w	d4,(a4)
  		move.w	d5,-(sp)

@@ -75,12 +75,12 @@ thisCode_Top:
 		move.w	d0,(RAM_EmiPosY).w
 
 		move.l	#ART_FGTEST,d0
-		move.w	#ART_FGTEST_e-ART_FGTEST,d1
-		move.w	#$40,d2
+		move.w	#$40*$20,d1
+		move.w	#ART_FGTEST_e-ART_FGTEST,d2
 		bsr	Video_LoadArt
 		move.l	#ART_BGTEST,d0
-		move.w	#ART_BGTEST_e-ART_BGTEST,d1
-		move.w	#$60,d2
+		move.w	#$60*$20,d1
+		move.w	#ART_BGTEST_e-ART_BGTEST,d2
 		bsr	Video_LoadArt
 
 		lea	(MAP_BGTEST),a0
@@ -636,24 +636,24 @@ Emilie_MkSprite:
 		and.w	#$FF,d4
 		sub.w	#1,d4
 		move.w	#1,d5
+
+
 	; d0 - graphics
-	; d1 - Size
-	; d2 - VRAM
+	; d5 - VRAM OUTPUT
+		lsl.w	#5,d5
 .nxt_dpz:
 		move.l	#ART_EMI,d0
-		move.w	(a0)+,d2
-		move.w	d2,d1
-		and.w	#$7FF,d2
-		lsl.w	#5,d2
-		add.l	d2,d0
-		lsr.w	#7,d1
-		move.w	d1,d3
-		add.w	#$20,d1
-		move.w	d5,d2
+		move.w	(a0)+,d1
+		move.w	d1,d2
+		and.w	#$7FF,d1
+		lsl.w	#5,d1
+		add.l	d1,d0
+		move.w	d5,d1
+		lsr.w	#7,d2
+		add.w	#$20,d2
+		move.w	d2,d3
 		bsr	Video_DmaSet
-		lsr.w	#5,d3
 		add.w	d3,d5
-		add.w	#1,d5
 		dbf	d4,.nxt_dpz
 .no_upd:
 		rts

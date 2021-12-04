@@ -157,14 +157,9 @@ commZRomRd	db 0		; Z80 ROM reading flag
 commZRead	db 0		; cmd read pointer (here)
 commZWrite	db 0		; cmd fifo wptr (from 68k)
 marsBlock	db 0		; 1 - to disable PWM comm
-marsUpd		db 0		; update PWM sound
 palMode		db 0
-
 sbeatPtck	dw 224		; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
-
-currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
-
 
 ; --------------------------------------------------------
 ; Z80 Interrupt at 0038h
@@ -4192,55 +4187,6 @@ wavFreq_List:	dw 100h		; C-0
 
 ; --------------------------------------------------------
 
-trkPointers:
-		dw trkBuff_0
-		dw trkBuff_1
-
-insDataC_0	ds 8*16		; Instrument data for each Track slot
-insDataC_1	ds 8*16		; 8*MAX_INS
-; 	; *** MERGED VARS TO SAVE SPACE
-
-
-x68ksrclsb	db 0			; transferRom temporal LSB
-x68ksrcmid	db 0			; transferRom temporal MID
-currInsData	dw 0
-currTblPos	dw 0
-currInsPos	dw 0
-currTrkCtrl	dw 0
-
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Z80 RAM
-; ----------------------------------------------------------------
-
-		org 1900h
-dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
-trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
-trkData_1	ds 100h
-
-; MUST BE ALIGNED BY 100h
-; Track control: first 20h + channels (8h each)
-trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
-commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
-dDacPntr	db 0,0,0		; WAVE play current ROM position
-dDacCntr	db 0,0,0		; WAVE play length counter
-dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
-tickFlag	dw 0			; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
-tickCnt		db 0			; Tick counter (PUT THIS TAG AFTER tickFlag)
-trkHdOut	ds 6			; temporal Header for reading Track position/row count
-trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
-wave_Start	dw 0		; START: 68k 24-bit pointer
-		db 0
-wave_Len	dw 0		; LENGTH 24-bit
-		db 0
-wave_Loop	dw 0		; LOOP POINT 24-bit (MUST BE BELOW wave_Len)
-		db 0
-wave_Pitch	dw 0100h	; 01.00h
-wave_Flags	db 0		; WAVE playback flags (%10x: 1 loop / 0 no loop)
-psgHatMode	db 0
-fmSpcMode	db 0
-flagResChip	db 0		; reset chips flag
 	; PSG psuedo-controls
 psgcom		db 00h,00h,00h,00h	;  0 command 1 = key on, 2 = key off, 4 = stop snd
 psglev		db -1, -1, -1, -1	;  4 output level attenuation (%llll.0000, -1 = silent)
@@ -4255,10 +4201,52 @@ psgalv		db 00h,00h,00h,00h	; 36 attack level attenuation
 whdflg		db 00h,00h,00h,00h	; 40 flags to indicate hardware should be updated
 psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
 psgvol		db 00h,00h,00h,00h
+fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
+		db 00h,00h,00h,00h,00h,00h	;  6 - keys xxxx0000b
+		db 00h,00h,00h,00h,00h,00h	; 12 - volume (for 40h+)
+		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
+		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
+		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
+fmins_com:	ds 028h			; Current instrument data for each FM
+fmins_com2:	ds 028h
+fmins_com3:	ds 028h
+fmins_com4:	ds 028h
+fmins_com5:	ds 028h
+fmins_com6:	ds 028h
 fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
 		dw 0AD00h,0A900h
 		dw 0AE00h,0AA00h
 daccom:		db 0			; single byte for key on, off and cut
+
+trkPointers:
+		dw trkBuff_0
+		dw trkBuff_1
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Z80 RAM
+; ----------------------------------------------------------------
+
+insDataC_0	ds 8*16		; Instrument data for each Track slot
+insDataC_1	ds 8*16		; 8*MAX_INS
+x68ksrclsb	db 0			; transferRom temporal LSB
+x68ksrcmid	db 0			; transferRom temporal MID
+currInsData	dw 0
+currTblPos	dw 0
+currInsPos	dw 0
+currTrkCtrl	dw 0
+currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
+marsUpd		db 0		; update PWM sound
+tickFlag	dw 0			; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
+tickCnt		db 0			; Tick counter (PUT THIS TAG AFTER tickFlag)
+wave_Start	dw 0		; START: 68k 24-bit pointer
+		db 0
+wave_Len	dw 0		; LENGTH 24-bit
+		db 0
+wave_Loop	dw 0		; LOOP POINT 24-bit (MUST BE BELOW wave_Len)
+		db 0
+wave_Pitch	dw 0100h	; 01.00h
+wave_Flags	db 0		; WAVE playback flags (%10x: 1 loop / 0 no loop)
 
 	; Channel tables: 10h bytes
 	; 0  - Link addr (0000h = free, used chnls start from +0020h)
@@ -4293,18 +4281,6 @@ tblPWM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,05h,00h,00h,00h,00h,00h	; Channel 6
 		db 00h,00h,06h,00h,00h,00h,00h,00h	; Channel 7
 		dw -1
-fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
-		db 00h,00h,00h,00h,00h,00h	;  6 - keys xxxx0000b
-		db 00h,00h,00h,00h,00h,00h	; 12 - volume (for 40h+)
-		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
-		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
-		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
-fmins_com:	ds 028h			; Current instrument data for each FM
-fmins_com2:	ds 028h
-fmins_com3:	ds 028h
-fmins_com4:	ds 028h
-fmins_com5:	ds 028h
-fmins_com6:	ds 028h
 
 	; Format:
 	; %00VP0CFO
@@ -4322,5 +4298,20 @@ pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; sample location
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,00h,00h,00h,00h,00h,00h
+
+		org 1B00h
+dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
+trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
+trkData_1	ds 100h
+trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
+commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
+dDacPntr	db 0,0,0		; WAVE play current ROM position
+dDacCntr	db 0,0,0		; WAVE play length counter
+dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
+psgHatMode	db 0
+fmSpcMode	db 0
+flagResChip	db 0			; reset chips flag
+trkHdOut	ds 6			; temporal Header for reading Track position/row count
+trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
 
 ; Stack area

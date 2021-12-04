@@ -293,7 +293,7 @@ MD_HotStart:
 		movea.l	d0,a6
 		move.l	a6,usp
 .waitframe:	move.w	(vdp_ctrl).l,d0			; Wait a frame
-		btst	#bitVint,d0
+		btst	#7,d0
 		beq.s	.waitframe
 		move.l	#$80048144,(vdp_ctrl).l		; Keep display
 		lea	($FF0000),a0			; Clear RAM until $FFF000

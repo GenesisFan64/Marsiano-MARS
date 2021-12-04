@@ -6,24 +6,24 @@
 ; (macros add the bank automaticly)
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-; DAC samples
-; --------------------------------------------------------
-
 ; Special include macro for samples
 ; Works for both DAC and PWM
 ;
-; aligns by 4 at the end so the sample can be used on 32X
+; aligns by 4 at the end so the sample can recycled on 32X
 gSmpl macro locate,loop
 .start
 	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
 	dc.b ((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
 	binclude locate,$2C	; actual data
 .end
-	align 4		; align 4 for pwm's
+	align 4			; align 4 for pwm's
 	endm
 
-	align 4		; FIRST ALIGN FOR PWMs
+; --------------------------------------------------------
+; DAC samples
+; --------------------------------------------------------
+
+	align 4			; FIRST ALIGN FOR PWMs
 DacIns_Magic2:
 	gSmpl "sound/instr/smpl/magic_2.wav",0
 DacIns_Snare_Gem:
@@ -47,6 +47,8 @@ DacIns_LowString:
 ; Normal FM ins: $20
 ; Special FM ins: $28
 ;
+
+; FM3 Special
 FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:
@@ -54,6 +56,7 @@ FmIns_Fm3_ClosedHat:
 FmIns_Fm3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
 
+; Normal
 FmIns_Guitar_gem:
 		binclude "sound/instr/fm/guitar_gem.gsx",$2478,$20
 Fmins_Guitar_Heavy:
@@ -64,7 +67,6 @@ Fmins_Guitar_puy_2:
 		binclude "sound/instr/fm/guitar_puy_2.gsx",$2478,$20
 FmIns_DrumKick_gem:
 		binclude "sound/instr/fm/drum_kick_gem.gsx",$2478,$20
-
 
 ; FmIns_DrumKick:
 ; 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
@@ -176,4 +178,3 @@ FmIns_Banjo_puy:
 		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
 FmIns_Violin_gem:
 		binclude "sound/instr/fm/violin_gem.gsx",$2478,$20
-

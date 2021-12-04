@@ -49,7 +49,8 @@ System_Init:
 ; d4-d6,a4-a5
 ; --------------------------------------------------------
 
-; TODO: check if it still requires to turn OFF the Z80
+; TODO:
+; Check if it still required to turn OFF the Z80
 ; while reading the controller
 
 System_Input:
@@ -203,7 +204,7 @@ System_Random:
 		move.l	(RAM_SysRandSeed),d5
 		move.l	(RAM_SysRandVal),d4
 		rol.l	#1,d5
-		asr.l	#1,d4
+		asr.l	d5,d4
 		add.l	d5,d4
 		move.l	d5,(RAM_SysRandSeed).l
 		move.l	d4,(RAM_SysRandVal).l
@@ -359,6 +360,44 @@ System_JumpRamCode:
 		dbf	d7,.copyme2
 		jmp	(RAMCODE_USER).l
 
+; --------------------------------------------------------
+; Initialize current screen mode
+; --------------------------------------------------------
+
+Mode_Init:
+		bsr	Video_Clear
+		lea	(RAM_ModeBuff),a4
+		move.w	#(MAX_MDERAM/2)-1,d5
+		moveq	#0,d4
+.clr:
+		move.w	d4,(a4)+
+		dbf	d5,.clr
+		rts
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Default interrupts
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; VBlank
+; --------------------------------------------------------
+
+VInt_Default:
+		movem.l	d0-a6,-(sp)
+		bsr	System_Input
+; 		bsr	Sound_Update
+		add.l	#1,(RAM_FrameCount).l
+		movem.l	(sp)+,d0-a6		
+		rte
+
+; --------------------------------------------------------
+; HBlank
+; --------------------------------------------------------
+
+HInt_Default:
+		rte
+		
 ; ====================================================================
 ; --------------------------------------------------------
 ; 32X Communication, using DREQ
@@ -520,20 +559,6 @@ System_JumpRamCode:
 ; .mid_write:
 ; 		rts
 
-; --------------------------------------------------------
-; Initialize current screen mode
-; --------------------------------------------------------
-
-Mode_Init:
-		bsr	Video_Clear
-		lea	(RAM_ModeBuff),a4
-		move.w	#(MAX_MDERAM/2)-1,d5
-		moveq	#0,d4
-.clr:
-		move.w	d4,(a4)+
-		dbf	d5,.clr
-		rts
-
 ; MdMars_FIFO:
 ; 		move.w	#$100,d4
 ; 		move.w	d4,($A15110).l
@@ -554,30 +579,6 @@ Mode_Init:
 ; .exit:
 ; 		rts
 
-; ====================================================================
-; ----------------------------------------------------------------
-; Default interrupts
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; VBlank
-; --------------------------------------------------------
-
-VInt_Default:
-		movem.l	d0-a6,-(sp)
-		bsr	System_Input
-; 		bsr	Sound_Update
-		add.l	#1,(RAM_FrameCount).l
-		movem.l	(sp)+,d0-a6		
-		rte
-
-; --------------------------------------------------------
-; HBlank
-; --------------------------------------------------------
-
-HInt_Default:
-		rte
-		
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; System data

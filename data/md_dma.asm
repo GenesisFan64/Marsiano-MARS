@@ -1,8 +1,8 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; DMA ROM DATA Transfer section, no bank limitations
+; DMA ROM DATA Transfer section
 ; 
-; RV bit must be set to access here
+; RV bit must be enabled to read from here
 ; ----------------------------------------------------------------
 
 		align $8000
