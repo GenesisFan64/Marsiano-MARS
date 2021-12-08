@@ -2841,11 +2841,11 @@ setupchip:
 
 gema_init:
 		call	dac_off
-; 		ld	hl,dWaveBuff	; hl - Wave buffer START
-; 		ld	de,dWaveBuff+1	; de - Wave next byte
-; 		ld	bc,100h-1	; bc - length for copying
-; 		ld	(hl),80h	; Set first byte
-; 		ldir			; Start copying
+		ld	hl,dWaveBuff	; hl - Wave buffer START
+		ld	de,dWaveBuff+1	; de - Wave next byte
+		ld	bc,100h-1	; bc - length for copying
+		ld	(hl),80h	; Set first byte
+		ldir			; Start copying
 		ld	hl,Zpsg_ctrl	; Silence PSG channels
 		ld	(hl),09Fh
 		ld	(hl),0BFh
@@ -3498,6 +3498,7 @@ chip_env:
 		call	nz,fm_send_2
 		call	z,fm_send_1
 		rst	8
+
 		ld	a,c
 		and	11b
 		or	0B0h

@@ -69,7 +69,7 @@ RamCode_Default:
 ; 68k DATA BANKs at $900000 1MB max
 ; ----------------------------------------------------------------
 
-	; First one is smaller than the rest...
+	; First one is smaller than the others...
 		phase $900000+*				; Only one currently
 		include "sound/tracks.asm"
 		include "data/md_bank0.asm"
@@ -77,19 +77,19 @@ RamCode_Default:
 ; 		org $100000-4				; Fill this bank and
 ; 		dc.b "BNK0"				; add a tag at the end
 
-; 		phase $900000+*
+; 		phase $900000;+*
 ; 		include "data/md_bank1.asm"
 ; 		dephase
 ; 		org $200000-4
 ; 		dc.b "BNK1"
 
-; 		phase $900000+*
+; 		phase $900000;+*
 ; 		include "data/md_bank2.asm"
 ; 		dephase
 ; 		org $300000-4
 ; 		dc.b "BNK2"
 
-; 		phase $900000+*
+; 		phase $900000;+*
 ; 		include "data/md_bank3.asm"
 ; 		dephase
 ; 		org $400000-4
@@ -97,7 +97,7 @@ RamCode_Default:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD DMA transfer data, Set RV=1 first.
+; MD DMA data, BANK-free but requres RV=1
 ; ----------------------------------------------------------------
 
 		align 4
@@ -105,7 +105,7 @@ RamCode_Default:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; SH2 SECTION
+; SH2 CODE
 ; ----------------------------------------------------------------
 
 		align 4

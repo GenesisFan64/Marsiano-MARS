@@ -94,16 +94,15 @@ Video_Clear:
 		lsl.w	#2,d1
 		bra	Video_Fill
 		
-; ---------------------------------
+; --------------------------------------------------------
 ; Video_Update
 ; 
-; Sends register data specified
-; in RAM to VDP
-; from regs $80 to $90
+; Writes register data stored in RAM to VDP
+; from Registers $80 to $90
 ; 
 ; Uses:
 ; d6-d7,a5-a6
-; ---------------------------------
+; --------------------------------------------------------
 
 Video_Update:
 		lea	(RAM_VdpRegs).w,a6
@@ -159,10 +158,10 @@ Video_LoadPal:
 ; 
 ; a0 - Map data
 ; d0 | LONG - 00|Layer|X|Y, locate(lyr,x,y)  
-; d1 | LONG - Width|Height (cells),  mapsize(x,y)
+; d1 | LONG - Width|Height (in cells),  mapsize(x,y)
 ; d2 | WORD - VRAM
 ;
-; Can autodetect layer size setting
+; Can autodetect layer width.
 ;
 ; Uses:
 ; d4-d7,a6
@@ -709,6 +708,8 @@ Video_Copy:
 ; $40000080 (vdp destination + dma bit)
 
 Video_DmaBlast:
+		tst.w	(RAM_VdpDmaMod).w
+		bne.s	.mid_edit
 		lea	(vdp_ctrl),a4
 		lea	(RAM_VdpDmaList).w,a3
 		move.w	#$8100,d7			; DMA ON
@@ -752,6 +753,7 @@ Video_DmaBlast:
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a4)
+.mid_edit:
 		rts
 
 ; --------------------------------------------------------
@@ -768,6 +770,7 @@ Video_DmaBlast:
 ; --------------------------------------------------------
 
 Video_DmaSet:
+		move.w	#1,(RAM_VdpDmaMod).w
 		lea	(RAM_VdpDmaList).w,a6
 		move.w	(RAM_VdpDmaIndx).w,d7
 		adda	d7,a6
@@ -806,6 +809,7 @@ Video_DmaSet:
 		ori.w	#$80,d6
 		move.w	d7,(a6)+
 		move.w	d6,(a6)+
+		move.w	#0,(RAM_VdpDmaMod).w
 		rts
 
 ; --------------------------------------------------------
@@ -815,7 +819,7 @@ Video_DmaSet:
 ; d1 | WORD - VRAM location
 ; d2 | WORD - Size
 ;
-; *** For faster transfers wait for VBlank first ***
+; *** For faster transfers call this during VBlank ***
 ;
 ; Uses:
 ; d5-d7,a4-a6
@@ -884,12 +888,12 @@ Video_LoadArt:
 
 ; TODO: check if Source RAM transfers are safe without turining off Z80
 .from_ram:
-		move.w	d4,(a4)
+		move.w	d7,(a4)
  		move.w	d5,-(sp)
 		move.w	(sp)+,(a4)			; Second write
-		move.w	#$8100,d4
-		move.b	(RAM_VdpRegs+1),d4
-		move.w	d4,(a4)
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1),d7
+		move.w	d7,(a4)
 		move.w	(sp)+,sr
 		rts
 

@@ -71,8 +71,8 @@ sndReq_Enter:
 		movem.l	d6-d7/a5-a6,(RAM_SndSaveReg).l
 		moveq	#0,d6
 		move.w	sr,d6
+		move.w	#$0100,(z80_bus).l		; Request Z80 Stop
 		swap	d6
-		move.w	#$0100,(z80_bus).l		; Stop Z80
 		or.w	#$0700,sr			; disable ints
 		lea	(z80_cpu+commZWrite),a5		; a5 - commZWrite
 		lea	(z80_cpu+commZfifo),a6		; a6 - fifo command list
@@ -145,21 +145,23 @@ Sound_DMA_Pause:
 		bra.s	.retry
 	; TODO: ver si necesito un timeout...
 		;rts
-
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
+
+	; Make a data-backup of the current
+	; PWM's
 .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
-		and.w	#%11010000,d7			; BUSY/CLOCK
+		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
 		bne.s	.wait_mars1
 		move.b	(sysmars_reg+comm15),d7		; Request PWM Backup
 		bset	#5,d7
 		move.b	d7,(sysmars_reg+comm15)
 		nop
 		nop
-.wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for BUSY/CLOCK and
-		and.w	#%11100000,d7			; BACKUP
+.wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
+		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
 		bne.s	.wait_mars2
 		swap	d7
 		rts
@@ -175,16 +177,16 @@ Sound_DMA_Resume:
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
-.wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for BUSY/CLOCK/BACKUP
-		and.w	#%11100000,d7
+.wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
+		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
 		bne.s	.wait_mars1
 		move.b	(sysmars_reg+comm15),d7		; Request PWM Restore
 		bset	#4,d7
 		move.b	d7,(sysmars_reg+comm15)
 		nop
 		nop
-.wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for BUSY/CLOCK and
-		and.w	#%11010000,d7			; RESTORE
+.wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
+		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
 		bne.s	.wait_mars2
 		swap	d7
 		rts
@@ -192,7 +194,7 @@ Sound_DMA_Resume:
 ; --------------------------------------------------------
 ; SoundReq_SetTrack
 ;
-; a0 - Pointers to Pattern, Blocks and Instruments:
+; a0 - Pointer to Pattern, Blocks and Instruments list
 ;  	dc.l pattern_data
 ;  	dc.l block_data
 ;  	dc.l instrument_data

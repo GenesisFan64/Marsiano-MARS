@@ -221,7 +221,7 @@ System_Random:
 ; d1 | WORD - Multiply by
 ;
 ; Output:
-; d2 | WORD - Result
+; d2 | LONG - Result (as 0000.0000)
 ; --------------------------------------------------------
 
 System_SineWave_Cos:

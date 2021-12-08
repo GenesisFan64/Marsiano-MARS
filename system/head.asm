@@ -176,8 +176,8 @@
 ; ----------------------------------------------------------------
 ; Entry point, this must be located at $3F0
 ; 
-; After the 32X's internal initialization finishes,
-; It returns the following bits:
+; At this point, the initialization
+; returns the following bits:
 ; 
 ; d0: %h0000000 rsc000ti
 ; 	h - Cold start / Hot Start
@@ -200,14 +200,14 @@
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-		bcs	.no_mars			; if Carry set, 32X is not present
-		move.l	#0,(RAM_initflug).l		; Reset "INIT" flag
-		btst	#15,d0				; Soft reset?	
+		bcs	.no_mars		; if Carry set, 32X is not present
+		move.l	#0,(RAM_initflug).l	; Reset "INIT" flag
+		btst	#15,d0			; Soft reset?
 		beq	MD_Init
-		lea	(sysmars_reg).l,a5		; a5 - MARS register
-		btst.b	#0,adapter(a5)			; 32X enabled?
-		bne	.adapterenable			; If yes, start booting
-		move.l	#0,comm8(a5)			; If not, we can't use 32X or something went wrong
+		lea	(sysmars_reg).l,a5	; a5 - MARS register
+		btst.b	#0,adapter(a5)		; 32X enabled?
+		bne	.adapterenable		; If yes, start booting
+		move.l	#0,comm8(a5)		; If not, we can't use 32X or something went wrong
 		lea	.ramcode(pc),a0			; Copy the adapter-retry code to RAM
 		lea	($FF0000).l,a1			; and jump there.
 		move.l	(a0)+,(a1)+
@@ -221,20 +221,20 @@ MARS_Entry:
 		lea	($FF0000).l,a0
 		jmp	(a0)
 .ramcode:
-		move.b	#1,adapter(a5)			; Enable adapter.
-		lea	.restarticd(pc),a0		; JUMP to the following code in
-		adda.l	#$880000,a0			; the new 68k location
+		move.b	#1,adapter(a5)		; Enable adapter.
+		lea	.restarticd(pc),a0	; JUMP to the following code in
+		adda.l	#$880000,a0		; the new 68k location
 		jmp	(a0)
 .restarticd:
-		lea	($A10000).l,a5			; a5 - MD's I/O area base
-		move.l	#-64,a4				; a4 - $FFFFFF9C
-		move.w	#3900,d7			; d7 - loop this many times
-		lea	($880000+$6E4),a1		; Jump to ?res_wait (check ICD_MARS.PRG)
+		lea	($A10000).l,a5		; a5 - MD's I/O area
+		move.l	#-64,a4			; a4 - $FFFFFF9C
+		move.w	#3900,d7		; d7 - loop this many times
+		lea	($880000+$6E4),a1	; Jump to ?res_wait (check ICD_MARS.PRG)
 		jmp	(a1)
 .adapterenable:
 		lea	(sysmars_reg),a5
-		btst.b	#1,adapter(a5)			; SH2 Reset request?
-		bne.s	MD_HotStart			; If not, we are on hotstart
+		btst.b	#1,adapter(a5)		; SH2 Reset request?
+		bne.s	MD_HotStart		; If not, we are on hotstart
 		bra.s	.restarticd
 
 ; ====================================================================
