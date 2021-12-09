@@ -700,7 +700,7 @@ Video_Copy:
 ; **CALL THIS DURING VBLANK ONLY**
 ;
 ; Uses:
-; d5-d7,a3-a6
+; d5-d7,a3-a4
 ; --------------------------------------------------------
 
 ; Entry format:
@@ -708,8 +708,10 @@ Video_Copy:
 ; $40000080 (vdp destination + dma bit)
 
 Video_DmaBlast:
-		tst.w	(RAM_VdpDmaMod).w
-		bne.s	.mid_edit
+		tst.w	(RAM_VdpDmaMod).w		; Got mid-write?
+		bne.s	.exit
+		tst.w	(RAM_VdpDmaIndx).w		; Index != 0?
+		beq.s	.exit
 		lea	(vdp_ctrl),a4
 		lea	(RAM_VdpDmaList).w,a3
 		move.w	#$8100,d7			; DMA ON
@@ -753,7 +755,7 @@ Video_DmaBlast:
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a4)
-.mid_edit:
+.exit:
 		rts
 
 ; --------------------------------------------------------

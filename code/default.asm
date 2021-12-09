@@ -67,48 +67,51 @@ thisCode_Top:
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
 
-	; Default Emilie vars
-		move.w	#(320/2)-80,d0
-		move.w	d0,(RAM_EmiPosX).w
-		move.w	#(224/2)+48,d0
-		move.w	d0,(RAM_EmiPosY).w
+; 	; Default Emilie vars
+; 		move.w	#(320/2)-80,d0
+; 		move.w	d0,(RAM_EmiPosX).w
+; 		move.w	#(224/2)+48,d0
+; 		move.w	d0,(RAM_EmiPosY).w
+;
+; 		move.l	#ART_FGTEST,d0
+; 		move.w	#$40*$20,d1
+; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
+; 		bsr	Video_LoadArt
+; 		move.l	#ART_BGTEST,d0
+; 		move.w	#$60*$20,d1
+; 		move.w	#ART_BGTEST_e-ART_BGTEST,d2
+; 		bsr	Video_LoadArt
+;
+; 		lea	(MAP_BGTEST),a0
+; 		move.l	#locate(1,0,0),d0
+; 		move.l	#mapsize(512,256),d1
+; 		move.w	#$60+$4000,d2
+; 		bsr	Video_LoadMap
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(0,0,0),d0
+; 		move.l	#mapsize(512,256),d1
+; 		move.w	#$40+$2000,d2
+; 		bsr	Video_LoadMap
 
-		move.l	#ART_FGTEST,d0
-		move.w	#$40*$20,d1
-		move.w	#ART_FGTEST_e-ART_FGTEST,d2
-		bsr	Video_LoadArt
-		move.l	#ART_BGTEST,d0
-		move.w	#$60*$20,d1
-		move.w	#ART_BGTEST_e-ART_BGTEST,d2
-		bsr	Video_LoadArt
-
-		lea	(MAP_BGTEST),a0
-		move.l	#locate(1,0,0),d0
-		move.l	#mapsize(512,256),d1
-		move.w	#$60+$4000,d2
-		bsr	Video_LoadMap
-		lea	(MAP_FGTEST),a0
-		move.l	#locate(0,0,0),d0
-		move.l	#mapsize(512,256),d1
-		move.w	#$40+$2000,d2
-		bsr	Video_LoadMap
-
+; 		lea	str_Title(pc),a0
+; 		move.l	#locate(0,2,2),d0
+; 		bsr	Video_Print
 		lea	str_Gema(pc),a0			; GEMA tester text on WINDOW
 		move.l	#locate(2,2,2),d0
 		bsr	Video_Print
-		move.b	#$80,(sysmars_reg+comm14)	; Unlock MASTER
-		lea	PAL_EMI(pc),a0
-		moveq	#0,d0
-		move.w	#$F,d1
-		bsr	Video_LoadPal
-		lea	PAL_TESTBOARD(pc),a0		; ON palette
-		moveq	#$10,d0
-		move.w	#$F,d1
-		bsr	Video_LoadPal
-		lea	PAL_BG(pc),a0		; ON palette
-		moveq	#$20,d0
-		move.w	#$F,d1
-		bsr	Video_LoadPal
+
+; 		lea	PAL_EMI(pc),a0
+; 		moveq	#0,d0
+; 		move.w	#$F,d1
+; 		bsr	Video_LoadPal
+; 		lea	PAL_TESTBOARD(pc),a0		; ON palette
+; 		moveq	#$10,d0
+; 		move.w	#$F,d1
+; 		bsr	Video_LoadPal
+; 		lea	PAL_BG(pc),a0		; ON palette
+; 		moveq	#$20,d0
+; 		move.w	#$F,d1
+; 		bsr	Video_LoadPal
 
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable display
 		bsr	Video_Update
@@ -123,6 +126,7 @@ thisCode_Top:
 		moveq	#0,d2
 		move.w	#0,d3
 		bsr	Sound_TrkPlay
+		move.b	#$80,(sysmars_reg+comm14)	; Unlock MASTER
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -134,7 +138,7 @@ thisCode_Top:
 		btst	#bitVint,d4
 		beq.s	.loop
 		bsr	Video_DmaBlast
-		bsr	Emilie_Show
+; 		bsr	Emilie_Show
 		bsr	System_Input
 
 		add.l	#1,(RAM_Framecount).l
@@ -212,16 +216,36 @@ thisCode_Top:
 ; 		bset	#0,(RAM_BoardUpd).w
 ; .no_shake:
 
+		move.b	(sysmars_reg+comm14),d6
+		and.w	#%00001111,d6
+		bne.s	.lel
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
-		beq.s	.noz_r
-		sub.w	#2,(RAM_XposFg)
-		sub.l	#$1000,(RAM_XposBg)
-		add.w	#1,(RAM_EmiAnim).w
-		move.b	#1,(sysmars_reg+comm14)
-.noz_r:
-		bsr	Emilie_Move
-		bsr	Emilie_MkSprite
+		beq.s	.nor_m
+		bset	#0,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nor_m:
+		btst	#bitJoyLeft,d7
+		beq.s	.nol_m
+		bset	#1,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nol_m:
+		btst	#bitJoyDown,d7
+		beq.s	.nod_m
+		bset	#2,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nod_m:
+		btst	#bitJoyUp,d7
+		beq.s	.nou_m
+		bset	#3,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nou_m:
+
+.lel:
+
+; .noz_r:
+; 		bsr	Emilie_Move
+; 		bsr	Emilie_MkSprite
 		rts
 
 ; 		lea	str_TempVal(pc),a0		; Main title
@@ -770,8 +794,7 @@ MD_FifoMars:
 ; ------------------------------------------------------
 
 str_Title:
-		dc.b "Project MARSIANO           (START)",$A
-		dc.b "Test game                GEMA Tester",0
+		dc.b "Project MARSIANO",0
 		align 2
 
 str_Cursor:	dc.b " ",$A

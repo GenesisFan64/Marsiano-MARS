@@ -75,6 +75,7 @@ sizeof_input	ds.l 0
 RAM_MdMarsDreq	ds.l 128			; RAM sent to Master CPU using DREQ
 RAM_InputData	ds.b sizeof_input*4		; Input data section
 RAM_SaveData	ds.b $200			; SRAM data cache
+RAM_Objects	ds.b $10*32
 RAM_FrameCount	ds.l 1				; Global frame counter
 RAM_SysRandVal	ds.l 1				; Random value
 RAM_SysRandSeed	ds.l 1				; Randomness seed
@@ -142,6 +143,6 @@ sizeof_mdram	ds.l 0
 	endif
 
 	if MOMPASS=7
-		message "MD RAM ends at: \{((sizeof_mdram)&$FFFFFF)}"
+		message "MD RAM: \{(MDRAM_START)&$FFFFFF}-\{(sizeof_mdram)&$FFFFFF}"
 	endif
 		finish
