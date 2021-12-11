@@ -782,10 +782,6 @@ m_irq_custom:
 ; ; ------------------------------------------------
 ;
 		align 4
-Cach_Xpos	ds.l 1			; Mode2 X position
-Cach_Xadd	ds.l 1			; Mode2 XDX (xxxx.xxxx)
-Cach_Yadd	ds.l 1			; Mode2 YDX (xxxx.xxxx)
-Cach_Ycurr	ds.l 1			; Mode2 Y current pos (updates)
 Cach_XHead_L	ds.l 1			; Left draw beam
 Cach_XHead_R	ds.l 1			; Right draw beam
 Cach_YHead_D	ds.l 1			; Bottom draw beam

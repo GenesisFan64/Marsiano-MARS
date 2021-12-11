@@ -11,7 +11,7 @@ Sound, Genesis and 32X:
 - 32X: Supports PWM at 22050hz, 7 psuedo channels are available to use with Pitch, Volume and Panning. Controlled by the sound driver in the Genesis side.
 
 Video "driver":
-- Draws an extra background in 256-color mode of any size in either ROM or RAM (but the map's WIDTH and HEIGHT must be aligned depending of specific setting)
+- Draws an extra background in 256-color mode of any size in either ROM or RAM, any WIDTH and HEIGHT (but must be aligned in blocks)
 
 Notes/Issues:
 - DAC Wave sound (Genesis side) might play slow if track is using too much channels

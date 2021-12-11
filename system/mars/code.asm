@@ -911,8 +911,8 @@ master_loop:
 ; 		mov	#240,r0
 ; 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
 		mov	#TESTMARS_BG,r1			; SET image
-		mov	#720,r2
-		mov	#528,r3
+		mov	#208,r2
+		mov	#208,r3
 		bsr	MarsVideo_SetBg
 		nop
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
@@ -961,8 +961,8 @@ mstr_gfx1_loop:
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#_sysreg+comm14,r1
-		mov	#$10000,r2
-		mov	#$10000,r3
+		mov	#$40000,r2
+		mov	#$40000,r3
 		mov.b	@r1,r4
 		mov	r4,r0
 		tst	#%0001,r0
@@ -1002,27 +1002,30 @@ mstr_gfx1_loop:
 	; Move and update background values
 	; ---------------------------------------
 
-	;	mov	#RAM_Mars_Background,r14
-		mov	@(mbg_data,r14),r0
-		cmp/eq	#0,r0
-		bt	.no_scrldata
-		bsr	MarsVideo_MoveBg
-		nop
-.no_scrldata:
-
-	; ---------------------------------------
-
 		mov	#RAM_Mars_Background,r14
 		mov.b	@(mbg_draw_all,r14),r0
 		cmp/pl	r0
 		bf	.no_redraw
 		dt	r0
 		mov.b	r0,@(mbg_draw_all,r14)
+		mov	#0,r1			; *** TEMPORAL
+		mov	#0,r2				; VARIABLES ***
 		bsr	MarsVideo_DrawAllBg
 		nop
 .no_redraw:
+
+		mov	@(mbg_data,r14),r0
+		cmp/eq	#0,r0
+		bt	.no_scrldata
+		bsr	MarsVideo_MoveBg
+		nop
+.no_scrldata:
 		bsr	MarsVideo_MakeTbl
 		nop
+
+	; ---------------------------------------
+
+; 		mov	#RAM_Mars_Background,r14
 		bsr	MarsVideo_BgDrawLR
 		nop
 		bsr	MarsVideo_BgDrawUD
