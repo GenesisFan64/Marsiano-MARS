@@ -1033,12 +1033,6 @@ mstr_gfx1_loop:
 		mov.b	@(mbg_draw_all,r14),r0
 		dt	r0
 		mov.b	r0,@(mbg_draw_all,r14)
-		mov	@(mbg_xpos,r14),r1
-		mov	@(mbg_ypos,r14),r2
-		shlr16	r1
-		shlr16	r2
-		exts.w	r1,r1
-		exts.w	r2,r2
 		bsr	MarsVideo_DrawAllBg
 		nop
 .no_redraw:

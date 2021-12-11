@@ -86,11 +86,20 @@ MarsVideo_Init:
 ;
 ; r1 - X pos
 ; r2 - Y pos
+;
+; *** THE OTHER DRAWING TIMERS U/D/L/R
+; MUST BE ZERO BEFORE GETTING HERE ***
 ; ---------------------------------------
 
 MarsVideo_DrawAllBg:
 		sts	pr,@-r15
 
+		mov	@(mbg_xpos,r14),r1
+		mov	@(mbg_ypos,r14),r2
+		shlr16	r1
+		shlr16	r2
+		exts.w	r1,r1
+		exts.w	r2,r2
 		mov	#RAM_Mars_Background,r14
 		mov	@(mbg_data,r14),r0
 		mov	r0,r13				; r13 - pixel data
@@ -106,6 +115,15 @@ MarsVideo_DrawAllBg:
 		and	r0,r2
 		mov	r1,r3
 		mov	r2,r4
+
+	; Set FB heads
+		mov	r8,r0
+		mov	r1,r5
+		cmp/pz	r5
+		bf	.yfb_low
+		add	r5,r0
+.yfb_low:
+		mov.w	r0,@(mbg_yfb,gbr)
 
 	; Set draw heads
 .xinit_l:
@@ -131,13 +149,22 @@ MarsVideo_DrawAllBg:
 		mov.w	r0,@(mbg_xinc_l,r14)
 		mov	#320,r5
 		add	r5,r0
+.lwr_xnxt:	cmp/gt	r11,r0
+		bf	.lwr_xvld
+		bra	.lwr_xnxt
+		sub	r11,r0
+.lwr_xvld:
 		mov.w	r0,@(mbg_xinc_r,r14)
 		mov	r2,r0
 		mov.w	r0,@(mbg_yinc_u,r14)
-		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r5
+		mov	#240,r5
 		add	r5,r0
+.lwr_ynxt:	cmp/gt	r9,r0
+		bf	.lwr_yvld
+		bra	.lwr_ynxt
+		sub	r9,r0
+.lwr_yvld:
 		mov.w	r0,@(mbg_yinc_d,r14)
-
 	; *** MAIN draw loop ***
 		mov	r1,@-r15
 		mov	r2,@-r15
@@ -880,7 +907,8 @@ MarsVideo_BgDrawLR:
 		mov	#MSCRL_BLKSIZE/4,r12
 		mov	#Cach_BgFbPos_H,r11
 		mov	@r11,r11
-		mov.w	@(mbg_yfb,r14),r0
+		mov	#Cach_BgFbPos_V,r0
+		mov	@r0,r0
 		and	r4,r0
 		mov	#MSCRL_WIDTH,r3
 		mulu	r3,r0
@@ -927,8 +955,8 @@ MarsVideo_BgDrawLR:
 		and	r4,r11
 		mov	#Cach_XHead_R,r0
 		mov	@r0,r0
-; 		mov.w	@(mbg_xinc_r,r14),r0
-; 		and	r4,r0
+		mov.w	@(mbg_xinc_r,r14),r0
+		and	r4,r0
 		bra	dtsk01_lrdraw
 		mov	r0,r5
 		align 4
@@ -938,7 +966,7 @@ MarsVideo_BgDrawLR:
 	; r12 - X block width
 	; r11 - drawzone pos
 	; r10 - drawzone size
-	;  r9 - Framebuffer
+	;  r9 - Framebuffer BASE
 	;  r8 - Pixeldata Y-Current
 	;  r7 - Pixeldata Y-Start
 	;  r6 - Pixeldata Y-End
