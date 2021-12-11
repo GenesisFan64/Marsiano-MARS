@@ -786,9 +786,8 @@ Cach_XHead_L	ds.l 1			; Left draw beam
 Cach_XHead_R	ds.l 1			; Right draw beam
 Cach_YHead_D	ds.l 1			; Bottom draw beam
 Cach_YHead_U	ds.l 1			; Top draw beam
-Cach_BgFbPos_U	ds.l 1			; Upper Y FB pos
-Cach_BgFbPos_D	ds.l 1			; Lower Y FB pos
-Cach_BgFbPos_LR	ds.l 1			; Left/Right FB pos
+Cach_BgFbPos_V	ds.l 1			; Upper Y FB pos
+Cach_BgFbPos_H	ds.l 1			; Left/Right FB pos
 ; Cach_LR_Lines	ds.l 1			; (L/R) X Lines to process
 
 Cach_Md2_Lines	ds.l 1

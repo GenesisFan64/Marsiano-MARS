@@ -55,6 +55,7 @@ MAX_MSPR	equ	128		; Maximum sprites
 
 			struct 0
 marsGbl_XShift		ds.w 1		; Xshift bit set at the start of master_loop
+marsGbl_XPatch		ds.w 1		; Flag for the $xxFF fix
 marsGbl_MstrReqDraw	ds.w 1
 marsGbl_CurrGfxMode	ds.w 1
 marsGbl_VIntFlag_M	ds.w 1		; Sets to 0 after Masters's VBlank ends
@@ -923,9 +924,13 @@ master_loop:
 		jsr	@r0
 		nop
 
-		mov	#RAM_Mars_Background,r1
+		mov	#RAM_Mars_Background,r14
 		mov	#2,r0
-		mov.b	r0,@(mbg_draw_all,r1)
+		mov.b	r0,@(mbg_draw_all,r14)
+		mov	#0,r1
+		shll16	r1
+		mov	r1,@(mbg_xpos,r14)
+		mov	r1,@(mbg_ypos,r14)
 
 		mov 	#_vdpreg,r1
 		mov	#1,r0
@@ -961,8 +966,8 @@ mstr_gfx1_loop:
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#_sysreg+comm14,r1
-		mov	#$40000,r2
-		mov	#$40000,r3
+		mov	#$10000,r2
+		mov	#$10000,r3
 		mov.b	@r1,r4
 		mov	r4,r0
 		tst	#%0001,r0
@@ -992,8 +997,15 @@ mstr_gfx1_loop:
 		sub	r3,r0
 		mov	r0,@(mbg_ypos,r14)
 .up:
+		mov	r4,r0
+		tst	#%10000,r0
+		bt	.notc
+		mov	#2,r0
+		mov.w	r0,@(mbg_draw_all,r14)
+.notc:
+
 		mov	#_sysreg+comm14,r1
-		and	#%11110000,r0
+		and	#%11100000,r0
 		mov.b	r0,@r1
 		ldc	@r15+,sr
 .TEST_1:
@@ -1006,14 +1018,31 @@ mstr_gfx1_loop:
 		mov.b	@(mbg_draw_all,r14),r0
 		cmp/pl	r0
 		bf	.no_redraw
+		mov.b	@(mbg_draw_d,r14),r0
+		mov	r0,r1
+		mov.b	@(mbg_draw_r,r14),r0
+		mov	r0,r2
+		mov.b	@(mbg_draw_u,r14),r0
+		mov	r0,r3
+		mov.b	@(mbg_draw_d,r14),r0
+		or	r3,r0
+		or	r2,r0
+		or	r1,r0
+		cmp/eq	#0,r0
+		bf	.no_redraw
+		mov.b	@(mbg_draw_all,r14),r0
 		dt	r0
 		mov.b	r0,@(mbg_draw_all,r14)
-		mov	#0,r1			; *** TEMPORAL
-		mov	#0,r2				; VARIABLES ***
+		mov	@(mbg_xpos,r14),r1
+		mov	@(mbg_ypos,r14),r2
+		shlr16	r1
+		shlr16	r2
+		exts.w	r1,r1
+		exts.w	r2,r2
 		bsr	MarsVideo_DrawAllBg
 		nop
 .no_redraw:
-
+		mov	#RAM_Mars_Background,r14
 		mov	@(mbg_data,r14),r0
 		cmp/eq	#0,r0
 		bt	.no_scrldata
@@ -1025,7 +1054,7 @@ mstr_gfx1_loop:
 
 	; ---------------------------------------
 
-; 		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_Background,r14
 		bsr	MarsVideo_BgDrawLR
 		nop
 		bsr	MarsVideo_BgDrawUD

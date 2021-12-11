@@ -240,6 +240,11 @@ thisCode_Top:
 		bset	#3,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nou_m:
+		btst	#bitJoyC,d7
+		beq.s	.nou_c
+		bset	#4,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nou_c:
 
 .lel:
 
