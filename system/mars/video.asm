@@ -50,9 +50,9 @@ mbg_size	ds.l 1		; Background FULL size, Width MUST be larger than 320.
 mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
 mbg_fb		ds.l 1		; Framebuffer TOPLEFT position
-mbg_fb_rd	ds.l 1
-mbg_scale_x	ds.l 1
-mbg_scale_y	ds.l 1
+; mbg_fb_rd	ds.l 1
+; mbg_scale_x	ds.l 1
+; mbg_scale_y	ds.l 1
 sizeof_marsbg	ds.l 0
 		finish
 
@@ -110,39 +110,28 @@ MarsVideo_DrawAllBg:
 		mov.w	@(mbg_height,r14),r0
 		mov	r0,r9
 		mov	#MSCRL_HEIGHT,r8
-		mov	#-MSCRL_BLKSIZE,r0
-		and	r0,r1
-		and	r0,r2
-		mov	r1,r3
-		mov	r2,r4
+		mov	#-MSCRL_BLKSIZE,r7
 
-	; Set FB heads
-		mov	r8,r0
-		mov	r1,r5
-		cmp/pz	r5
-		bf	.yfb_low
-		add	r5,r0
-.yfb_low:
-		mov.w	r0,@(mbg_yfb,gbr)
-
-	; Set draw heads
+	; Set X/Y draw heads
 .xinit_l:
 		cmp/pz	r1
 		bt	.xbg_back
+		bra	.xinit_l
 		add	r11,r1
 .xbg_back:
 		cmp/ge	r11,r1			; First X limiter
 		bf	.xbg_inc
-		bra	.xinit_l
+		bra	.xbg_back
 		sub	r11,r1
 .xbg_inc:
-		cmp/pz	r1
+		cmp/pz	r2
 		bt	.ybg_back
-		add	r9,r1
+		bra	.xbg_inc
+		add	r9,r2
 .ybg_back:
 		cmp/ge	r9,r2			; First Y limiter
 		bf	.ybg_inc
-		bra	.xbg_inc
+		bra	.ybg_back
 		sub	r9,r2
 .ybg_inc:
 		mov	r1,r0
@@ -165,103 +154,69 @@ MarsVideo_DrawAllBg:
 		sub	r9,r0
 .lwr_yvld:
 		mov.w	r0,@(mbg_yinc_d,r14)
-	; *** MAIN draw loop ***
-		mov	r1,@-r15
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
+
+	; r1 - X bg pos
+	; r2 - Y bg pos
+	; r3 - Framebuffer BASE
+	; r4 - Y FB pos &BLKSIZE
+	; Set X/Y framebuffer blocks
+		mov.w	@(mbg_yfb,r14),r0
+		mov	r0,r4
+		mov	@(mbg_fb,r14),r3
+		and	r7,r4
+		and	r7,r3
+		and	r7,r2
+		and	r7,r1
 		mov	#MSCRL_HEIGHT/MSCRL_BLKSIZE,r7
-.y_loop:
+.nxt_y:
 		cmp/ge	r9,r2		; Y limiters
 		bf	.ybg_l
 		sub	r9,r2
 .ybg_l:
-		cmp/ge	r8,r4
-		bf	.yfb_l
-		sub	r8,r4
-.yfb_l:
-	; X draw
-		mov	r1,@-r15
 		mov	r3,@-r15
-		mov	#(MSCRL_WIDTH/MSCRL_BLKSIZE),r6
-.x_loop:
-		cmp/ge	r11,r1		; X limiters
+		mov	r1,@-r15
+		mov	#MSCRL_WIDTH/MSCRL_BLKSIZE,r6
+.nxt_x:
+		cmp/ge	r11,r1		; X pixel-data wrap
 		bf	.xbg_l
 		sub	r11,r1
 .xbg_l:
-		cmp/ge	r10,r3
-		bf	.xfb_l
-		sub	r10,r3
-.xfb_l:
+		mov	#MSCRL_WIDTH,r0
+		mulu	r4,r0
+		sts	macl,r5
+		add	r3,r5
+		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
+		cmp/ge	r0,r5
+		bf	.lrgrfb
+		sub	r0,r5
+.lrgrfb:
 		bsr	.mk_piece
 		nop
 		mov	#MSCRL_BLKSIZE,r0
 		add	r0,r1
 		dt	r6
-		bf/s	.x_loop
-		add	r0,r3
-		mov	@r15+,r3
+		bf/s	.nxt_x
+		add	r0,r3		; No MAP WIDTH check needed here
 		mov	@r15+,r1
+		mov	@r15+,r3
 		mov	#MSCRL_BLKSIZE,r0
+		add	r0,r4
+		cmp/gt	r8,r4
+		bf	.nxt_y_l
+		sub	r8,r4
+.nxt_y_l:
 		add	r0,r2
 		dt	r7
-		bf/s	.y_loop
-		add	r0,r4
-		mov	@r15+,r4
-		mov	@r15+,r3
-		mov	@r15+,r2
-		mov	@r15+,r1
-
-	; Now for the hidden line at the bottom:
-		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0	; Point to the bottom FB
-		add	r0,r12
-		mov	#(MSCRL_WIDTH/MSCRL_BLKSIZE),r9
-.lnx_loop:
-		cmp/ge	r11,r1		; X limiters
-		bf	.lnxbg_l
-		sub	r11,r1
-.lnxbg_l:
-		cmp/ge	r10,r3
-		bf	.lnxfb_l
-		sub	r10,r3
-.lnxfb_l:
-		bsr	.mk_pzline
-		nop
-		mov	#MSCRL_BLKSIZE,r0
-		add	r0,r1
-		add	r0,r3
-		dt	r9
-		bf	.lnx_loop
+		bf	.nxt_y
 
 		lds	@r15+,pr
 		rts
 		nop
 		align 4
 
-.mk_pzline:
-		mov	r13,r8		; BG X/Y add
-		mulu	r11,r2
-		sts	macl,r0
-		add	r0,r8
-		add	r1,r8
-		mov	r12,r7		; FB X/Y add
-		mulu	r10,r4
-		sts	macl,r0
-		add	r0,r7
-		add	r3,r7
-		mov	r8,r5
-		mov	r7,r6
-	rept MSCRL_BLKSIZE/4
-		mov	@r5+,r0
-		mov	r0,@r6
-		add	#4,r6
-	endm
-		rts
-		nop
-		align 4
-
 ; r1 - X pos
 ; r2 - Y pos
+; r5 - framebuffer topleft
 .mk_piece:
 		mov	r5,@-r15
 		mov	r6,@-r15
@@ -275,13 +230,26 @@ MarsVideo_DrawAllBg:
 		sts	macl,r0
 		add	r0,r8
 		add	r1,r8
-		mov	r12,r7		; FB X/Y add
-		mulu	r10,r4
-		sts	macl,r0
-		add	r0,r7
-		add	r3,r7
+		mov	r12,r7		; FB X add
+		add	r5,r7
+
+	; Hidden line
 		mov	#MSCRL_BLKSIZE,r9
-.yblk_loop:
+		mov	#320,r0
+		cmp/ge	r0,r5
+		bt	.yblk_loopn
+		mov	r5,r6
+		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
+		add	r0,r6
+		add	r12,r6
+		mov	r8,r5
+	rept MSCRL_BLKSIZE/4
+		mov	@r5+,r0
+		mov	r0,@r6
+		add	#4,r6
+	endm
+
+.yblk_loopn:
 		mov	r8,r5
 		mov	r7,r6
 	rept MSCRL_BLKSIZE/4
@@ -291,67 +259,14 @@ MarsVideo_DrawAllBg:
 	endm
 		add	r11,r8
 		dt	r9
-		bf/s	.yblk_loop
+		bf/s	.yblk_loopn
 		add	r10,r7
-
+.yblk_ex:
 		mov	@r15+,r9
 		mov	@r15+,r8
 		mov	@r15+,r7
 		mov	@r15+,r6
 		mov	@r15+,r5
-		rts
-		nop
-		align 4
-
-; OLD, stable
-; 		sts	pr,@-r15
-; 		mov	#RAM_Mars_Background,r14
-; 		mov	@(mbg_data,r14),r0
-; 		mov	r0,r13
-; 		mov	#_framebuffer+$200,r12
-; 		mov.w	@(mbg_width,r14),r0
-; 		mov	r0,r11
-; 		mov	#MSCRL_WIDTH,r10
-; 		mov	#MSCRL_HEIGHT,r9
-; 		mov	#1,r8
-; 		mov	r12,r3
-; 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
-; 		add	r0,r3
-; .y_loop:
-; 		mov	r13,r5
-; 		mov	r12,r6
-; 		mov	#MSCRL_WIDTH/4,r7
-; .x_loop:
-; 		mov	@r5+,r0
-; 		mov	r0,@r6
-; 		cmp/pl	r8
-; 		bf	.notopln
-; 		mov	r0,@r3
-; 		add	#4,r3
-; .notopln
-; 		dt	r7
-; 		bf/s	.x_loop
-; 		add	#4,r6
-; 		add	r10,r12
-; 		add	r11,r13
-; 		dt	r9
-; 		bf/s	.y_loop
-; 		add	#-1,r8
-;
-; 		mov	#0,r0
-; 		mov.w	r0,@(mbg_xinc_l,r14)
-; 		mov	#MSCRL_WIDTH-MSCRL_BLKSIZE,r0
-; 		mov.w	r0,@(mbg_xinc_r,r14)
-; 		mov	#0,r0
-; 		mov.w	r0,@(mbg_yfb,r14)
-; 		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r0
-; 		mov.w	r0,@(mbg_yinc_d,r14)
-; 		mov.w	r0,@(mbg_yfb_d,r14)
-;
-; 		lds	@r15+,pr
-; 		rts
-; 		nop
-; 		align 4
 		rts
 		nop
 		align 4
@@ -630,6 +545,9 @@ MarsVideo_MoveBg:
 
 	; ---------------------------------------
 
+		mov.b	@(mbg_draw_all,r14),r0
+		cmp/eq	#0,r0
+		bf	.dont_snap
 		mov	#0,r5
 		mov.b	@(mbg_yset,r14),r0
 		add	r2,r0

@@ -217,7 +217,7 @@ thisCode_Top:
 ; .no_shake:
 
 		move.b	(sysmars_reg+comm14),d6
-		and.w	#%00001111,d6
+		and.w	#%00011111,d6
 		bne.s	.lel
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -245,6 +245,19 @@ thisCode_Top:
 		bset	#4,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nou_c:
+
+	; l/r press
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyB,d7
+		beq.s	.nor_mp
+		bset	#0,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nor_mp:
+		btst	#bitJoyA,d7
+		beq.s	.nol_mp
+		bset	#1,d6
+		move.b	d6,(sysmars_reg+comm14)
+.nol_mp:
 
 .lel:
 

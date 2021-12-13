@@ -27,9 +27,9 @@
 ;
 ; ROM data will be trashed if the Genesis side is doing DMA
 
-MSCRL_BLKSIZE		equ $10		; Block size for both directions, aligned by 4
-MSCRL_WIDTH		equ 320+$10	; Internal width for scrolldata
-MSCRL_HEIGHT		equ 240+$10	; Internal height for scrolldata
+MSCRL_BLKSIZE		equ $10			; Block size for both directions, aligned by 4
+MSCRL_WIDTH		equ 320+MSCRL_BLKSIZE	; Internal width for scrolldata + hidden zone
+MSCRL_HEIGHT		equ 240+MSCRL_BLKSIZE	; Internal height for scrolldata + hidden zone
 
 ; ----------------------------------------
 ; Polygon settings
@@ -928,9 +928,11 @@ master_loop:
 		mov	#2,r0
 		mov.b	r0,@(mbg_draw_all,r14)
 		mov	#0,r1
+		mov	#0,r2
 		shll16	r1
+		shll16	r2
 		mov	r1,@(mbg_xpos,r14)
-		mov	r1,@(mbg_ypos,r14)
+		mov	r2,@(mbg_ypos,r14)
 
 		mov 	#_vdpreg,r1
 		mov	#1,r0
@@ -966,8 +968,8 @@ mstr_gfx1_loop:
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#_sysreg+comm14,r1
-		mov	#$10000,r2
-		mov	#$10000,r3
+		mov	#$20000,r2
+		mov	#$20000,r3
 		mov.b	@r1,r4
 		mov	r4,r0
 		tst	#%0001,r0
@@ -1000,8 +1002,11 @@ mstr_gfx1_loop:
 		mov	r4,r0
 		tst	#%10000,r0
 		bt	.notc
+		mov.b	@(mbg_draw_all,r14),r0
+		cmp/eq	#0,r0
+		bf	.notc
 		mov	#2,r0
-		mov.w	r0,@(mbg_draw_all,r14)
+		mov.b	r0,@(mbg_draw_all,r14)
 .notc:
 
 		mov	#_sysreg+comm14,r1
@@ -1016,25 +1021,17 @@ mstr_gfx1_loop:
 
 		mov	#RAM_Mars_Background,r14
 		mov.b	@(mbg_draw_all,r14),r0
-		cmp/pl	r0
-		bf	.no_redraw
-		mov.b	@(mbg_draw_d,r14),r0
-		mov	r0,r1
-		mov.b	@(mbg_draw_r,r14),r0
-		mov	r0,r2
-		mov.b	@(mbg_draw_u,r14),r0
-		mov	r0,r3
-		mov.b	@(mbg_draw_d,r14),r0
-		or	r3,r0
-		or	r2,r0
-		or	r1,r0
 		cmp/eq	#0,r0
-		bf	.no_redraw
-		mov.b	@(mbg_draw_all,r14),r0
+		bt	.no_redraw
 		dt	r0
 		mov.b	r0,@(mbg_draw_all,r14)
 		bsr	MarsVideo_DrawAllBg
 		nop
+		mov	#0,r0
+		mov.b	r0,@(mbg_draw_u,r14)	; Cancel
+		mov.b	r0,@(mbg_draw_d,r14)	; the
+		mov.b	r0,@(mbg_draw_l,r14)	; other
+		mov.b	r0,@(mbg_draw_r,r14)	; timers
 .no_redraw:
 		mov	#RAM_Mars_Background,r14
 		mov	@(mbg_data,r14),r0
