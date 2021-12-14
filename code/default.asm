@@ -120,9 +120,9 @@ thisCode_Top:
 ; 		or.w	#1,d7
 ; 		move.b	d7,(sysmars_reg+comm15)
 
-		lea	MasterTrkList(pc),a0
+		lea	MasterTrkList+$10(pc),a0
 		moveq	#0,d0
-		move.w	#$A,d1
+		move.w	#7,d1
 		moveq	#0,d2
 		move.w	#0,d3
 		bsr	Sound_TrkPlay

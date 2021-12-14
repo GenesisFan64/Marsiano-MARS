@@ -27,9 +27,7 @@
 ;
 ; ROM data will be trashed if the Genesis side is doing DMA
 
-MSCRL_BLKSIZE		equ $10			; Block size for both directions, aligned by 4
-MSCRL_WIDTH		equ 320+MSCRL_BLKSIZE	; Internal width for scrolldata + hidden zone
-MSCRL_HEIGHT		equ 240+MSCRL_BLKSIZE	; Internal height for scrolldata + hidden zone
+
 
 ; ----------------------------------------
 ; Polygon settings
@@ -54,8 +52,8 @@ MAX_MSPR	equ	128		; Maximum sprites
 ; ----------------------------------------------------------------
 
 			struct 0
-marsGbl_XShift		ds.w 1		; Xshift bit set at the start of master_loop
-marsGbl_XPatch		ds.w 1		; Flag for the $xxFF fix
+marsGbl_XShift		ds.w 1		; Xshift bit at the start of master_loop
+marsGbl_XPatch		ds.w 1
 marsGbl_MstrReqDraw	ds.w 1
 marsGbl_CurrGfxMode	ds.w 1
 marsGbl_VIntFlag_M	ds.w 1		; Sets to 0 after Masters's VBlank ends
@@ -909,13 +907,13 @@ master_loop:
 		or	#$80,r0
 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 
-; 		mov	#240,r0
-; 		mov.w	r0,@(marsGbl_FbMaxLines,gbr)
-		mov	#TESTMARS_BG,r1			; SET image
-		mov	#208,r2
+		mov	#TESTMARS_BG,r1			; Image OR RAM section
+		mov	#$200,r2
 		mov	#208,r3
+		mov	#208,r4
 		bsr	MarsVideo_SetBg
 		nop
+
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
 		mov	#0,r2
 		mov	#256,r3
@@ -968,8 +966,8 @@ mstr_gfx1_loop:
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#_sysreg+comm14,r1
-		mov	#$20000,r2
-		mov	#$20000,r3
+		mov	#$10000,r2
+		mov	#$10000,r3
 		mov.b	@r1,r4
 		mov	r4,r0
 		tst	#%0001,r0
@@ -1034,21 +1032,19 @@ mstr_gfx1_loop:
 		mov.b	r0,@(mbg_draw_r,r14)	; timers
 .no_redraw:
 		mov	#RAM_Mars_Background,r14
-		mov	@(mbg_data,r14),r0
-		cmp/eq	#0,r0
-		bt	.no_scrldata
 		bsr	MarsVideo_MoveBg
 		nop
-.no_scrldata:
-		bsr	MarsVideo_MakeTbl
-		nop
-
-	; ---------------------------------------
-
-		mov	#RAM_Mars_Background,r14
 		bsr	MarsVideo_BgDrawLR
 		nop
 		bsr	MarsVideo_BgDrawUD
+		nop
+; .not_xptch:
+
+	; Build the linetables
+		mov	#RAM_Mars_Background,r1
+		mov	#0,r2
+		mov	#224,r3
+		bsr	MarsVideo_MakeTbl
 		nop
 
 ; 		mov.l   #$FFFFFE80,r1			; Stop watchdog
@@ -2212,20 +2208,10 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_Palette	ds.w 256			; Indexed palette
+RAM_Mars_Palette	ds.w 256	; Indexed palette
+RAM_Mars_XShfList	ds.w 240	; Xshift bits for each line (HBlank)
+RAM_Mars_XErrList	ds.w 240	; Word addresses of each FB's affected shifted lines (sigh)
 RAM_Mars_Background	ds.w sizeof_marsbg
-
-; RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
-; RAM_Mars_ObjLayout	ds.b sizeof_layout		; Layout buffer
-; RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
-; RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 0
-; RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_MPLGN	; Polygon list 1
-; RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Pieces list
-; RAM_Mars_VdpDrwList_e	ds.l 0				; (end-of-list label)
-; RAM_Mars_Plgn_ZList_0	ds.l MAX_MPLGN*2		; Z value / foward faces
-; RAM_Mars_Plgn_ZList_1	ds.l MAX_MPLGN*2		; Z value / foward faces
-; RAM_Mars_PlgnNum_0	ds.w 1				; Number of polygons to read, both buffers
-; RAM_Mars_PlgnNum_1	ds.w 1				;
 sizeof_marsvid		ds.l 0
 			finish
 
