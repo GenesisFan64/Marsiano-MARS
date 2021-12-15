@@ -53,7 +53,7 @@ MAX_MSPR	equ	128		; Maximum sprites
 
 			struct 0
 marsGbl_XShift		ds.w 1		; Xshift bit at the start of master_loop
-marsGbl_XPatch		ds.w 1
+marsGbl_XPatch		ds.w 1		; Redraw counter for the $xxFF fix, set to 0 on X/Y change
 marsGbl_MstrReqDraw	ds.w 1
 marsGbl_CurrGfxMode	ds.w 1
 marsGbl_VIntFlag_M	ds.w 1		; Sets to 0 after Masters's VBlank ends
@@ -907,21 +907,22 @@ master_loop:
 		or	#$80,r0
 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
 
-		mov	#TESTMARS_BG,r1			; Image OR RAM section
+	; Make default scroll section
+		mov	#0,r1
 		mov	#$200,r2
+		mov	#MSCRL_BLKSIZE,r3
+		mov	#MSCRL_WIDTH,r4
+		mov	#MSCRL_HEIGHT,r5
+		bsr	MarsVideo_MakeScreen
+		nop
+		mov	#0,r1
+		mov	#TESTMARS_BG,r2			; Image OR RAM section
 		mov	#208,r3
 		mov	#208,r4
 		bsr	MarsVideo_SetBg
 		nop
 
-		mov	#TESTMARS_BG_PAL,r1		; Load palette
-		mov	#0,r2
-		mov	#256,r3
-		mov	#$0000,r4
-		mov	#MarsVideo_LoadPal,r0
-		jsr	@r0
-		nop
-
+	; TODO: un lugar para estos settings
 		mov	#RAM_Mars_Background,r14
 		mov	#2,r0
 		mov.b	r0,@(mbg_draw_all,r14)
@@ -931,10 +932,17 @@ master_loop:
 		shll16	r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
-
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
+
+		mov	#TESTMARS_BG_PAL,r1		; Load palette
+		mov	#0,r2
+		mov	#256,r3
+		mov	#$0000,r4
+		mov	#MarsVideo_LoadPal,r0
+		jsr	@r0
+		nop
 
 ; ---------------------------------------
 ; Mode0 loop
@@ -1043,9 +1051,12 @@ mstr_gfx1_loop:
 	; Build the linetables
 		mov	#RAM_Mars_Background,r1
 		mov	#0,r2
-		mov	#224,r3
+		mov	#240,r3
 		bsr	MarsVideo_MakeTbl
 		nop
+		bsr	MarsVideo_FixTblShift
+		nop
+
 
 ; 		mov.l   #$FFFFFE80,r1			; Stop watchdog
 ; 		mov.w   #$A518,r0
@@ -2209,8 +2220,7 @@ sizeof_marssnd		ds.l 0
 
 			struct MarsRam_Video
 RAM_Mars_Palette	ds.w 256	; Indexed palette
-RAM_Mars_XShfList	ds.w 240	; Xshift bits for each line (HBlank)
-RAM_Mars_XErrList	ds.w 240	; Word addresses of each FB's affected shifted lines (sigh)
+RAM_Mars_HBlMdShft	ds.w 240	; Mode and Xshift bit for each HBlank
 RAM_Mars_Background	ds.w sizeof_marsbg
 sizeof_marsvid		ds.l 0
 			finish

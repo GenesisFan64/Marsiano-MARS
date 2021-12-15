@@ -10,23 +10,23 @@
 MSCRL_BLKSIZE	equ $10			; Block size for both directions, aligned by 4
 MSCRL_WIDTH	equ 320+MSCRL_BLKSIZE	; Internal width for scrolldata + hidden zone
 MSCRL_HEIGHT	equ 240+MSCRL_BLKSIZE	; Internal height for scrolldata + hidden zone
-FBVRAM_PATCH	equ $1D000		; Framebuffer location for the affected XShift lines
+FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift pixel lines
 
 ; ----------------------------------------
 ; Structs
 ; ----------------------------------------
 
 ; Be careful modifing these...
-; The SH2 doesn't like larger indexes
+; The SH2 has limited indexing
 		struct 0
-mbg_draw_all	ds.b 1		; Write 2 to request FULL redraw
+mbg_draw_all	ds.b 1		; Write 2 to request FULL redraw (OTHER draw bytes MUST be at 0)
 mbg_draw_r	ds.b 1		; Write 2 to draw to the right
-mbg_draw_l	ds.b 1		; ***** left
-mbg_draw_d	ds.b 1		; ***** down
-mbg_draw_u	ds.b 1		; ***** up
+mbg_draw_l	ds.b 1		; ***** for left
+mbg_draw_d	ds.b 1		; ***** for down
+mbg_draw_u	ds.b 1		; ***** for up
 mbg_xset	ds.b 1		; X-counter
 mbg_yset	ds.b 1		; Y-counter
-mbg_flags	ds.b 1		; TODO
+mbg_flags	ds.b 1		; Current type of pixel-data: Indexed or Direct
 mbg_xpos_old	ds.w 1
 mbg_ypos_old	ds.w 1
 mbg_xinc_l	ds.w 1
@@ -36,21 +36,16 @@ mbg_yinc_d	ds.w 1
 mbg_width	ds.w 1
 mbg_height	ds.w 1
 mbg_yfb		ds.w 1		; TOP Y position, multiply by WIDTH externally
-mbg_maxlines	ds.w 1
-mbg_xinc_r_rd	ds.w 1		; READ variables for scroll updating
-mbg_xinc_l_rd	ds.w 1
-mbg_yinc_u_rd	ds.w 1
-mbg_yinc_d_rd	ds.w 1
-mbg_fb_x_rd	ds.w 1
-mbg_fb_y_rd	ds.w 1
+mbg_intrl_blk	ds.w 1		; Block size
+mbg_intrl_w	ds.w 1		; Internal scrolling Width (MUST be larger than 320)
+mbg_intrl_h	ds.w 1		; Internal scrolling Height
 mbg_data	ds.l 1
 mbg_size	ds.l 1		; Background FULL size, Width MUST be larger than 320.
 mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
 mbg_fb		ds.l 1		; Framebuffer TOPLEFT position
 mbg_fbdata	ds.l 1		; Pixeldata location on Framebuffer
-mbg_intrl_w	ds.l 1		;
-mbg_intrl_h	ds.l 1		;
+mbg_intrl_size	ds.l 1		;
 sizeof_marsbg	ds.l 0
 		finish
 
@@ -92,11 +87,6 @@ MarsVideo_Init:
 MarsVideo_DrawAllBg:
 		sts	pr,@-r15
 		mov	#RAM_Mars_Background,r14
-		mov	#0,r0
-		mov.b	r0,@(mbg_draw_l,r14)
-		mov.b	r0,@(mbg_draw_r,r14)
-		mov.b	r0,@(mbg_draw_u,r14)
-		mov.b	r0,@(mbg_draw_d,r14)
 		mov	@(mbg_xpos,r14),r1
 		mov	@(mbg_ypos,r14),r2
 		shlr16	r1
@@ -110,11 +100,13 @@ MarsVideo_DrawAllBg:
 		add	r0,r12
 		mov.w	@(mbg_width,r14),r0		; r11 - pixel-data WIDTH
 		mov	r0,r11
-		mov	#MSCRL_WIDTH,r10		; r10 - internal WIDTH
+		mov.w	@(mbg_intrl_w,r14),r0		; r10 - internal WIDTH
+		mov	r0,r10
 		mov.w	@(mbg_height,r14),r0
 		mov	r0,r9
-		mov	#MSCRL_HEIGHT,r8
-		mov	#-MSCRL_BLKSIZE,r7
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r8
+		mov	#-MSCRL_BLKSIZE,r7		; TODO
 
 	; Set X/Y draw heads
 .xinit_l:
@@ -172,7 +164,12 @@ MarsVideo_DrawAllBg:
 		and	r7,r3
 		and	r7,r2
 		and	r7,r1
-		mov	#MSCRL_HEIGHT/MSCRL_BLKSIZE,r7
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r7
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mulu	r7,r0
+		sts	macl,r7
+		shlr8	r7
 .nxt_y:
 		cmp/ge	r9,r2		; Y limiters
 		bf	.ybg_l
@@ -180,31 +177,36 @@ MarsVideo_DrawAllBg:
 .ybg_l:
 		mov	r3,@-r15
 		mov	r1,@-r15
-		mov	#MSCRL_WIDTH/MSCRL_BLKSIZE,r6
+		mov.w	@(mbg_intrl_w,r14),r0
+		mov	r0,r6
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mulu	r6,r0
+		sts	macl,r6
+		shlr8	r6
 .nxt_x:
 		cmp/ge	r11,r1		; X pixel-data wrap
 		bf	.xbg_l
 		sub	r11,r1
 .xbg_l:
-		mov	#MSCRL_WIDTH,r0
+		mov.w	@(mbg_intrl_w,r14),r0
 		mulu	r4,r0
 		sts	macl,r5
 		add	r3,r5
-		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
+		mov	@(mbg_intrl_size,r14),r0
 		cmp/ge	r0,r5
 		bf	.lrgrfb
 		sub	r0,r5
 .lrgrfb:
 		bsr	.mk_piece
 		nop
-		mov	#MSCRL_BLKSIZE,r0
+		mov.w	@(mbg_intrl_blk,r14),r0
 		add	r0,r1
 		dt	r6
 		bf/s	.nxt_x
 		add	r0,r3		; No MAP WIDTH check needed here
 		mov	@r15+,r1
 		mov	@r15+,r3
-		mov	#MSCRL_BLKSIZE,r0
+		mov.w	@(mbg_intrl_blk,r14),r0
 		add	r0,r4
 		cmp/gt	r8,r4
 		bf	.nxt_y_l
@@ -239,16 +241,17 @@ MarsVideo_DrawAllBg:
 		add	r5,r7
 
 	; Hidden line
-		mov	#MSCRL_BLKSIZE,r9
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r9
 		mov	#320,r0
 		cmp/ge	r0,r5
 		bt	.yblk_loopn
 		mov	r5,r6
-		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r0
+		mov	@(mbg_intrl_size,r14),r0
 		add	r0,r6
 		add	r12,r6
 		mov	r8,r5
-	rept MSCRL_BLKSIZE/4
+	rept MSCRL_BLKSIZE/4		; TODO
 		mov	@r5+,r0
 		mov	r0,@r6
 		add	#4,r6
@@ -257,7 +260,7 @@ MarsVideo_DrawAllBg:
 .yblk_loopn:
 		mov	r8,r5
 		mov	r7,r6
-	rept MSCRL_BLKSIZE/4
+	rept MSCRL_BLKSIZE/4		; TODO
 		mov	@r5+,r0
 		mov	r0,@r6
 		add	#4,r6
@@ -333,17 +336,8 @@ MarsVideo_MoveBg:
 		or	r2,r0
 		cmp/eq	#0,r0
 		bt	.no_chng
-; 		mov.w	@(marsGbl_XPatch,gbr),r0
-; 		cmp/eq	#0,r0
-; 		bf	.no_chng
-		mov	#RAM_Mars_XErrList,r3
-		mov	#240,r4
 		mov	#0,r0
-.wordclr:
-		mov.w	r0,@r3
-		dt	r4
-		bf/s	.wordclr
-		add	#2,r3
+		mov.w	r0,@(marsGbl_XPatch,gbr)
 .no_chng:
 		mov.w	@(marsGbl_XShift,gbr),r0	; Also update the XShift
 		add	r1,r0				; bit for 256-color mode
@@ -353,22 +347,21 @@ MarsVideo_MoveBg:
 	; Y Framebuffer position (direct)
 	; ---------------------------------------
 
-	if MSCRL_HEIGHT=256
-		mov.w	@(mbg_yfb,r14),r0
-		add	r2,r0
-		and	#$FF,r0
-		mov.w	r0,@(mbg_yfb,r14)
+; 	if MSCRL_HEIGHT=256
+; 		mov.w	@(mbg_yfb,r14),r0
+; 		add	r2,r0
+; 		and	#$FF,r0
+; 		mov.w	r0,@(mbg_yfb,r14)
 ; 		mov.w	@(mbg_yfb_d,r14),r0
 ; 		add	r2,r0
 ; 		and	#$FF,r0
 ; 		mov.w	r0,@(mbg_yfb_d,r14)
-	else
-		mov	#MSCRL_HEIGHT,r3
+; 	else
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r3
 		mov.w	@(mbg_yfb,r14),r0
 		mov	r0,r4
-; 		mov.w	@(mbg_yfb_d,r14),r0
-; 		mov	r0,r5
-		add	r2,r4		; UP
+		add	r2,r4
 		cmp/pl	r2
 		bf	.ypu_negtv
 		cmp/ge	r3,r4
@@ -381,32 +374,14 @@ MarsVideo_MoveBg:
 		bt	.ypu_postv
 		add	r3,r4
 .ypu_postv:
-; 		add	r2,r5		; DOWN
-; 		cmp/pl	r2
-; 		bf	.ypd_negtv
-; 		cmp/ge	r3,r5
-; 		bf	.ypd_negtv
-; 		sub	r3,r5
-; .ypd_negtv:
-; 		cmp/pz	r2
-; 		bt	.ypd_postv
-; 		cmp/pz	r5
-; 		bt	.ypd_postv
-; 		add	r3,r5
-.ypd_postv:
 		mov	r4,r0
 		mov.w	r0,@(mbg_yfb,r14)
-; 		mov	r5,r0
-; 		mov.w	r0,@(mbg_yfb_d,r14)
-
-	endif
 
 	; ---------------------------------------
 	; Update Framebuffer TOP-LEFT position
 	; ---------------------------------------
 
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
-		mov	r0,r3
+		mov	@(mbg_intrl_size,r14),r3
 		mov	@(mbg_fb,r14),r0
 		add	r1,r0
 		cmp/pl	r1
@@ -509,7 +484,7 @@ MarsVideo_MoveBg:
 		mov.b	@(mbg_yset,r14),r0
 		add	r2,r0
 		mov	r0,r6
-		tst	#(-MSCRL_BLKSIZE)&$FF,r0
+		tst	#(-MSCRL_BLKSIZE)&$FF,r0	; TODO
 		bt	.ydr_busy
 		mov	#-MSCRL_BLKSIZE,r3
 		cmp/pl	r2
@@ -536,13 +511,16 @@ MarsVideo_MoveBg:
 		mov.b	r0,@(mbg_draw_u,r14)
 		add	#$01,r5
 .ydr_busy:
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r4
 		mov	r6,r0
-		and	#MSCRL_BLKSIZE-1,r0
+		dt	r4
+		and	r4,r0
 		mov.b	r0,@(mbg_yset,r14)
 		mov.b	@(mbg_xset,r14),r0
 		add	r1,r0
 		mov	r0,r6
-		tst	#(-MSCRL_BLKSIZE)&$FF,r0
+		tst	#(-MSCRL_BLKSIZE)&$FF,r0	; TODO
 		bt	.ydl_busy
 		mov	#-MSCRL_BLKSIZE,r3
 		cmp/pl	r1
@@ -571,15 +549,18 @@ MarsVideo_MoveBg:
 		mov.b	r0,@(mbg_draw_l,r14)
 		add	#$02,r5
 .ydl_busy:
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r4
 		mov	r6,r0
-		and	#MSCRL_BLKSIZE-1,r0
+		dt	r4
+		and	r4,r0
 		mov.b	r0,@(mbg_xset,r14)
 
 	; Make snapshot of scroll variables
 	; to CACHE
 		cmp/pl	r5
 		bf	.dont_snap
-		mov	#-MSCRL_BLKSIZE,r4
+		mov	#-MSCRL_BLKSIZE,r4	; TODO
 
 		mov	#Cach_XHead_L,r1
 		mov	#Cach_XHead_R,r2
@@ -619,24 +600,22 @@ MarsVideo_MoveBg:
 ; r1 - Background buffer
 ; r2 - Top Y
 ; r3 - Bottom Y
-;
-; Clear the XErrList externally in case
-; the background moved before getting
-; here.
 ; ---------------------------------------
 
 MarsVideo_MakeTbl:
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
 		mov	@(mbg_fbdata,r1),r13		; r13 - Framebuffer pixeldata position
-		mov	#RAM_Mars_XErrList,r12		; r12 - Framebuffer indexes affected by $xxFF
-		mov	#_framebuffer+FBVRAM_PATCH,r11	; r11 - Output for patched pixel lines
-		mov	#MSCRL_WIDTH*MSCRL_HEIGHT,r10	; r10 - Full size of screen-scroll
-		mov	#MSCRL_WIDTH,r9			;  r9 - Next line add
+		mov	@(mbg_intrl_size,r1),r12	; r12 - Full size of screen-scroll
+		mov	#RAM_Mars_HBlMdShft,r11		; r11 - HBlank mode/xshift list
+		mov.w	@(mbg_intrl_w,r1),r0
+		mov	r0,r9				;  r9 - Next line to add
 		mov	r2,r6
 		mov	r14,r8
 		mov	r2,r0
 		shll	r0
 		add	r0,r8
+		shll	r0
+		add	r0,r11
 		mov.w	@(mbg_yfb,r1),r0
 		mulu	r9,r0
 		mov	@(mbg_fb,r1),r5
@@ -645,68 +624,21 @@ MarsVideo_MakeTbl:
 		add	r0,r7
 .ln_loop:
 		mov	r7,r5
-		cmp/ge	r10,r5
+		cmp/ge	r12,r5
 		bf	.xl_r
-		sub	r10,r5
+		sub	r12,r5
 .xl_r:
 		cmp/pz	r5
 		bt	.xl_l
-		add	r10,r5
+		add	r12,r5
 .xl_l:
 		mov	r5,r7
 		add	r9,r7		; Add Y
 		add	r13,r5		; Add Framebuffer position
 		shlr	r5		; divide by 2 (shift reg does the missing bit 0)
-
-	; $xxFF patch section
-	; 256-color flag goes here
-		mov	r5,r0
-		mov	#$FF,r4
-		mov	r5,r0
-		and	r4,r0
-		cmp/eq	r4,r0
-		bf	.hw_cont
-		mov.w	@(marsGbl_XShift,gbr),r0
-		and	#1,r0
-		cmp/eq	#1,r0
-		bf	.hw_cont
-; 		mov.w	@r12,r0
-; 		mov	r0,r4
-; 		cmp/eq	#0,r0
-; 		bf	.mk_ntry
-		mov	r11,r4
-		shlr	r4
-		mov	r2,@-r15
-		mov	r1,@-r15
-; 		mov	r11,r3
-		mov	r5,r1
-		shll	r1
-; 		add	#1,r1
-; 		add	#1,r3
-		add	r14,r1
-	; ** MAKE SURE NEW POINTERS DOESNT END WITH $xxFF **
-		mov	#320,r2
-.patchme:
-		mov.b	@(1,r1),r0
-		mov.b	r0,@(1,r11)
-		add	#1,r1
-		dt	r2
-		bf/s	.patchme
-		add	#1,r11
-		mov	@r15+,r1
-		mov	@r15+,r2
-		mov.w	r4,@r12
-.mk_ntry:
-		mov	r4,r5
-; 		mov.w	@(marsGbl_XPatch,gbr),r0
-; 		cmp/eq	#2,r0
-; 		bt	.hw_cont
-; 		add	#1,r0
-; 		mov.w	r0,@(marsGbl_XPatch,gbr)
-.hw_cont:
 		mov.w	r5,@r8		; send to FB's table
 		add	#1,r6
-		add	#2,r12
+		add	#4,r11
 		cmp/eq	r3,r6
 		bf/s	.ln_loop
 		add	#2,r8
@@ -715,118 +647,66 @@ MarsVideo_MakeTbl:
 		nop
 		align 4
 
-; 		cmp/pl	r6
-; 		bf	.no_lines
-; 		mov.w	@(marsGbl_XPatch,gbr),r0
-; 		add	#1,r0
-; 		cmp/eq	#4,r0
-; 		bf	.no_lns2
-; 		mov	#0,r0
-; .no_lns2:
-; 		mov.w	r0,@(marsGbl_XPatch,gbr)
-; 	; XShift fix
-; 		mov.w	@(marsGbl_XPatch,gbr),r0
-; 		cmp/eq	#2,r0
-; 		bt	.hw_shfback
-; 		mov.w	@(marsGbl_XShift,gbr),r0
-; 		and 	#1,r0
-; 		cmp/eq	#1,r0
-; 		bf	.hw_cont
-; 		mov	r5,r0
-; 		mov	#$FF,r4
-; 		and	r4,r0
-; 		cmp/eq	r4,r0
-; 		bf	.hw_cont
-; 		mov	r5,r4
-; 		shll	r4
-; 		add	r14,r4
-; 		mov	#MSCRL_WIDTH,r6
-; .copypxls:
-; 		mov.b	@(1,r4),r0
-; 		mov.b	r0,@r4
-; 		dt	r6
-; 		bf/s	.copypxls
-; 		add	#1,r4
-; 		bra	.hw_cont
-; 		mov	#1,r6
-;
-; .hw_shfback:
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_XPatch,gbr)
-; 		mov.b	r0,@(mbg_draw_l,r1)
-; 		mov.b	r0,@(mbg_draw_r,r1)
-; 		mov.b	r0,@(mbg_draw_u,r1)
-; 		mov.b	r0,@(mbg_draw_d,r1)
-; 		mov.b	@(mbg_draw_all,r1),r0
-; 		cmp/eq	#0,r0
-; 		bf	.hw_cont
-; 		mov	#2,r0
-; 		mov.b	r0,@(mbg_draw_all,r1)
+; ---------------------------------------
+; Call this after ALL Framebuffer tables
+; are set, to fix that Xshift bit issue
+; on Hardware
+; ---------------------------------------
 
-; MarsVideo_MakeTbl:
-; 		mov	#RAM_Mars_Background,r14
-;
-; ; 		mov	#rot_angle,r1
-; ; 		mov	@r1,r2
-; ; 		mov	r2,r4
-; ; 		mov	#$7FF,r3
-; ; 		add	#4,r4		; wave speed
-; ; 		and	r3,r4
-; ; 		mov	r4,@r1
-; 		mov	#0,r3
-; 		mov	#0,r4
-; 		mov	#_framebuffer,r13
-; 	; Y add goes here
-;
-; 		mov	#$200,r8			; TOP FB position
-; 		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r7	; Last line point
-; 		mov.w	@(mbg_yfb,r14),r0
-; 		mov	#MSCRL_WIDTH,r6
-; 		mulu	r6,r0
-; 		sts	macl,r5
-; 		mov	@(mbg_fb,r14),r0
-; 		mov	r0,r1
-; 		mov	r1,r12
-; 		add	r5,r12
-; 		mov.w	@(mbg_maxlines,r14),r0	; Number of lines to show
-; 		cmp/pl	r0
-; 		bf	.no_lines
-; 		mov	r0,r5
-; .ln_loop:
-; ; 		mov	#$7FF,r3
-; ; 		mov	r2,r0
-; ; 		add	#16,r2		; wave distord
-; ; 		and	r3,r2
-; ; 		shll2	r0
-; ; 		mov	#sin_table,r3
-; ; 		mov	@(r0,r3),r4
-; ; 		mov	#8,r0		; wave max X
-; ; 		dmuls	r0,r4
-; ; 		sts	macl,r4
-; ; 		shlr16	r4
-; ; 		exts.w	r4,r4
-; 		mov	r12,r1
-; 		cmp/ge	r7,r1
-; 		bf	.xl_r
-; 		sub	r7,r1
-; .xl_r:
-; 		cmp/pz	r1
-; 		bt	.xl_l
-; 		add	r7,r1
-; .xl_l:
-; 		mov	r1,r12
-; 		add	r6,r12		; Add Y
-; 		add	r8,r1		; Add FB base pos
-; 		shlr	r1		; divide by 2 (shift reg does the missing bit 0)
-; ; 		add	r4,r1
-; 		mov.w	r1,@r13		; send to FB's table
-; 		dt	r5
-; 		bf/s	.ln_loop
-; 		add	#2,r13
-; .no_lines:
-; 		rts
-; 		nop
-; 		align 4
+MarsVideo_FixTblShift:
+		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
+		mov	#_framebuffer+FBVRAM_PATCH,r13	; r13 - Output for patched pixel lines
+		mov	#RAM_Mars_HBlMdShft,r12		; r12 - HBlank mode/xshift list
+		mov	#240,r11
+		mov	r14,r10
+.ln_loop:
+		mov.w	@r10,r0
+		mov	r0,r8
+		mov	#$FF,r9
+		and	r9,r0
+		cmp/eq	r9,r0
+		bf	.hw_cont
+		mov.w	@(marsGbl_XShift,gbr),r0
+		and	#1,r0
+		cmp/eq	#1,r0
+		bf	.hw_cont
+		mov	r13,r4		; r4 - new index
+		shlr	r4
+		mov	#0,r5
+		mov.w	@(marsGbl_XPatch,gbr),r0
+		cmp/eq	#2,r0
+		bt	.no_rdrw
+		mov	#1,r5
+		mov	#$FFFF,r0
+		mov	r8,r7
+		and	r0,r7
+		shll	r7
+		add	r14,r7
+		mov	#320,r6
+.patchme:
+		mov.b	@(1,r7),r0
+		mov.b	r0,@(1,r13)
+		add	#1,r7
+		dt	r6
+		bf/s	.patchme
+		add	#1,r13
+.no_rdrw:
+		mov.w	r4,@r10
+.hw_cont:
+		add	#4,r12
+		dt	r11
+		bf/s	.ln_loop
+		add	#2,r10
+
+		cmp/pl	r5
+		bt	.no_incr
+		mov.w	@(marsGbl_XPatch,gbr),r0
+		add	#1,r0
+		mov.w	r0,@(marsGbl_XPatch,gbr)
+.no_incr:
+		rts
+		nop
+		align 4
 
 ; ---------------------------------------
 ; Draw Left/Right sections
@@ -843,19 +723,19 @@ MarsVideo_BgDrawLR:
 		mov	@(mbg_data,r14),r0
 		cmp/pl	r0
 		bf	nxt_drawud
-		mov	#-MSCRL_BLKSIZE,r4
+		mov	#-MSCRL_BLKSIZE,r4		; TODO
 		mov	#256,r13
 		mov	#MSCRL_BLKSIZE/4,r12
 		mov	#Cach_BgFbPos_H,r11
 		mov	@r11,r11
-		mov	#Cach_BgFbPos_V,r0
-		mov	@r0,r0
-		and	r4,r0
-		mov	#MSCRL_WIDTH,r3
+		mov	#Cach_BgFbPos_V,r3
+		mov	@r3,r3
+		and	r4,r3
+		mov.w	@(mbg_intrl_w,r14),r0
 		mulu	r3,r0
 		sts	macl,r0
 		add	r0,r11
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r10
+		mov	@(mbg_intrl_size,r14),r10
 		mov	@(mbg_fbdata,r14),r9
 		mov	#_framebuffer,r0
 		add	r0,r9
@@ -955,7 +835,7 @@ dtsk01_lrdraw:
 		add	#4,r3
 		mov.w	@(mbg_width,r14),r0
 		add	r0,r8
-		mov	#MSCRL_WIDTH,r0
+		mov.w	@(mbg_intrl_w,r14),r0
 		dt	r13
 		bf/s	dtsk01_lrdraw
 		add	r0,r11
@@ -1007,12 +887,13 @@ MarsVideo_BgDrawUD:
 		add	r0,r2
 		mov	r2,r3
 		add	r4,r3
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r7
 		mov	#Cach_BgFbPos_H,r5
 		mov	@r5,r5
 		mov	#Cach_BgFbPos_V,r0
 		mov	@r0,r0
-		mov	#MSCRL_HEIGHT,r7
-		mov	#MSCRL_HEIGHT-MSCRL_BLKSIZE,r6
+		mov	#240,r6		; TODO: checar esto bien
 		add	r6,r0
 		cmp/gt	r7,r0
 		bf	.upwrp
@@ -1045,7 +926,8 @@ MarsVideo_BgDrawUD:
 
 	; Main U/D loop
 .drwy_go:
-		mov	#MSCRL_BLKSIZE,r8
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r8
 .rept_y:
 		cmp/ge	r12,r2
 		bf	.ybgend
@@ -1055,21 +937,22 @@ MarsVideo_BgDrawUD:
 		add	r0,r3
 .ybgend:
 		mov	r2,r1		; r1 - bg pixel data
-		mov	#-MSCRL_BLKSIZE,r7
+		mov	#-MSCRL_BLKSIZE,r7	; TODO
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		and	r7,r0
 		add	r0,r1
 
+		mov.w	@(mbg_intrl_w,r14),r0
+		mov	r0,r7
 		mov	r5,r4		; r4 - X
 		mov	r6,r0
-		mov	#MSCRL_WIDTH,r7
 		mulu	r7,r0
 		sts	macl,r0
 		add	r0,r4		; X + Y
-		mov	#(MSCRL_WIDTH)/4,r7
+		shlr2	r7		; width / 4
 .rept_x:
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+		mov	@(mbg_intrl_size,r14),r0
 		cmp/ge	r0,r4
 		bf	.res_x
 		sub	r0,r4
@@ -1091,7 +974,7 @@ MarsVideo_BgDrawUD:
 		bt	.not_l2
 		mov	r4,r9
 		add	r10,r9
-		mov	#(MSCRL_WIDTH*MSCRL_HEIGHT),r0
+		mov	@(mbg_intrl_size,r14),r0
 		add	r0,r9
 		mov	@r1,r0
 		mov	r0,@r9
@@ -1105,19 +988,18 @@ MarsVideo_BgDrawUD:
 		mov.w	@(mbg_width,r14),r0
 		add	r0,r2
 		add	r0,r3
-	if MSCRL_HEIGHT=256
-		mov	r6,r0
-		add	#1,r0
-		and	#$FF,r0
-		mov	r0,r6
-	else
-		mov	#MSCRL_HEIGHT,r0
+; 	if MSCRL_HEIGHT=256
+; 		mov	r6,r0
+; 		add	#1,r0
+; 		and	#$FF,r0
+; 		mov	r0,r6
+; 	else
+		mov.w	@(mbg_intrl_h,r14),r0
 		add	#1,r6
 		cmp/gt	r0,r6
 		bf	.rdhlow
 		sub	r0,r6
 .rdhlow:
-	endif
 		dt	r8
 		bf	.rept_y
 drw_ud_exit:
@@ -1835,106 +1717,131 @@ MarsVideo_LoadPal:
 		ltorg
 
 ; ------------------------------------------------
+; MarsVideo_MakeScreen
+;
+; Set pointer to read the pixel-data
+;
+; r1 - Background slot
+; r2 - Output framebuffer data
+; r3 - Scroll block size (best size: $10)
+; r4 - Scroll width + blocksize (MUST BE LARGER THAN 320)
+; r5 - Scroll height + blocksize
+; ------------------------------------------------
+
+MarsVideo_MakeScreen:
+		mov	#RAM_Mars_Background,r14
+		mov	r2,@(mbg_fbdata,r14)
+		mov	r3,r0
+		mov.w	r0,@(mbg_intrl_blk,r14)
+		mov	r4,r0
+		mov.w	r0,@(mbg_intrl_w,r14)
+		mov	r5,r0
+		mov.w	r0,@(mbg_intrl_h,r14)
+		mulu	r4,r5
+		sts	macl,r0
+		mov	r0,@(mbg_intrl_size,r14)
+		rts
+		nop
+		align 4
+		ltorg
+
+; ------------------------------------------------
 ; MarsVideo_SetBg
 ;
-; Set background pixel-data
-; to be used for scrolling, ROM data or
-; RAM section
+; Set pointer to read the pixel-data
 ;
-; r1 - ROM/RAM pointer
+; r1 - Background slot
 ; r2 - Pixeldata output location on Framebuffer
-; r3 - Image WIDTH
-; r4 - Image HEIGHT
+; r3 - Source image WIDTH
+; r4 - Source image HEIGHT
+;
+; WIDTH AND HEIGHT MUST BE ALIGNED IN "BLOCKS"
 ; ------------------------------------------------
 
 MarsVideo_SetBg:
 		mov	#RAM_Mars_Background,r14
-		mov	r1,@(mbg_data,r14)
-		mov	r2,@(mbg_fbdata,r14)
+		mov	r2,@(mbg_data,r14)
 		mov	r3,r0
 		mov.w	r0,@(mbg_width,r14)
 		mov	r4,r0
 		mov.w	r0,@(mbg_height,r14)
-
-; 		mov	#240,r0
-; 		mov.w	r0,@(mbg_maxlines,r14)
 		rts
 		nop
 		align 4
 		ltorg
 
-; ------------------------------------------------
-; MarsVideo_SetWatchdog
+; ; ------------------------------------------------
+; ; MarsVideo_SetWatchdog
+; ;
+; ; Initialize watchdog interrupt with
+; ; default settings
+; ; ------------------------------------------------
 ;
-; Initialize watchdog interrupt with
-; default settings
-; ------------------------------------------------
-
-MarsVideo_SetWatchdog:
-		stc	sr,@-r15			; Save interrupts
-		mov	#$F0,r0
-		ldc	r0,sr
-
-; 	; Polygon start-values
-; ; 		mov	#RAM_Mars_VdpDrwList,r0		; Reset the piece-drawing pointer
-; ; 		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; on both READ and WRITE pointers
-; ; 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-; ; 		mov	#0,r0				; Reset polygon pieces counter
-; ; 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
+; MarsVideo_SetWatchdog:
+; 		stc	sr,@-r15			; Save interrupts
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 ;
-; 	; Vars that require reset
-; 		mov	#MSCRL_HEIGHT,r2
-; 		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
-; 		and	#$7F,r0
-; 		cmp/eq	#1,r0
-; 		bt	.mde1
-; 		mov	#224,r2
-; .mde1:
-; 		mov	#Cach_LR_Lines,r1		; L/R lines to process
-; 		mov	r2,@r1
-; 		mov	#_framebuffer+$200,r0
-; 		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
-; 		mov	#Cach_Xadd,r1
-; 		mov	#Cach_Yadd,r2
-; 		mov.w	@(marsGbl_Bg_Xscale,gbr),r0
-; 		shll8	r0
-; 		mov	r0,@r1
-; 		mov.w	@(marsGbl_Bg_Yscale,gbr),r0
-; 		shll8	r0
-; 		mov	r0,@r2
-; 		mov.w	@(mbg_xinc_l,r14),r0
-; 		mov	#Cach_Xpos,r1
-; 		mov	r0,@r1
-; 		mov.w	@(mbg_yinc_u,r14),r0
-; 		shll16	r0
-; 		mov	#Cach_Ycurr,r1
-; 		mov	r0,@r1
+; ; 	; Polygon start-values
+; ; ; 		mov	#RAM_Mars_VdpDrwList,r0		; Reset the piece-drawing pointer
+; ; ; 		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; on both READ and WRITE pointers
+; ; ; 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+; ; ; 		mov	#0,r0				; Reset polygon pieces counter
+; ; ; 		mov.w	r0,@(marsGbl_PzListCntr,gbr)
+; ;
+; ; 	; Vars that require reset
+; ; 		mov	#MSCRL_HEIGHT,r2
+; ; 		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
+; ; 		and	#$7F,r0
+; ; 		cmp/eq	#1,r0
+; ; 		bt	.mde1
+; ; 		mov	#224,r2
+; ; .mde1:
+; ; 		mov	#Cach_LR_Lines,r1		; L/R lines to process
+; ; 		mov	r2,@r1
+; ; 		mov	#_framebuffer+$200,r0
+; ; 		mov	r0,@(marsGbl_Bg_FbCurrR,gbr)
+; ; 		mov	#Cach_Xadd,r1
+; ; 		mov	#Cach_Yadd,r2
+; ; 		mov.w	@(marsGbl_Bg_Xscale,gbr),r0
+; ; 		shll8	r0
+; ; 		mov	r0,@r1
+; ; 		mov.w	@(marsGbl_Bg_Yscale,gbr),r0
+; ; 		shll8	r0
+; ; 		mov	r0,@r2
+; ; 		mov.w	@(mbg_xinc_l,r14),r0
+; ; 		mov	#Cach_Xpos,r1
+; ; 		mov	r0,@r1
+; ; 		mov.w	@(mbg_yinc_u,r14),r0
+; ; 		shll16	r0
+; ; 		mov	#Cach_Ycurr,r1
+; ; 		mov	r0,@r1
+; ;
+; ; 	; X draw settings
+; ; 		mov	@(marsGbl_BgData,gbr),r0
+; ; 		mov	r0,@(marsGbl_BgData_R,gbr)
 ;
-; 	; X draw settings
-; 		mov	@(marsGbl_BgData,gbr),r0
-; 		mov	r0,@(marsGbl_BgData_R,gbr)
-
-; 	; Y draw settings
-; 		mov	#1,r0				; Set first task $01
-; 		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
-		ldc	@r15+,sr			; Restore interrupts
-		mov	#$FFFFFE80,r1
-		mov.w	#$5A20,r0			; Watchdog timer
-		mov.w	r0,@r1
-		mov.w	#$A538,r0			; Enable this watchdog
-		mov.w	r0,@r1
-		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
-		tst	#2,r0
-		bf	.wait_fb
-		mov.w	#$A1,r0				; ClearOnly: Pre-start at $A1
-; 		mov.w	#$100,r0			; BG: Pre-start at $100
-		mov.w	r0,@(6,r1)			;
-
-		rts
-		nop
-		align 4
-		ltorg
+; ; 	; Y draw settings
+; ; 		mov	#1,r0				; Set first task $01
+; ; 		mov.w	r0,@(marsGbl_WdDrwTask,gbr)
+; 		ldc	@r15+,sr			; Restore interrupts
+; 		mov	#$FFFFFE80,r1
+; 		mov.w	#$5A20,r0			; Watchdog timer
+; 		mov.w	r0,@r1
+; 		mov.w	#$A538,r0			; Enable this watchdog
+; 		mov.w	r0,@r1
+; 		mov	#_vdpreg,r1
+; .wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
+; 		tst	#2,r0
+; 		bf	.wait_fb
+; 		mov.w	#$A1,r0				; ClearOnly: Pre-start at $A1
+; ; 		mov.w	#$100,r0			; BG: Pre-start at $100
+; 		mov.w	r0,@(6,r1)			;
+;
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
 
 ; ====================================================================
 ; ----------------------------------------------------------------
