@@ -120,11 +120,11 @@ thisCode_Top:
 ; 		or.w	#1,d7
 ; 		move.b	d7,(sysmars_reg+comm15)
 
-		lea	MasterTrkList+$10(pc),a0
+		lea	MasterTrkList(pc),a0
+		move.w	$C(a0),d1
+		move.w	$E(a0),d3
 		moveq	#0,d0
-		move.w	#7,d1
 		moveq	#0,d2
-		move.w	#0,d3
 		bsr	Sound_TrkPlay
 		move.b	#$80,(sysmars_reg+comm14)	; Unlock MASTER
 
@@ -525,6 +525,8 @@ thisCode_Top:
 
 ; test playlist
 MasterTrkList:
+	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
+	dc.w 7,0
 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
 	dc.w $A,0
 	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS

@@ -4113,7 +4113,7 @@ wavFreq_List:	dw 100h		; C-0
 		dw 068h		; A-3
 		dw 070h		; A#3
 		dw 075h		; B-3
-		dw 081h		; C-4 11025 -12
+		dw 085h		; C-4 11025 -12
 		dw 087h		; C#4
 		dw 08Ch		; D-4
 		dw 09Ah		; D#4

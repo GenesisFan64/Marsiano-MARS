@@ -26,6 +26,23 @@
 ; PWM samples
 ; --------------------------------------------------------
 
+SmpIns_Vctr01:
+	gSmpl "sound/instr/smpl/vctr01.wav",58
+SmpIns_Vctr04:
+	gSmpl "sound/instr/smpl/vctr04.wav",124
+SmpIns_VctrSnare:
+	gSmpl "sound/instr/smpl/vctrSnare.wav",0
+SmpIns_VctrKick:
+	gSmpl "sound/instr/smpl/vctrKick.wav",0
+SmpIns_VctrTimpani:
+	gSmpl "sound/instr/smpl/vctrTimpani.wav",0
+SmpIns_VctrCrash:
+	gSmpl "sound/instr/smpl/vctrCrash.wav",0
+SmpIns_VctrBrass:
+	gSmpl "sound/instr/smpl/vctrBrass.wav",1004
+SmpIns_VctrAmbient:
+	gSmpl "sound/instr/smpl/vctrBrass.wav",124
+
 SmpIns_Bell_Ice:
 	gSmpl "sound/instr/smpl/bell_ice.wav",0
 SmpIns_Brass1_Hi:
@@ -44,6 +61,8 @@ SmpIns_PIANO_1:
 	gSmpl "sound/instr/smpl/PIANO__1.wav",0
 SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",0
+
+
 
 ; --------------------------------------------------------
 ; Other

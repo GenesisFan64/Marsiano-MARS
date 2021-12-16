@@ -670,23 +670,24 @@ MarsVideo_FixTblShift:
 		and	#1,r0
 		cmp/eq	#1,r0
 		bf	.hw_cont
+		mov	#$FFFF,r3
 		mov	r13,r4		; r4 - new index
 		shlr	r4
+		and	r3,r4
 		mov	#0,r5
 		mov.w	@(marsGbl_XPatch,gbr),r0
 		cmp/eq	#2,r0
 		bt	.no_rdrw
 		mov	#1,r5
-		mov	#$FFFF,r0
 		mov	r8,r7
-		and	r0,r7
+		and	r3,r7
 		shll	r7
 		add	r14,r7
 		mov	#320,r6
 .patchme:
-		mov.b	@(1,r7),r0
-		mov.b	r0,@(1,r13)
 		add	#1,r7
+		mov.b	@r7,r0
+		mov.b	r0,@(1,r13)
 		dt	r6
 		bf/s	.patchme
 		add	#1,r13

@@ -98,8 +98,8 @@ FmIns_Bass_heavy:
 ; 		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
 FmIns_Bass_3:
 		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
-; FmIns_Bass_4:
-; 		binclude "sound/instr/fm/bass_4.gsx",$2478,$20
+FmIns_Bass_4:
+		binclude "sound/instr/fm/bass_4.gsx",$2478,$20
 ; FmIns_Bass_5:
 ; 		binclude "sound/instr/fm/bass_5.gsx",$2478,$20
 ; FmIns_Bass_6:
@@ -162,8 +162,8 @@ FmIns_Ambient_dark:
 		binclude "sound/instr/fm/ambient_dark.gsx",$2478,$20
 FmIns_Ambient_spook:
 		binclude "sound/instr/fm/ambient_spook.gsx",$2478,$20
-; FmIns_Ambient_3:
-; 		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
+FmIns_Ambient_3:
+		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
 FmIns_Ding_toy:
 		binclude "sound/instr/fm/ding_toy.gsx",$2478,$20
 FmIns_Bell_China:

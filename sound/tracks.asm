@@ -91,6 +91,26 @@ GemaSfxIns_Boom:
 	gInsPsgN 0,$00,$00,$00,$00,$02,%110
 	gInsFm 0,FmIns_Ding_toy
 
+GemaTrk_blk_Vectr:
+	binclude "sound/tracks/vectr_blk.bin"
+GemaTrk_patt_Vectr:
+	binclude "sound/tracks/vectr_patt.bin"
+GemaTrk_ins_Vectr:
+	gInsPwm -17,SmpIns_Vctr01,%001
+	gInsNull
+	gInsPwm -15,SmpIns_VctrCrash,0
+	gInsPwm -17,SmpIns_Vctr04,%001
+	gInsNull
+	gInsPwm -15,SmpIns_VctrTimpani,%001
+	gInsFm -22,FmIns_Bass_4
+	gInsPsg 0,$00,$00,$00,$00,$01
+	gInsPsg 0,$00,$00,$00,$00,$01
+	gInsPwm -17,SmpIns_VctrSnare,%000
+	gInsPwm -17,SmpIns_VctrKick,%000
+	gInsPsgN 0,$00,$00,$00,$00,$10,%100
+	gInsPsgN 0,$00,$00,$00,$00,$08,%100
+	gInsPwm -17,SmpIns_VctrBrass,%001
+
 GemaTrk_blk_BeMine:
 	binclude "sound/tracks/bemine_blk.bin"
 GemaTrk_patt_BeMine:

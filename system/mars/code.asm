@@ -917,12 +917,12 @@ master_loop:
 		nop
 		mov	#0,r1
 		mov	#TESTMARS_BG,r2			; Image OR RAM section
-		mov	#208,r3
-		mov	#208,r4
+		mov	#320,r3
+		mov	#240,r4
 		bsr	MarsVideo_SetBg
 		nop
 
-	; TODO: un lugar para estos settings
+	; TODO: buscar un lugar para estos settings
 		mov	#RAM_Mars_Background,r14
 		mov	#2,r0
 		mov.b	r0,@(mbg_draw_all,r14)
