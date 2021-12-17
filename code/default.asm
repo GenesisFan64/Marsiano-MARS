@@ -30,6 +30,7 @@ MAX_TSTENTRY	equ	5
 		struct RAM_ModeBuff
 RAM_EmiPosX	ds.l 1
 RAM_EmiPosY	ds.l 1
+RAM_Ypos	ds.l 1
 RAM_XposFg	ds.l 1
 RAM_XposBg	ds.l 1
 RAM_EmiChar	ds.w 1
@@ -73,10 +74,10 @@ thisCode_Top:
 ; 		move.w	#(224/2)+48,d0
 ; 		move.w	d0,(RAM_EmiPosY).w
 ;
-; 		move.l	#ART_FGTEST,d0
-; 		move.w	#$40*$20,d1
-; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
-; 		bsr	Video_LoadArt
+		move.l	#ART_FGTEST,d0
+		move.w	#1*$20,d1
+		move.w	#ART_FGTEST_e-ART_FGTEST,d2
+		bsr	Video_LoadArt
 ; 		move.l	#ART_BGTEST,d0
 ; 		move.w	#$60*$20,d1
 ; 		move.w	#ART_BGTEST_e-ART_BGTEST,d2
@@ -84,14 +85,20 @@ thisCode_Top:
 ;
 ; 		lea	(MAP_BGTEST),a0
 ; 		move.l	#locate(1,0,0),d0
-; 		move.l	#mapsize(512,256),d1
+; 		move.l	#mapsize(224,224),d1
 ; 		move.w	#$60+$4000,d2
 ; 		bsr	Video_LoadMap
-; 		lea	(MAP_FGTEST),a0
-; 		move.l	#locate(0,0,0),d0
-; 		move.l	#mapsize(512,256),d1
-; 		move.w	#$40+$2000,d2
-; 		bsr	Video_LoadMap
+
+		lea	(MAP_FGTEST),a0
+		move.l	#locate(0,8,0),d0
+		move.l	#mapsize(192,224),d1
+		move.w	#1+$2000,d2
+		bsr	Video_LoadMap
+		lea	(MAP_FGTEST),a0
+		move.l	#locate(0,8+32,0),d0
+		move.l	#mapsize(192,224),d1
+		move.w	#1+$2000,d2
+		bsr	Video_LoadMap
 
 ; 		lea	str_Title(pc),a0
 ; 		move.l	#locate(0,2,2),d0
@@ -104,10 +111,10 @@ thisCode_Top:
 ; 		moveq	#0,d0
 ; 		move.w	#$F,d1
 ; 		bsr	Video_LoadPal
-; 		lea	PAL_TESTBOARD(pc),a0		; ON palette
-; 		moveq	#$10,d0
-; 		move.w	#$F,d1
-; 		bsr	Video_LoadPal
+		lea	PAL_TESTBOARD(pc),a0		; ON palette
+		moveq	#$10,d0
+		move.w	#$F,d1
+		bsr	Video_LoadPal
 ; 		lea	PAL_BG(pc),a0		; ON palette
 ; 		moveq	#$20,d0
 ; 		move.w	#$F,d1
@@ -142,21 +149,24 @@ thisCode_Top:
 		bsr	System_Input
 
 		add.l	#1,(RAM_Framecount).l
+		move.l	#$40000010,(vdp_ctrl).l
+		move.l	(RAM_Ypos).w,(vdp_data).l
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.l	(RAM_XposFg).l,d0
-		move.l	(RAM_XposBg).l,d1
-		swap	d1
-		move.w	d1,d0
+		neg.l	d0
+; 		move.l	(RAM_XposBg).l,d1
+; 		swap	d1
+; 		move.w	d1,d0
 		move.l	d0,(vdp_data).l
-		move.l	#$40000010,(vdp_ctrl).l
-		move.w	(RAM_ShakeMe).w,d3
-		move.w	d3,d4
-		lsr.w	#3,d3
-		btst	#1,d4
-		bne.s	.midshk
-		neg.w	d3
-.midshk:
-		move.w	d3,(vdp_data).l
+; 		move.l	#$40000010,(vdp_ctrl).l
+; 		move.w	(RAM_ShakeMe).w,d3
+; 		move.w	d3,d4
+; 		lsr.w	#3,d3
+; 		btst	#1,d4
+; 		bne.s	.midshk
+; 		neg.w	d3
+; .midshk:
+; 		move.w	d3,(vdp_data).l
 		move.w	(RAM_WindowCurr).w,d2
 		move.w	(RAM_WindowNew).w,d1
 		cmp.w	d2,d1
@@ -218,25 +228,29 @@ thisCode_Top:
 
 		move.b	(sysmars_reg+comm14),d6
 		and.w	#%00011111,d6
-		bne.s	.lel
+		bne	.lel
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_m
+		add.w	#1,(RAM_XposFg).w
 		bset	#0,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nor_m:
 		btst	#bitJoyLeft,d7
 		beq.s	.nol_m
+		sub.w	#1,(RAM_XposFg).w
 		bset	#1,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nol_m:
 		btst	#bitJoyDown,d7
 		beq.s	.nod_m
+		add.w	#1,(RAM_Ypos).w
 		bset	#2,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nod_m:
 		btst	#bitJoyUp,d7
 		beq.s	.nou_m
+		sub.w	#1,(RAM_Ypos).w
 		bset	#3,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nou_m:
@@ -250,11 +264,13 @@ thisCode_Top:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyB,d7
 		beq.s	.nor_mp
+		add.w	#1,(RAM_XposFg).w
 		bset	#0,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nor_mp:
 		btst	#bitJoyA,d7
 		beq.s	.nol_mp
+		sub.w	#1,(RAM_XposFg).w
 		bset	#1,d6
 		move.b	d6,(sysmars_reg+comm14)
 .nol_mp:

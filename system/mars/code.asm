@@ -14,32 +14,6 @@
 ; User settings
 ; ----------------------------------------------------------------
 
-; Third scrolling layer settings:
-;
-; Do note that drawing the new sections takes TWO frames
-
-; The maximum moving speed is divided by 2 depending of
-; the BLKSIZE setting. (BLKSIZE/2)
-;
-; Map data can be either ROM data or a RAM section,
-; Background's WIDTH and HEIGHT are defined by gbr variables (BgWidth and BgHeight)
-; but the sizes must be aligned by the same value as BLKSIZE
-;
-; ROM data will be trashed if the Genesis side is doing DMA
-
-
-
-; ----------------------------------------
-; Polygon settings
-; (can manipulate 3 or 4 points)
-; ----------------------------------------
-
-; MAX_MPLGN	equ	128		; Maximum polygon faces to store on buffer(s)
-; MAX_SVDP_PZ	equ	128+64		; Polygon pieces r/w list, loops
-; MAX_MODELS	equ	24		; Note: First 9 models are reserved for layout map
-; MAX_ZDIST	equ	-$2400		; Max drawing distance (-Z max)
-; LAY_WIDTH	equ	$20*2		; Layout data width * 2
-
 ; ----------------------------------------
 ; Normal sprite settings
 ; ----------------------------------------
@@ -949,19 +923,73 @@ master_loop:
 ; ---------------------------------------
 
 mstr_gfx1_loop:
+; 		mov	#_vdpreg,r4
+; 		mov.b	@(vdpsts,r4),r0
+; .plus2:
+; 		and	#$80,r0
+; 		tst	r0,r0
+; 		bt	.plus2
+
 		mov.b	@(marsGbl_CurrFb,gbr),r0
 		mov	r0,r3
 		mov	#_vdpreg,r4			; Wait if frameswap is done
 .wait_frmswp:	mov.b	@(framectl,r4),r0
 		cmp/eq	r0,r3
 		bf	.wait_frmswp
+
+	; ---------------------------------------
+	; Do visual changes here
+	; ---------------------------------------
+
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
 		mov	#_vdpreg+shift,r1
 		and	#1,r0
 		mov.w	r0,@r1
+		mov	#RAM_Mars_Background,r14
+		mov.b	@(mbg_draw_all,r14),r0
+		cmp/eq	#0,r0
+		bt	.no_redraw
+		dt	r0
+		mov.b	r0,@(mbg_draw_all,r14)
+		bsr	MarsVideo_DrawAllBg
+		nop
+		mov	#0,r0
+		mov.b	r0,@(mbg_draw_u,r14)	; Cancel
+		mov.b	r0,@(mbg_draw_d,r14)	; the
+		mov.b	r0,@(mbg_draw_l,r14)	; other
+		mov.b	r0,@(mbg_draw_r,r14)	; timers
+.no_redraw:
+		mov	#RAM_Mars_Background,r14
+		bsr	MarsVideo_MoveBg
+		nop
+		mov	#MarsVideo_BgDrawLR,r0
+		jsr	@r0
+		nop
+		mov	#MarsVideo_BgDrawUD,r0
+		jsr	@r0
+		nop
+		mov	#RAM_Mars_Background,r1
+		mov	#0,r2
+		mov	#240,r3
+		bsr	MarsVideo_MakeTbl
+		nop
+		mov	#MarsVideo_FixTblShift,r0
+		jsr	@r0
+		nop
+
+; 		bsr	MarsVideo_FixTblShift
+; 		nop
+		mov	#_vdpreg,r1
+		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
+		xor	#1,r0				; (swap is done during VBlank)
+		mov.b	r0,@(framectl,r1)		; Save new bit
+		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
+; 		xor	r0,r0
+; 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
 
 	; ---------------------------------------
-	; TESTING
+	; Updates go here, frameswap is
+	; already requested
 	; ---------------------------------------
 
 		mov	#RAM_Mars_Background,r14
@@ -1021,57 +1049,6 @@ mstr_gfx1_loop:
 		ldc	@r15+,sr
 .TEST_1:
 
-	; ---------------------------------------
-	; Move and update background values
-	; ---------------------------------------
-
-		mov	#RAM_Mars_Background,r14
-		mov.b	@(mbg_draw_all,r14),r0
-		cmp/eq	#0,r0
-		bt	.no_redraw
-		dt	r0
-		mov.b	r0,@(mbg_draw_all,r14)
-		bsr	MarsVideo_DrawAllBg
-		nop
-		mov	#0,r0
-		mov.b	r0,@(mbg_draw_u,r14)	; Cancel
-		mov.b	r0,@(mbg_draw_d,r14)	; the
-		mov.b	r0,@(mbg_draw_l,r14)	; other
-		mov.b	r0,@(mbg_draw_r,r14)	; timers
-.no_redraw:
-		mov	#RAM_Mars_Background,r14
-		bsr	MarsVideo_MoveBg
-		nop
-		bsr	MarsVideo_BgDrawLR
-		nop
-		bsr	MarsVideo_BgDrawUD
-		nop
-; .not_xptch:
-
-	; Build the linetables
-		mov	#RAM_Mars_Background,r1
-		mov	#0,r2
-		mov	#240,r3
-		bsr	MarsVideo_MakeTbl
-		nop
-		bsr	MarsVideo_FixTblShift
-		nop
-
-
-; 		mov.l   #$FFFFFE80,r1			; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-; 		mov	#_vdpreg,r1
-; .waitfb:	mov.w	@(vdpsts,r1),r0			; Wait for any line-fill finishes.
-; 		tst	#%10,r0
-; 		bf	.waitfb
-		mov	#_vdpreg,r1
-		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
-		xor	#1,r0				; (swap is done during VBlank)
-		mov.b	r0,@(framectl,r1)		; Save new bit
-		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
 		bra	master_loop
 		nop
 		align 4
@@ -2222,6 +2199,7 @@ sizeof_marssnd		ds.l 0
 RAM_Mars_Palette	ds.w 256	; Indexed palette
 RAM_Mars_HBlMdShft	ds.w 240	; Mode and Xshift bit for each HBlank
 RAM_Mars_Background	ds.w sizeof_marsbg
+RAM_Mars_LineTblCopy	ds.w 240	; Copy of linetable
 sizeof_marsvid		ds.l 0
 			finish
 
