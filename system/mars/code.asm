@@ -577,8 +577,6 @@ s_irq_pwm:
 ; =================================================================
 ; ------------------------------------------------
 ; Slave | CMD Interrupt
-;
-; Recieve data from Genesis using DREQ
 ; ------------------------------------------------
 
 s_irq_cmd:
@@ -642,41 +640,6 @@ s_irq_cmd:
 		nop
 		align 4
 		ltorg
-
-; ; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
-; ; 		mov.b	@r1,r0			; Clear DMA signal for MD
-; ; 		and	#%10111111,r0
-; ; 		mov.b	r0,@r1
-; 		mov	#RAM_Mars_DREQ,r1	; r1 - Output destination
-; 		mov	#$20004010,r2		; r2 - DREQ length address
-; 		mov	#_DMASOURCE0,r3		; r3 - DMA Channel 0
-; 		mov	#0,r0
-; 		mov	r0,@($30,r3)		; DMA Stop (_DMAOPERATION)
-; 		mov	r0,@($C,r3)		; _DMACHANNEL0
-; 		mov	#%0100010011100000,r0
-; 		mov	r0,@($C,r3)
-; 		mov	#$20004012,r0		; Source data (DREQ FIFO)
-; 		mov	r0,@(0,r3)
-; 		mov	r1,@(4,r3)
-; 		mov.w	@r2,r0
-; 		mov	r0,@(8,r3)
-; 		mov	#%0100010011100001,r0
-; 		mov	r0,@($C,r3)
-; 		mov	#1,r0
-; 		mov	r0,@($30,r3)		; DMA Start (_DMAOPERATION)
-; ; 		mov	#_sysreg+comm15,r1	; comm15 at bit 6
-; ; 		mov.b	@r1,r0			; Tell MD to push FIFO
-; ; 		or	#%01000000,r0
-; ; 		mov.b	r0,@r1
-;
-; 		mov	#_sysreg+comm4,r2	; DEBUG
-; 		mov	#RAM_Mars_DREQ,r1
-; 		mov	@r1,r0
-; 		mov	r0,@r2
-
-; 		mov 	@r15+,r4
-; 		mov 	@r15+,r3
-; 		mov 	@r15+,r2
 
 ; =================================================================
 ; ------------------------------------------------
@@ -943,6 +906,35 @@ master_loop:
 ; ---------------------------------------
 
 mstr_gfx1_loop:
+
+	; ---------------------------------------
+	; Set DMA Channel 0 to recieve
+	; DREQ FIFO data, even if the Genesis
+	; side isn't doing any request
+	; ---------------------------------------
+	; TODO: si algo sale mal, mover esto
+	; para abajo
+
+		mov	#_sysreg,r9
+		mov	#_DMASOURCE0,r8
+		mov.l	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
+		mov	r0,@($C,r8)
+		mov	#_sysreg+dreqfifo,r0
+		mov	#RAM_Mars_DREQ,r1
+		mov	r0,@r8			; Source
+		mov	r1,@(4,r8)		; Destination
+		mov.w	@(dreqlen,r9),r0
+		mov	r0,@(8,r8)		; Length
+		mov	#_sysreg+comm14,r1	; Unlock MD from here
+		mov.b	@r1,r0
+		or	#%01000000,r0
+		mov.b	r0,@r1
+		mov	@($C,r8),r0		; dummy readback(?) (TODO)
+		mov.l	#%0100010011100001,r0	; Transfer mode: + DMA enable
+		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	#1,r0			; _DMAOPERATION = 1
+		mov	r0,@($30,r8)
+
 		mov.b	@(marsGbl_CurrFb,gbr),r0
 		mov	r0,r3
 		mov	#_vdpreg,r4			; Wait if frameswap is done
@@ -964,34 +956,6 @@ mstr_gfx1_loop:
 		and	#$80,r0
 		tst	r0,r0
 		bf	.wait_vblnk
-
-	; ---------------------------------------
-	; Set DMA Channel 0 to recieve
-	; DREQ FIFO data, even if the Genesis
-	; side isn't doing any request
-	; ---------------------------------------
-
-		mov	#RAM_Mars_DREQ,r1
-		mov	#_sysreg,r9
-		mov	#_sysreg+dreqfifo,r0
-		mov	#_DMASOURCE0,r8
-		mov	r0,@r8			; Source
-		mov	r1,@(4,r8)		; Destination
-		mov.w	@(dreqlen,r9),r0
-		mov	r0,@(8,r8)		; Length
-		mov.l	#%0100010011100001,r0	; Transfer mode
-		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r8)
-		mov	#_sysreg+comm14,r1	; Report that this DMA started
-		mov.b	@r1,r0
-		or	#%01000000,r0
-		mov.b	r0,@r1
-; .wait_dma:
-; 		mov	@r1,r0
-; 		and	#%10,r0
-; 		tst	r0,r0
-; 		bt	.wait_dma
 
 	; ---------------------------------------
 	; Framebuffer redraw goes here

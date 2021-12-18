@@ -17,7 +17,6 @@ Sound, Genesis and 32X:
 
 Notes/Issues:
 - Genesis: DAC Wave sound (Genesis side) might play slow if track is using too much channels
-- 32X: PWM playback overflows, on Real hardware
 
 Do note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers

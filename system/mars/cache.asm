@@ -462,12 +462,12 @@ MarsSound_ReadPwm:
 		sts	macl,r4
 		shlr8	r4
 		sub	r4,r2
-		mov	#$7F,r4		; align wave to pwm
+		mov	#$7F,r4
 		mulu	r0,r4
-		sts	macl,r4
-		shlr8	r4
-		add	r4,r1
-		add	r4,r2
+		sts	macl,r0
+		shlr8	r0
+		add	r0,r1
+		add	r0,r2
 .skip:
 		add	#1,r1
 		add	#1,r2
@@ -478,18 +478,15 @@ MarsSound_ReadPwm:
 		dt	r8
 		bf/s	.loop
 		add	#sizeof_sndchn,r9
-
-	; ***This check is for emus only***
-	; It recreates what happens to the PWM
-	; in real hardware when it overflows
-; 		mov	#$3FF,r0
-; 		cmp/gt	r0,r5
-; 		bf	.lmuch
-; 		mov	r0,r5
-; .lmuch:	cmp/gt	r0,r6
-; 		bf	.rmuch
-; 		mov	r0,r6
-; .rmuch:
+		mov	#$3FF,r0		; Overflow protection
+		cmp/gt	r0,r6
+		bf	.lmuch
+		mov	r0,r6
+.lmuch:
+		cmp/gt	r0,r7
+		bf	.rmuch
+		mov	r0,r7
+.rmuch:
 		mov	#_sysreg+lchwidth,r1	; Write WAVE result
 		mov	#_sysreg+rchwidth,r2
  		mov.w	r6,@r1

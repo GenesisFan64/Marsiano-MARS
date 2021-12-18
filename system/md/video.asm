@@ -719,10 +719,7 @@ Video_DmaBlast:
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a4)
 		bsr	Sound_DMA_Pause			; Request Z80 stop and SH2 backup
-		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
-		or.w	#%00000001,d7
-		move.w	d7,(sysmars_reg+dreqctl).l
-
+		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
 .next:		tst.w	(RAM_VdpDmaIndx).w
 		beq.s	.end
 		move.l	(a3),(a4)			; Size
@@ -735,22 +732,12 @@ Video_DmaBlast:
 		clr.w	(a3)+
 		move.w	(a3),d5
 		clr.w	(a3)+
-; 		bsr	Sound_DMA_Pause
-; 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
-; 		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
-; 		move.w	d7,(sysmars_reg+dreqctl).l
 		move.w	d6,(a4)
 		move.w	d5,(a4)
-; 		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=0
-; 		and.w	#%11111110,d7
-; 		move.w	d7,(sysmars_reg+dreqctl).l
-; 		bsr	Sound_DMA_Resume
 		sub.w	#7*2,(RAM_VdpDmaIndx).w
 		bra.s	.next
 .end:
-		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=0
-		and.w	#%11111110,d7
-		move.w	d7,(sysmars_reg+dreqctl).l
+		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
 		bsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
@@ -873,15 +860,11 @@ Video_LoadArt:
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
 		bsr	Sound_DMA_Pause
-		move.w	(sysmars_reg+dreqctl).l,d7	; Set RV=1
-		or.w	#%00000001,d7			; 68k ROM map moves to $000000, $880000/$900000=trash
-		move.w	d7,(sysmars_reg+dreqctl).l
+		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
  		move.w	d5,-(sp)
 		move.w	d6,(a4)				; d6 - First word
 		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
-		move.w	(sysmars_reg+dreqctl).l,d6	; Set RV=0
-		and.w	#%11111110,d6			; 68k ROM map returns to $880000/$900000
-		move.w	d6,(sysmars_reg+dreqctl).l
+		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
 		move.w	#$8100,d6			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d6
 		move.w	d6,(a4)

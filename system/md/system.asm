@@ -403,41 +403,49 @@ HInt_Default:
 ; 32X Communication, using DREQ
 ; --------------------------------------------------------
 
-; ====================================================================
-; ------------------------------------------------------
-; FIFO RAM TRANSFER
-; ------------------------------------------------------
-
 System_MdMarsDreq:
-		move.w	sr,d7
-		or	#$700,sr
-		move.w	#$100,(sysmars_reg+dreqlen).l
-		bset	#2,(sysmars_reg+dreqctl+1).l
-		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG ENTER
-		move.w	#$00E,(vdp_data).l
-.wait_signal:
-		btst	#6,(sysmars_reg+comm14).l
-		beq.s	.wait_signal
-		bclr	#6,(sysmars_reg+comm14).l
 		lea	(RAM_MdMarsDreq),a6
 		lea	($A15112).l,a5
-		bsr	.blast_me
-		bsr	.blast_me
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$000,(vdp_data).l
+		move.w	#$100,d6
+		move.w	sr,d7
+		move.w	#$2700,sr
+.retry:
+		move.w	d6,(sysmars_reg+dreqlen).l
+		bset	#2,(sysmars_reg+dreqctl).l
+.wait_bit:
+		btst	#6,(sysmars_reg+comm14).l
+		beq.s	.wait_bit
+		bclr	#6,(sysmars_reg+comm14).l
+		move.w	d6,d5
+		lsr.w	#2,d5
+		sub.w	#1,d5
+.l0:		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+.l1:		btst	#7,dreqctl(a5)		; Got Full ?
+		bne.s	.l1
+		dbf	d5,.l0
+		btst	#2,dreqctl(a5)		; DMA All OK ?
+		bne	.retry
 		move.w	d7,sr
 		rts
-.blast_me:
-	rept 128
-		move.w	(a6)+,(a5)
-	endm
-		rts
+
+; 		lea	(RAM_MdMarsDreq),a6
+; 		lea	($A15112).l,a5
+; 		bsr	.blast_me
+; 		bsr	.blast_me
+; .blast_me:
+; 	rept 128
+; 		move.w	(a6)+,(a5)
+; 	endm
+; 		rts
 
 ; .l0:		move.w	(a6)+,(a4)		; Fill FIFO ...
 ; 		move.w	(a6)+,(a4)
 ; 		move.w	(a6)+,(a4)
 ; 		move.w	(a6)+,(a4)
-; ; .l1:		btst	#7,dreqctl+1(a5)	; Got Full ?
+; ; .l1:		btst	#7,dreqctl(a5)	; Got Full ?
 ; ; 		bne.s	.l1
 ; ; 		subq	#4,d4
 ; ; 		bcc.s	.l0

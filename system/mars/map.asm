@@ -44,7 +44,7 @@ adapter		equ	$00		; adapter control register
 intmask		equ	$01		; interrupts mask
 standby		equ	$02		; CMD interrupt request bit by MD side (slave|master)
 hcount		equ	$05		; H Counter
-dreqctl		equ	$06		; DREQ control
+dreqctl		equ	$07		; DREQ control (BYTE READ)
 dreqsource	equ	$08		; DREQ source address
 dreqdest	equ	$0C		; DREQ destination address
 dreqlen		equ	$10		; DREQ length
