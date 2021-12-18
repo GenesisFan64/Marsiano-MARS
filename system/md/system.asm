@@ -403,6 +403,53 @@ HInt_Default:
 ; 32X Communication, using DREQ
 ; --------------------------------------------------------
 
+; ====================================================================
+; ------------------------------------------------------
+; FIFO RAM TRANSFER
+; ------------------------------------------------------
+
+System_MdMarsDreq:
+		move.w	sr,d7
+		or	#$700,sr
+		move.w	#$100,(sysmars_reg+dreqlen).l
+		bset	#2,(sysmars_reg+dreqctl+1).l
+		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG ENTER
+		move.w	#$00E,(vdp_data).l
+.wait_signal:
+		btst	#6,(sysmars_reg+comm14).l
+		beq.s	.wait_signal
+		bclr	#6,(sysmars_reg+comm14).l
+		lea	(RAM_MdMarsDreq),a6
+		lea	($A15112).l,a5
+		bsr	.blast_me
+		bsr	.blast_me
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$000,(vdp_data).l
+		move.w	d7,sr
+		rts
+.blast_me:
+	rept 128
+		move.w	(a6)+,(a5)
+	endm
+		rts
+
+; .l0:		move.w	(a6)+,(a4)		; Fill FIFO ...
+; 		move.w	(a6)+,(a4)
+; 		move.w	(a6)+,(a4)
+; 		move.w	(a6)+,(a4)
+; ; .l1:		btst	#7,dreqctl+1(a5)	; Got Full ?
+; ; 		bne.s	.l1
+; ; 		subq	#4,d4
+; ; 		bcc.s	.l0
+; ; 		move.w	($A15110).l,d4
+; ; 		bne.s	.retry
+; ; 		btst	#2,dreqctl(a5)		; DMA All OK ?
+; ; 		bne	.retry
+; 		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG EXIT
+; 		move.w	#$000,(vdp_data).l
+; 		move.w	d7,sr			; Restore SR
+; 		rts
+
 ; ; ------------------------------------------------
 ; ; Add new task to the list
 ; ; ------------------------------------------------

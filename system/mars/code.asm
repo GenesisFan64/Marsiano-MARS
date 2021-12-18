@@ -49,62 +49,62 @@ SH2_Master:
 		dc.l SH2_M_Entry,CS3|$40000	; Power PC, Stack
 		dc.l SH2_M_Entry,CS3|$40000	; Reset PC, Stack
 
-		dc.l SH2_Error			; Illegal instruction
+		dc.l SH2_M_Error		; Illegal instruction
 		dc.l 0				; reserved
-		dc.l SH2_Error			; Invalid slot instruction
+		dc.l SH2_M_Error		; Invalid slot instruction
 		dc.l $20100400			; reserved
 		dc.l $20100420			; reserved
-		dc.l SH2_Error			; CPU address error
-		dc.l SH2_Error			; DMA address error
-		dc.l SH2_Error			; NMI vector
-		dc.l SH2_Error			; User break vector
+		dc.l SH2_M_Error		; CPU address error
+		dc.l SH2_M_Error		; DMA address error
+		dc.l SH2_M_Error		; NMI vector
+		dc.l SH2_M_Error		; User break vector
 
 		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
 
-		dc.l SH2_Error			; Trap user vectors
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
- 		dc.l master_irq			; Level 1 IRQ
-		dc.l master_irq			; Level 2 & 3 IRQ
-		dc.l master_irq			; Level 4 & 5 IRQ
-		dc.l master_irq			; Level 6 & 7 IRQ: PWM interupt
-		dc.l master_irq			; Level 8 & 9 IRQ: Command interupt
-		dc.l master_irq			; Level 10 & 11 IRQ: H Blank interupt
-		dc.l master_irq			; Level 12 & 13 IRQ: V Blank interupt
-		dc.l master_irq			; Level 14 & 15 IRQ: Reset Button
+		dc.l SH2_M_Error	; Trap user vectors
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+		dc.l SH2_M_Error
+ 		dc.l master_irq		; Level 1 IRQ
+		dc.l master_irq		; Level 2 & 3 IRQ
+		dc.l master_irq		; Level 4 & 5 IRQ
+		dc.l master_irq		; Level 6 & 7 IRQ: PWM interupt
+		dc.l master_irq		; Level 8 & 9 IRQ: Command interupt
+		dc.l master_irq		; Level 10 & 11 IRQ: H Blank interupt
+		dc.l master_irq		; Level 12 & 13 IRQ: V Blank interupt
+		dc.l master_irq		; Level 14 & 15 IRQ: Reset Button
 
 	; ON-chip interrupts go here (vbr+$120)
-		dc.l master_irq			; Watchdog (custom)
+		dc.l master_irq		; Watchdog (custom)
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -116,51 +116,51 @@ SH2_Slave:
 		dc.l SH2_S_Entry,CS3|$3F000	; Cold PC,SP
 		dc.l SH2_S_Entry,CS3|$3F000	; Manual PC,SP
 
-		dc.l SH2_Error			; Illegal instruction
+		dc.l SH2_S_Error			; Illegal instruction
 		dc.l 0				; reserved
-		dc.l SH2_Error			; Invalid slot instruction
+		dc.l SH2_S_Error			; Invalid slot instruction
 		dc.l $20100400			; reserved
 		dc.l $20100420			; reserved
-		dc.l SH2_Error			; CPU address error
-		dc.l SH2_Error			; DMA address error
-		dc.l SH2_Error			; NMI vector
-		dc.l SH2_Error			; User break vector
+		dc.l SH2_S_Error			; CPU address error
+		dc.l SH2_S_Error			; DMA address error
+		dc.l SH2_S_Error			; NMI vector
+		dc.l SH2_S_Error			; User break vector
 
 		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
 
-		dc.l SH2_Error			; Trap user vectors
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
-		dc.l SH2_Error
+		dc.l SH2_S_Error			; Trap user vectors
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
+		dc.l SH2_S_Error
  		dc.l slave_irq			; Level 1 IRQ
 		dc.l slave_irq			; Level 2 & 3 IRQ
 		dc.l slave_irq			; Level 4 & 5 IRQ
@@ -265,7 +265,26 @@ int_s_list:
 ; Noraml error trap
 ; ----------------------------------------------------------------
 
-SH2_Error:
+; Master only
+SH2_M_Error:
+		mov	#StrM_Oops,r1
+		mov	#0,r2
+		bsr	MarsVdp_Print
+		mov	#0,r3
+		mov	#_vdpreg,r1
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
+.infin:		nop
+		bra	.infin
+		nop
+		align 4
+StrM_Oops:
+		dc.b "Error on MASTER CPU",0
+		align 4
+
+; Slave only
+SH2_S_Error:
 		mov	#_sysreg+comm14,r1
 		mov	#$1234,r0
 		mov.w	r0,@r1
@@ -856,6 +875,11 @@ SH2_M_HotStart:
 		cmp/pz	r0
 		bt	.lel
 
+		mov	#_DMACHANNEL0,r1
+		mov	#0,r0
+		mov	r0,@($30,r1)
+		mov	r0,@($C,r1)
+
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	master_loop
@@ -866,10 +890,6 @@ SH2_M_HotStart:
 ; ---------------------------------------
 
 master_loop:
-; 		mov	#_sysreg+comm0,r1
-; 		mov.w	@r1,r0
-; 		add	#1,r0
-; 		mov.w	r0,@r1
 
 		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
 		mov	r0,r1
@@ -923,29 +943,78 @@ master_loop:
 ; ---------------------------------------
 
 mstr_gfx1_loop:
-; 		mov	#_vdpreg,r4
-; 		mov.b	@(vdpsts,r4),r0
-; .plus2:
-; 		and	#$80,r0
-; 		tst	r0,r0
-; 		bt	.plus2
-
 		mov.b	@(marsGbl_CurrFb,gbr),r0
 		mov	r0,r3
 		mov	#_vdpreg,r4			; Wait if frameswap is done
 .wait_frmswp:	mov.b	@(framectl,r4),r0
 		cmp/eq	r0,r3
 		bf	.wait_frmswp
-
-	; ---------------------------------------
-	; Do visual changes here
-	; ---------------------------------------
-
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
 		mov	#_vdpreg+shift,r1
 		and	#1,r0
 		mov.w	r0,@r1
+
+	; ---------------------------------------
+	; New frame is now on the screen, but
+	; we are still on VBlank
+	; ---------------------------------------
+
+		mov	#_vdpreg,r4		; Still on VBlank?
+.wait_vblnk:	mov.b	@(vdpsts,r4),r0
+		and	#$80,r0
+		tst	r0,r0
+		bf	.wait_vblnk
+
+	; ---------------------------------------
+	; Set DMA Channel 0 to recieve
+	; DREQ FIFO data, even if the Genesis
+	; side isn't doing any request
+	; ---------------------------------------
+
+		mov	#RAM_Mars_DREQ,r1
+		mov	#_sysreg,r9
+		mov	#_sysreg+dreqfifo,r0
+		mov	#_DMASOURCE0,r8
+		mov	r0,@r8			; Source
+		mov	r1,@(4,r8)		; Destination
+		mov.w	@(dreqlen,r9),r0
+		mov	r0,@(8,r8)		; Length
+		mov.l	#%0100010011100001,r0	; Transfer mode
+		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	#1,r0			; _DMAOPERATION = 1
+		mov	r0,@($30,r8)
+		mov	#_sysreg+comm14,r1	; Report that this DMA started
+		mov.b	@r1,r0
+		or	#%01000000,r0
+		mov.b	r0,@r1
+; .wait_dma:
+; 		mov	@r1,r0
+; 		and	#%10,r0
+; 		tst	r0,r0
+; 		bt	.wait_dma
+
+	; ---------------------------------------
+	; Framebuffer redraw goes here
+	; ---------------------------------------
+
+		mov	#StrM_Test,r1
+		mov	#1,r2
+		bsr	MarsVdp_Print
+		mov	#11*8,r3
+		mov	#RAM_Mars_DREQ,r1
+		mov	#1,r2
+		mov	#12*8,r3
+		bsr	MarsVdp_PrintVal
+		nop
+		mov	#RAM_Mars_DREQ+(256*2)-4,r1
+		mov	#10,r2
+		mov	#12*8,r3
+		bsr	MarsVdp_PrintVal
+		nop
+
 		mov	#RAM_Mars_Background,r14
+		bsr	MarsVideo_MoveBg
+		nop
 		mov.b	@(mbg_draw_all,r14),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
@@ -959,9 +1028,6 @@ mstr_gfx1_loop:
 		mov.b	r0,@(mbg_draw_l,r14)	; other
 		mov.b	r0,@(mbg_draw_r,r14)	; timers
 .no_redraw:
-		mov	#RAM_Mars_Background,r14
-		bsr	MarsVideo_MoveBg
-		nop
 		mov	#MarsVideo_BgDrawLR,r0
 		jsr	@r0
 		nop
@@ -973,224 +1039,23 @@ mstr_gfx1_loop:
 		mov	#240,r3
 		bsr	MarsVideo_MakeTbl
 		nop
-		mov	#MarsVideo_FixTblShift,r0
-		jsr	@r0
+		bsr	MarsVideo_FixTblShift
 		nop
-
-; 		bsr	MarsVideo_FixTblShift
-; 		nop
 		mov	#_vdpreg,r1
 		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
 		xor	#1,r0				; (swap is done during VBlank)
 		mov.b	r0,@(framectl,r1)		; Save new bit
 		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
-
-	; ---------------------------------------
-	; Updates go here, frameswap is
-	; already requested
-	; ---------------------------------------
-
-		mov	#RAM_Mars_Background,r14
-		mov	#_sysreg+comm14,r1
-		mov.b	@r1,r0
-		and	#$FF,r0
-		cmp/eq	#0,r0
-		bt	.TEST_1
-		stc	sr,@-r15		; Interrupts OFF
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov	#_sysreg+comm14,r1
-		mov	#$10000,r2
-		mov	#$10000,r3
-		mov.b	@r1,r4
-		mov	r4,r0
-		tst	#%0001,r0
-		bt	.right
-		mov	@(mbg_xpos,r14),r0
-		add	r2,r0
-		mov	r0,@(mbg_xpos,r14)
-.right:
-		mov	r4,r0
-		tst	#%0010,r0
-		bt	.left
-		mov	@(mbg_xpos,r14),r0
-		sub	r2,r0
-		mov	r0,@(mbg_xpos,r14)
-.left:
-		mov	r4,r0
-		tst	#%0100,r0
-		bt	.down
-		mov	@(mbg_ypos,r14),r0
-		add	r3,r0
-		mov	r0,@(mbg_ypos,r14)
-.down:
-		mov	r4,r0
-		tst	#%1000,r0
-		bt	.up
-		mov	@(mbg_ypos,r14),r0
-		sub	r3,r0
-		mov	r0,@(mbg_ypos,r14)
-.up:
-		mov	r4,r0
-		tst	#%10000,r0
-		bt	.notc
-		mov.b	@(mbg_draw_all,r14),r0
-		cmp/eq	#0,r0
-		bf	.notc
-		mov	#2,r0
-		mov.b	r0,@(mbg_draw_all,r14)
-.notc:
-
-		mov	#_sysreg+comm14,r1
-		and	#%11100000,r0
-		mov.b	r0,@r1
-		ldc	@r15+,sr
-.TEST_1:
 
 		bra	master_loop
 		nop
 		align 4
 		ltorg
 
-; ; ---------------------------------------
-; ; Custom graphics mode 0
-; ;
-; ; Single 256-color scrolling layer
-; ; using dirty-section method,
-; ; ---------------------------------------
-;
-; mstr_gfx2:
-; 		mov	r1,r0
-; 		and	#$80,r0
-; 		cmp/eq	#0,r0
-; 		bf	mstr_gfx2_loop
-; 		mov	r1,r0
-; 		or	#$80,r0
-; 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
-; 		mov	#TESTMARS_BG,r1			; SET image
-; 		mov	#320,r2
-; 		mov	#240,r3
-; 		mov	#$00010000,r4
-; 		mov	#$00010000,r5
-; 		bsr	MarsVideo_SetBg
-; 		nop
-; 		mov	#TESTMARS_BG_PAL,r1		; Load palette
-; 		mov	#0,r2
-; 		mov	#256,r3
-; 		mov	#$0000,r4
-; 		mov	#MarsVideo_LoadPal,r0
-; 		jsr	@r0
-; 		nop
-; 		mov 	#_vdpreg,r1
-; 		mov	#1,r0
-; 		mov.b	r0,@(bitmapmd,r1)
-;
-; ; ---------------------------------------
-; ; Mode0 loop
-; ; ---------------------------------------
-;
-; mstr_gfx2_loop:
-; 		mov.b	@(marsGbl_CurrFb,gbr),r0
-; 		mov	r0,r3
-; 		mov	#_vdpreg,r4			; Wait if frameswap is done
-; .wait_frmswp:	mov.b	@(framectl,r4),r0
-; 		cmp/eq	r0,r3
-; 		bf	.wait_frmswp
-;
-; 		mov	@(marsGbl_BgData,gbr),r0
-; 		cmp/eq	#0,r0
-; 		bt	.no_scrldata
-; 		bsr	mstr_movebg
-; 		nop
-; .no_scrldata:
-;  		mov	#_framebuffer,r1
-; 		mov	#$200/2,r0	; START line data
-; 		mov	#240,r2		; Vertical lines to set
-; 		mov	r0,r3		; Increment by (copy from r0)
-; .loopfb:	mov.w	r0,@r1
-; 		add	#2,r1
-; 		add	r3,r0
-; 		dt	r2
-; 		bf	.loopfb
-; 		mov	#_CCR,r3			; <-- Required for Watchdog
-; 		mov	#%00001000,r0			; Two-way mode
-; 		mov.w	r0,@r3
-; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-; 		mov.w	r0,@r3
-; 		mov	#MarsVideo_SetWatchdog,r0
-; 		jsr	@r0
-; 		nop
-;
-; ; 	TODO: broken
-; 	; Start slicing polygons
-; 	; r14 - Polygon pointers list
-; 	; r13 - Number of polygons to build
-; 		mov.w	@(marsGbl_MstrReqDraw,gbr),r0
-; 		cmp/eq	#0,r0
-; 		bt	.skip
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_MstrReqDraw,gbr)
-; 		mov.w   @(marsGbl_PlgnBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-; 		tst     #1,r0				; Check for which buffer to use
-; 		bt	.page_2
-; 		mov 	#RAM_Mars_Plgn_ZList_0,r14
-; 		mov	#RAM_Mars_PlgnNum_0,r13
-; 		bra	.cont_plgn
-; 		nop
-; .page_2:
-; 		mov 	#RAM_Mars_Plgn_ZList_1,r14
-; 		mov	#RAM_Mars_PlgnNum_1,r13
-; 		nop
-; 		nop
-; .cont_plgn:
-; 		mov.w	@r13,r13			; read from memory to register
-; 		cmp/pl	r13				; zero?
-; 		bf	.skip
-; .loop:
-; 		mov	r14,@-r15
-; 		mov	r13,@-r15
-; 		mov	@r14,r14			; Get location of the polygon
-; 		cmp/pl	r14				; Zero?
-; 		bf	.invalid			; if yes, skip
-; 		mov 	#MarsVideo_SlicePlgn,r0
-; 		jsr	@r0
-; 		nop
-; .invalid:
-; 		mov	@r15+,r13
-; 		mov	@r15+,r14
-; 		dt	r13				; Decrement numof_polygons
-; 		bf/s	.loop
-; 		add	#8,r14				; Move to next entry
-; .skip:
-; 		bra	mstgfx_exit
-; 		nop
-
-; 	; --------------------------------------
-; .wait_pz:
-; 		mov.w	@(marsGbl_PzListCntr,gbr),r0	; Any pieces remaining on Watchdog?
-; 		cmp/eq	#0,r0
-; 		bf	.wait_pz
-; .wait_task:
-; 		mov.w	@(marsGbl_WdDrwTask,gbr),r0	; Any drawing task active?
-; 		cmp/eq	#0,r0
-; 		bf	.wait_task
-; 		mov.l   #$FFFFFE80,r1			; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-; 		mov	#_vdpreg,r1
-; .waitfb:	mov.w	@(vdpsts,r1),r0			; Wait until any line-fill finishes.
-; 		tst	#%10,r0
-; 		bf	.waitfb
-; 		mov	#_vdpreg,r1
-; 		mov.b	@(framectl,r1),r0		; Frameswap request, Next Watchdog will
-; 		xor	#1,r0				; check for it later.
-; 		mov.b	r0,@(framectl,r1)		; Save new bit
-; 		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
-; 		bra	master_loop
-; 		nop
+StrM_Test:
+		dc.b "32X recibe por DREQ:",0
 		align 4
+
 		ltorg
 
 ; ====================================================================
@@ -1200,7 +1065,7 @@ mstr_gfx1_loop:
 
 		align 4
 SH2_S_Entry:
-		mov.l	#CS3|$3F000,r15			; Reset stack
+		mov.l	#CS3|$3F000,r15		; Reset stack
 		mov	#_FRT,r1
 		mov     #0,r0
 		mov.b   r0,@(0,r1)
@@ -1217,11 +1082,11 @@ SH2_S_Entry:
 		mov     #0,r0
 		mov.b   r0,@(3,r1)
 		mov.b   r0,@(2,r1)
-		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+		mov.l   #$FFFFFEE2,r0		; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
 		mov.l   #$FFFFFEE4,r0
-		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
+		mov     #$120/4,r1		; Watchdog: Set jump pointer (VBR + this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
 
@@ -2147,6 +2012,7 @@ s_irq_custom:
 
 		align 4
 sin_table	binclude "system/mars/data/sinedata.bin"
+m_ascii		binclude "system/mars/data/m_ascii.bin"
 		align 4
 		include "data/mars_sdram.asm"
 
@@ -2161,12 +2027,12 @@ SH2_RAM:
 	if MOMPASS=1
 MarsRam_System	ds.l 0
 MarsRam_Video	ds.l 0
-MarsRam_Sound	ds.l 0
+; MarsRam_Sound	ds.l 0
 sizeof_marsram	ds.l 0
 	else
 MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
-MarsRam_Sound	ds.b (sizeof_marssnd-MarsRam_Sound)
+; MarsRam_Sound	ds.b (sizeof_marssnd-MarsRam_Sound)
 sizeof_marsram	ds.l 0
 	endif
 
@@ -2181,14 +2047,15 @@ sizeof_marsram	ds.l 0
 ; MARS Sound RAM
 ; ----------------------------------------------------------------
 
-			struct MarsRam_Sound
-MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
+; MOVED TO CACHE
+; 			struct MarsRam_Sound
+; MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+; MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
 ; MarsSnd_PwmCache	ds.b $100*MAX_PWMCHNL
 ; MarsSnd_PwmTrkData	ds.b $80*2
 ; MarsSnd_Active		ds.l 1
-sizeof_marssnd		ds.l 0
-			finish
+; sizeof_marssnd		ds.l 0
+; 			finish
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2199,7 +2066,7 @@ sizeof_marssnd		ds.l 0
 RAM_Mars_Palette	ds.w 256	; Indexed palette
 RAM_Mars_HBlMdShft	ds.w 240	; Mode and Xshift bit for each HBlank
 RAM_Mars_Background	ds.w sizeof_marsbg
-RAM_Mars_LineTblCopy	ds.w 240	; Copy of linetable
+RAM_Mars_LineTblCopy	ds.l 240	; Index | BadLine
 sizeof_marsvid		ds.l 0
 			finish
 
@@ -2209,7 +2076,7 @@ sizeof_marsvid		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
-RAM_Mars_Global		ds.w sizeof_MarsGbl		; gbr values go here.
-RAM_Mars_DREQ		ds.w 256			; 256 WORDS of MD communication
+RAM_Mars_DREQ		ds.w 256			; 128 LONGS of storage
+RAM_Mars_Global		ds.l sizeof_MarsGbl		; gbr values go here.
 sizeof_marssys		ds.l 0
 			finish

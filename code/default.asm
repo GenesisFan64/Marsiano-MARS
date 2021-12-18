@@ -89,16 +89,16 @@ thisCode_Top:
 ; 		move.w	#$60+$4000,d2
 ; 		bsr	Video_LoadMap
 
-		lea	(MAP_FGTEST),a0
-		move.l	#locate(0,8,0),d0
-		move.l	#mapsize(192,224),d1
-		move.w	#1+$2000,d2
-		bsr	Video_LoadMap
-		lea	(MAP_FGTEST),a0
-		move.l	#locate(0,8+32,0),d0
-		move.l	#mapsize(192,224),d1
-		move.w	#1+$2000,d2
-		bsr	Video_LoadMap
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(0,8,0),d0
+; 		move.l	#mapsize(192,224),d1
+; 		move.w	#1+$2000,d2
+; 		bsr	Video_LoadMap
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(0,8+32,0),d0
+; 		move.l	#mapsize(192,224),d1
+; 		move.w	#1+$2000,d2
+; 		bsr	Video_LoadMap
 
 ; 		lea	str_Title(pc),a0
 ; 		move.l	#locate(0,2,2),d0
@@ -213,71 +213,39 @@ thisCode_Top:
 
 ; Mode 0 mainloop
 .mode0_loop:
+		lea	str_DreqMe(pc),a0
+		move.l	#locate(0,1,7),d0
+		bsr	Video_Print
+		add.l	#1,(RAM_MdMarsDreq).w
+		add.l	#-1,(RAM_MdMarsDreq+(256*2)-4).w
+		bsr	System_MdMarsDreq
+
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.no_mode0
 		move.w	#1,(RAM_CurrType).w
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
-; 		move.w	(RAM_ShakeMe),d7
-; 		tst.w	(RAM_ShakeMe).w
-; 		beq.s	.no_shake
-; 		sub.w	#1,(RAM_ShakeMe).w
-; 		bset	#0,(RAM_BoardUpd).w
-; .no_shake:
 
-		move.b	(sysmars_reg+comm14),d6
-		and.w	#%00011111,d6
-		bne	.lel
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyRight,d7
-		beq.s	.nor_m
-		add.w	#1,(RAM_XposFg).w
-		bset	#0,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nor_m:
-		btst	#bitJoyLeft,d7
-		beq.s	.nol_m
-		sub.w	#1,(RAM_XposFg).w
-		bset	#1,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nol_m:
-		btst	#bitJoyDown,d7
-		beq.s	.nod_m
-		add.w	#1,(RAM_Ypos).w
-		bset	#2,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nod_m:
-		btst	#bitJoyUp,d7
-		beq.s	.nou_m
-		sub.w	#1,(RAM_Ypos).w
-		bset	#3,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nou_m:
-		btst	#bitJoyC,d7
-		beq.s	.nou_c
-		bset	#4,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nou_c:
+; 		move.w	(Controller_1+on_hold),d7
+; 		move.b	d7,(sysmars_reg+comm14)
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.nor_m
+; 		add.w	#1,(RAM_XposFg).w
+; .nor_m:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.nol_m
+; 		sub.w	#1,(RAM_XposFg).w
+; .nol_m:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.nod_m
+; 		add.w	#1,(RAM_Ypos).w
+; .nod_m:
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.nou_m
+; 		sub.w	#1,(RAM_Ypos).w
+; .nou_m:
 
-	; l/r press
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyB,d7
-		beq.s	.nor_mp
-		add.w	#1,(RAM_XposFg).w
-		bset	#0,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nor_mp:
-		btst	#bitJoyA,d7
-		beq.s	.nol_mp
-		sub.w	#1,(RAM_XposFg).w
-		bset	#1,d6
-		move.b	d6,(sysmars_reg+comm14)
-.nol_mp:
-
-.lel:
-
-; .noz_r:
 ; 		bsr	Emilie_Move
 ; 		bsr	Emilie_MkSprite
 		rts
@@ -741,80 +709,6 @@ Emilie_Show:
 
 ; ====================================================================
 ; ------------------------------------------------------
-; FIFO TEST
-; ------------------------------------------------------
-
-; TODO: ver como fregados consigo mandar
-; RAM al 32X sin que se trabe
-
-MD_FifoMars:
-		lea	(RAM_FrameCount),a6
-		move.w	#$100,d6
-
-		lea	(sysmars_reg),a5
-		move.w	sr,d7			; Backup current SR
-		move.w	#$2700,sr		; Disable interrupts
-		move.w	#$00E,d5
-.retry:
-		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG ENTER
-		move.w	d5,(vdp_data).l
-		move.b	#%000,($A15107).l	; 68S bit
-		move.w	d6,($A15110).l		; DREQ len
-		move.b	#%100,($A15107).l	; 68S bit
-		lea	($A15112).l,a4
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		nop
-		move.w	standby(a5),d0		; Request SLAVE CMD interrupt
-		bset	#1,d0
-		move.w	d0,standby(a5)
-.wait_cmd:	move.w	standby(a5),d0		; interrupt is ready?
-		btst    #1,d0
-		bne.s   .wait_cmd
-; .wait_dma:	move.b	comm15(a5),d0		; Another flag to check
-; 		btst	#6,d0
-; 		beq.s	.wait_dma
-; 		move.b	#1,d0
-; 		move.b	d0,comm15(a5)
-
-; 	; blast
-; 	rept $200/128
-; 		bsr.s	.blast
-; 	endm
-; 		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG EXIT
-; 		move.w	#$000,(vdp_data).l
-; 		move.w	d7,sr			; Restore SR
-; 		rts
-; .blast:
-; 	rept 128
-; 		move.w	(a6)+,(a4)
-; 	endm
-; 		rts
-
-; 	safer
-.l0:		move.w	(a6)+,(a4)		; Data Transfer
-		move.w	(a6)+,(a4)		;
-		move.w	(a6)+,(a4)		;
-		move.w	(a6)+,(a4)		;
-.l1:		btst	#7,dreqctl+1(a5)	; FIFO Full ?
-		bne.s	.l1
-		subq	#4,d6
-		bcc.s	.l0
-		move.w	#$E00,d5
-		btst	#2,dreqctl(a5)		; DMA All OK ?
-		bne.s	.retry
-		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG EXIT
-		move.w	#$000,(vdp_data).l
-		move.w	d7,sr			; Restore SR
-		rts
-
-; ====================================================================
-; ------------------------------------------------------
 ; VBlank
 ; ------------------------------------------------------
 
@@ -871,6 +765,12 @@ str_COMM:
 		dc.l sysmars_reg+comm14
 		align 2
 
+str_DreqMe:
+		dc.b "Genesis manda por DREQ:",$A
+		dc.b "\\l \\l",0
+		dc.l RAM_MdMarsDreq
+		dc.l RAM_MdMarsDreq+(256*2)-4
+		align 2
 ; str_TempVal:
 ; 		dc.b "\\w",0
 ; 		dc.l RAM_EmiFlags

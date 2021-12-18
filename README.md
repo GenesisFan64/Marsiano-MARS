@@ -1,5 +1,10 @@
 # Marsiano-MARS
 
+A library/engine for making Sega 32X Games, in assembly. Still WIP
+
+Video "driver":
+- A working scrolling background in 256-color mode, Source data can be either a static image in ROM or a buffer section in RAM, in any WIDTH and HEIGHT BUT aligned in "blocks" (8x8, 16x16, 32x32...)
+
 Sound, Genesis and 32X:
 - Runs on Z80, with Genesis-DMA protection
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
@@ -10,11 +15,9 @@ Sound, Genesis and 32X:
 - YM2612 soundchip: DAC sample playback at 18000hz aprox. with pitch changes, supports FM3 special mode for extra frequencies
 - 32X: Supports PWM at 22050hz, 7 psuedo channels are available to use with Pitch, Volume and Panning. Controlled by the sound driver in the Genesis side.
 
-Video "driver":
-- Draws an extra background in 256-color mode of any size in either ROM or RAM, any WIDTH and HEIGHT (but must be aligned in blocks)
-
 Notes/Issues:
-- DAC Wave sound (Genesis side) might play slow if track is using too much channels
+- Genesis: DAC Wave sound (Genesis side) might play slow if track is using too much channels
+- 32X: PWM playback overflows, on Real hardware
 
 Do note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the error handlers

@@ -72,7 +72,7 @@ sizeof_input	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdSystem
-RAM_MdMarsDreq	ds.l 128			; RAM sent to Master CPU using DREQ
+RAM_MdMarsDreq	ds.w 256			; RAM sent to Master CPU using DREQ
 RAM_InputData	ds.b sizeof_input*4		; Input data section
 RAM_SaveData	ds.b $200			; SRAM data cache
 RAM_Objects	ds.b $10*32

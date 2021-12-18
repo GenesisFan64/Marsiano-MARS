@@ -254,74 +254,6 @@ drw_ud_exit:
 		align 4
 		ltorg
 
-; ---------------------------------------
-; Call this after ALL Framebuffer tables
-; are set, to fix that Xshift bit issue
-; on Hardware
-; ---------------------------------------
-
-; TODO: este codigo rebota la imagen final en SDRAM
-; checar si poniendo esto en CACHE ya no salta
-
-MarsVideo_FixTblShift:
-		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
-		mov	#_framebuffer+FBVRAM_PATCH,r13	; r13 - Output for patched pixel lines
-		mov	#RAM_Mars_HBlMdShft,r12		; r12 - HBlank mode/xshift list
-		mov	#240,r11
-		mov	r14,r10
-		mov	#RAM_Mars_LineTblCopy,r9
-.ln_loop:
-		mov.w	@r9,r0
-		mov	r0,r8
-		mov	#$FF,r7
-		and	r7,r0
-		cmp/eq	r7,r0
-		bf	.hw_cont
-		mov.w	@(marsGbl_XShift,gbr),r0
-		and	#1,r0
-		cmp/eq	#1,r0
-		bf	.hw_cont
-		mov	#$FFFF,r3
-		mov	r13,r4		; r4 - new index
-		shlr	r4
-		and	r3,r4
-		mov	#0,r5
-		mov.w	@(marsGbl_XPatch,gbr),r0
-		cmp/eq	#2,r0
-		bt	.no_rdrw
-		mov	#1,r5
-		mov	r8,r7
-		and	r3,r7
-		shll	r7
-		add	r14,r7
-		mov	#320,r6
-.patchme:
-		add	#1,r7
-		mov.b	@r7,r0
-		mov.b	r0,@(1,r13)
-		dt	r6
-		bf/s	.patchme
-		add	#1,r13
-.no_rdrw:
-		mov.w	r4,@r10
-.hw_cont:
-		add	#4,r12
-		add	#2,r9
-		dt	r11
-		bf/s	.ln_loop
-		add	#2,r10
-
-		cmp/pl	r5
-		bt	.no_incr
-		mov.w	@(marsGbl_XPatch,gbr),r0
-		add	#1,r0
-		mov.w	r0,@(marsGbl_XPatch,gbr)
-.no_incr:
-		rts
-		nop
-		align 4
-		ltorg
-
 ; ------------------------------------------------
 
 		align 4
@@ -365,6 +297,8 @@ CACHE_SLAVE:
 ; ------------------------------------------------
 
 MarsSnd_PwmCache	ds.b $80*MAX_PWMCHNL
+MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
 
 ; ------------------------------------------------
 ; Mars PWM playback (Runs on PWM interrupt)
