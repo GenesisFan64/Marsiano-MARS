@@ -411,9 +411,10 @@ HInt_Default:
 ; --------------------------------------------------------
 
 ; DREQ is unstable and can loose data, and
-; on emulators performs worse.
+; on emulators it performs worse.
 ;
 ; Here's a table of the working sizes:
+; (in WORDs)
 ;
 ;     Hardware,Fusion,Gens
 ; $500 |  Y  |  Y  |  Y  |
@@ -442,7 +443,7 @@ System_MdMarsDreq:
 		lea	(RAM_MdMarsDreq),a6		; *** VRDX transfer method
 		lea	($A15112).l,a5
 .loopy:
-		bsr	.blast_me	; each blast is $80 words
+		bsr	.blast_me			; each blast is $80 words
 		dbf	d5,.loopy
 		move.w	d7,sr
 		rts

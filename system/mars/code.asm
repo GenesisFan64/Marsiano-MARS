@@ -893,37 +893,9 @@ SH2_M_HotStart:
 ; ---------------------------------------
 
 master_loop:
-		mov	#_sysreg,r9
-		mov	#_DMASOURCE0,r8
-		mov	#_sysreg+comm14,r7
-		mov.b	@r7,r0
-		and	#%10111111,r0
-		tst	r0,r0
-		bt	.no_swp
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r0,r1
-		mov	@(marsGbl_DreqRead,gbr),r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
-		mov	r1,r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-.no_swp:
-		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
-		mov	r0,@($C,r8)
-		mov	#_sysreg+dreqfifo,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r1,@r8			; Source
-		mov	r0,@(4,r8)		; Destination
-		mov.w	@(dreqlen,r9),r0
-		mov	r0,@(8,r8)		; Length
-		mov.b	@r7,r0
-		or	#%00100000,r0		; Tell MD we are ready.
-		mov.b	r0,@r7
-		mov	@($C,r8),r0		; dummy readback(?)
-		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
-		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r8)
-.no_dma:
+		mov	#Mars_DoDreq,r0
+		jsr	@r0
+		nop
 
 	; ---------------------------------------
 	; Wait for frameswap
@@ -995,7 +967,7 @@ master_loop:
 		nop
 		mov	#RAM_Mars_Background,r1
 		mov	#0,r2
-		mov	#224,r3
+		mov	#240,r3
 		bsr	MarsVideo_MakeTbl
 		nop
 		bsr	MarsVideo_FixTblShift
@@ -1010,10 +982,20 @@ master_loop:
 
 		mov	#RAM_Mars_Background,r14
 		mov	@(marsGbl_DreqRead,gbr),r0
-		mov	@r0+,r1
-		mov	@r0+,r2
+		mov	r0,r13
+		mov	@r13,r1
+		mov	@(4,r13),r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
+
+		mov	@(8,r13),r0
+		tst	r0,r0
+		bt	.norequ
+		dt	r0
+		mov	r0,@(8,r13)
+		mov	#2,r0
+		mov.b	r0,@(mbg_draw_all,r14)
+.norequ:
 
 		bra	master_loop
 		nop

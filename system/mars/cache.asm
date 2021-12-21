@@ -24,6 +24,46 @@ m_irq_custom:
 		align 4
 .tag_FRT:	dc.l _FRT
 
+; ---------------------------------------
+; DREQ DMA Transfer, might perform
+; better here...
+; ---------------------------------------
+
+Mars_DoDreq:
+		mov	#_sysreg,r9
+		mov	#_DMASOURCE0,r8
+		mov	#_sysreg+comm14,r7
+		mov.b	@r7,r0
+		and	#%10111111,r0
+		tst	r0,r0
+		bt	.no_swp
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r0,r1
+		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+.no_swp:
+		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
+		mov	r0,@($C,r8)
+		mov	#_sysreg+dreqfifo,r1
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r1,@r8			; Source
+		mov	r0,@(4,r8)		; Destination
+		mov.w	@(dreqlen,r9),r0
+		mov	r0,@(8,r8)		; Length
+		mov.b	@r7,r0
+		or	#%00100000,r0		; Tell MD we are ready.
+		mov.b	r0,@r7
+		mov	@($C,r8),r0		; dummy readback(?)
+		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
+		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	#1,r0			; _DMAOPERATION = 1
+		mov	r0,@($30,r8)
+.no_dma:
+		rts
+		nop
+		align 4
 
 ; ---------------------------------------
 ; Draw Left/Right sections
@@ -178,8 +218,13 @@ MarsVideo_BgDrawUD:
 		mov	@r0,r0
 		add	r0,r12
 		mov	r9,r6
-		mov	#240,r0			; Move to the bottom
-		add	r0,r6
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r5
+		mov.w	@(mbg_intrl_blk,r14),r0
+		sub	r0,r5
+		add	r5,r6
+; 		mov	#176,r0		; TODO: add custom Y fb inc
+; 		add	r0,r6
 		mov.w	@(mbg_intrl_h,r14),r0
 		cmp/gt	r0,r6
 		bf	.upwrp

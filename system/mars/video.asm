@@ -7,10 +7,10 @@
 ; Variables
 ; ----------------------------------------
 
-MSCRL_BLKSIZE	equ $10			; Block size for both directions, aligned by 4
+MSCRL_BLKSIZE	equ 16			; Block size for both directions, aligned by 4
 MSCRL_WIDTH	equ 320+MSCRL_BLKSIZE	; Internal width for scrolldata + hidden zone
 MSCRL_HEIGHT	equ 240+MSCRL_BLKSIZE	; Internal height for scrolldata + hidden zone
-FBVRAM_PATCH	equ $1D000		; Framebuffer location for the affected XShift pixel lines
+FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift pixel lines
 
 ; ----------------------------------------
 ; Structs
@@ -373,7 +373,10 @@ MarsVideo_DrawAllBg:
 		mov	r0,r9
 		mov.w	@(mbg_intrl_h,r14),r0
 		mov	r0,r8
-		mov	#-MSCRL_BLKSIZE,r7		; TODO
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r7
+		neg	r7,r6
+		mov	@(mbg_intrl_size,r14),r5
 
 	; Set X/Y draw heads
 .xinit_l:
@@ -399,24 +402,27 @@ MarsVideo_DrawAllBg:
 .ybg_inc:
 		mov	r1,r0
 		mov.w	r0,@(mbg_xinc_l,r14)
-		mov	#320,r5
-		add	r5,r0
+		mov	#320,r4
+		add	r4,r0
 .lwr_xnxt:	cmp/gt	r11,r0
 		bf	.lwr_xvld
-; 		bra	.lwr_xnxt
+		bra	.lwr_xnxt
 		sub	r11,r0
 .lwr_xvld:
 		mov.w	r0,@(mbg_xinc_r,r14)
 
 		mov	r2,r0
 		mov.w	r0,@(mbg_yinc_u,r14)
-		mov	#240,r5
-		add	r5,r0
-.lwr_ynxt:	cmp/ge	r9,r0
+		mov	r0,r3
+
+		add	r8,r3
+		sub	r7,r3
+.lwr_ynxt:	cmp/ge	r9,r3
 		bf	.lwr_yvld
-; 		bra	.lwr_ynxt
-		sub	r9,r0
+		bra	.lwr_ynxt
+		sub	r9,r3
 .lwr_yvld:
+		mov	r3,r0
 		mov.w	r0,@(mbg_yinc_d,r14)
 
 	; r1 - X bg pos
@@ -427,60 +433,44 @@ MarsVideo_DrawAllBg:
 		mov.w	@(mbg_yfb,r14),r0
 		mov	r0,r4
 		mov	@(mbg_fb,r14),r3
-		and	r7,r4
-		and	r7,r3
-		and	r7,r2
-		and	r7,r1
-		mov.w	@(mbg_intrl_h,r14),r0
-		mov	r0,r7
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mulu	r7,r0
-		sts	macl,r7
-		shlr8	r7
+		and	r6,r4
+		and	r6,r3
+		and	r6,r2
+		and	r6,r1
+		mov	#0,r6
 .nxt_y:
 		cmp/ge	r9,r2		; Y limiters
 		bf	.ybg_l
 		sub	r9,r2
 .ybg_l:
+		mov	r6,@-r15
 		mov	r3,@-r15
 		mov	r1,@-r15
-		mov.w	@(mbg_intrl_w,r14),r0
-		mov	r0,r6
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mulu	r6,r0
-		sts	macl,r6
-		shlr8	r6
+		mov	#0,r6
 .nxt_x:
 		cmp/ge	r11,r1		; X pixel-data wrap
 		bf	.xbg_l
 		sub	r11,r1
 .xbg_l:
-		mov.w	@(mbg_intrl_w,r14),r0
-		mulu	r4,r0
-		sts	macl,r5
-		add	r3,r5
-		mov	@(mbg_intrl_size,r14),r0
-		cmp/ge	r0,r5
-		bf	.lrgrfb
-		sub	r0,r5
-.lrgrfb:
 		bsr	.mk_piece
 		nop
-		mov.w	@(mbg_intrl_blk,r14),r0
-		add	r0,r1
-		dt	r6
+		add	r7,r1
+		add	r7,r6
+		cmp/ge	r10,r6
 		bf/s	.nxt_x
-		add	r0,r3		; No MAP WIDTH check needed here
+		add	r7,r3		; No MAP WIDTH check needed here
 		mov	@r15+,r1
 		mov	@r15+,r3
-		mov.w	@(mbg_intrl_blk,r14),r0
-		add	r0,r4
+		mov	@r15+,r6
+
+		add	r7,r4
 		cmp/gt	r8,r4
 		bf	.nxt_y_l
 		sub	r8,r4
 .nxt_y_l:
-		add	r0,r2
-		dt	r7
+		add	r7,r2
+		add 	r7,r6
+		cmp/ge	r8,r6
 		bf	.nxt_y
 
 		lds	@r15+,pr
@@ -490,13 +480,23 @@ MarsVideo_DrawAllBg:
 
 ; r1 - X pos
 ; r2 - Y pos
-; r5 - framebuffer topleft
 .mk_piece:
+		mov	r3,@-r15
+		mov	r4,@-r15
 		mov	r5,@-r15
 		mov	r6,@-r15
 		mov	r7,@-r15
 		mov	r8,@-r15
 		mov	r9,@-r15
+
+		mulu	r4,r10
+		sts	macl,r6
+		add	r3,r6
+; 		mov	@(mbg_intrl_size,r14),r0
+		cmp/ge	r5,r6
+		bf	.lrgrfb
+		sub	r5,r6
+.lrgrfb:
 
 	; Framebuffer X/Y add
 		mov	r13,r8		; BG X/Y add
@@ -505,33 +505,41 @@ MarsVideo_DrawAllBg:
 		add	r0,r8
 		add	r1,r8
 		mov	r12,r7		; FB X add
-		add	r5,r7
+		add	r6,r7
 
 	; Hidden line
 		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r9
 		mov	#320,r0
-		cmp/ge	r0,r5
+		cmp/ge	r0,r6
 		bt	.yblk_loopn
-		mov	r5,r6
+; 		mov	r5,r6
+		mov	r0,r3
+		shlr2	r3
 		mov	@(mbg_intrl_size,r14),r0
 		add	r0,r6
 		add	r12,r6
 		mov	r8,r5
-	rept MSCRL_BLKSIZE/4		; TODO
+		mov.w	@(mbg_intrl_blk,r14),r0
+.nxtlnghdn:
 		mov	@r5+,r0
 		mov	r0,@r6
+		dt	r3
+		bf/s	.nxtlnghdn
 		add	#4,r6
-	endm
-
 .yblk_loopn:
 		mov	r8,r5
 		mov	r7,r6
-	rept MSCRL_BLKSIZE/4		; TODO
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r3
+		shlr2	r3
+.nxtlng:
 		mov	@r5+,r0
 		mov	r0,@r6
+		dt	r3
+		bf/s	.nxtlng
 		add	#4,r6
-	endm
+
 		add	r11,r8
 		dt	r9
 		bf/s	.yblk_loopn
@@ -542,6 +550,8 @@ MarsVideo_DrawAllBg:
 		mov	@r15+,r7
 		mov	@r15+,r6
 		mov	@r15+,r5
+		mov	@r15+,r4
+		mov	@r15+,r3
 		rts
 		nop
 		align 4
@@ -826,7 +836,9 @@ MarsVideo_MoveBg:
 	; to CACHE
 		cmp/pl	r5
 		bf	.dont_snap
-		mov	#-MSCRL_BLKSIZE,r7	; TODO
+		mov.w	@(mbg_intrl_blk,r14),r0
+		neg	r0,r0
+		mov	r0,r7
 		mov	#Cach_XHead_L,r1
 		mov	#Cach_XHead_R,r2
 		mov	#Cach_YHead_U,r3
@@ -937,7 +949,7 @@ MarsVideo_MakeTbl:
 
 MarsVideo_FixTblShift:
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
-		mov.b	@(mbg_flags,r14),r0
+		mov.b	@(mbg_flags,r1),r0
 		and	#%00000001,r0
 		tst	r0,r0
 		bf	.ptchset
@@ -947,23 +959,23 @@ MarsVideo_FixTblShift:
 		mov	@r12,r0
 		cmp/eq	#0,r0
 		bt	.tblexit
-		mov	r0,r1
+		mov	r0,r3
 		mov	r0,r2
 		shlr16	r2
 		add	r14,r2
 		mov	#$FFFF,r0
-		and	r0,r1
-		shll	r1
-		add	r14,r1
+		and	r0,r3
+		shll	r3
+		add	r14,r3
 		mov	r13,r0
 		shlr	r0
 		mov.w	r0,@r2
-		mov	#320,r3
+		mov	#320,r4
 .copyline:
-		add	#1,r1
-		mov.b	@r1,r0
+		add	#1,r3
+		mov.b	@r3,r0
 		mov.b	r0,@(1,r13)
-		dt	r3
+		dt	r4
 		bf/s	.copyline
 		add	#1,r13
 		xor	r0,r0

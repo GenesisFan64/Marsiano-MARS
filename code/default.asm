@@ -244,6 +244,16 @@ thisCode_Top:
 		move.l	d0,(RAM_MdMarsDreq).w
 		move.l	d1,(RAM_MdMarsDreq+4).w
 
+		tst.w	(RAM_MdMarsDreq+8).w
+		beq.s	.noclr
+		clr.w	(RAM_MdMarsDreq+8).w
+.noclr:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyC,d7
+		beq.s	.nor_m3
+		move.w	#1,(RAM_MdMarsDreq+8).w
+.nor_m3:
+
 ; 		bsr	Emilie_Move
 ; 		bsr	Emilie_MkSprite
 		rts
