@@ -47,7 +47,6 @@ RAM_CurrTicks	ds.w 1
 RAM_CurrTempo	ds.w 1
 RAM_WindowCurr	ds.w 1
 RAM_WindowNew	ds.w 1
-; RAM_BoardBlocks	dc.b 6*6
 		finish
 
 ; ====================================================================
@@ -141,32 +140,16 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		beq.s	.loop
-		bsr	Video_DmaBlast
-; 		bsr	Emilie_Show
-		bsr	System_Input
+		bsr	System_VBlank
 
-		add.l	#1,(RAM_Framecount).l
 		move.l	#$40000010,(vdp_ctrl).l
 		move.l	(RAM_Ypos).w,(vdp_data).l
 		move.l	#$7C000003,(vdp_ctrl).l
 		move.l	(RAM_XposFg).l,d0
 		neg.l	d0
-; 		move.l	(RAM_XposBg).l,d1
-; 		swap	d1
-; 		move.w	d1,d0
 		move.l	d0,(vdp_data).l
-; 		move.l	#$40000010,(vdp_ctrl).l
-; 		move.w	(RAM_ShakeMe).w,d3
-; 		move.w	d3,d4
-; 		lsr.w	#3,d3
-; 		btst	#1,d4
-; 		bne.s	.midshk
-; 		neg.w	d3
-; .midshk:
-; 		move.w	d3,(vdp_data).l
+
+	; Window up/down
 		move.w	(RAM_WindowCurr).w,d2
 		move.w	(RAM_WindowNew).w,d1
 		cmp.w	d2,d1
@@ -179,9 +162,7 @@ thisCode_Top:
 		add.w	d0,(RAM_WindowCurr).w
 		move.w	(RAM_WindowCurr).w,(vdp_ctrl).l
 .same_w:
-.inside:	move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		bne.s	.inside
+; 		bsr	System_VBlnk_Exit
 
 		move.w	(RAM_CurrType).w,d0
 		and.w	#%11111,d0
@@ -213,12 +194,7 @@ thisCode_Top:
 
 ; Mode 0 mainloop
 .mode0_loop:
-		lea	str_DreqMe(pc),a0
-		move.l	#locate(0,1,7),d0
-		bsr	Video_Print
-		add.l	#1,(RAM_MdMarsDreq).w
-		add.l	#-1,(RAM_MdMarsDreq+(256*2)-4).w
-		bsr	System_MdMarsDreq
+
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -226,25 +202,47 @@ thisCode_Top:
 		move.w	#1,(RAM_CurrType).w
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
+		add.l	#-1,((RAM_MdMarsDreq-4)+(MAX_MDDREQ)).w
 
-; 		move.w	(Controller_1+on_hold),d7
-; 		move.b	d7,(sysmars_reg+comm14)
-; 		btst	#bitJoyRight,d7
-; 		beq.s	.nor_m
-; 		add.w	#1,(RAM_XposFg).w
-; .nor_m:
-; 		btst	#bitJoyLeft,d7
-; 		beq.s	.nol_m
-; 		sub.w	#1,(RAM_XposFg).w
-; .nol_m:
-; 		btst	#bitJoyDown,d7
-; 		beq.s	.nod_m
-; 		add.w	#1,(RAM_Ypos).w
-; .nod_m:
-; 		btst	#bitJoyUp,d7
-; 		beq.s	.nou_m
-; 		sub.w	#1,(RAM_Ypos).w
-; .nou_m:
+		move.l	(RAM_MdMarsDreq+4).w,d1
+
+		move.l	(RAM_MdMarsDreq).w,d0
+		move.l	(RAM_MdMarsDreq+4).w,d1
+		move.l	#$20000,d2
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyRight,d7
+		beq.s	.nor_m
+		add.l	d2,d0
+.nor_m:
+		btst	#bitJoyLeft,d7
+		beq.s	.nol_m
+		sub.l	d2,d0
+.nol_m:
+		btst	#bitJoyDown,d7
+		beq.s	.nod_m
+		add.l	d2,d1
+.nod_m:
+		btst	#bitJoyUp,d7
+		beq.s	.nou_m
+		sub.l	d2,d1
+.nou_m:
+		move.l	d0,(RAM_MdMarsDreq).w
+		move.l	d1,(RAM_MdMarsDreq+4).w
+
+		move.l	(RAM_MdMarsDreq).w,d0
+		move.l	(RAM_MdMarsDreq+4).w,d1
+		move.l	#$10000,d2
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyB,d7
+		beq.s	.nor_m2
+		add.l	d2,d0
+.nor_m2:
+		btst	#bitJoyA,d7
+		beq.s	.nol_m2
+		sub.l	d2,d0
+.nol_m2:
+		move.l	d0,(RAM_MdMarsDreq).w
+		move.l	d1,(RAM_MdMarsDreq+4).w
 
 ; 		bsr	Emilie_Move
 ; 		bsr	Emilie_MkSprite

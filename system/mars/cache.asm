@@ -34,8 +34,7 @@ MarsVideo_BgDrawLR:
 		mov	@(mbg_data,r14),r0
 		cmp/pl	r0
 		bf	.nxt_drawud
-
-		mov	#-MSCRL_BLKSIZE,r4		; TODO
+		mov	#-MSCRL_BLKSIZE,r4
 		mov	#MSCRL_HEIGHT,r13
 		mov	#MSCRL_BLKSIZE/4,r12
 		mov	#Cach_BgFbPos_H,r11
@@ -79,6 +78,9 @@ MarsVideo_BgDrawLR:
 .dtsk01_dleft:
 		dt	r0
 		mov.b	r0,@(mbg_draw_l,r14)
+		mov.b	@(mbg_draw_all,r14),r0
+		tst	r0,r0
+		bf	.nxt_drawud
 
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
@@ -87,6 +89,10 @@ MarsVideo_BgDrawLR:
 .dtsk01_dright:
 		dt	r0
 		mov.b	r0,@(mbg_draw_r,r14)
+		mov.b	@(mbg_draw_all,r14),r0
+		tst	r0,r0
+		bf	.nxt_drawud
+
 		mov	#320,r0			; Set FB position
 		add	r0,r11
 		and	r4,r11
@@ -167,16 +173,10 @@ MarsVideo_BgDrawUD:
 		mov	@(mbg_intrl_size,r14),r8
 		mov.w	@(mbg_width,r14),r0
 		mov	r0,r7
-		mov	#Cach_YHead_D,r0
-		mov	@r0,r0
-		mulu	r7,r0
-		sts	macl,r0
-		add	r0,r12
-		add	r0,r11
+
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		add	r0,r12
-
 		mov	r9,r6
 		mov	#240,r0			; Move to the bottom
 		add	r0,r6
@@ -194,11 +194,24 @@ MarsVideo_BgDrawUD:
 .tsk00_down:
 		dt	r0
 		mov.b	r0,@(mbg_draw_d,r14)
+
+		mov	#Cach_YHead_D,r0
+		mov	@r0,r0
+		mulu	r7,r0
+		sts	macl,r0
+		add	r0,r12
+		add	r0,r11
 		bra	.do_updown
 		mov	r6,r9
 .tsk00_up:
 		dt	r0
 		mov.b	r0,@(mbg_draw_u,r14)
+		mov	#Cach_YHead_U,r0
+		mov	@r0,r0
+		mulu	r7,r0
+		sts	macl,r0
+		add	r0,r12
+		add	r0,r11
 
 	; Main U/D loop
 	; r12 - pixel-data current pos
@@ -219,7 +232,7 @@ MarsVideo_BgDrawUD:
 		add	r7,r4
 		mov	#MSCRL_WIDTH/4,r5
 .x_loop:
-		cmp/ge	r8,r10		; topleft fb pos
+		cmp/ge	r8,r10			; topleft fb pos
 		bf	.lwrfb
 		sub	r8,r10
 .lwrfb:
@@ -232,7 +245,7 @@ MarsVideo_BgDrawUD:
 		add	r13,r2
 		mov	r1,r0
 		mov	r0,@r2
-		mov	#320,r0		; hidden-line
+		mov	#320,r0			; hidden-line
 		cmp/gt	r0,r10
 		bt	.hdnx
 		mov	r10,r2
@@ -244,7 +257,7 @@ MarsVideo_BgDrawUD:
 		dt	r5
 		bf/s	.x_loop
 		add	#4,r10
-		add	r7,r11		; Next SRC Y
+		add	r7,r11			; Next SRC Y
 		dt	r6
 		bf/s	.y_loop
 		add	r7,r12
@@ -257,21 +270,12 @@ drw_ud_exit:
 ; ------------------------------------------------
 
 		align 4
-Cach_XHead_L	ds.l 1			; Left draw beam
-Cach_XHead_R	ds.l 1			; Right draw beam
-Cach_YHead_D	ds.l 1			; Bottom draw beam
-Cach_YHead_U	ds.l 1			; Top draw beam
-Cach_BgFbPos_V	ds.l 1			; Framebuffer Y direct pos (mutiply externally)
-Cach_BgFbPos_H	ds.l 1			; Framebuffer TOPLEFT position
-
-; Cach_Md2_Lines	ds.l 1
-; Cach_DDA_Top	ds.l 2*2		; First 2 points
-; Cach_DDA_Last	ds.l 2*2		; Triangle or Quad (+8)
-; Cach_DDA_Src	ds.l 4*2
-; Cach_DDA_Src_L	ds.l 4			; X/DX/Y/DX positions for textures
-; Cach_DDA_Src_R	ds.l 4
-; Cach_LnDrw_L	ds.l 14			; Own stack: Read foward (-->)
-; Cach_LnDrw_S	ds.l 0			; Read this backwards (<--)
+Cach_XHead_L	ds.l 1		; Left draw beam
+Cach_XHead_R	ds.l 1		; Right draw beam
+Cach_YHead_D	ds.l 1		; Bottom draw beam
+Cach_YHead_U	ds.l 1		; Top draw beam
+Cach_BgFbPos_V	ds.l 1		; Framebuffer Y direct pos (mutiply externally)
+Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
 
 ; ------------------------------------------------
 .end:		phase CACHE_MASTER+.end&$1FFF

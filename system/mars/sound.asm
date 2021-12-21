@@ -20,8 +20,7 @@ mchnsnd_vol	ds.l 1
 sizeof_sndchn	ds.l 0
 		finish
 
-; *** PWM INTERRUPT MOVED TO SLAVE'S CACHE (see cache.asm)
-; Perfoms better in there.
+; *** PWM INTERRUPT MOVED TO CACHE (see cache.asm)
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -217,7 +216,7 @@ MarsSound_PwmEnable:
 ; r1-r8
 ; --------------------------------------------------------
 
-; PWM interrupt is still enabled while doing this.
+; The trick here is to keep PWM interrupt enabled
 
 MarsSnd_Refill:
 		mov	#MarsSnd_PwmChnls,r8
@@ -231,8 +230,7 @@ MarsSnd_Refill:
 		mov	@(mchnsnd_bank,r8),r0
 		mov	#CS1,r2
 		cmp/eq	r2,r0
-		bf	.not_activ
-
+		bf	.not_enbl
 		mov	#0,r1
 		mov	r1,@(mchnsnd_cchread,r8)
 		mov	r5,r1
@@ -256,48 +254,7 @@ MarsSnd_Refill:
 		dt	r2
 		bf/s	.copy_now
 		add	#1,r1
-
-; 		mov	#0,r1
-; 		mov	@(mchnsnd_enbl,r8),r0	; Finished already?
-; 		cmp/eq	#1,r0
-; 		bf	.got_low
-; 		mov	@(mchnsnd_read,r8),r1
-; 		sub	r4,r1
-; .got_low:
-; 		mov	r1,@(mchnsnd_cchread,r8)
 .not_enbl:
-
-; 		mov	#_DMASOURCE0,r1
-; 		mov	#_DMAOPERATION,r2
-; 		mov	r0,@r1			; set source address
-; 		add	#4,r1
-; 		mov	r5,@r1			; set destination address
-; 		add	#4,r1
-; 		mov	#$100,r0
-; 		mov	r0,@r1			; set length
-; 		add	#4,r1
-; 		mov	#0,r0
-; 		mov	r0,@r2			; Stop OPERATION
-; 		xor	r0,r0
-; 		mov	r0,@r1			; clear TE bit
-; 		mov	#%0101001011100001,r0	; transfer mode bits, ON
-; 		mov	r0,@r1			; load mode
-; 		stc	sr,@-r15
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov	#1,r0
-; 		mov	r0,@r2			; Start OPERATION
-; .wait_dma:
-; 		mov	@r1,r0
-; 		and	#%10,r0
-; 		tst	r0,r0
-; 		bt	.wait_dma
-; 		ldc	@r15+,sr
-; 		mov	@r1,r0
-; 		mov	#-1,r2
-; 		and	r2,r0
-; 		mov	r0,@r1
-.not_activ:
 		mov	#$80,r0
 		add	r0,r5
 		dt	r6
@@ -307,21 +264,6 @@ MarsSnd_Refill:
 		nop
 		align 4
 		ltorg
-
-; 		mov 	#sizeof_sndchn,r0
-; 		mulu	r1,r0
-; 		sts	macl,r0
-; 		add 	r0,r8
-; 		mov	@(mchnsnd_enbl,r8),r0
-; 		cmp/eq	#1,r0
-; 		bf	.off_1
-; ; 		mov	@(mchnsnd_read,r8),r0
-; 		mov	r2,@(mchnsnd_pitch,r8)
-; .off_1:
-; ; 		ldc	@r15+,sr
-; 		rts
-; 		nop
-; 		align 4
 
 ; ====================================================================
 

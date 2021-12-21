@@ -4,13 +4,14 @@
 ; ----------------------------------------------------------------
 
 MAX_MDDMATSK	equ 16			; MAX DMA transfer requests for VBlank
+MAX_MDDREQ	equ $500*2		; MAX size for DREQ RAM transfer in WORDS ($80 aligned)
 
 ; ====================================================================
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
 
-MDRAM_START	equ $FFFFC000		; Start of working MD RAM (below that is for CODE or decompression output)
+MDRAM_START	equ $FFFFA000		; Start of working MD RAM (below that is for CODE or decompression output)
 MAX_MDERAM	equ $800		; MAX RAM for current screen mode (title,menu,or gameplay...)
 varNullVram	equ $7FF		; Default Blank tile for some video routines
 
@@ -72,7 +73,7 @@ sizeof_input	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdSystem
-RAM_MdMarsDreq	ds.w 256			; RAM sent to Master CPU using DREQ
+RAM_MdMarsDreq	ds.b MAX_MDDREQ			; RAM sent to Master CPU using DREQ
 RAM_InputData	ds.b sizeof_input*4		; Input data section
 RAM_SaveData	ds.b $200			; SRAM data cache
 RAM_Objects	ds.b $10*32

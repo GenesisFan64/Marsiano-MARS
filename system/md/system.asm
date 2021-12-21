@@ -321,40 +321,43 @@ System_SramInit:
 		rts
 
 ; --------------------------------------------------------
-; System_VSync
-; 
-; Waits for VBlank manually
-; 
-; Uses:
-; d4
+; System_VBlnk_Enter, System_VBlnk_Exit
+;
+; Call _Enter first on your main loop, to wait
+; for the next frame, this also performs others tasks:
+; Read controller, DMA transfers, control the 32X
 ; --------------------------------------------------------
 
-System_VSync:
+System_VBlank:
 		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
-		beq.s	System_VSync
+		beq.s	System_VBlank
+		bsr	Video_DmaBlast
 		bsr	System_Input
-; 		bsr	Sound_Update
-		add.l	#1,(RAM_FrameCount).l
-.inside:	move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		bne.s	.inside
+		bsr	System_MdMarsDreq
+		add.l	#1,(RAM_Framecount).l
 		rts
+
+; System_VBlnk_Exit:
+; 		move.w	(vdp_ctrl),d4
+; 		btst	#bitVint,d4
+; 		bne.s	System_VBlnk_Exit
+; 		rts
 
 ; --------------------------------------------------------
 ; System_JumpRamCode
 ;
-; Transfer user code to RAM and jump to it.
+; Transfer user code to RAM and jump into it.
 ;
 ; Input:
-; d0 - Location of the RAM code
+; d0 - ROM pointer to code
 ; --------------------------------------------------------
 
 System_JumpRamCode:
 		or.l	#$880000,d0
 		move.l	d0,a0
 		lea	(RAMCODE_USER),a1
-		move.w	#$4000-1,d7
+		move.w	#$8000-1,d7
 .copyme2:
 		move.b	(a0)+,(a1)+
 		dbf	d7,.copyme2
@@ -386,7 +389,7 @@ Mode_Init:
 VInt_Default:
 		movem.l	d0-a6,-(sp)
 		bsr	System_Input
-; 		bsr	Sound_Update
+		bsr	System_MdMarsDreq
 		add.l	#1,(RAM_FrameCount).l
 		movem.l	(sp)+,d0-a6		
 		rte
@@ -400,243 +403,56 @@ HInt_Default:
 		
 ; ====================================================================
 ; --------------------------------------------------------
-; 32X Communication, using DREQ
+; System_MdMarsDreq
+;
+; Sends RAM data stored here to 32X
+;
+; CALL THIS ON VBLANK ONLY
 ; --------------------------------------------------------
 
+; DREQ is unstable and can loose data, and
+; on emulators performs worse.
+;
+; Here's a table of the working sizes:
+;
+;     Hardware,Fusion,Gens
+; $500 |  Y  |  Y  |  Y  |
+; $600 |  Y  |  Y  |  N  |
+; $680 |  Y  |  N  |  N  |
+; $700 |  Y  |  N  |  N  |
+; $780 |  N  |  N  |  N  |
+; $800 |  N  |  N  |  N  |
+
 System_MdMarsDreq:
-		lea	(RAM_MdMarsDreq),a6
-		lea	($A15112).l,a5
-		move.w	#$100,d6
+		move.w	#MAX_MDDREQ/2,d6		; SIZE MUST BE ALIGNED BY $80
 		move.w	sr,d7
 		move.w	#$2700,sr
 .retry:
 		move.w	d6,(sysmars_reg+dreqlen).l
 		bset	#2,(sysmars_reg+dreqctl).l
-.wait_bit:
-		btst	#6,(sysmars_reg+comm14).l
-		beq.s	.wait_bit
-		bclr	#6,(sysmars_reg+comm14).l
 		move.w	d6,d5
-		lsr.w	#2,d5
+		lsr.w	#7,d5		; size / $80
 		sub.w	#1,d5
-.l0:		move.w  (a6)+,(a5)
-		move.w  (a6)+,(a5)
-		move.w  (a6)+,(a5)
-		move.w  (a6)+,(a5)
-.l1:		btst	#7,dreqctl(a5)		; Got Full ?
-		bne.s	.l1
-		dbf	d5,.l0
-		btst	#2,dreqctl(a5)		; DMA All OK ?
-		bne	.retry
+		bset	#6,(sysmars_reg+comm14).l	; Flip DREQ buff page on SH2
+.wait_bit:
+		btst	#5,(sysmars_reg+comm14).l
+		beq.s	.wait_bit
+		bclr	#5,(sysmars_reg+comm14).l
+		bclr	#6,(sysmars_reg+comm14).l
+		lea	(RAM_MdMarsDreq),a6		; *** VRDX transfer method
+		lea	($A15112).l,a5
+.loopy:
+		bsr	.blast_me	; each blast is $80 words
+		dbf	d5,.loopy
 		move.w	d7,sr
 		rts
-
-; 		lea	(RAM_MdMarsDreq),a6
-; 		lea	($A15112).l,a5
-; 		bsr	.blast_me
-; 		bsr	.blast_me
-; .blast_me:
-; 	rept 128
-; 		move.w	(a6)+,(a5)
-; 	endm
-; 		rts
-
-; .l0:		move.w	(a6)+,(a4)		; Fill FIFO ...
-; 		move.w	(a6)+,(a4)
-; 		move.w	(a6)+,(a4)
-; 		move.w	(a6)+,(a4)
-; ; .l1:		btst	#7,dreqctl(a5)	; Got Full ?
-; ; 		bne.s	.l1
-; ; 		subq	#4,d4
-; ; 		bcc.s	.l0
-; ; 		move.w	($A15110).l,d4
-; ; 		bne.s	.retry
-; ; 		btst	#2,dreqctl(a5)		; DMA All OK ?
-; ; 		bne	.retry
-; 		move.l	#$C0000000,(vdp_ctrl).l	; DEBUG EXIT
-; 		move.w	#$000,(vdp_data).l
-; 		move.w	d7,sr			; Restore SR
-; 		rts
-
-; ; ------------------------------------------------
-; ; Add new task to the list
-; ; ------------------------------------------------
-;
-; System_MdMars_MstAddTask:
-; 		lea	(RAM_MdMarsTskM).w,a0
-; 		lea	(RAM_MdMarsTCntM).w,a1
-; 		bra	sysMdMars_instask
-;
-; System_MdMars_SlvAddTask:
-; 		lea	(RAM_MdMarsTskS).w,a0
-; 		lea	(RAM_MdMarsTCntS).w,a1
-; 		bra	sysMdMars_instask
-;
-; ; ------------------------------------------------
-; ; Single task
-; ; ------------------------------------------------
-;
-; System_MdMars_MstTask:
-; 		lea	(RAM_MdMarsTsSgl),a0
-; 		lea	(sysmars_reg+comm14),a1
-; 		movem.l	d0-d7,(a0)
-; 		move.w	#(MAX_MDTSKARG*4),d0
-; 		moveq	#1,d1
-; 		moveq	#0,d2
-; 		bra	sysMdMars_Transfer
-;
-; System_MdMars_SlvTask:
-; 		lea	(RAM_MdMarsTsSgl),a0
-; 		lea	(sysmars_reg+comm15),a1
-; 		movem.l	d0-d7,(a0)
-; 		move.w	#(MAX_MDTSKARG*4),d0
-; 		moveq	#1,d1
-; 		moveq	#1,d2
-; 		bra	sysMdMars_Transfer
-;
-; ; ------------------------------------------------
-; ; Queued tasks
-; ; ------------------------------------------------
-;
-; System_MdMars_MstSendAll:
-; 		lea	(RAM_MdMarsTskM),a0
-; 		lea	(sysmars_reg+comm14),a1
-; 		move.w	(RAM_MdMarsTCntM).w,d0
-; 		clr.w	(RAM_MdMarsTCntM).w
-; 		moveq	#1,d1
-; 		moveq	#0,d2
-; 		bra	sysMdMars_Transfer
-;
-; System_MdMars_SlvSendAll:
-; 		lea	(RAM_MdMarsTskS),a0
-; 		lea	(sysmars_reg+comm15),a1
-; 		move.w	(RAM_MdMarsTCntS).w,d0
-; 		clr.w	(RAM_MdMarsTCntS).w
-; 		moveq	#1,d1
-; 		moveq	#1,d2
-; 		bra.s	sysMdMars_Transfer
-;
-; System_MdMars_MstSendDrop:
-; 		lea	(RAM_MdMarsTskM),a0
-; 		lea	(sysmars_reg+comm14),a1
-; 		move.w	(RAM_MdMarsTCntM).w,d0
-; 		moveq	#1,d1
-; 		moveq	#0,d2
-; 		nop
-; 		nop
-; 		move.b	(a1),d7
-; 		and.w	#$80,d7
-; 		beq.s	.go_m
-; 		rts
-; .go_m:		clr.w	(RAM_MdMarsTCntM).w
-; 		bra	sysMdMars_Transfer
-;
-; System_MdMars_SlvSendDrop:
-; 		lea	(RAM_MdMarsTskS),a0
-; 		lea	(sysmars_reg+comm15),a1
-; 		move.w	(RAM_MdMarsTCntS).w,d0
-; 		moveq	#1,d1
-; 		moveq	#1,d2
-; 		nop
-; 		nop
-; 		move.b	(a1),d7
-; 		and.w	#$80,d7
-; 		beq.s	.go_s
-; 		moveq	#-1,d7
-; 		rts
-; .go_s:		clr.w	(RAM_MdMarsTCntS).w
-; 		bsr	sysMdMars_Transfer
-; 		moveq	#0,d7
-; 		rts
-;
-; ; a0 - task pointer and args
-; ; a1 - task list counter
-; sysMdMars_instask:
-; 		cmp.w	#(MAX_MDTSKARG*MAX_MDTASKS)*4,(a1)
-; 		bge.s	.ran_out
-; 		adda.w	(a1),a0
-; 		movem.l	d0-d7,(a0)		; Set variables to RAM (d0 is the label to jump)
-; 		add.w	#MAX_MDTSKARG*4,(a1)
-; .ran_out:
-; 		rts
-;
-; ; ------------------------------------------------
-; ; sysMdMars_Transfer
-; ;
-; ; a0 - Data to transfer
-; ; a1 - Status byte from the target CPU
-; ; d0 - Num of LONGS(4bytes) to transfer
-; ; d1 - Transfer type ID
-; ; d2 - CMD Interrupt bitset value
-; ; 	($00-Master/$01-Slave)
-; ; ------------------------------------------------
-;
-; sysMdMars_Transfer:
-; 		nop
-; 		nop
-; 		move.b	(a1),d4
-; 		and.w	#$80,d4
-; 		bne.s	sysMdMars_Transfer
-; 		lea	(sysmars_reg),a4
-; 		move.w	sr,d5
-; 		move.w	#$2700,sr		; Disable interrupts
-; 		lea	comm8(a4),a3		; comm transfer method
-; 		move.b	d1,(a3)			; Set MD task ID
-; 		move.b	#$01,1(a3)		; Set SH as busy first
-; 		move.w	standby(a4),d4		; Request CMD interrupt
-; 		bset	d2,d4
-; 		move.w	d4,standby(a4)
-; .wait_cmd:	move.w	standby(a4),d4		; CMD cleared?
-; 		btst    d2,d4
-; 		bne.s   .wait_cmd
-; .loop:
-; 		cmpi.b	#2,1(a3)		; SH ready?
-; 		bne.s	.loop
-; 		move.w	d1,d4
-; 		or.w	#$80,d4
-; 		move.b	d4,(a3)			; MD is busy
-; 		tst.w	d0
-; 		beq.s	.exit
-; 		bmi.s	.exit
-; 		move.l	(a0),d4
-; 		clr.l	(a0)+
-; 		move.w	d4,4(a3)
-; 		swap	d4
-; 		move.w	d4,2(a3)
-; 		move.w	d1,d4
-; 		or.w	#$40,d4
-; 		move.b	d4,(a3)			; MD is ready
-; 		sub.w	#4,d0
-; 		bra.s	.loop
-; .exit:
-; 		move.b	#0,(a3)			; MD finished
-; 		move.w	d5,sr
-; .mid_write:
-; 		rts
-
-; MdMars_FIFO:
-; 		move.w	#$100,d4
-; 		move.w	d4,($A15110).l
-; 		move.b	#%100,($A15107).l
-; loc_0_28E2:
-; 		btst	#1,(sysmars_reg+comm14).l
-; 		beq.s	loc_0_28E2
-; 		bclr	#1,(sysmars_reg+comm14).l
-; 		lea	($FF0000).l,a4
-; 		lea	($A15112).l,a5
-; 		lsr.w	#2,d4
-; 		beq.s	.exit
-; .fifo_blast:
-; 		btst	#7,($A15107).l
-; 		bne.s	.fifo_blast
-; 		move.w	(a4)+,(a5)
-; 		dbf	d4,.fifo_blast
-; .exit:
-; 		rts
+.blast_me:
+	rept $80
+		move.w	(a6)+,(a5)
+	endm
+		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; System data
 ; ----------------------------------------------------------------
-
-

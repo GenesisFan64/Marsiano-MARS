@@ -26,6 +26,8 @@ MAX_MSPR	equ	128		; Maximum sprites
 ; ----------------------------------------------------------------
 
 			struct 0
+marsGbl_DreqRead	ds.l 1
+marsGbl_DreqWrite	ds.l 1
 marsGbl_XShift		ds.w 1		; Xshift bit at the start of master_loop
 marsGbl_XPatch		ds.w 1		; Redraw counter for the $xxFF fix, set to 0 on X/Y change
 marsGbl_MstrReqDraw	ds.w 1
@@ -390,7 +392,7 @@ m_irq_v:
 .wait_fb:	mov.w	@(vdpsts,r1),r0		; Read status as WORD
 		tst	#2,r0			; Framebuffer busy? (wait for FEN=1)
 		bf	.wait_fb
-.wait		mov.b	@(vdpsts,r1),r0		; Now read as a BYTE
+.wait:		mov.b	@(vdpsts,r1),r0		; Now read as a BYTE
 		tst	#$20,r0			; Palette unlocked? (wait for PEN=0)
 		bt	.wait
 		stc	sr,@-r15
@@ -816,7 +818,7 @@ SH2_M_HotStart:
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#_sysreg,r1
-		mov	#VIRQ_ON,r0			; Enable usage of these interrupts
+		mov	#0,r0				; Enable usage of these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
 		mov 	#$C0000000,r2
@@ -837,34 +839,19 @@ SH2_M_HotStart:
 .lel:		mov.b	@r1,r0
 		cmp/pz	r0
 		bt	.lel
-
 		mov	#_DMACHANNEL0,r1
 		mov	#0,r0
 		mov	r0,@($30,r1)
 		mov	r0,@($C,r1)
 
+		mov	#RAM_Mars_DREQ0,r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+		mov	#RAM_Mars_DREQ1,r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
-		bra	master_loop
-		nop
-		align 4
-		ltorg
 
-; ---------------------------------------
-
-master_loop:
-
-		mov.w	@(marsGbl_CurrGfxMode,gbr),r0
-		mov	r0,r1
-		mov	r1,r0
-		and	#$80,r0
-		cmp/eq	#0,r0
-		bf	mstr_gfx1_loop
-		mov	r1,r0
-		or	#$80,r0
-		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
-
-	; Make default scroll section
+	; TEMPORAL
 		mov	#0,r1
 		mov	#$200,r2
 		mov	#MSCRL_BLKSIZE,r3
@@ -874,12 +861,10 @@ master_loop:
 		nop
 		mov	#0,r1
 		mov	#TESTMARS_BG,r2			; Image OR RAM section
-		mov	#320,r3
-		mov	#240,r4
+		mov	#1248,r3
+		mov	#656,r4
 		bsr	MarsVideo_SetBg
 		nop
-
-	; TODO: buscar un lugar para estos settings
 		mov	#RAM_Mars_Background,r14
 		mov	#2,r0
 		mov.b	r0,@(mbg_draw_all,r14)
@@ -892,7 +877,6 @@ master_loop:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
-
 		mov	#TESTMARS_BG_PAL,r1		; Load palette
 		mov	#0,r2
 		mov	#256,r3
@@ -901,39 +885,49 @@ master_loop:
 		jsr	@r0
 		nop
 
+		bra	master_loop
+		nop
+		align 4
+		ltorg
+
 ; ---------------------------------------
-; Mode0 loop
-; ---------------------------------------
 
-mstr_gfx1_loop:
-
-	; ---------------------------------------
-	; Set DMA Channel 0 to recieve
-	; DREQ FIFO data, even if the Genesis
-	; side isn't doing any request
-	; ---------------------------------------
-	; TODO: si algo sale mal, mover esto
-	; para abajo
-
+master_loop:
 		mov	#_sysreg,r9
 		mov	#_DMASOURCE0,r8
-		mov.l	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
+		mov	#_sysreg+comm14,r7
+		mov.b	@r7,r0
+		and	#%10111111,r0
+		tst	r0,r0
+		bt	.no_swp
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r0,r1
+		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+.no_swp:
+		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
 		mov	r0,@($C,r8)
-		mov	#_sysreg+dreqfifo,r0
-		mov	#RAM_Mars_DREQ,r1
-		mov	r0,@r8			; Source
-		mov	r1,@(4,r8)		; Destination
+		mov	#_sysreg+dreqfifo,r1
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r1,@r8			; Source
+		mov	r0,@(4,r8)		; Destination
 		mov.w	@(dreqlen,r9),r0
 		mov	r0,@(8,r8)		; Length
-		mov	#_sysreg+comm14,r1	; Unlock MD from here
-		mov.b	@r1,r0
-		or	#%01000000,r0
-		mov.b	r0,@r1
-		mov	@($C,r8),r0		; dummy readback(?) (TODO)
-		mov.l	#%0100010011100001,r0	; Transfer mode: + DMA enable
+		mov.b	@r7,r0
+		or	#%00100000,r0		; Tell MD we are ready.
+		mov.b	r0,@r7
+		mov	@($C,r8),r0		; dummy readback(?)
+		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
 		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r8)
+.no_dma:
+
+	; ---------------------------------------
+	; Wait for frameswap
+	; ---------------------------------------
 
 		mov.b	@(marsGbl_CurrFb,gbr),r0
 		mov	r0,r3
@@ -947,10 +941,26 @@ mstr_gfx1_loop:
 		mov.w	r0,@r1
 
 	; ---------------------------------------
-	; New frame is now on the screen, but
+	; New frame is now shown on screen but
 	; we are still on VBlank
 	; ---------------------------------------
 
+		mov	#_vdpreg,r1
+.wait:		mov.b	@(vdpsts,r1),r0
+		and	#$20,r0
+		tst	r0,r0			; Palette unlocked?
+		bt	.wait
+		mov	#RAM_Mars_Palette,r1
+		mov	#_palette,r2
+ 		mov	#256/16,r3
+.copy_pal:
+	rept 16
+		mov.w	@r1+,r0
+		mov.w	r0,@r2
+		add	#2,r2
+	endm
+		dt	r3
+		bf	.copy_pal
 		mov	#_vdpreg,r4		; Still on VBlank?
 .wait_vblnk:	mov.b	@(vdpsts,r4),r0
 		and	#$80,r0
@@ -960,21 +970,6 @@ mstr_gfx1_loop:
 	; ---------------------------------------
 	; Framebuffer redraw goes here
 	; ---------------------------------------
-
-		mov	#StrM_Test,r1
-		mov	#1,r2
-		bsr	MarsVdp_Print
-		mov	#11*8,r3
-		mov	#RAM_Mars_DREQ,r1
-		mov	#1,r2
-		mov	#12*8,r3
-		bsr	MarsVdp_PrintVal
-		nop
-		mov	#RAM_Mars_DREQ+(256*2)-4,r1
-		mov	#10,r2
-		mov	#12*8,r3
-		bsr	MarsVdp_PrintVal
-		nop
 
 		mov	#RAM_Mars_Background,r14
 		bsr	MarsVideo_MoveBg
@@ -1000,7 +995,7 @@ mstr_gfx1_loop:
 		nop
 		mov	#RAM_Mars_Background,r1
 		mov	#0,r2
-		mov	#240,r3
+		mov	#224,r3
 		bsr	MarsVideo_MakeTbl
 		nop
 		bsr	MarsVideo_FixTblShift
@@ -1011,14 +1006,23 @@ mstr_gfx1_loop:
 		mov.b	r0,@(framectl,r1)		; Save new bit
 		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
 
+	; ---------------------------------------
+
+		mov	#RAM_Mars_Background,r14
+		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	@r0+,r1
+		mov	@r0+,r2
+		mov	r1,@(mbg_xpos,r14)
+		mov	r2,@(mbg_ypos,r14)
+
 		bra	master_loop
 		nop
 		align 4
 		ltorg
 
-StrM_Test:
-		dc.b "32X recibe por DREQ:",0
-		align 4
+; StrM_Test:
+; 		dc.b "32X recibe por DREQ:",0
+; 		align 4
 
 		ltorg
 
@@ -1119,58 +1123,60 @@ SH2_S_HotStart:
 		ltorg
 
 slave_loop:
-		mov	#_sysreg+comm15,r1
-		mov.b	@r1,r0
-		and	#$01,r0
-		cmp/eq	#0,r0
-		bt	.TEST_1
-		and	#%11111110,r0
-; 		xor	r0,r0
-		mov.b	r0,@r1
-		stc	sr,@-r15		; Interrupts OFF
-		mov	#$F0,r0
-		mov	#0,r1
-		mov	#SmpIns_Bell_Ice+6,r2
-		mov	#SmpIns_Bell_Ice+$3B2A,r3
-		mov	#0,r4
-		mov	#$80,r5
-		mov	#0,r6
-		mov	#%1011,r7
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
-; 		mov	#1,r1
-; 		mov	#SmpIns_Brass1_Low+6,r2
-; 		mov	#SmpIns_Brass1_Low+$3FD8,r3
+; 		mov	#_sysreg+comm15,r1
+; 		mov.b	@r1,r0
+; 		and	#%00000001,r0
+; 		tst	r0,r0
+; 		bt	.TEST_1
+; 		cmp/eq	#0,r0
+; 		bt	.TEST_1
+; 		and	#%11111110,r0
+; ; 		xor	r0,r0
+; 		mov.b	r0,@r1
+; 		stc	sr,@-r15		; Interrupts OFF
+; 		mov	#$F0,r0
+; 		mov	#0,r1
+; 		mov	#SmpIns_Bell_Ice+6,r2
+; 		mov	#SmpIns_Bell_Ice+$3B2A,r3
 ; 		mov	#0,r4
-; 		mov	#$30,r5
+; 		mov	#$80,r5
 ; 		mov	#0,r6
 ; 		mov	#%1011,r7
 ; 		mov	#MarsSound_SetPwm,r0
 ; 		jsr	@r0
 ; 		nop
-; 		mov	#0,r1
-; 		mov	#PWM_STEREO+6,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%1111,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
-; 		mov	#1,r1
-; 		mov	#PWM_STEREO+6,r2
-; 		mov	#PWM_STEREO_e,r3
-; 		mov	#0,r4
-; 		mov	#$100,r5
-; 		mov	#0,r6
-; 		mov	#%1111,r7
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
-		ldc	@r15+,sr
-.TEST_1:
+; ; 		mov	#1,r1
+; ; 		mov	#SmpIns_Brass1_Low+6,r2
+; ; 		mov	#SmpIns_Brass1_Low+$3FD8,r3
+; ; 		mov	#0,r4
+; ; 		mov	#$30,r5
+; ; 		mov	#0,r6
+; ; 		mov	#%1011,r7
+; ; 		mov	#MarsSound_SetPwm,r0
+; ; 		jsr	@r0
+; ; 		nop
+; ; 		mov	#0,r1
+; ; 		mov	#PWM_STEREO+6,r2
+; ; 		mov	#PWM_STEREO_e,r3
+; ; 		mov	#0,r4
+; ; 		mov	#$100,r5
+; ; 		mov	#0,r6
+; ; 		mov	#%1111,r7
+; ; 		mov	#MarsSound_SetPwm,r0
+; ; 		jsr	@r0
+; ; 		nop
+; ; 		mov	#1,r1
+; ; 		mov	#PWM_STEREO+6,r2
+; ; 		mov	#PWM_STEREO_e,r3
+; ; 		mov	#0,r4
+; ; 		mov	#$100,r5
+; ; 		mov	#0,r6
+; ; 		mov	#%1111,r7
+; ; 		mov	#MarsSound_SetPwm,r0
+; ; 		jsr	@r0
+; ; 		nop
+; 		ldc	@r15+,sr
+; .TEST_1:
 
 	; *** GEMA PWM DRIVER
 	; %RCIOxxxx
@@ -1198,8 +1204,8 @@ slave_loop:
 		mov.b	@r9,r0
 		mov	#%10000000,r1
 		and	r1,r0
-		cmp/eq	r1,r0
-		bt	.non_zero
+		tst	r0,r0
+		bf	.non_zero
 		bra	.no_ztrnsfr
 		nop
 .non_zero:
@@ -1211,8 +1217,8 @@ slave_loop:
 		nop
 		mov.b	@r9,r0			; wait first CLOCK
 		and	#%01000000,r0		; from Z80
-		cmp/pl	r0
-		bf	.wait_1
+		tst	r0,r0
+		bt	.wait_1
 		mov	#7,r6
 		mov	#_sysreg+comm0,r8
 .copy_1:
@@ -1228,6 +1234,7 @@ slave_loop:
 		bf	.wait_1
 	; *** TRANSFER END
 
+	; Process PWM
 		mov	#0,r1			; r1 - PWM slot
 		mov	#MarsSnd_PwmControl,r14
 		mov	#7,r10
@@ -2040,7 +2047,8 @@ sizeof_marsvid		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
-RAM_Mars_DREQ		ds.w 256			; 128 LONGS of storage
+RAM_Mars_DREQ0		ds.w $800			; 128 LONGS of storage
+RAM_Mars_DREQ1		ds.w $800
 RAM_Mars_Global		ds.l sizeof_MarsGbl		; gbr values go here.
 sizeof_marssys		ds.l 0
 			finish

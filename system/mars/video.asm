@@ -10,7 +10,7 @@
 MSCRL_BLKSIZE	equ $10			; Block size for both directions, aligned by 4
 MSCRL_WIDTH	equ 320+MSCRL_BLKSIZE	; Internal width for scrolldata + hidden zone
 MSCRL_HEIGHT	equ 240+MSCRL_BLKSIZE	; Internal height for scrolldata + hidden zone
-FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift pixel lines
+FBVRAM_PATCH	equ $1D000		; Framebuffer location for the affected XShift pixel lines
 
 ; ----------------------------------------
 ; Structs
@@ -62,10 +62,37 @@ MarsVideo_Init:
 		mov 	#_vdpreg,r1
 		mov	#0,r0			; Start at blank
 		mov.b	r0,@(bitmapmd,r1)
+
+		mov	#_framebuffer,r2
+		bsr	.def_fb
+		nop
+		bsr	.def_fb
+		nop
 		lds	@r15+,pr
 		rts
 		nop
 		align 4
+.def_fb:
+		mov	r2,r3
+		mov	#$1FD80/2,r0	; very last usable line
+		mov	#240,r4
+.nxt_lne:
+		mov.w	r0,@r3
+		dt	r4
+		bf/s	.nxt_lne
+		add	#2,r3
+
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov	r0,r3
+		mov.b	r0,@(framectl,r1)
+.wait_frm:	mov.b	@(framectl,r1),r0
+		cmp/eq	r0,r3
+		bf	.wait_frm
+		rts
+		nop
+		align 4
+
 		ltorg
 
 ; ====================================================================
@@ -287,6 +314,8 @@ MarsVdp_PrintVal:
 		add	r0,r7
 		mov	r13,r8
 		add	r11,r8
+		mov	#-4,r0
+		and	r0,r8
 		mov	#8,r9
 .nxt_lns:
 		mov	@r7+,r0
@@ -353,7 +382,7 @@ MarsVideo_DrawAllBg:
 		bra	.xinit_l
 		add	r11,r1
 .xbg_back:
-		cmp/ge	r11,r1			; First X limiter
+		cmp/gt	r11,r1			; First X limiter
 		bf	.xbg_inc
 		bra	.xbg_back
 		sub	r11,r1
@@ -363,29 +392,29 @@ MarsVideo_DrawAllBg:
 		bra	.xbg_inc
 		add	r9,r2
 .ybg_back:
-		cmp/ge	r9,r2			; First Y limiter
+		cmp/gt	r9,r2			; First Y limiter
 		bf	.ybg_inc
 		bra	.ybg_back
 		sub	r9,r2
 .ybg_inc:
-
 		mov	r1,r0
 		mov.w	r0,@(mbg_xinc_l,r14)
 		mov	#320,r5
 		add	r5,r0
 .lwr_xnxt:	cmp/gt	r11,r0
 		bf	.lwr_xvld
-		bra	.lwr_xnxt
+; 		bra	.lwr_xnxt
 		sub	r11,r0
 .lwr_xvld:
 		mov.w	r0,@(mbg_xinc_r,r14)
+
 		mov	r2,r0
 		mov.w	r0,@(mbg_yinc_u,r14)
 		mov	#240,r5
 		add	r5,r0
-.lwr_ynxt:	cmp/gt	r9,r0
+.lwr_ynxt:	cmp/ge	r9,r0
 		bf	.lwr_yvld
-		bra	.lwr_ynxt
+; 		bra	.lwr_ynxt
 		sub	r9,r0
 .lwr_yvld:
 		mov.w	r0,@(mbg_yinc_d,r14)
@@ -569,12 +598,12 @@ MarsVideo_MoveBg:
 .y_stend:
 
 	; 256-color BG mode flag goes here
-		mov	r1,r0
-		or	r2,r0
-		cmp/eq	#0,r0
-		bt	.no_chng
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_XPatch,gbr)
+; 		mov	r1,r0
+; 		or	r2,r0
+; 		cmp/eq	#0,r0
+; 		bt	.no_chng
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_XPatch,gbr)
 .no_chng:
 		mov.w	@(marsGbl_XShift,gbr),r0	; Also update the XShift
 		add	r1,r0				; bit for 256-color mode
@@ -907,10 +936,11 @@ MarsVideo_MakeTbl:
 ; checar si poniendo esto en CACHE ya no salta
 
 MarsVideo_FixTblShift:
-		mov.w	@(marsGbl_XPatch,gbr),r0
-		cmp/eq	#2,r0
-		bt	.ptchset
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
+		mov.b	@(mbg_flags,r14),r0
+		and	#%00000001,r0
+		tst	r0,r0
+		bf	.ptchset
 		mov	#_framebuffer+FBVRAM_PATCH,r13	; r13 - Output for patched pixel lines
 		mov	#RAM_Mars_LineTblCopy,r12
 .loop:
@@ -941,9 +971,9 @@ MarsVideo_FixTblShift:
 		bra	.loop
 		add	#4,r12
 .tblexit:
-		mov.w	@(marsGbl_XPatch,gbr),r0
-		add	#1,r0
-		mov.w	r0,@(marsGbl_XPatch,gbr)
+; 		mov.w	@(marsGbl_XPatch,gbr),r0
+; 		add	#1,r0
+; 		mov.w	r0,@(marsGbl_XPatch,gbr)
 .ptchset:
 		rts
 		nop
