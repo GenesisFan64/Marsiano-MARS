@@ -30,37 +30,25 @@ m_irq_custom:
 ; ---------------------------------------
 
 Mars_DoDreq:
-		mov	#_sysreg,r9
-		mov	#_DMASOURCE0,r8
-		mov	#_sysreg+comm14,r7
-		mov.b	@r7,r0
-		and	#%10111111,r0
-		tst	r0,r0
-		bt	.no_swp
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r0,r1
-		mov	@(marsGbl_DreqRead,gbr),r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
-		mov	r1,r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-.no_swp:
+		mov	#_sysreg,r4
+		mov	#_DMASOURCE0,r3
+		mov	#_sysreg+comm14,r2
 		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
-		mov	r0,@($C,r8)
+		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r1,@r8			; Source
-		mov	r0,@(4,r8)		; Destination
-		mov.w	@(dreqlen,r9),r0
-		mov	r0,@(8,r8)		; Length
-		mov.b	@r7,r0
+		mov	#MarsRam_Dreq,r0
+		mov	r1,@r3			; Source
+		mov	r0,@(4,r3)		; Destination
+		mov.w	@(dreqlen,r4),r0
+		mov	r0,@(8,r3)		; Length
+		mov.b	@r2,r0
 		or	#%00100000,r0		; Tell MD we are ready.
-		mov.b	r0,@r7
-		mov	@($C,r8),r0		; dummy readback(?)
+		mov.b	r0,@r2
+		mov	@($C,r3),r0		; dummy readback(?)
 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
-		mov	r0,@($C,r8)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r8)
-.no_dma:
+		mov	r0,@($30,r3)
 		rts
 		nop
 		align 4
@@ -74,9 +62,12 @@ MarsVideo_BgDrawLR:
 		mov	@(mbg_data,r14),r0
 		cmp/pl	r0
 		bf	.nxt_drawud
-		mov	#-MSCRL_BLKSIZE,r4
-		mov	#MSCRL_HEIGHT,r13
-		mov	#MSCRL_BLKSIZE/4,r12
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r13
+		mov.w	@(mbg_intrl_blk,r14),r0
+		neg	r0,r4
+		shlr2	r0
+		mov	r0,r12
 		mov	#Cach_BgFbPos_H,r11
 		mov	@r11,r11
 		mov	#Cach_BgFbPos_V,r3
@@ -104,10 +95,12 @@ MarsVideo_BgDrawLR:
 		mulu	r3,r0
 		sts	macl,r0
 		add	r0,r8
-		mov.b	@(mbg_draw_r,r14),r0
+		mov	#Cach_Drw_R,r1
+		mov	#Cach_Drw_L,r2
+		mov	@r1,r0
 		cmp/eq	#0,r0
 		bf	.dtsk01_dright
-		mov.b	@(mbg_draw_l,r14),r0
+		mov	@r2,r0
 		cmp/eq	#0,r0
 		bf	.dtsk01_dleft
 .nxt_drawud:
@@ -117,24 +110,22 @@ MarsVideo_BgDrawLR:
 
 .dtsk01_dleft:
 		dt	r0
-		mov.b	r0,@(mbg_draw_l,r14)
-		mov.b	@(mbg_draw_all,r14),r0
-		tst	r0,r0
-		bf	.nxt_drawud
-
+		mov	r0,@r2
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		bra	dtsk01_lrdraw
 		mov	r0,r5
 .dtsk01_dright:
 		dt	r0
-		mov.b	r0,@(mbg_draw_r,r14)
-		mov.b	@(mbg_draw_all,r14),r0
+		mov	r0,@r1
+		mov	#320,r3			; Set FB position
+		mov.b	@(mbg_flags,r14),r0
+		and	#1,r0
 		tst	r0,r0
-		bf	.nxt_drawud
-
-		mov	#320,r0			; Set FB position
-		add	r0,r11
+		bt	.indxmode
+		shll	r3
+.indxmode:
+		add	r3,r11
 		and	r4,r11
 		mov	#Cach_XHead_R,r0
 		mov	@r0,r0
@@ -172,8 +163,14 @@ dtsk01_lrdraw:
 		add	r9,r1
 		mov	@r2,r0
 		mov	r0,@r1
-		mov	#320,r0		; Ex-line
-		cmp/gt	r0,r3
+		mov	#320,r1			; Hidden line
+		mov.b	@(mbg_flags,r14),r0
+		and	#1,r0
+		tst	r0,r0
+		bt	.indxmode
+		shll	r1
+.indxmode:
+		cmp/gt	r1,r3
 		bt	.not_l2
 		mov	r3,r1
 		add	r9,r1
@@ -213,32 +210,39 @@ MarsVideo_BgDrawUD:
 		mov	@(mbg_intrl_size,r14),r8
 		mov.w	@(mbg_width,r14),r0
 		mov	r0,r7
-
+; 		mov.b	@(mbg_flags,r14),r0
+; 		and	#1,r0
+; 		tst	r0,r0
+; 		bt	.indxmodew
+; 		shll	r7
+; .indxmodew:
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		add	r0,r12
 		mov	r9,r6
+
 		mov.w	@(mbg_intrl_h,r14),r0
 		mov	r0,r5
+		mov	r0,r4
 		mov.w	@(mbg_intrl_blk,r14),r0
-		sub	r0,r5
-		add	r5,r6
-; 		mov	#176,r0		; TODO: add custom Y fb inc
-; 		add	r0,r6
-		mov.w	@(mbg_intrl_h,r14),r0
-		cmp/gt	r0,r6
+		sub	r0,r4
+		add	r4,r6
+.wrpagain:	cmp/gt	r5,r6
 		bf	.upwrp
-		sub	r0,r6
+		bra	.wrpagain
+		sub	r5,r6
 .upwrp:
-		mov.b	@(mbg_draw_u,r14),r0
+		mov	#Cach_Drw_U,r1
+		mov	#Cach_Drw_D,r2
+		mov	@r1,r0
 		cmp/eq	#0,r0
 		bf	.tsk00_up
-		mov.b	@(mbg_draw_d,r14),r0
+		mov	@r2,r0
 		cmp/eq	#0,r0
 		bt	drw_ud_exit
 .tsk00_down:
 		dt	r0
-		mov.b	r0,@(mbg_draw_d,r14)
+		mov	r0,@r2
 
 		mov	#Cach_YHead_D,r0
 		mov	@r0,r0
@@ -250,7 +254,7 @@ MarsVideo_BgDrawUD:
 		mov	r6,r9
 .tsk00_up:
 		dt	r0
-		mov.b	r0,@(mbg_draw_u,r14)
+		mov	r0,@r1
 		mov	#Cach_YHead_U,r0
 		mov	@r0,r0
 		mulu	r7,r0
@@ -270,12 +274,15 @@ MarsVideo_BgDrawUD:
 		mulu	r9,r0
 		sts	macl,r0
 		add	r0,r10
-		mov	#MSCRL_BLKSIZE,r6
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r6
 .y_loop:
 		mov	r12,r3
 		mov	r11,r4
 		add	r7,r4
-		mov	#MSCRL_WIDTH/4,r5
+		mov.w	@(mbg_intrl_w,r14),r0	; WIDTH / 4
+		shlr2	r0
+		mov	r0,r5
 .x_loop:
 		cmp/ge	r8,r10			; topleft fb pos
 		bf	.lwrfb
@@ -290,8 +297,15 @@ MarsVideo_BgDrawUD:
 		add	r13,r2
 		mov	r1,r0
 		mov	r0,@r2
-		mov	#320,r0			; hidden-line
-		cmp/gt	r0,r10
+
+		mov	#320,r2			; Hidden line
+		mov.b	@(mbg_flags,r14),r0
+		and	#1,r0
+		tst	r0,r0
+		bt	.indxmode
+		shll	r2
+.indxmode:
+		cmp/gt	r2,r10
 		bt	.hdnx
 		mov	r10,r2
 		add	r13,r2
@@ -315,13 +329,18 @@ drw_ud_exit:
 ; ------------------------------------------------
 
 		align 4
+Cach_Drw_All	ds.l 1		; Draw timers moved here
+Cach_Drw_U	ds.l 1
+Cach_Drw_D	ds.l 1
+Cach_Drw_L	ds.l 1
+Cach_Drw_R	ds.l 1
 Cach_XHead_L	ds.l 1		; Left draw beam
 Cach_XHead_R	ds.l 1		; Right draw beam
 Cach_YHead_D	ds.l 1		; Bottom draw beam
 Cach_YHead_U	ds.l 1		; Top draw beam
 Cach_BgFbPos_V	ds.l 1		; Framebuffer Y direct pos (mutiply externally)
 Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
-
+Cach_Drw_Cntr	ds.l 1
 ; ------------------------------------------------
 .end:		phase CACHE_MASTER+.end&$1FFF
 CACHE_MASTER_E:

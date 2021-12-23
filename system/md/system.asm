@@ -338,11 +338,11 @@ System_VBlank:
 		add.l	#1,(RAM_Framecount).l
 		rts
 
-; System_VBlnk_Exit:
-; 		move.w	(vdp_ctrl),d4
-; 		btst	#bitVint,d4
-; 		bne.s	System_VBlnk_Exit
-; 		rts
+System_VBlnk_Exit:
+		move.w	(vdp_ctrl),d4
+		btst	#bitVint,d4
+		bne.s	System_VBlnk_Exit
+		rts
 
 ; --------------------------------------------------------
 ; System_JumpRamCode
@@ -405,53 +405,58 @@ HInt_Default:
 ; --------------------------------------------------------
 ; System_MdMarsDreq
 ;
-; Sends RAM data stored here to 32X
+; Sends a small section of RAM from here to 32X
+; for controlling things like the background or sprites
 ;
-; CALL THIS ON VBLANK ONLY
+; CALL THIS DURING VBLANK ONLY, As this will try
+; to syncronize with the SH2 to recieve the data
+; on both VBlank(s) at the same time
 ; --------------------------------------------------------
 
-; DREQ is unstable and can loose data, and
-; on emulators it performs worse.
-;
-; Here's a table of the working sizes:
-; (in WORDs)
-;
-;     Hardware,Fusion,Gens
-; $500 |  Y  |  Y  |  Y  |
-; $600 |  Y  |  Y  |  N  |
-; $680 |  Y  |  N  |  N  |
-; $700 |  Y  |  N  |  N  |
-; $780 |  N  |  N  |  N  |
-; $800 |  N  |  N  |  N  |
+; ====================================================================
+; --------------------------------------------------------
+; 32X Communication, using DREQ
+; --------------------------------------------------------
 
 System_MdMarsDreq:
-		move.w	#MAX_MDDREQ/2,d6		; SIZE MUST BE ALIGNED BY $80
+		lea	(RAM_MdDreq),a6
+		lea	($A15112).l,a5
+		move.w	#MAX_MDDREQ/2,d6
 		move.w	sr,d7
 		move.w	#$2700,sr
 .retry:
 		move.w	d6,(sysmars_reg+dreqlen).l
 		bset	#2,(sysmars_reg+dreqctl).l
-		move.w	d6,d5
-		lsr.w	#7,d5		; size / $80
-		sub.w	#1,d5
-		bset	#6,(sysmars_reg+comm14).l	; Flip DREQ buff page on SH2
+		bset	#6,(sysmars_reg+comm14).l
 .wait_bit:
 		btst	#5,(sysmars_reg+comm14).l
 		beq.s	.wait_bit
 		bclr	#5,(sysmars_reg+comm14).l
-		bclr	#6,(sysmars_reg+comm14).l
-		lea	(RAM_MdMarsDreq),a6		; *** VRDX transfer method
-		lea	($A15112).l,a5
-.loopy:
-		bsr	.blast_me			; each blast is $80 words
-		dbf	d5,.loopy
+		move.w	d6,d5
+		lsr.w	#2,d5
+		sub.w	#1,d5
+.l0:		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+.l1:		btst	#7,dreqctl(a5)		; Got Full ?
+		bne.s	.l1
+		dbf	d5,.l0
+		btst	#2,dreqctl(a5)		; DMA All OK ?
+		bne	.retry
 		move.w	d7,sr
 		rts
-.blast_me:
-	rept $80
-		move.w	(a6)+,(a5)
-	endm
-		rts
+
+; .loopy:
+; 		bsr	.blast_me			; each blast is $80 words
+; 		dbf	d5,.loopy
+; 		move.w	d7,sr
+; 		rts
+; .blast_me:
+; 	rept $80
+; 		move.w	(a6)+,(a5)
+; 	endm
+; 		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------

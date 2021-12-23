@@ -88,16 +88,16 @@ thisCode_Top:
 ; 		move.w	#$60+$4000,d2
 ; 		bsr	Video_LoadMap
 
-; 		lea	(MAP_FGTEST),a0
-; 		move.l	#locate(0,8,0),d0
-; 		move.l	#mapsize(192,224),d1
-; 		move.w	#1+$2000,d2
-; 		bsr	Video_LoadMap
-; 		lea	(MAP_FGTEST),a0
-; 		move.l	#locate(0,8+32,0),d0
-; 		move.l	#mapsize(192,224),d1
-; 		move.w	#1+$2000,d2
-; 		bsr	Video_LoadMap
+		lea	(MAP_FGTEST),a0
+		move.l	#locate(0,8,0),d0
+		move.l	#mapsize(192,224),d1
+		move.w	#1+$2000,d2
+		bsr	Video_LoadMap
+		lea	(MAP_FGTEST),a0
+		move.l	#locate(0,8+32,0),d0
+		move.l	#mapsize(192,224),d1
+		move.w	#1+$2000,d2
+		bsr	Video_LoadMap
 
 ; 		lea	str_Title(pc),a0
 ; 		move.l	#locate(0,2,2),d0
@@ -114,25 +114,21 @@ thisCode_Top:
 		moveq	#$10,d0
 		move.w	#$F,d1
 		bsr	Video_LoadPal
-; 		lea	PAL_BG(pc),a0		; ON palette
-; 		moveq	#$20,d0
-; 		move.w	#$F,d1
-; 		bsr	Video_LoadPal
-
+		lea	(TESTMARS_BG_PAL),a0
+		moveq	#0,d0
+		move.w	#256,d1
+		bsr	Video_Mars_LoadPal
+		bset	#4,(sysmars_reg+comm14).l
+.wait2:		btst	#4,(sysmars_reg+comm14).l
+		bne.s	.wait2
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable display
 		bsr	Video_Update
-
-; 		move.b	(sysmars_reg+comm15),d7
-; 		or.w	#1,d7
-; 		move.b	d7,(sysmars_reg+comm15)
-
 		lea	MasterTrkList(pc),a0
 		move.w	$C(a0),d1
 		move.w	$E(a0),d3
 		moveq	#0,d0
 		moveq	#0,d2
 		bsr	Sound_TrkPlay
-		move.b	#$80,(sysmars_reg+comm14)	; Unlock MASTER
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -140,7 +136,13 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		bsr	System_VBlank
+
+.wait_frm
+		move.w	(vdp_ctrl),d4
+		btst	#bitVint,d4
+		beq.s	.wait_frm
+		bsr	System_Input
+		bsr	Video_DmaBlast
 
 		move.l	#$40000010,(vdp_ctrl).l
 		move.l	(RAM_Ypos).w,(vdp_data).l
@@ -148,6 +150,8 @@ thisCode_Top:
 		move.l	(RAM_XposFg).l,d0
 		neg.l	d0
 		move.l	d0,(vdp_data).l
+		add.l	#1,(RAM_Framecount).l
+		bsr	System_MdMarsDreq
 
 	; Window up/down
 		move.w	(RAM_WindowCurr).w,d2
@@ -162,7 +166,7 @@ thisCode_Top:
 		add.w	d0,(RAM_WindowCurr).w
 		move.w	(RAM_WindowCurr).w,(vdp_ctrl).l
 .same_w:
-; 		bsr	System_VBlnk_Exit
+		bsr	System_VBlnk_Exit
 
 		move.w	(RAM_CurrType).w,d0
 		and.w	#%11111,d0
@@ -202,57 +206,65 @@ thisCode_Top:
 		move.w	#1,(RAM_CurrType).w
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
-		add.l	#-1,((RAM_MdMarsDreq-4)+(MAX_MDDREQ)).w
+; 		add.l	#-1,((RAM_MdMarsDreq-4)+(MAX_MDDREQ)).w
 
-		move.l	(RAM_MdMarsDreq+4).w,d1
+; 		move.l	(RAM_MdMarsDreq+4).w,d1
 
-		move.l	(RAM_MdMarsDreq).w,d0
-		move.l	(RAM_MdMarsDreq+4).w,d1
-		move.l	#$20000,d2
+		move.l	(RAM_MdMarsBg).w,d0
+		move.l	(RAM_MdMarsBg+4).w,d1
+		move.w	(RAM_XposFg).w,d2
+		move.w	(RAM_Ypos).w,d3
+		move.l	#$10000,d5
+		move.l	#1,d6
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_m
-		add.l	d2,d0
+		add.l	d5,d0
+		add.w	d6,d2
 .nor_m:
 		btst	#bitJoyLeft,d7
 		beq.s	.nol_m
-		sub.l	d2,d0
+		sub.l	d5,d0
+		sub.w	d6,d2
 .nol_m:
 		btst	#bitJoyDown,d7
 		beq.s	.nod_m
-		add.l	d2,d1
+		add.l	d5,d1
+		add.w	d6,d3
 .nod_m:
 		btst	#bitJoyUp,d7
 		beq.s	.nou_m
-		sub.l	d2,d1
+		sub.l	d5,d1
+		sub.w	d6,d3
 .nou_m:
-		move.l	d0,(RAM_MdMarsDreq).w
-		move.l	d1,(RAM_MdMarsDreq+4).w
 
-		move.l	(RAM_MdMarsDreq).w,d0
-		move.l	(RAM_MdMarsDreq+4).w,d1
-		move.l	#$10000,d2
+
+; 		move.l	#$10000,d2
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyB,d7
 		beq.s	.nor_m2
-		add.l	d2,d0
+		add.l	d5,d0
+		add.w	d6,d2
 .nor_m2:
 		btst	#bitJoyA,d7
 		beq.s	.nol_m2
-		sub.l	d2,d0
+		sub.l	d5,d0
+		sub.w	d6,d2
 .nol_m2:
-		move.l	d0,(RAM_MdMarsDreq).w
-		move.l	d1,(RAM_MdMarsDreq+4).w
+		move.l	d0,(RAM_MdMarsBg).w
+		move.l	d1,(RAM_MdMarsBg+4).w
+		move.w	d2,(RAM_XposFg).w
+		move.w	d3,(RAM_Ypos).w
 
-		tst.w	(RAM_MdMarsDreq+8).w
-		beq.s	.noclr
-		clr.w	(RAM_MdMarsDreq+8).w
-.noclr:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyC,d7
-		beq.s	.nor_m3
-		move.w	#1,(RAM_MdMarsDreq+8).w
-.nor_m3:
+; 		tst.w	(RAM_MdMarsDreq+8).w
+; 		beq.s	.noclr
+; 		clr.w	(RAM_MdMarsDreq+8).w
+; .noclr:
+; 		move.w	(Controller_1+on_press),d7
+; 		btst	#bitJoyC,d7
+; 		beq.s	.nor_m3
+; 		move.w	#1,(RAM_MdMarsDreq+8).w
+; .nor_m3:
 
 ; 		bsr	Emilie_Move
 ; 		bsr	Emilie_MkSprite
@@ -773,12 +785,12 @@ str_COMM:
 		dc.l sysmars_reg+comm14
 		align 2
 
-str_DreqMe:
-		dc.b "Genesis manda por DREQ:",$A
-		dc.b "\\l \\l",0
-		dc.l RAM_MdMarsDreq
-		dc.l RAM_MdMarsDreq+(256*2)-4
-		align 2
+; str_DreqMe:
+; 		dc.b "Genesis manda por DREQ:",$A
+; 		dc.b "\\l \\l",0
+; 		dc.l RAM_MdMarsDreq
+; 		dc.l RAM_MdMarsDreq+(256*2)-4
+; 		align 2
 ; str_TempVal:
 ; 		dc.b "\\w",0
 ; 		dc.l RAM_EmiFlags

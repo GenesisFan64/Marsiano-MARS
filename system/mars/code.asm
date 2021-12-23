@@ -26,8 +26,6 @@ MAX_MSPR	equ	128		; Maximum sprites
 ; ----------------------------------------------------------------
 
 			struct 0
-marsGbl_DreqRead	ds.l 1
-marsGbl_DreqWrite	ds.l 1
 marsGbl_XShift		ds.w 1		; Xshift bit at the start of master_loop
 marsGbl_XPatch		ds.w 1		; Redraw counter for the $xxFF fix, set to 0 on X/Y change
 marsGbl_MstrReqDraw	ds.w 1
@@ -35,8 +33,7 @@ marsGbl_CurrGfxMode	ds.w 1
 marsGbl_VIntFlag_M	ds.w 1		; Sets to 0 after Masters's VBlank ends
 marsGbl_VIntFlag_S	ds.w 1		; Sets to 0 after Slave's VBlank ends
 marsGbl_CurrFb		ds.w 1		; Current framebuffer number (byte)
-marsGbl_PalDmaMidWr	ds.w 1		; Flag to tell we are in middle of transfering palette
-; marsGbl_FbMaxLines	ds.w 1		; Max lines to output to screen (MAX: 240 lines)
+; marsGbl_PalDmaMidWr	ds.w 1		; Flag to tell we are in middle of transfering palette
 marsGbl_PwmCtrlUpd	ds.w 1		; Flag to update Pwm tracker channels
 sizeof_MarsGbl		ds.l 0
 			finish
@@ -344,6 +341,34 @@ m_irq_cmd:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+cmdintclr,r1
 		mov.w	r0,@r1
+
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	#_sysreg,r4
+		mov	#_DMASOURCE0,r3
+		mov	#_sysreg+comm14,r2
+		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
+		mov	r0,@($C,r3)
+		mov	#_sysreg+dreqfifo,r1
+		mov	#MarsRam_Dreq,r0
+		mov	r1,@r3			; Source
+		mov	r0,@(4,r3)		; Destination
+		mov.w	@(dreqlen,r4),r0
+		mov	r0,@(8,r3)		; Length
+		mov	@($C,r3),r0		; dummy readback(?)
+		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
+		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov.b	@r2,r0
+		or	#%01000000,r0		; Tell MD we are ready.
+		mov.b	r0,@r2
+		mov	#1,r0			; _DMAOPERATION = 1
+		mov	r0,@($30,r3)
+
+		mov	@r15+,r4
+		mov	@r15+,r3
+		mov	@r15+,r2
+
 		nop
 		nop
 		nop
@@ -388,70 +413,40 @@ m_irq_v:
 		mov	#_sysreg+vintclr,r1
 		mov.w	r0,@r1
 
-		mov	#_vdpreg,r1		; Wait for palette access
-.wait_fb:	mov.w	@(vdpsts,r1),r0		; Read status as WORD
-		tst	#2,r0			; Framebuffer busy? (wait for FEN=1)
-		bf	.wait_fb
-.wait:		mov.b	@(vdpsts,r1),r0		; Now read as a BYTE
-		tst	#$20,r0			; Palette unlocked? (wait for PEN=0)
-		bt	.wait
-		stc	sr,@-r15
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
-		sts	macl,@-r15
-		mov	#$F0,r0			; Disable interrupts
-		ldc	r0,sr
-
-	; Copy palette manually to SuperVDP
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_PalDmaMidWr,gbr)
-		mov	#RAM_Mars_Palette,r1
-		mov	#_palette,r2
- 		mov	#256/16,r3
-.copy_pal:
-	rept 16
-		mov.w	@r1+,r0
-		mov.w	r0,@r2
-		add	#2,r2
-	endm
-		dt	r3
-		bf	.copy_pal
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_PalDmaMidWr,gbr)
-
-        ; OLD method: doesn't work on hardware
+; 		mov	#_vdpreg,r1		; Wait for palette access
+; .wait_fb:	mov.w	@(vdpsts,r1),r0		; Read status as WORD
+; 		tst	#2,r0			; Framebuffer busy? (wait for FEN=1)
+; 		bf	.wait_fb
+; .wait:		mov.b	@(vdpsts,r1),r0		; Now read as a BYTE
+; 		tst	#$20,r0			; Palette unlocked? (wait for PEN=0)
+; 		bt	.wait
+; 		stc	sr,@-r15
+; 		mov	r2,@-r15
+; 		mov	r3,@-r15
 ; 		mov	r4,@-r15
 ; 		mov	r5,@-r15
-; 		mov	r6,@-r15
-; 		mov	#RAM_Mars_Palette,r1		; Send palette stored on RAM
+; 		sts	macl,@-r15
+; 		mov	#$F0,r0			; Disable interrupts
+; 		ldc	r0,sr
+; 		mov	#RAM_Mars_Palette,r1
 ; 		mov	#_palette,r2
-;  		mov	#256,r3
-; 		mov	#%0101011011110001,r4		; transfer size 2 / burst
-; 		mov	#_DMASOURCE0,r5 		; _DMASOURCE = $ffffff80
-; 		mov	#_DMAOPERATION,r6 		; _DMAOPERATION = $ffffffb0
-; 		mov	r1,@r5				; set source address
-; 		mov	r2,@(4,r5)			; set destination address
-; 		mov	r3,@(8,r5)			; set length
-; 		xor	r0,r0
-; 		mov	r0,@r6				; Stop OPERATION
-; 		xor	r0,r0
-; 		mov	r0,@($C,r5)			; clear TE bit
-; 		mov	r4,@($C,r5)			; load mode
-; 		add	#1,r0
-; 		mov	r0,@r6				; Start OPERATION
-; 		mov	@r15+,r6
+;  		mov	#256/16,r3
+; .copy_pal:
+; 	rept 16
+; 		mov.w	@r1+,r0
+; 		mov.w	r0,@r2
+; 		add	#2,r2
+; 	endm
+; 		dt	r3
+; 		bf	.copy_pal
+
+; 		lds	@r15+,macl
 ; 		mov	@r15+,r5
 ; 		mov	@r15+,r4
-
-		lds	@r15+,macl
-		mov	@r15+,r5
-		mov	@r15+,r4
-		mov	@r15+,r3
-		mov	@r15+,r2
-		ldc	@r15+,sr
-.mid_pwrite:
+; 		mov	@r15+,r3
+; 		mov	@r15+,r2
+; 		ldc	@r15+,sr
+; .mid_pwrite:
 		mov 	#0,r0				; Clear VintFlag for Master
 		mov.w	r0,@(marsGbl_VIntFlag_M,gbr)
 		rts
@@ -818,7 +813,7 @@ SH2_M_HotStart:
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#_sysreg,r1
-		mov	#0,r0				; Enable usage of these interrupts
+		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
 		mov 	#$C0000000,r2
@@ -834,57 +829,31 @@ SH2_M_HotStart:
 		nop
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrGfxMode,gbr)
-
-		mov	#_sysreg+comm14,r1
-.lel:		mov.b	@r1,r0
-		cmp/pz	r0
-		bt	.lel
 		mov	#_DMACHANNEL0,r1
 		mov	#0,r0
 		mov	r0,@($30,r1)
 		mov	r0,@($C,r1)
-
-		mov	#RAM_Mars_DREQ0,r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-		mov	#RAM_Mars_DREQ1,r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
 	; TEMPORAL
 		mov	#0,r1
 		mov	#$200,r2
-		mov	#MSCRL_BLKSIZE,r3
-		mov	#MSCRL_WIDTH,r4
-		mov	#MSCRL_HEIGHT,r5
-		bsr	MarsVideo_MakeScreen
-		nop
+		mov	#8,r3
+		mov	#320,r4
+		mov	#240,r5
+		bsr	MarsVideo_MkScrlField
+		mov	#0,r6
 		mov	#0,r1
 		mov	#TESTMARS_BG,r2			; Image OR RAM section
-		mov	#1248,r3
-		mov	#656,r4
+		mov	#320,r3
+		mov	#224,r4
 		bsr	MarsVideo_SetBg
 		nop
-		mov	#RAM_Mars_Background,r14
-		mov	#2,r0
-		mov.b	r0,@(mbg_draw_all,r14)
-		mov	#0,r1
-		mov	#0,r2
-		shll16	r1
-		shll16	r2
-		mov	r1,@(mbg_xpos,r14)
-		mov	r2,@(mbg_ypos,r14)
+
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
-		mov	#TESTMARS_BG_PAL,r1		; Load palette
-		mov	#0,r2
-		mov	#256,r3
-		mov	#$0000,r4
-		mov	#MarsVideo_LoadPal,r0
-		jsr	@r0
-		nop
-
 		bra	master_loop
 		nop
 		align 4
@@ -893,10 +862,6 @@ SH2_M_HotStart:
 ; ---------------------------------------
 
 master_loop:
-		mov	#Mars_DoDreq,r0
-		jsr	@r0
-		nop
-
 	; ---------------------------------------
 	; Wait for frameswap
 	; ---------------------------------------
@@ -915,6 +880,8 @@ master_loop:
 	; ---------------------------------------
 	; New frame is now shown on screen but
 	; we are still on VBlank
+	;
+	; Update colors
 	; ---------------------------------------
 
 		mov	#_vdpreg,r1
@@ -922,7 +889,7 @@ master_loop:
 		and	#$20,r0
 		tst	r0,r0			; Palette unlocked?
 		bt	.wait
-		mov	#RAM_Mars_Palette,r1
+		mov	#RAM_Mars_Palette,r1	; Copy all indexed colors
 		mov	#_palette,r2
  		mov	#256/16,r3
 .copy_pal:
@@ -933,31 +900,69 @@ master_loop:
 	endm
 		dt	r3
 		bf	.copy_pal
-		mov	#_vdpreg,r4		; Still on VBlank?
-.wait_vblnk:	mov.b	@(vdpsts,r4),r0
+
+	; ---------------------------------------
+	; Process DREQ
+	; ---------------------------------------
+
+		mov	#_vdpreg,r1		; Still on VBlank?
+		mov	#_sysreg+comm14,r2
+.no_dreq:
+		mov.b	@(vdpsts,r1),r0
 		and	#$80,r0
 		tst	r0,r0
-		bf	.wait_vblnk
+		bt	.time_out
+		mov.b	@r2,r0
+		and	#%01000000,r0
+		tst	r0,r0
+		bt	.no_dreq
+		and	#%10111111,r0
+		mov.b	r0,@r2
+		mov	#Mars_DoDreq,r0
+		jsr	@r0
+		nop
+.time_out:
 
 	; ---------------------------------------
-	; Framebuffer redraw goes here
+	; Interact with background
 	; ---------------------------------------
 
+	; RedrawALL bit.
+		mov	#_sysreg+comm14,r2
+		mov.b	@r2,r0
+		and	#%00010000,r0
+		tst	r0,r0
+		bt	.no_rdrw
+		mov.b	@r2,r0
+		and	#%11101111,r0
+		mov.b	r0,@r2
+		mov	#Cach_Drw_All,r1
+		mov	#2,r0
+		mov	r0,@r1
+.no_rdrw:
+		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_BgControl,r13
+		mov	@r13+,r1
+		mov	@r13+,r2
+		mov	r1,@(mbg_xpos,r14)
+		mov	r2,@(mbg_ypos,r14)
 		mov	#RAM_Mars_Background,r14
 		bsr	MarsVideo_MoveBg
 		nop
-		mov.b	@(mbg_draw_all,r14),r0
+
+	; ---------------------------------------
+	; Framebuffer redraws sections
+	; go here
+	; ---------------------------------------
+
+		mov	#Cach_Drw_All,r13		; DrawAll != 0?
+		mov	@r13,r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
 		dt	r0
-		mov.b	r0,@(mbg_draw_all,r14)
+		mov	r0,@r13
 		bsr	MarsVideo_DrawAllBg
 		nop
-		mov	#0,r0
-		mov.b	r0,@(mbg_draw_u,r14)	; Cancel
-		mov.b	r0,@(mbg_draw_d,r14)	; the
-		mov.b	r0,@(mbg_draw_l,r14)	; other
-		mov.b	r0,@(mbg_draw_r,r14)	; timers
 .no_redraw:
 		mov	#MarsVideo_BgDrawLR,r0
 		jsr	@r0
@@ -970,42 +975,19 @@ master_loop:
 		mov	#240,r3
 		bsr	MarsVideo_MakeTbl
 		nop
-		bsr	MarsVideo_FixTblShift
-		nop
-		mov	#_vdpreg,r1
-		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
-		xor	#1,r0				; (swap is done during VBlank)
-		mov.b	r0,@(framectl,r1)		; Save new bit
-		mov.b	r0,@(marsGbl_CurrFb,gbr)	; And a copy for checking
 
 	; ---------------------------------------
 
-		mov	#RAM_Mars_Background,r14
-		mov	@(marsGbl_DreqRead,gbr),r0
-		mov	r0,r13
-		mov	@r13,r1
-		mov	@(4,r13),r2
-		mov	r1,@(mbg_xpos,r14)
-		mov	r2,@(mbg_ypos,r14)
-
-		mov	@(8,r13),r0
-		tst	r0,r0
-		bt	.norequ
-		dt	r0
-		mov	r0,@(8,r13)
-		mov	#2,r0
-		mov.b	r0,@(mbg_draw_all,r14)
-.norequ:
-
+		bsr	MarsVideo_FixTblShift		; Call this AFTER all linetables
+		nop					; are set.
+		mov	#_vdpreg,r1
+		mov.b	@(framectl,r1),r0		; Framebuffer swap *REQUEST*, the swap
+		xor	#1,r0				; will be made on VBlank
+		mov.b	r0,@(framectl,r1)
+		mov.b	r0,@(marsGbl_CurrFb,gbr)	; Copy bit for checking
 		bra	master_loop
 		nop
 		align 4
-		ltorg
-
-; StrM_Test:
-; 		dc.b "32X recibe por DREQ:",0
-; 		align 4
-
 		ltorg
 
 ; ====================================================================
@@ -1638,16 +1620,16 @@ Rotate_Point
 ; @($04,r14) - SuperVDP bitmap number (0-3)
 ; ------------------------------------------------
 
-CmdTaskMd_SetBitmap:
-		mov 	#_vdpreg,r1
-.wait_fb:	mov.w   @($A,r1),r0
-		tst     #2,r0
-		bf      .wait_fb
-		mov	@($04,r14),r0
-		mov.b	r0,@(bitmapmd,r1)
-		rts
-		nop
-		align 4
+; CmdTaskMd_SetBitmap:
+; 		mov 	#_vdpreg,r1
+; .wait_fb:	mov.w   @($A,r1),r0
+; 		tst     #2,r0
+; 		bf      .wait_fb
+; 		mov	@($04,r14),r0
+; 		mov.b	r0,@(bitmapmd,r1)
+; 		rts
+; 		nop
+; 		align 4
 
 ; ------------------------------------------------
 ; Load palette to SuperVDP from MD
@@ -1658,17 +1640,17 @@ CmdTaskMd_SetBitmap:
 ; @($10,r14) - OR value
 ; ------------------------------------------------
 
-CmdTaskMd_LoadSPal:
-		mov	r14,r13
-		add	#4,r13
-		mov	@r13+,r1
-		mov	@r13+,r2
-		mov	@r13+,r3
-		mov	@r13+,r4
-		mov	#MarsVideo_LoadPal,r0
-		jmp	@r0
-		nop
-		align 4
+; CmdTaskMd_LoadSPal:
+; 		mov	r14,r13
+; 		add	#4,r13
+; 		mov	@r13+,r1
+; 		mov	@r13+,r2
+; 		mov	@r13+,r3
+; 		mov	@r13+,r4
+; 		mov	#MarsVideo_LoadPal,r0
+; 		jmp	@r0
+; 		nop
+; 		align 4
 
 ; ------------------------------------------------
 ; CALLS EXCLUSIVE TO SLAVE CPU
@@ -1980,12 +1962,12 @@ SH2_RAM:
 	if MOMPASS=1
 MarsRam_System	ds.l 0
 MarsRam_Video	ds.l 0
-; MarsRam_Sound	ds.l 0
+MarsRam_Dreq	ds.l 0
 sizeof_marsram	ds.l 0
 	else
 MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
-; MarsRam_Sound	ds.b (sizeof_marssnd-MarsRam_Sound)
+MarsRam_Dreq	ds.b MAX_MDDREQ				; Shared with Genesis side
 sizeof_marsram	ds.l 0
 	endif
 
@@ -2016,9 +1998,8 @@ sizeof_marsram	ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_Palette	ds.w 256	; Indexed palette
-RAM_Mars_HBlMdShft	ds.w 240	; Mode and Xshift bit for each HBlank
 RAM_Mars_Background	ds.w sizeof_marsbg
+RAM_Mars_HBlMdShft	ds.w 240	; Mode and Xshift bit for each HBlank
 RAM_Mars_LineTblCopy	ds.l 240	; Index | BadLine
 sizeof_marsvid		ds.l 0
 			finish
@@ -2029,8 +2010,18 @@ sizeof_marsvid		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
-RAM_Mars_DREQ0		ds.w $800			; 128 LONGS of storage
-RAM_Mars_DREQ1		ds.w $800
 RAM_Mars_Global		ds.l sizeof_MarsGbl		; gbr values go here.
 sizeof_marssys		ds.l 0
+			finish
+
+; ====================================================================
+; ----------------------------------------------------------------
+; DREQ Genesis control
+;
+; Make sure it matches on the Genesis side manually
+; ----------------------------------------------------------------
+
+			struct MarsRam_Dreq
+RAM_Mars_Palette	ds.w 256
+RAM_Mars_BgControl	ds.l $10
 			finish

@@ -209,14 +209,12 @@ MarsSound_PwmEnable:
 ; --------------------------------------------------------
 ; MarsSound_Refill
 ;
-; Call this if MD wants to do DMA, which sets RV=1
-; starting from specific slot
-;
 ; Uses:
 ; r1-r8
 ; --------------------------------------------------------
 
-; The trick here is to keep PWM interrupt enabled
+; The trick here is to keep PWM interrupt enabled while
+; filling backup data
 
 MarsSnd_Refill:
 		mov	#MarsSnd_PwmChnls,r8

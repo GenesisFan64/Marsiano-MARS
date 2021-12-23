@@ -150,7 +150,7 @@ Video_LoadPal:
 		move.w	(a0)+,(a6)
 		dbf	d7,.loop
 		rts
-		
+
 ; --------------------------------------------------------
 ; Video_LoadMap
 ; 
@@ -892,8 +892,43 @@ Video_LoadArt:
 ; System_MdMarsDreq
 ; ----------------------------------------------------------------
 
-Video_MdMars_Pal:
+; --------------------------------------------------------
+; Video_Mars_LoadPal
+; --------------------------------------------------------
+
+Video_Mars_LoadPal:
+		lea	(RAM_MdMarsPal),a6
+		moveq	#0,d7
+		move.w	d0,d7
+		add.w	d7,d7
+		adda	d7,a6
+		move.w	d1,d7
+		sub.w	#1,d7
+.loop:
+		move.w	(a0)+,d6
+		and.w	#$7FFF,d6
+		move.w	d6,(a6)+
+		dbf	d7,.loop
 		rts
+
+; ; --------------------------------------------------------
+; ; Video_Mars_LoadPal
+; ; --------------------------------------------------------
+;
+; Video_LoadPalMars:
+; 		lea	(RAM_MdMarsPal),a6
+; 		moveq	#0,d7
+; 		move.w	d0,d7
+; 		add.w	d7,d7
+; 		adda	d7,a6
+; 		move.w	d1,d7
+; 		sub.w	#1,d7
+; .loop:
+; 		move.w	(a0)+,d6
+; 		and.w	#$7FFF,d6
+; 		move.w	d6,(a6)+
+; 		dbf	d7,.loop
+; 		rts
 
 ; ====================================================================
 ; --------------------------------------------------------

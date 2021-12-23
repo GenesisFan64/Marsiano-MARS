@@ -7,7 +7,6 @@
 ; SH2 SIDE MAP
 ; --------------------------------------------------------
 
-; NEW test.
 CS0		equ	$00000000	; Boot rom & system registers
 CS1		equ	$02000000	; ROM data (all 4MB), Locked if RV=1
 CS2		equ	$04000000	; Framebuffer section
@@ -42,7 +41,7 @@ _overwrite:	equ	CS2+$20000	; Overwrite, $00-byte writes are ignored
 ; _sysreg
 adapter		equ	$00		; adapter control register
 intmask		equ	$01		; interrupts mask
-standby		equ	$02		; CMD interrupt request bit by MD side (slave|master)
+standby		equ	$03		; CMD interrupt request bit by MD side (slave|master)
 hcount		equ	$05		; H Counter
 dreqctl		equ	$07		; DREQ control (BYTE READ)
 dreqsource	equ	$08		; DREQ source address

@@ -3,17 +3,17 @@
 ; MD/MARS shared constants
 ; ----------------------------------------------------------------
 
-MAX_MDDMATSK	equ 16			; MAX DMA transfer requests for VBlank
-MAX_MDDREQ	equ $500*2		; MAX size for DREQ RAM transfer in WORDS ($80 aligned)
+MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
+MAX_MDDREQ	equ $800	; MAX size for DREQ RAM transfer in WORDS ($08 aligned)
 
 ; ====================================================================
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
 
-MDRAM_START	equ $FFFFA000		; Start of working MD RAM (below that is for CODE or decompression output)
-MAX_MDERAM	equ $800		; MAX RAM for current screen mode (title,menu,or gameplay...)
-varNullVram	equ $7FF		; Default Blank tile for some video routines
+MDRAM_START	equ $FFFF9000	; Start of working MD RAM
+MAX_MDERAM	equ $800	; MAX RAM for current screen mode
+varNullVram	equ $7FF	; Default Blank tile for some video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -73,18 +73,13 @@ sizeof_input	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdSystem
-RAM_MdMarsDreq	ds.b MAX_MDDREQ			; RAM sent to Master CPU using DREQ
 RAM_InputData	ds.b sizeof_input*4		; Input data section
 RAM_SaveData	ds.b $200			; SRAM data cache
-RAM_Objects	ds.b $10*32
-RAM_FrameCount	ds.l 1				; Global frame counter
 RAM_SysRandVal	ds.l 1				; Random value
 RAM_SysRandSeed	ds.l 1				; Randomness seed
 RAM_initflug	ds.l 1				; "INIT" flag
 RAM_MdMarsVInt	ds.w 3				; VBlank jump (JMP xxxx xxxx)
 RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
-RAM_MdMarsTCntM	ds.w 1				; Counter for MASTER CPU's task list
-RAM_MdMarsTCntS	ds.w 1				; Counter for SLAVE CPU's task list
 RAM_SysFlags	ds.w 1				; Game engine flags (note: it's a byte)
 sizeof_mdsys	ds.l 0
 		finish
@@ -113,8 +108,21 @@ RAM_VdpDmaIndx	ds.w 1
 RAM_VdpDmaMod	ds.w 1
 RAM_VidPrntVram	ds.w 1			; Default VRAM location for ASCII text used by Video_Print
 RAM_VidPrntList	ds.w 3*64		; Video_Print list: Address, Type
+RAM_FrameCount	ds.l 1				; Global frame counter
 RAM_VdpRegs	ds.b 24			; VDP Register cache
 sizeof_mdvid	ds.l 0
+		finish
+
+; ====================================================================
+; ----------------------------------------------------------------
+; 32X control using DREQ
+;
+; Size for this buffer is set externally as MAX_MDDREQ
+; ----------------------------------------------------------------
+
+		struct RAM_MdDreq
+RAM_MdMarsPal	ds.w 256
+RAM_MdMarsBg	ds.l $10
 		finish
 
 ; ====================================================================
@@ -133,6 +141,7 @@ RAM_MdSound	ds.l 0
 RAM_MdVideo	ds.l 0
 RAM_MdSystem	ds.l 0
 RAM_MdGlobal	ds.l 0
+RAM_MdDreq	ds.l 0
 sizeof_mdram	ds.l 0
 	else
 RAM_ModeBuff	ds.b MAX_MDERAM			; Second pass: sizes are set
@@ -140,6 +149,7 @@ RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
 RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
 RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
 RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal
+RAM_MdDreq	ds.b MAX_MDDREQ
 sizeof_mdram	ds.l 0
 	endif
 

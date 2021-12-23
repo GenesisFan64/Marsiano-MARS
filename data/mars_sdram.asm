@@ -11,6 +11,4 @@
 ; ----------------------------------------------------------------
 
 	align 4
-TESTMARS_BG_PAL:
-	binclude "data/mars/test_pal.bin"
-	align 4
+
