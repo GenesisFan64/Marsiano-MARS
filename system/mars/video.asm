@@ -50,13 +50,12 @@ sizeof_marsbg	ds.l 0
 MarsVideo_Init:
 		sts	pr,@-r15
 		mov	#_sysreg,r1
-		mov 	#FM,r0			; Set SVDP permission to SH2
-  		mov.b	r0,@(adapter,r1)
+		mov 	#FM,r0			; Set SVDP permission to SH2, but the Genesis
+  		mov.b	r0,@(adapter,r1)	; will control the pallete using DREQ
 		mov 	#_vdpreg,r1
 		mov	#0,r0			; Start at blank
 		mov.b	r0,@(bitmapmd,r1)
-
-		mov	#_framebuffer,r2
+		mov	#_framebuffer,r2	; Make null nametables
 		bsr	.def_fb
 		nop
 		bsr	.def_fb
@@ -67,14 +66,13 @@ MarsVideo_Init:
 		align 4
 .def_fb:
 		mov	r2,r3
-		mov	#$1FD80/2,r0	; very last usable line
+		mov	#$1FD80/2,r0	; very last usable (blank) line
 		mov	#240,r4
 .nxt_lne:
 		mov.w	r0,@r3
 		dt	r4
 		bf/s	.nxt_lne
 		add	#2,r3
-
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov	r0,r3

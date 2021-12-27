@@ -100,15 +100,18 @@ sizeof_mdsnd	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdVideo
-RAM_SpriteData	ds.w 8*70		; DMA'd Sprites
 RAM_HorScroll	ds.l 240		; DMA'd Horizontal scroll data
 RAM_VerScroll	ds.l 320/16		; DMA'd Vertical scroll data
+RAM_SpriteData	ds.w 8*70		; DMA'd Sprites
+RAM_MdMarsPalFd	ds.w 256		; Target 32X palette for FadeIn/Out
 RAM_VdpDmaList	ds.w 7*MAX_MDDMATSK
+RAM_VidPrntList	ds.w 3*64		; Video_Print list: Address, Type
 RAM_VdpDmaIndx	ds.w 1
 RAM_VdpDmaMod	ds.w 1
 RAM_VidPrntVram	ds.w 1			; Default VRAM location for ASCII text used by Video_Print
-RAM_VidPrntList	ds.w 3*64		; Video_Print list: Address, Type
-RAM_FrameCount	ds.l 1				; Global frame counter
+RAM_ReqFadeMars	ds.w 1			; FadeIn/Out request for 32X palette
+RAM_ReqFadeMSpd	ds.w 1			; Increment speed for 32X's fade
+RAM_FrameCount	ds.l 1			; Global frame counter
 RAM_VdpRegs	ds.b 24			; VDP Register cache
 sizeof_mdvid	ds.l 0
 		finish

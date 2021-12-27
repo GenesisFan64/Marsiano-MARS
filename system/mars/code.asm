@@ -850,7 +850,6 @@ SH2_M_HotStart:
 		mov	#224,r4
 		bsr	MarsVideo_SetBg
 		nop
-
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
@@ -907,11 +906,12 @@ master_loop:
 
 		mov	#_vdpreg,r1		; Still on VBlank?
 		mov	#_sysreg+comm14,r2
-.no_dreq:
+
+.time_out:
 		mov.b	@(vdpsts,r1),r0
 		and	#$80,r0
 		tst	r0,r0
-		bt	.time_out
+		bf	.time_out
 		mov.b	@r2,r0
 		and	#%01000000,r0
 		tst	r0,r0
@@ -921,7 +921,7 @@ master_loop:
 		mov	#Mars_DoDreq,r0
 		jsr	@r0
 		nop
-.time_out:
+.no_dreq:
 
 	; ---------------------------------------
 	; Interact with background

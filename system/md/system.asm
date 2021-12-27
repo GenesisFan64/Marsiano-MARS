@@ -428,13 +428,13 @@ System_MdMarsDreq:
 		move.w	d6,(sysmars_reg+dreqlen).l
 		bset	#2,(sysmars_reg+dreqctl).l
 		bset	#6,(sysmars_reg+comm14).l
+		move.w	d6,d5
+		lsr.w	#2,d5
+		sub.w	#1,d5
 .wait_bit:
 		btst	#5,(sysmars_reg+comm14).l
 		beq.s	.wait_bit
 		bclr	#5,(sysmars_reg+comm14).l
-		move.w	d6,d5
-		lsr.w	#2,d5
-		sub.w	#1,d5
 .l0:		move.w  (a6)+,(a5)
 		move.w  (a6)+,(a5)
 		move.w  (a6)+,(a5)
