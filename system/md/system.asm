@@ -427,36 +427,27 @@ System_MdMarsDreq:
 .retry:
 		move.w	d6,(sysmars_reg+dreqlen).l
 		bset	#2,(sysmars_reg+dreqctl).l
-		bset	#6,(sysmars_reg+comm14).l
+		bset	#0,(sysmars_reg+standby).l
+.wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Request CMD to Master
+		bne.s	.wait_cmd
+.wait_bit:
+		btst	#6,(sysmars_reg+comm14).l
+		beq.s	.wait_bit
+		bclr	#6,(sysmars_reg+comm14).l
 		move.w	d6,d5
 		lsr.w	#2,d5
 		sub.w	#1,d5
-.wait_bit:
-		btst	#5,(sysmars_reg+comm14).l
-		beq.s	.wait_bit
-		bclr	#5,(sysmars_reg+comm14).l
-.l0:		move.w  (a6)+,(a5)
+.l0:		move.w  (a6)+,(a5)		; From here the SH2 reads FIFO using DMA
+		move.w  (a6)+,(a5)		; First In, First Out
 		move.w  (a6)+,(a5)
 		move.w  (a6)+,(a5)
-		move.w  (a6)+,(a5)
-.l1:		btst	#7,dreqctl(a5)		; Got Full ?
+.l1:		btst	#7,dreqctl(a5)		; Got Full here?
 		bne.s	.l1
 		dbf	d5,.l0
-		btst	#2,dreqctl(a5)		; DMA All OK ?
+		btst	#2,dreqctl(a5)		; DMA got ok? (In case DREQ failed...)
 		bne	.retry
 		move.w	d7,sr
 		rts
-
-; .loopy:
-; 		bsr	.blast_me			; each blast is $80 words
-; 		dbf	d5,.loopy
-; 		move.w	d7,sr
-; 		rts
-; .blast_me:
-; 	rept $80
-; 		move.w	(a6)+,(a5)
-; 	endm
-; 		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------

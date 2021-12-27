@@ -113,6 +113,7 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
+		bsr	System_MdMarsDreq
 
 .wait_frm
 		move.w	(vdp_ctrl),d4
@@ -128,7 +129,6 @@ thisCode_Top:
 		neg.l	d0
 		move.l	d0,(vdp_data).l
 		add.l	#1,(RAM_Framecount).l
-		bsr	System_MdMarsDreq
 
 	; Window up/down
 		move.w	(RAM_WindowCurr).w,d2

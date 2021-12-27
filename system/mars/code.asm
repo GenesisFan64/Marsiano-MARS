@@ -316,6 +316,8 @@ m_irq_bad:
 ; ------------------------------------------------
 
 m_irq_pwm:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -337,6 +339,8 @@ m_irq_pwm:
 ; ------------------------------------------------
 
 m_irq_cmd:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -358,24 +362,17 @@ m_irq_cmd:
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
 		mov	r0,@(8,r3)		; Length
+		mov.b	@r2,r0
+		or	#%01000000,r0		; Tell MD we are ALMOST ready, so the 68K
+		mov.b	r0,@r2			; side writes the first FIFO words
 		mov	@($C,r3),r0		; dummy readback(?)
 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-		mov.b	@r2,r0
-		or	#%01000000,r0		; Tell MD we are ready.
-		mov.b	r0,@r2
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
-
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
-
-		nop
-		nop
-		nop
-		nop
-		nop
 		rts
 		nop
 		align 4
@@ -387,6 +384,8 @@ m_irq_cmd:
 ; ------------------------------------------------
 
 m_irq_h:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -408,49 +407,19 @@ m_irq_h:
 ; ------------------------------------------------
 
 m_irq_v:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+vintclr,r1
 		mov.w	r0,@r1
-
-; 		mov	#_vdpreg,r1		; Wait for palette access
-; .wait_fb:	mov.w	@(vdpsts,r1),r0		; Read status as WORD
-; 		tst	#2,r0			; Framebuffer busy? (wait for FEN=1)
-; 		bf	.wait_fb
-; .wait:		mov.b	@(vdpsts,r1),r0		; Now read as a BYTE
-; 		tst	#$20,r0			; Palette unlocked? (wait for PEN=0)
-; 		bt	.wait
-; 		stc	sr,@-r15
-; 		mov	r2,@-r15
-; 		mov	r3,@-r15
-; 		mov	r4,@-r15
-; 		mov	r5,@-r15
-; 		sts	macl,@-r15
-; 		mov	#$F0,r0			; Disable interrupts
-; 		ldc	r0,sr
-; 		mov	#RAM_Mars_Palette,r1
-; 		mov	#_palette,r2
-;  		mov	#256/16,r3
-; .copy_pal:
-; 	rept 16
-; 		mov.w	@r1+,r0
-; 		mov.w	r0,@r2
-; 		add	#2,r2
-; 	endm
-; 		dt	r3
-; 		bf	.copy_pal
-
-; 		lds	@r15+,macl
-; 		mov	@r15+,r5
-; 		mov	@r15+,r4
-; 		mov	@r15+,r3
-; 		mov	@r15+,r2
-; 		ldc	@r15+,sr
-; .mid_pwrite:
-		mov 	#0,r0				; Clear VintFlag for Master
-		mov.w	r0,@(marsGbl_VIntFlag_M,gbr)
+		nop
+		nop
+		nop
+		nop
+		nop
 		rts
 		nop
 		align 4
@@ -461,18 +430,14 @@ m_irq_v:
 ; Master | VRES Interrupt (RESET on Genesis)
 ; ------------------------------------------------
 
-; TODO: Breaks on many RESETs
-
 m_irq_vres:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov.l	#_sysreg,r0
 		ldc	r0,gbr
 		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
-		nop
-		nop
-		nop
-		nop
-		mov	#$F0,r0
-		ldc	r0,sr
+
+	; TODO: ver que hacer con esto...
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.mars_reset
@@ -539,6 +504,15 @@ s_irq_bad:
 ; ------------------------------------------------
 
 s_irq_pwm:
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
+		mov	#_sysreg+pwmintclr,r1
+		mov.w	r0,@r1
+
 		mov	#_sysreg+monowidth,r1
 		mov.b	@r1,r0
  		tst	#$80,r0
@@ -548,30 +522,10 @@ s_irq_pwm:
 		jsr	@r0
 		nop
 		lds	@r15+,pr
-.exit:		mov	#_FRT,r1
-		mov.b	@(7,r1),r0
-		xor	#2,r0
-		mov.b	r0,@(7,r1)
-		mov	#_sysreg+pwmintclr,r1
-		mov.w	r0,@r1
+.exit:
 		rts
 		nop
 		align 4
-
-; 		mov	#_FRT,r1
-; 		mov.b	@(7,r1),r0
-; 		xor	#2,r0
-; 		mov.b	r0,@(7,r1)
-; 		mov	#_sysreg+pwmintclr,r1
-; 		mov.w	r0,@r1
-; 		nop
-; 		nop
-; 		nop
-; 		nop
-; 		nop
-; 		rts
-; 		nop
-; 		align 4
 
 ; =================================================================
 ; ------------------------------------------------
@@ -579,62 +533,70 @@ s_irq_pwm:
 ; ------------------------------------------------
 
 s_irq_cmd:
-		stc	sr,@-r15
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
+		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
+		mov.w	r0,@r1
+		nop
+		nop
+		nop
+		nop
+		nop
 
 ; ----------------------------------
 
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
-		mov	r6,@-r15
-		mov	r7,@-r15
-		mov	r8,@-r15
-		mov	r9,@-r15
-		sts	pr,@-r15
-; 		mov	#MarsSnd_PwmControl,r9
-; 		mov	#_sysreg+comm15,r7	; control comm
-; 		mov	#4,r5			; number of passes
-; .wait_1:
-; 		nop
-; 		nop
-; 		mov.b	@r7,r0			; wait first CLOCK
-; 		and	#%00100000,r0		; from Z80
-; 		cmp/pl	r0
-; 		bf	.wait_1
-; 		mov	#7,r6
-; 		mov	#_sysreg+comm0,r8
-; .copy_1:
-; 		mov.w	@r8+,r0
-; 		mov.w	r0,@r9
-; 		dt	r6
-; 		bf/s	.copy_1
-; 		add	#2,r9
-; 		mov.b	@r7,r0			; tell Z80 CLK finished
-; 		and	#%11011111,r0
-; 		mov.b	r0,@r7
-; 		dt	r5
-; 		bf	.wait_1
-; 		mov.w	#1,r0			; request SOUND update to main loop
-; 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
-.cantupd:
-		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
-		mov.w	r0,@r1
-; 		mov.w	@r1,r0
-		lds	@r15+,pr
-		mov 	@r15+,r9
-		mov 	@r15+,r8
-		mov 	@r15+,r7
-		mov 	@r15+,r6
-		mov 	@r15+,r5
-		mov 	@r15+,r4
-		mov 	@r15+,r3
-		mov 	@r15+,r2
-		ldc 	@r15+,sr
+; 		stc	sr,@-r15
+; 		mov	r2,@-r15
+; 		mov	r3,@-r15
+; 		mov	r4,@-r15
+; 		mov	r5,@-r15
+; 		mov	r6,@-r15
+; 		mov	r7,@-r15
+; 		mov	r8,@-r15
+; 		mov	r9,@-r15
+; 		sts	pr,@-r15
+; ; 		mov	#MarsSnd_PwmControl,r9
+; ; 		mov	#_sysreg+comm15,r7	; control comm
+; ; 		mov	#4,r5			; number of passes
+; ; .wait_1:
+; ; 		nop
+; ; 		nop
+; ; 		mov.b	@r7,r0			; wait first CLOCK
+; ; 		and	#%00100000,r0		; from Z80
+; ; 		cmp/pl	r0
+; ; 		bf	.wait_1
+; ; 		mov	#7,r6
+; ; 		mov	#_sysreg+comm0,r8
+; ; .copy_1:
+; ; 		mov.w	@r8+,r0
+; ; 		mov.w	r0,@r9
+; ; 		dt	r6
+; ; 		bf/s	.copy_1
+; ; 		add	#2,r9
+; ; 		mov.b	@r7,r0			; tell Z80 CLK finished
+; ; 		and	#%11011111,r0
+; ; 		mov.b	r0,@r7
+; ; 		dt	r5
+; ; 		bf	.wait_1
+; ; 		mov.w	#1,r0			; request SOUND update to main loop
+; ; 		mov.w	r0,@(marsGbl_PwmCtrlUpd,gbr)
+; .cantupd:
+;
+; ; 		mov.w	@r1,r0
+; 		lds	@r15+,pr
+; 		mov 	@r15+,r9
+; 		mov 	@r15+,r8
+; 		mov 	@r15+,r7
+; 		mov 	@r15+,r6
+; 		mov 	@r15+,r5
+; 		mov 	@r15+,r4
+; 		mov 	@r15+,r3
+; 		mov 	@r15+,r2
+; 		ldc 	@r15+,sr
 		rts
 		nop
 		align 4
@@ -646,6 +608,8 @@ s_irq_cmd:
 ; ------------------------------------------------
 
 s_irq_h:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -667,15 +631,21 @@ s_irq_h:
 ; ------------------------------------------------
 
 s_irq_v:
-		mov 	#0,r0				; Clear VintFlag for Slave
-		mov.w	r0,@(marsGbl_VIntFlag_S,gbr)
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+vintclr,r1
-		rts
 		mov.w	r0,@r1
+		nop
+		nop
+		nop
+		nop
+		nop
+		rts
+		nop
 		align 4
 
 ; =================================================================
@@ -684,15 +654,11 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov.l	#_sysreg,r0
 		ldc	r0,gbr
 		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
-		nop
-		nop
-		nop
-		nop
-		mov	#$F0,r0
-		ldc	r0,sr
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.mars_reset
@@ -815,7 +781,7 @@ SH2_M_HotStart:
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#_sysreg,r1
-		mov	#0,r0				; Enable usage of these interrupts
+		mov	#CMDIRQ_ON,r0				; Enable usage of these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
 		mov 	#$C0000000,r2
@@ -910,26 +876,30 @@ master_loop:
 		bf	.copy_pal
 
 	; ---------------------------------------
-	; Process DREQ
+
+		stc	sr,@-r15		; Interrupts OFF
+		mov.l	#$F0,r0
+		ldc	r0,sr
+		mov	#_DMACHANNEL0,r1	; Check if we got mid-DMA
+		mov	@r1,r0
+		and	#%01,r0			; Enabled?
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:	mov	@r1,r0			; Mid-transfer?
+		and	#%10,r0
+		tst	r0,r0
+		bt	.wait_dma
+		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	r0,r1
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
+.not_yet:
+		ldc	@r15+,sr
+
 	; ---------------------------------------
 
-		mov	#_vdpreg,r1		; Still on VBlank?
-		mov	#_sysreg+comm14,r2
-.no_dreq:
-		mov.b	@(vdpsts,r1),r0
-		and	#$80,r0
-		tst	r0,r0
-		bt	.time_out
-		mov.b	@r2,r0
-		and	#%01000000,r0
-		tst	r0,r0
-		bt	.no_dreq
-		and	#%10111111,r0
-		mov.b	r0,@r2
-		mov	#Mars_DoDreq,r0
-		jsr	@r0
-		nop
-.time_out:
 		mov	#RAM_Mars_Background,r14
 		mov	#Dreq_BgControl,r13
 		mov	@(marsGbl_DreqRead,gbr),r0
@@ -941,6 +911,13 @@ master_loop:
 		mov	#RAM_Mars_Background,r14
 		bsr	MarsVideo_MoveBg
 		nop
+		mov	#_vdpreg,r1		; Still on VBlank?
+		mov	#_sysreg+comm14,r2
+.no_dreq:
+		mov.b	@(vdpsts,r1),r0
+		and	#$80,r0
+		tst	r0,r0
+		bf	.no_dreq
 
 	; ---------------------------------------
 	; Interact with background
