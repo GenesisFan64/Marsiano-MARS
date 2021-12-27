@@ -935,15 +935,15 @@ Video_LoadPalFade_Mars:
 ; d0 - Number of colors
 ; d1 - Speed
 ;
-; RAM_ReqFadeMars:
-; 01 - Fade in
-; 02 - Fade out to black
+; RAM_ReqFadeMars: (WORD)
+; $00 - No task (or finished)
+; $01 - Fade in
+; $02 - Fade out to black
 ;
 ; CALL THIS OUTSIDE OF VBLANK
 ; --------------------------------------------------------
 
-; TODO: luego ver como le hago con el
-; bit de priority
+; TODO: luego ver que hago con el priority bit
 
 Video_MarsPalFade:
 		move.w	(RAM_ReqFadeMars),d7
@@ -1022,8 +1022,8 @@ Video_MarsPalFade:
 		lsr.w	#2,d1
 		move.w	d6,(a0)+
 		adda	#2,a6
-		tst.w	d2		; Index finished?
-		beq.s	.no_fnsh
+		cmp.w	#%111,d2
+		bne.s	.no_fnsh
 		swap	d6
 		sub.w	#1,d6
 		swap	d6

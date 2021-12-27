@@ -26,6 +26,8 @@ MAX_MSPR	equ	128		; Maximum sprites
 ; ----------------------------------------------------------------
 
 			struct 0
+marsGbl_DreqRead	ds.l 1
+marsGbl_DreqWrite	ds.l 1
 marsGbl_XShift		ds.w 1		; Xshift bit at the start of master_loop
 marsGbl_XPatch		ds.w 1		; Redraw counter for the $xxFF fix, set to 0 on X/Y change
 marsGbl_MstrReqDraw	ds.w 1
@@ -351,7 +353,7 @@ m_irq_cmd:
 		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
 		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
-		mov	#MarsRam_Dreq,r0
+		mov	@(marsGbl_DreqWrite,gbr),r0
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
@@ -813,7 +815,7 @@ SH2_M_HotStart:
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
+		mov	#0,r0				; Enable usage of these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
 		mov 	#$C0000000,r2
@@ -833,6 +835,10 @@ SH2_M_HotStart:
 		mov	#0,r0
 		mov	r0,@($30,r1)
 		mov	r0,@($C,r1)
+		mov	#MarsRam_Dreq0,r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+		mov	#MarsRam_Dreq1,r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
@@ -888,7 +894,10 @@ master_loop:
 		and	#$20,r0
 		tst	r0,r0			; Palette unlocked?
 		bt	.wait
-		mov	#RAM_Mars_Palette,r1	; Copy all indexed colors
+		mov	#Dreq_Palette,r13
+		mov	@(marsGbl_DreqRead,gbr),r0
+		add	r0,r13
+		mov	r0,r1
 		mov	#_palette,r2
  		mov	#256/16,r3
 .copy_pal:
@@ -906,12 +915,11 @@ master_loop:
 
 		mov	#_vdpreg,r1		; Still on VBlank?
 		mov	#_sysreg+comm14,r2
-
-.time_out:
+.no_dreq:
 		mov.b	@(vdpsts,r1),r0
 		and	#$80,r0
 		tst	r0,r0
-		bf	.time_out
+		bt	.time_out
 		mov.b	@r2,r0
 		and	#%01000000,r0
 		tst	r0,r0
@@ -921,7 +929,18 @@ master_loop:
 		mov	#Mars_DoDreq,r0
 		jsr	@r0
 		nop
-.no_dreq:
+.time_out:
+		mov	#RAM_Mars_Background,r14
+		mov	#Dreq_BgControl,r13
+		mov	@(marsGbl_DreqRead,gbr),r0
+		add	r0,r13
+		mov	@r13+,r1
+		mov	@r13+,r2
+		mov	r1,@(mbg_xpos,r14)
+		mov	r2,@(mbg_ypos,r14)
+		mov	#RAM_Mars_Background,r14
+		bsr	MarsVideo_MoveBg
+		nop
 
 	; ---------------------------------------
 	; Interact with background
@@ -940,15 +959,7 @@ master_loop:
 		mov	#2,r0
 		mov	r0,@r1
 .no_rdrw:
-		mov	#RAM_Mars_Background,r14
-		mov	#RAM_Mars_BgControl,r13
-		mov	@r13+,r1
-		mov	@r13+,r2
-		mov	r1,@(mbg_xpos,r14)
-		mov	r2,@(mbg_ypos,r14)
-		mov	#RAM_Mars_Background,r14
-		bsr	MarsVideo_MoveBg
-		nop
+
 
 	; ---------------------------------------
 	; Framebuffer redraws sections
@@ -1962,12 +1973,14 @@ SH2_RAM:
 	if MOMPASS=1
 MarsRam_System	ds.l 0
 MarsRam_Video	ds.l 0
-MarsRam_Dreq	ds.l 0
+MarsRam_Dreq0	ds.l 0
+MarsRam_Dreq1	ds.l 0
 sizeof_marsram	ds.l 0
 	else
 MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
-MarsRam_Dreq	ds.b MAX_MDDREQ				; Shared with Genesis side
+MarsRam_Dreq0	ds.b MAX_MDDREQ				; Shared with Genesis side
+MarsRam_Dreq1	ds.b MAX_MDDREQ
 sizeof_marsram	ds.l 0
 	endif
 
@@ -2018,10 +2031,17 @@ sizeof_marssys		ds.l 0
 ; ----------------------------------------------------------------
 ; DREQ Genesis control
 ;
-; Make sure it matches on the Genesis side manually
+; Read these labels directly and add
+; marsGbl_DreqRead to them
+;
+;	mov	#DREQ_LABEL,r14
+; 	mov	@(marsGbl_DreqRead,gbr),r0
+; 	add	r0,r14
+;
+; *** Make sure it matches on the Genesis side manually ***
 ; ----------------------------------------------------------------
 
-			struct MarsRam_Dreq
-RAM_Mars_Palette	ds.w 256
-RAM_Mars_BgControl	ds.l $10
+			struct 0
+Dreq_Palette		ds.w 256
+Dreq_BgControl		ds.l $10
 			finish

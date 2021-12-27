@@ -23,9 +23,9 @@ Do note that current 32X emulators ignore some hardware restrictions and bugs of
 - RV bit: This bit sets the ROM map temporary to it's original location on the Genesis side, as a workaround for the Genesis DMA's ROM-to-VDP transfers, If you do any DMA-transfer without setting this bit: it will transfer trash data, Your Genesis-DMA transfer routines MUST be located on RAM (at least the last VDP write), on the SH2 side: If RV is set, any read from SH2's ROM area will return trash data.
 - FM bit: This bit tells which system side (Genesis or 32X) can read/write to the Super VDP (The framebuffer and 256-color palette), if a CPU with no permission touches the Super VDP, it will freeze the entire system (32X add-on or Genesis), on emulation nothing happens.
 - BUS fighting on SH2: If any of the SH2 CPUs WRITE the same location at the same time it will crash the add-on. (Only checked SDRAM area, and the comm ports)
-- SH2's DMA locks Palette (Hardware bug I found, or probably did something wrong): If transfering indexed-palette data to SuperVDP's Palette using DMA, the first transfer will work, then the DMA will get stuck, both Source and Destination areas can't be rewritten
 - PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs
 - SDRAM is a little slower for code. Found this while checking the PWM playback: on SDRAM the playback code struggled to play while on Cache it worked as it supposed to. ANY code that requires to process things fast it must be done on the current SH2's cache (at $C0000000, $800 bytes max, NOT $1000, GensKmod's debugger shows it as $1000 bytes long)
+- If the SH2 peforms DMA (Channel 0) on the background and the DESTINATION section gets modified (READ or WRITE) it will stop the DMA transfer entirely.
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
 If it doesn't boot or freezes: I probably broke something without testing on HW

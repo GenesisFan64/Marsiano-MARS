@@ -3,7 +3,8 @@
 ; BANK 0 of 68k data ($900000-$9FFFFF)
 ; for big stuff like maps, levels, etc.
 ;
-; For the graphics see md_dma.asm
+; For graphics use DMA and place your files at
+; md_dma.asm (Watch out for the $20000-section limit.)
 ;
 ; Maximum size: $0FFFFF bytes per bank
 ; ----------------------------------------------------------------

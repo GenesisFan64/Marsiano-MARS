@@ -4,7 +4,7 @@
 ; ----------------------------------------------------------------
 
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-MAX_MDDREQ	equ $800	; MAX size for DREQ RAM transfer in WORDS ($08 aligned)
+MAX_MDDREQ	equ $400	; MAX size for DREQ RAM transfer in WORDS ($08 bytes aligned)
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -126,7 +126,11 @@ sizeof_mdvid	ds.l 0
 		struct RAM_MdDreq
 RAM_MdMarsPal	ds.w 256
 RAM_MdMarsBg	ds.l $10
+sizeof_dreqmd	ds.l 0
 		finish
+	if MOMPASS=7
+		message "DREQ RAM: \{(sizeof_dreqmd-RAM_MdDreq)&$FFFFFF} of \{(MAX_MDDREQ)&$FFFFFF}"
+	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------

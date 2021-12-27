@@ -35,8 +35,13 @@ Mars_DoDreq:
 		mov	#_sysreg+comm14,r2
 		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
 		mov	r0,@($C,r3)
+		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	r0,r1
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
 		mov	#_sysreg+dreqfifo,r1
-		mov	#MarsRam_Dreq,r0
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
@@ -49,6 +54,11 @@ Mars_DoDreq:
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
+; .wait_dma:
+; 		mov	@($C,r3),r0		; Wait until DMA finishes
+; 		and	#%10,r0
+; 		tst	r0,r0
+; 		bt	.wait_dma
 		rts
 		nop
 		align 4

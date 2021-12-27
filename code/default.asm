@@ -71,6 +71,16 @@ thisCode_Top:
 		move.w	#1*$20,d1
 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
 		bsr	Video_LoadArt
+		lea	(MAP_FGTEST),a0
+		move.l	#locate(0,8,0),d0
+		move.l	#mapsize(192,224),d1
+		move.w	#1+$2000,d2
+		bsr	Video_LoadMap
+		lea	(MAP_FGTEST),a0
+		move.l	#locate(0,8+32,0),d0
+		move.l	#mapsize(192,224),d1
+		move.w	#1+$2000,d2
+		bsr	Video_LoadMap
 
 		lea	str_Gema(pc),a0			; GEMA tester text on WINDOW
 		move.l	#locate(2,2,2),d0
@@ -82,8 +92,8 @@ thisCode_Top:
 		lea	(TESTMARS_BG_PAL),a0
 		moveq	#0,d0
 		move.w	#256,d1
-		bsr	Video_LoadPal_Mars
-; 		move.w	#1,(RAM_ReqFadeMars).w
+		bsr	Video_LoadPalFade_Mars
+		move.w	#1,(RAM_ReqFadeMars).w
 
 		bset	#4,(sysmars_reg+comm14).l
 .wait2:		btst	#4,(sysmars_reg+comm14).l

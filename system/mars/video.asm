@@ -982,10 +982,11 @@ MarsVideo_FixTblShift:
 		mov	r12,r0
 		shlr	r0
 		mov.w	r0,@r13
-		mov	#320,r3
+		mov	#320+16,r3
 .copyline:
 		add	#1,r2
 		mov.b	@r2,r0
+		nop
 		mov.b	r0,@(1,r12)
 		dt	r3
 		bf/s	.copyline
