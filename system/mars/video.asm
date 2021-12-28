@@ -60,6 +60,17 @@ MarsVideo_Init:
 		nop
 		bsr	.def_fb
 		nop
+
+	; Clear values
+		mov	#RAM_Mars_Background,r1
+		mov	#0,r0
+		mov	r0,@(mbg_data,r1)
+		mov	r0,@(mbg_xpos,r1)
+		mov	r0,@(mbg_ypos,r1)
+		mov.w	r0,@(mbg_xpos_old,r1)
+		mov.w	r0,@(mbg_ypos_old,r1)
+		mov.b	r0,@(mbg_xset,r1)
+		mov.b	r0,@(mbg_yset,r1)
 		lds	@r15+,pr
 		rts
 		nop

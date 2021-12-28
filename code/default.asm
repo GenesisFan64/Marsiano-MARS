@@ -38,7 +38,7 @@ RAM_EmiAnim	ds.w 1
 RAM_EmiHide	ds.w 1
 RAM_ShakeMe	ds.w 1
 RAM_BoardUpd	ds.w 1
-RAM_CurrType	ds.w 1
+RAM_CurrMode	ds.w 1
 RAM_BgCamera	ds.w 1
 RAM_CurrSelc	ds.w 1
 RAM_CurrIndx	ds.w 1
@@ -59,14 +59,13 @@ thisCode_Top:
 		bsr	Sound_init
 		bsr	Video_init
 		bsr	System_Init
+
+
 		bsr	Mode_Init
 		bsr	Video_PrintInit
-		move.w	#0,(RAM_CurrType).w
-		move.w	#208,(RAM_CurrTempo).w
 		move.w	#$9200,d0
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
-
 		move.l	#ART_FGTEST,d0
 		move.w	#1*$20,d1
 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
@@ -85,21 +84,27 @@ thisCode_Top:
 		lea	str_Gema(pc),a0			; GEMA tester text on WINDOW
 		move.l	#locate(2,2,2),d0
 		bsr	Video_Print
-		lea	PAL_TESTBOARD(pc),a0		; ON palette
+
+	; Load palettes for fade-in
+		lea	PAL_TESTBOARD(pc),a0
 		moveq	#$10,d0
 		move.w	#$F,d1
-		bsr	Video_LoadPal
+		bsr	Video_PalTarget
 		lea	(TESTMARS_BG_PAL),a0
 		moveq	#0,d0
 		move.w	#256,d1
-		bsr	Video_LoadPalFade_Mars
-		move.w	#1,(RAM_ReqFadeMars).w
-
-		bset	#4,(sysmars_reg+comm14).l
-.wait2:		btst	#4,(sysmars_reg+comm14).l
+		moveq	#1,d2
+		bsr	Video_PalTarget_Mars
+		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
+		move.w	#2,(RAM_FadeMarsSpd).w
+		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
+		move.w	#1,(RAM_FadeMarsReq).w
+		bset	#4,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait2:		btst	#4,(sysmars_reg+comm14).l	; and wait until it finishes
 		bne.s	.wait2
-		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable display
+		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
+
 		lea	MasterTrkList(pc),a0
 		move.w	$C(a0),d1
 		move.w	$E(a0),d3
@@ -113,26 +118,9 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		bsr	System_MdMarsDreq
-
-.wait_frm
-		move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		beq.s	.wait_frm
-		bsr	System_Input
-		bsr	Video_DmaBlast
-
-		move.l	#$40000010,(vdp_ctrl).l
-		move.l	(RAM_Ypos).w,(vdp_data).l
-		move.l	#$7C000003,(vdp_ctrl).l
-		move.l	(RAM_XposFg).l,d0
-		neg.l	d0
-		move.l	d0,(vdp_data).l
-		add.l	#1,(RAM_Framecount).l
-
-	; Window up/down
-		move.w	(RAM_WindowCurr).w,d2
-		move.w	(RAM_WindowNew).w,d1
+		bsr	System_VBlank
+		move.w	(RAM_WindowCurr).w,d2		; Window up/down
+		move.w	(RAM_WindowNew).w,d1		; animation
 		cmp.w	d2,d1
 		beq.s	.same_w
 		move.w	#1,d0
@@ -143,9 +131,10 @@ thisCode_Top:
 		add.w	d0,(RAM_WindowCurr).w
 		move.w	(RAM_WindowCurr).w,(vdp_ctrl).l
 .same_w:
-		bsr	System_VBlnk_Exit
+		add.l	#1,(RAM_Framecount).l
+		bsr	System_VBlank_Exit
 
-		move.w	(RAM_CurrType).w,d0
+		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
 		add.w	d0,d0
@@ -167,42 +156,39 @@ thisCode_Top:
 ; --------------------------------------------------
 
 .mode0:
-		tst.w	(RAM_CurrType).w
+		tst.w	(RAM_CurrMode).w
 		bmi	.mode0_loop
-		or.w	#$8000,(RAM_CurrType).w
-		move.w	#0,(RAM_EmiHide).w
-; 		move.w	#1,(RAM_EmiUpd).w
+		or.w	#$8000,(RAM_CurrMode).w
+	; This mode's initial values go here
 
-; Mode 0 mainloop
 .mode0_loop:
+		bsr	Video_PalFade
 		bsr	Video_MarsPalFade
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.no_mode0
-		move.w	#1,(RAM_CurrType).w
+		move.w	#1,(RAM_CurrMode).w
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
-; 		add.l	#-1,((RAM_MdMarsDreq-4)+(MAX_MDDREQ)).w
 
-; 		move.l	(RAM_MdMarsDreq+4).w,d1
-
+	; Test movement
 		move.l	(RAM_MdMarsBg).w,d0
 		move.l	(RAM_MdMarsBg+4).w,d1
-		move.w	(RAM_XposFg).w,d2
-		move.w	(RAM_Ypos).w,d3
+		move.w	(RAM_HorScroll).w,d2
+		move.w	(RAM_VerScroll).w,d3
 		move.l	#$10000,d5
 		move.l	#1,d6
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_m
 		add.l	d5,d0
-		add.w	d6,d2
+		sub.w	d6,d2
 .nor_m:
 		btst	#bitJoyLeft,d7
 		beq.s	.nol_m
 		sub.l	d5,d0
-		sub.w	d6,d2
+		add.w	d6,d2
 .nol_m:
 		btst	#bitJoyDown,d7
 		beq.s	.nod_m
@@ -221,17 +207,18 @@ thisCode_Top:
 		btst	#bitJoyB,d7
 		beq.s	.nor_m2
 		add.l	d5,d0
-		add.w	d6,d2
+		sub.w	d6,d2
 .nor_m2:
 		btst	#bitJoyA,d7
 		beq.s	.nol_m2
 		sub.l	d5,d0
-		sub.w	d6,d2
+		add.w	d6,d2
 .nol_m2:
 		move.l	d0,(RAM_MdMarsBg).w
 		move.l	d1,(RAM_MdMarsBg+4).w
-		move.w	d2,(RAM_XposFg).w
-		move.w	d3,(RAM_Ypos).w
+		move.w	d2,(RAM_HorScroll).w
+		move.w	d3,(RAM_VerScroll).w
+		bsr	System_MdMarsDreq
 
 ; 		tst.w	(RAM_MdMarsDreq+8).w
 ; 		beq.s	.noclr
@@ -338,9 +325,9 @@ thisCode_Top:
 ; --------------------------------------------------
 
 .mode1:
-		tst.w	(RAM_CurrType).w
+		tst.w	(RAM_CurrMode).w
 		bmi	.mode1_loop
-		or.w	#$8000,(RAM_CurrType).w
+		or.w	#$8000,(RAM_CurrMode).w
 		bsr	.print_cursor
 		move.w	#1,(RAM_EmiHide).w
 ; 		move.w	#1,(RAM_EmiUpd).w
@@ -349,7 +336,7 @@ thisCode_Top:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.no_mode1
-		move.w	#0,(RAM_CurrType).w
+		move.w	#0,(RAM_CurrMode).w
 		move.w	#$9200,(RAM_WindowNew).w
 .no_mode1:
 		move.w	(Controller_1+on_press),d7

@@ -134,21 +134,131 @@ Video_Update:
 ; in the middle of the screen.
 ; --------------------------------------------------------
 
+Video_PalTarget:
+		lea	(RAM_PaletteFd),a6
+		bra.s	vidMd_Pal
 Video_LoadPal:
-		lea	(vdp_data),a6
+		lea	(RAM_Palette),a6
+vidMd_Pal:
+		move.l	a0,a5
 		moveq	#0,d7
 		move.w	d0,d7
 		add.w	d7,d7
-		ori.w	#$C000,d7
-		swap	d7
-		move.l	d7,4(a6)
+		adda	d7,a6
 		move.w	d1,d7
-.outv: 		move.w	4(a6),d6
-		btst	#bitVint,d6
-		beq.s	.outv
+		sub.w	#1,d7
+		move.w	d2,d6
+		and.w	#1,d6
+		ror.w	#1,d6
 .loop:
-		move.w	(a0)+,(a6)
+		move.w	(a5)+,(a6)+
 		dbf	d7,.loop
+		rts
+
+; --------------------------------------------------------
+; Video_PalFade
+;
+; a0 - Palette data
+; d0 - Number of colors
+; d1 - Speed
+;
+; RAM_ReqFadeMars: (WORD)
+; $00 - No task (or finished)
+; $01 - Fade in
+; $02 - Fade out to black
+;
+; CALL THIS OUTSIDE OF VBLANK
+; --------------------------------------------------------
+
+Video_PalFade:
+		move.w	(RAM_FadeMdReq).w,d7
+		add.w	d7,d7
+		move.w	.fade_list(pc,d7.w),d7
+		jmp	.fade_list(pc,d7.w)
+
+; --------------------------------------------
+
+.fade_list:
+		dc.w .fade_done-.fade_list
+		dc.w .fade_in-.fade_list
+
+; --------------------------------------------
+; No fade or finished.
+; --------------------------------------------
+
+.fade_done:
+		rts
+
+; --------------------------------------------
+; Fade in
+; --------------------------------------------
+
+.fade_in:
+		lea	(RAM_PaletteFd),a6
+		lea	(RAM_Palette),a0
+		move.w	#64,d0				; Num of colors
+		move.w	(RAM_FadeMdSpd).w,d1		; Speed
+		add.w	d1,d1
+		move.w	d0,d6
+		swap	d6
+		sub.w	#1,d0
+.nxt_pal:
+		clr.w	d2		; Reset finished colorbits
+		move.w	(a6),d7		; d7 - Input
+		move.w	(a0),d6		; d6 - Output
+		move.w	d7,d3		; RED
+		move.w	d6,d4
+		and.w	#%0000111011100000,d6
+		and.w	#%0000000000001110,d4
+		and.w	#%0000000000001110,d3
+		add.w	d1,d4
+		cmp.w	d3,d4
+		bcs.s	.no_red
+		move.w	d3,d4
+		or.w	#%001,d2	; RED is ready
+.no_red:
+		or.w	d4,d6
+		lsl.w	#4,d1
+		move.w	d7,d3		; GREEN
+		move.w	d6,d4
+		and.w	#%0000111000001110,d6
+		and.w	#%0000000011100000,d4
+		and.w	#%0000000011100000,d3
+		add.w	d1,d4
+		cmp.w	d3,d4
+		bcs.s	.no_grn
+		move.w	d3,d4
+		or.w	#%010,d2	; GREEN is ready
+.no_grn:
+		or.w	d4,d6
+		lsl.w	#4,d1
+		move.w	d7,d3		; BLUE
+		move.w	d6,d4
+		and.w	#%0000000011101110,d6
+		and.w	#%0000111000000000,d4
+		and.w	#%0000111000000000,d3
+		add.w	d1,d4
+		cmp.w	d3,d4
+		bcs.s	.no_blu
+		move.w	d3,d4
+		or.w	#%100,d2	; BLUE is ready
+.no_blu:
+		or.w	d4,d6
+		lsr.w	#8,d1
+		move.w	d6,(a0)+
+		adda	#2,a6
+		cmp.w	#%111,d2
+		bne.s	.no_fnsh
+		swap	d6
+		sub.w	#1,d6
+		swap	d6
+.no_fnsh:
+		dbf	d0,.nxt_pal
+		swap	d6
+		tst.w	d6
+		bne.s	.no_move
+		clr.w	(RAM_FadeMdReq).w
+.no_move:
 		rts
 
 ; --------------------------------------------------------
@@ -316,6 +426,7 @@ Video_PrintInit:
 		moveq	#$30,d0
 		move.w	#$F,d1
 		bsr	Video_LoadPal
+		bsr	Video_PalTarget
 		move.l	#ASCII_FONT,d0
 		move.w	#$580*$20,d1
 		move.w	#ASCII_FONT_e-ASCII_FONT,d2
@@ -704,7 +815,7 @@ Video_Copy:
 ; --------------------------------------------------------
 
 ; Entry format:
-; $94xx,$93xx,$95xx,$96xx,$97xx (SIZE,SOURCE)
+; $94xx,$93xx,$96xx,$95xx,$97xx (SIZE,SOURCE)
 ; $40000080 (vdp destination + dma bit)
 
 Video_DmaBlast:
@@ -886,45 +997,40 @@ Video_LoadArt:
 ; ----------------------------------------------------------------
 ; 32X EXCLUSIVE Video routines
 ;
-; Any use of these you will need to call either
-; System_VSync in your Main Loop
-; OR
-; System_MdMarsDreq
+; After any use of these routines call System_MdMarsDreq
+; to transfer the changes to the 32X side
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Video_Mars_LoadPal
+; Video_LoadPal_Mars
+;
+; Load Indexed palette directly to Buffer
+;
+; d0 - Start at
+; d1 - Number of colors
+; d2 - Priority bit OFF/ON
 ; --------------------------------------------------------
 
+Video_PalTarget_Mars:
+		lea	(RAM_MdMarsPalFd),a6
+		bra.s	vidMars_Pal
 Video_LoadPal_Mars:
 		lea	(RAM_MdMarsPal),a6
+vidMars_Pal:
+		move.l	a0,a5
 		moveq	#0,d7
 		move.w	d0,d7
 		add.w	d7,d7
 		adda	d7,a6
 		move.w	d1,d7
 		sub.w	#1,d7
+		move.w	d2,d6
+		and.w	#1,d6
+		ror.w	#1,d6
 .loop:
-		move.w	(a0)+,d6
-		and.w	#$7FFF,d6
-		move.w	d6,(a6)+
-		dbf	d7,.loop
-		rts
-
-; ------------------------------------------------
-
-Video_LoadPalFade_Mars:
-		lea	(RAM_MdMarsPalFd),a6
-		moveq	#0,d7
-		move.w	d0,d7
-		add.w	d7,d7
-		adda	d7,a6
-		move.w	d1,d7
-		sub.w	#1,d7
-.loop:
-		move.w	(a0)+,d6
-		and.w	#$7FFF,d6
-		move.w	d6,(a6)+
+		move.w	(a5)+,d5
+		or.w	d6,d5
+		move.w	d5,(a6)+
 		dbf	d7,.loop
 		rts
 
@@ -946,7 +1052,7 @@ Video_LoadPalFade_Mars:
 ; TODO: luego ver que hago con el priority bit
 
 Video_MarsPalFade:
-		move.w	(RAM_ReqFadeMars),d7
+		move.w	(RAM_FadeMarsReq).w,d7
 		add.w	d7,d7
 		move.w	.fade_list(pc,d7.w),d7
 		jmp	.fade_list(pc,d7.w)
@@ -971,8 +1077,8 @@ Video_MarsPalFade:
 .fade_in:
 		lea	(RAM_MdMarsPalFd),a6
 		lea	(RAM_MdMarsPal),a0
-		move.w	#256,d0		; Num of colors
-		move.w	#1,d1		; Speed
+		move.w	#256,d0				; Num of colors
+		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
 		move.w	d0,d6
 		swap	d6
 		sub.w	#1,d0
@@ -995,7 +1101,7 @@ Video_MarsPalFade:
 		lsl.w	#5,d1
 		move.w	d7,d3		; GREEN
 		move.w	d6,d4
-		and.w	#%0111110000011111,d6
+		and.w	#%1111110000011111,d6
 		and.w	#%0000001111100000,d4
 		and.w	#%0000001111100000,d3
 		add.w	d1,d4
@@ -1008,7 +1114,7 @@ Video_MarsPalFade:
 		lsl.w	#5,d1
 		move.w	d7,d3		; BLUE
 		move.w	d6,d4
-		and.w	#%0000001111111111,d6
+		and.w	#%1000001111111111,d6
 		and.w	#%0111110000000000,d4
 		and.w	#%0111110000000000,d3
 		add.w	d1,d4
@@ -1032,7 +1138,7 @@ Video_MarsPalFade:
 		swap	d6
 		tst.w	d6
 		bne.s	.no_move
-		clr.w	(RAM_ReqFadeMars).w
+		clr.w	(RAM_FadeMarsReq).w
 .no_move:
 		rts
 

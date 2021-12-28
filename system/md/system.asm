@@ -323,25 +323,60 @@ System_SramInit:
 ; --------------------------------------------------------
 ; System_VBlnk_Enter, System_VBlnk_Exit
 ;
-; Call _Enter first on your main loop, to wait
-; for the next frame, this also performs others tasks:
-; Read controller, DMA transfers, control the 32X
+; Call System_VBlank to wait for the next frame.
+; This will also update the control input and
+; do DMA transfers
+;
+; NOTE:
+; DO NOT CALL System_MdMarsDreq ON VBLANK
 ; --------------------------------------------------------
 
 System_VBlank:
 		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
 		beq.s	System_VBlank
-		bsr	Video_DmaBlast
-		bsr	System_Input
-		bsr	System_MdMarsDreq
+		bsr	System_Input		; Read inputs ASAP
+		bsr	Video_DmaBlast		; DMA tasks
+
+	; DMA'd Scroll and Palette
+		lea	(vdp_ctrl),a6
+		move.w	#$8100,d7			; DMA ON
+		move.b	(RAM_VdpRegs+1),d7
+		bset	#bitDmaEnbl,d7
+		move.w	d7,(a6)
+; 		bsr	Sound_DMA_Pause			; Don't need this.
+		move.l	#$94009328,(a6)
+		move.l	#$96009500|(RAM_VerScroll<<7&$FF0000)|(RAM_VerScroll>>1&$FF),(a6)
+		move.w	#$9700|(RAM_VerScroll>>17&$7F),(a6)
+		move.w	#$4000,d7
+		move.w	#$0010|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
+		move.l	#$940193E0,(a6)
+		move.l	#$96009500|(RAM_HorScroll<<7&$FF0000)|(RAM_HorScroll>>1&$FF),(a6)
+		move.w	#$9700|(RAM_HorScroll>>17&$7F),(a6)
+		move.w	#$7C00,d7
+		move.w	#$0003|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
+		move.l	#$94009340,(a6)
+		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
+		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
+		move.w	#$C000,d7
+		move.w	#$0000|$80,-(sp)		; Palette is transfered below so
+		move.w	d7,(a6)				; those dots will not be shown
+		move.w	(sp)+,(a6)			; on non-CRT displays
+; 		bsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
+		move.w	#$8100,d7			; DMA OFF
+		move.b	(RAM_VdpRegs+1).w,d7
+		move.w	d7,(a6)
 		add.l	#1,(RAM_Framecount).l
 		rts
 
-System_VBlnk_Exit:
+System_VBlank_Exit:
 		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
-		bne.s	System_VBlnk_Exit
+		bne.s	System_VBlank_Exit
 		rts
 
 ; --------------------------------------------------------
