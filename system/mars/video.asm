@@ -62,6 +62,7 @@ MarsVideo_Init:
 		nop
 
 	; Clear values
+	; TODO: checar bien esto
 		mov	#RAM_Mars_Background,r1
 		mov	#0,r0
 		mov	r0,@(mbg_data,r1)
@@ -957,18 +958,17 @@ MarsVideo_MakeTbl:
 ; ---------------------------------------
 ; Call this after ALL Framebuffer tables
 ; are set, to fix that Xshift bit issue
-; on Hardware
+; on Real hardware
 ; ---------------------------------------
 
-; TODO: this workaround fails
-; if the source width is exactly == 320
+; TODO: this workaround MIGHT fail
+; if the source WIDTH is exactly == 320
 
 MarsVideo_FixTblShift:
 		mov.w	@(marsGbl_XShift,gbr),r0
 		and	#1,r0
 		cmp/eq	#1,r0
 		bf	.ptchset
-
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
 		mov.b	@(mbg_flags,r1),r0		; Background is Indexed?
 		and	#%00000001,r0
@@ -1018,8 +1018,9 @@ MarsVideo_FixTblShift:
 ; Make a new internal background
 ; scrolling buffer
 ;
+; First call this, set your values
 ; Then call MarsVideo_SetBg to set
-; the source image
+; the source image (ROM or RAM)
 ;
 ; r1 - Background slot
 ; r2 - Output framebuffer data

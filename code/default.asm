@@ -60,7 +60,6 @@ thisCode_Top:
 		bsr	Video_init
 		bsr	System_Init
 
-
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 		move.w	#$9200,d0
@@ -71,21 +70,28 @@ thisCode_Top:
 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
 		bsr	Video_LoadArt
 		lea	(MAP_FGTEST),a0
-		move.l	#locate(0,8,0),d0
+		move.l	#locate(1,8,0),d0
 		move.l	#mapsize(192,224),d1
 		move.w	#1+$2000,d2
 		bsr	Video_LoadMap
 		lea	(MAP_FGTEST),a0
-		move.l	#locate(0,8+32,0),d0
+		move.l	#locate(1,8+32,0),d0
 		move.l	#mapsize(192,224),d1
 		move.w	#1+$2000,d2
 		bsr	Video_LoadMap
 
+		lea	str_Title(pc),a0		; GEMA tester text on WINDOW
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
 		lea	str_Gema(pc),a0			; GEMA tester text on WINDOW
 		move.l	#locate(2,2,2),d0
 		bsr	Video_Print
 
 	; Load palettes for fade-in
+		lea	PAL_EMI(pc),a0
+		moveq	#0,d0
+		move.w	#$F,d1
+		bsr	Video_PalTarget
 		lea	PAL_TESTBOARD(pc),a0
 		moveq	#$10,d0
 		move.w	#$F,d1
@@ -96,7 +102,7 @@ thisCode_Top:
 		moveq	#1,d2
 		bsr	Video_PalTarget_Mars
 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
-		move.w	#2,(RAM_FadeMarsSpd).w
+		move.w	#1,(RAM_FadeMarsSpd).w
 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
 		move.w	#1,(RAM_FadeMarsReq).w
 		bset	#4,(sysmars_reg+comm14).l	; Request REDRAW on Master
@@ -104,6 +110,9 @@ thisCode_Top:
 		bne.s	.wait2
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
+
+		move.w	#320/2,(RAM_EmiPosX).w
+		move.w	#224/2,(RAM_EmiPosY).w
 
 		lea	MasterTrkList(pc),a0
 		move.w	$C(a0),d1
@@ -119,6 +128,7 @@ thisCode_Top:
 
 .loop:
 		bsr	System_VBlank
+		bsr	System_MdMarsDreq
 		move.w	(RAM_WindowCurr).w,d2		; Window up/down
 		move.w	(RAM_WindowNew).w,d1		; animation
 		cmp.w	d2,d1
@@ -164,6 +174,10 @@ thisCode_Top:
 .mode0_loop:
 		bsr	Video_PalFade
 		bsr	Video_MarsPalFade
+; 		move.w	(RAM_FadeMarsReq),d7
+; 		move.w	(RAM_FadeMdReq),d6
+; 		or.w	d6,d7
+; 		bne.s	.loop
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -172,11 +186,40 @@ thisCode_Top:
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
 
+		move.w	(Controller_1+on_hold),d7
+		lsr.w	#8,d7
+		btst	#bitJoyX,d7
+		beq.s	.nox
+		move.w	#4,(RAM_FadeMarsSpd).w
+		move.w	#2,(RAM_FadeMarsReq).w
+.nox:
+		btst	#bitJoyY,d7
+		beq.s	.noy
+		move.w	#4,(RAM_FadeMarsSpd).w
+		move.w	#1,(RAM_FadeMarsReq).w
+.noy:
+
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyA,d7
+		beq.s	.noa
+		move.w	#1,(RAM_FadeMdSpd).w
+		move.w	#2,(RAM_FadeMdReq).w
+.noa:
+		btst	#bitJoyB,d7
+		beq.s	.nob
+		move.w	#1,(RAM_FadeMdSpd).w
+		move.w	#1,(RAM_FadeMdReq).w
+.nob:
+
+
+
+
+
 	; Test movement
 		move.l	(RAM_MdMarsBg).w,d0
 		move.l	(RAM_MdMarsBg+4).w,d1
-		move.w	(RAM_HorScroll).w,d2
-		move.w	(RAM_VerScroll).w,d3
+		move.w	(RAM_HorScroll+2).w,d2
+		move.w	(RAM_VerScroll+2).w,d3
 		move.l	#$10000,d5
 		move.l	#1,d6
 		move.w	(Controller_1+on_hold),d7
@@ -201,24 +244,11 @@ thisCode_Top:
 		sub.w	d6,d3
 .nou_m:
 
-
-; 		move.l	#$10000,d2
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyB,d7
-		beq.s	.nor_m2
-		add.l	d5,d0
-		sub.w	d6,d2
-.nor_m2:
-		btst	#bitJoyA,d7
-		beq.s	.nol_m2
-		sub.l	d5,d0
-		add.w	d6,d2
-.nol_m2:
 		move.l	d0,(RAM_MdMarsBg).w
 		move.l	d1,(RAM_MdMarsBg+4).w
-		move.w	d2,(RAM_HorScroll).w
-		move.w	d3,(RAM_VerScroll).w
-		bsr	System_MdMarsDreq
+		move.w	d2,(RAM_HorScroll+2).w
+		move.w	d3,(RAM_VerScroll+2).w
+
 
 ; 		tst.w	(RAM_MdMarsDreq+8).w
 ; 		beq.s	.noclr
@@ -230,8 +260,8 @@ thisCode_Top:
 ; 		move.w	#1,(RAM_MdMarsDreq+8).w
 ; .nor_m3:
 
-; 		bsr	Emilie_Move
-; 		bsr	Emilie_MkSprite
+		bsr	Emilie_Move
+		bsr	Emilie_MkSprite
 		rts
 
 ; 		lea	str_TempVal(pc),a0		; Main title
@@ -329,7 +359,7 @@ thisCode_Top:
 		bmi	.mode1_loop
 		or.w	#$8000,(RAM_CurrMode).w
 		bsr	.print_cursor
-		move.w	#1,(RAM_EmiHide).w
+; 		move.w	#1,(RAM_EmiHide).w
 ; 		move.w	#1,(RAM_EmiUpd).w
 
 .mode1_loop:
@@ -398,16 +428,16 @@ thisCode_Top:
 
 		move.w	(Controller_1+on_hold),d7
 		and.w	#JoyB,d7
-		beq.s	.nob
+		beq.s	.noba
 		add.w	#1,(a1)
 		bsr	.print_cursor
-.nob:
+.noba:
 		move.w	(Controller_1+on_hold),d7
 		and.w	#JoyA,d7
-		beq.s	.noa
+		beq.s	.noaa
 		sub.w	#1,(a1)
 		bsr	.print_cursor
-.noa:
+.noaa:
 
 
 
@@ -565,7 +595,7 @@ Emilie_Move:
 ; 		move.w	#-1,d6
 ; .reversx:
 ; 		bset	#7,d2
-; 		add.w	#1,(RAM_EmiAnim).w
+		add.w	#1,(RAM_EmiAnim).w
 ; 		add.w	d6,d0
 ; .same_x:
 		rts
@@ -588,7 +618,7 @@ Emilie_MkSprite:
 ; 		move.w	#1,d2
 ; 		bsr	Video_DmaSet
 .no_updgfx:
-		lea	(RAM_SpriteData),a6
+		lea	(RAM_Sprites),a6
 		move.l	(RAM_EmiPosY),d0
 		move.l	(RAM_EmiPosX),d1
 		swap	d0
@@ -606,7 +636,7 @@ Emilie_MkSprite:
 		and.w	#$FF,d4
 		sub.w	#1,d4
 		move.w	#$0001,d5
-		move.w	#$0001,d6
+		move.w	#$0500,d6
 .nxt_pz:
 		move.b	(a0)+,d3
 		ext.w	d3
@@ -646,7 +676,7 @@ Emilie_MkSprite:
 		move.w	(a0)+,d4
 		and.w	#$FF,d4
 		sub.w	#1,d4
-		move.w	#1,d5
+		move.w	#$500,d5
 
 
 	; d0 - graphics
@@ -670,7 +700,7 @@ Emilie_MkSprite:
 		rts
 ;
 .hidefuji:
-		lea	(RAM_SpriteData),a6
+		lea	(RAM_Sprites),a6
 		move.l	#0,(a6)+
 		move.l	#0,(a6)+
 		move.l	#0,(a6)+
@@ -681,7 +711,7 @@ Emilie_MkSprite:
 Emilie_Show:
 		lea	(vdp_data),a6
 		move.l	#$78000003,4(a6)
-		lea	(RAM_SpriteData),a5
+		lea	(RAM_Sprites),a5
 		move.w	#8-1,d7
 .sprdata:
 		move.l	(a5)+,(a6)
@@ -708,7 +738,12 @@ Emilie_Show:
 ; ------------------------------------------------------
 
 str_Title:
-		dc.b "Project MARSIANO",0
+		dc.b "Project MARSIANO",$A
+		dc.b $A
+		dc.b "Probando el FadeIn/FadeOut",$A
+		dc.b $A
+		dc.b "(X)(Y) - 32X",$A
+		dc.b "(A)(B) - Genesis",0
 		align 2
 
 str_Cursor:	dc.b " ",$A

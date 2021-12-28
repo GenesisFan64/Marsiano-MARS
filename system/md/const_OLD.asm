@@ -3,11 +3,8 @@
 ; MD/MARS shared constants
 ; ----------------------------------------------------------------
 
-; NOTE: Be careful changing the MAX_MDDREQ value:
-; If something goes wrong set it to $800
-
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-MAX_MDDREQ	equ $800	; MAX size for DREQ RAM transfer in WORDS (careful for HW)
+MAX_MDDREQ	equ $800	; MAX size for DREQ RAM transfer in WORDS ($08 bytes aligned)
 
 ; ====================================================================
 ; --------------------------------------------------------

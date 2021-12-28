@@ -326,9 +326,6 @@ System_SramInit:
 ; Call System_VBlank to wait for the next frame.
 ; This will also update the control input and
 ; do DMA transfers
-;
-; NOTE:
-; DO NOT CALL System_MdMarsDreq ON VBLANK
 ; --------------------------------------------------------
 
 System_VBlank:
@@ -336,7 +333,6 @@ System_VBlank:
 		btst	#bitVint,d4
 		beq.s	System_VBlank
 		bsr	System_Input		; Read inputs ASAP
-		bsr	Video_DmaBlast		; DMA tasks
 
 	; DMA'd Scroll and Palette
 		lea	(vdp_ctrl),a6
@@ -359,6 +355,13 @@ System_VBlank:
 		move.w	#$0003|$80,-(sp)
 		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
+		move.l	#$94019318,(a6)
+		move.l	#$96009500|(RAM_Sprites<<7&$FF0000)|(RAM_Sprites>>1&$FF),(a6)
+		move.w	#$9700|(RAM_Sprites>>17&$7F),(a6)
+		move.w	#$7800,d7
+		move.w	#$0003|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
 		move.l	#$94009340,(a6)
 		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
 		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
@@ -370,6 +373,9 @@ System_VBlank:
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
+
+
+		bsr	Video_DmaBlast		; DMA tasks
 		add.l	#1,(RAM_Framecount).l
 		rts
 

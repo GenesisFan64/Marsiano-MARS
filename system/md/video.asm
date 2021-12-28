@@ -181,6 +181,7 @@ Video_PalFade:
 .fade_list:
 		dc.w .fade_done-.fade_list
 		dc.w .fade_in-.fade_list
+		dc.w .fade_out-.fade_list
 
 ; --------------------------------------------
 ; No fade or finished.
@@ -195,7 +196,7 @@ Video_PalFade:
 
 .fade_in:
 		lea	(RAM_PaletteFd),a6
-		lea	(RAM_Palette),a0
+		lea	(RAM_Palette),a5
 		move.w	#64,d0				; Num of colors
 		move.w	(RAM_FadeMdSpd).w,d1		; Speed
 		add.w	d1,d1
@@ -205,7 +206,7 @@ Video_PalFade:
 .nxt_pal:
 		clr.w	d2		; Reset finished colorbits
 		move.w	(a6),d7		; d7 - Input
-		move.w	(a0),d6		; d6 - Output
+		move.w	(a5),d6		; d6 - Output
 		move.w	d7,d3		; RED
 		move.w	d6,d4
 		and.w	#%0000111011100000,d6
@@ -245,7 +246,7 @@ Video_PalFade:
 .no_blu:
 		or.w	d4,d6
 		lsr.w	#8,d1
-		move.w	d6,(a0)+
+		move.w	d6,(a5)+
 		adda	#2,a6
 		cmp.w	#%111,d2
 		bne.s	.no_fnsh
@@ -259,6 +260,65 @@ Video_PalFade:
 		bne.s	.no_move
 		clr.w	(RAM_FadeMdReq).w
 .no_move:
+		rts
+
+; --------------------------------------------
+; Fade out
+; --------------------------------------------
+
+.fade_out:
+		lea	(RAM_Palette),a6
+		move.w	#64,d0				; Num of colors
+		move.w	(RAM_FadeMdSpd).w,d1		; Speed
+		move.w	d0,d6
+		swap	d6
+		sub.w	#1,d0
+.nxt_pal_o:
+		clr.w	d2		; Reset finished colorbits
+		move.w	(a6),d7		; d7 - Input
+		move.w	d7,d6
+		and.w	#%0000111011100000,d7
+		and.w	#%0000000000001110,d6
+		sub.w	d1,d6
+		bpl.s	.no_red_o
+		clr.w	d6
+		or.w	#%001,d2	; RED is ready
+.no_red_o:
+		or.w	d6,d7
+		lsl.w	#4,d1
+		move.w	d7,d6
+		and.w	#%0000111000001110,d7
+		and.w	#%0000000011100000,d6
+		sub.w	d1,d6
+		bpl.s	.no_grn_o
+		clr.w	d6
+		or.w	#%010,d2	; GREEN is ready
+.no_grn_o:
+		or.w	d6,d7
+		lsl.w	#4,d1
+		move.w	d7,d6
+		and.w	#%0000000011101110,d7
+		and.w	#%0000111000000000,d6
+		sub.w	d1,d6
+		bpl.s	.no_blu_o
+		clr.w	d6
+		or.w	#%100,d2	; BLUE is ready
+.no_blu_o:
+		or.w	d6,d7
+		lsr.w	#8,d1
+		move.w	d7,(a6)+
+		cmp.w	#%111,d2
+		bne.s	.no_fnsh_o
+		swap	d6
+		sub.w	#1,d6
+		swap	d6
+.no_fnsh_o:
+		dbf	d0,.nxt_pal_o
+		swap	d6
+		tst.w	d6
+		bne.s	.no_move_o
+		clr.w	(RAM_FadeMdReq).w
+.no_move_o:
 		rts
 
 ; --------------------------------------------------------
@@ -1062,6 +1122,7 @@ Video_MarsPalFade:
 .fade_list:
 		dc.w .fade_done-.fade_list
 		dc.w .fade_in-.fade_list
+		dc.w .fade_out-.fade_list
 
 ; --------------------------------------------
 ; No fade or finished.
@@ -1076,7 +1137,7 @@ Video_MarsPalFade:
 
 .fade_in:
 		lea	(RAM_MdMarsPalFd),a6
-		lea	(RAM_MdMarsPal),a0
+		lea	(RAM_MdMarsPal),a5
 		move.w	#256,d0				; Num of colors
 		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
 		move.w	d0,d6
@@ -1085,7 +1146,7 @@ Video_MarsPalFade:
 .nxt_pal:
 		clr.w	d2		; Reset finished colorbits
 		move.w	(a6),d7		; d7 - Input
-		move.w	(a0),d6		; d6 - Output
+		move.w	(a5),d6		; d6 - Output
 		move.w	d7,d3		; RED
 		move.w	d6,d4
 		and.w	#%1111111111100000,d6
@@ -1126,7 +1187,7 @@ Video_MarsPalFade:
 		or.w	d4,d6
 		lsr.w	#8,d1
 		lsr.w	#2,d1
-		move.w	d6,(a0)+
+		move.w	d6,(a5)+
 		adda	#2,a6
 		cmp.w	#%111,d2
 		bne.s	.no_fnsh
@@ -1140,6 +1201,66 @@ Video_MarsPalFade:
 		bne.s	.no_move
 		clr.w	(RAM_FadeMarsReq).w
 .no_move:
+		rts
+
+; --------------------------------------------
+; Fade out
+; --------------------------------------------
+
+.fade_out:
+		lea	(RAM_MdMarsPal),a6
+		move.w	#256,d0				; Num of colors
+		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
+		move.w	d0,d6
+		swap	d6
+		sub.w	#1,d0
+.nxt_pal_o:
+		clr.w	d2		; Reset finished colorbits
+		move.w	(a6),d7		; d7 - Input
+		move.w	d7,d6
+		and.w	#%1111111111100000,d7
+		and.w	#%0000000000011111,d6
+		sub.w	d1,d6
+		bpl.s	.no_red_o
+		clr.w	d6
+		or.w	#%001,d2	; RED is ready
+.no_red_o:
+		or.w	d6,d7
+		lsl.w	#5,d1
+		move.w	d7,d6
+		and.w	#%1111110000011111,d7
+		and.w	#%0000001111100000,d6
+		sub.w	d1,d6
+		bpl.s	.no_grn_o
+		clr.w	d6
+		or.w	#%010,d2	; GREEN is ready
+.no_grn_o:
+		or.w	d6,d7
+		lsl.w	#5,d1
+		move.w	d7,d6
+		and.w	#%1000001111111111,d7
+		and.w	#%0111110000000000,d6
+		sub.w	d1,d6
+		bpl.s	.no_blu_o
+		clr.w	d6
+		or.w	#%100,d2	; BLUE is ready
+.no_blu_o:
+		or.w	d6,d7
+		lsr.w	#8,d1
+		lsr.w	#2,d1
+		move.w	d7,(a6)+
+		cmp.w	#%111,d2
+		bne.s	.no_fnsh_o
+		swap	d6
+		sub.w	#1,d6
+		swap	d6
+.no_fnsh_o:
+		dbf	d0,.nxt_pal_o
+		swap	d6
+		tst.w	d6
+		bne.s	.no_move_o
+		clr.w	(RAM_FadeMarsReq).w
+.no_move_o:
 		rts
 
 ; ====================================================================

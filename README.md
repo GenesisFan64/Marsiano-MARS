@@ -30,8 +30,8 @@ Do note that current 32X emulators ignore some hardware restrictions and bugs of
 - FM bit: This bit tells which system side (Genesis or 32X) can read/write to the Super VDP (The framebuffer and 256-color palette), if a CPU with NO permission touches the Super VDP, it will freeze the entire system (32X add-on or Genesis), on emulation nothing happens.
 - BUS fighting on SH2: If any of the SH2 CPUs WRITE the same location at the same time it will crash the add-on. (Only checked SDRAM area, and the comm ports)
 - PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs
-- SDRAM is a little slower for code: Found this while checking the PWM playback: on SDRAM the playback code struggled to play while on Cache it worked as it supposed to. ANY code that requires to process things fast it must be done on the current SH2's cache (at $C0000000, $800 bytes max, NOT $1000, GensKmod's debugger shows it as $1000 bytes long) (TODO: Maybe check this again)
-- If the SH2 peforms DMA (Channel 0) on the background and the DESTINATION gets touched (READ or WRITE) it will abort the DMA transfer entirely.
+- SDRAM is a little slower for code (Found this while checking the PWM playback): On SDRAM the PWM playback code struggled to play while on Cache it worked as it supposed to. ANY code that requires to process things fast MUST be done on the current SH2's cache (at $C0000000, $800 bytes max) (TODO: Maybe check this again)
+- If the SH2 peforms DMA (Channel 0) on the background and the DESTINATION gets poked (READ or WRITE) it will abort the DMA transfer entirely.
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
 If it doesn't boot or freezes: I probably broke something without testing on HW
