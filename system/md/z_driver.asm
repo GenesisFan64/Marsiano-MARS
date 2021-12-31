@@ -1405,7 +1405,7 @@ setupchip:
 ; --------------------------------
 
 .ins_psgn:
-		ld	a,(hl)
+		ld	a,(hl)		; Extra bits for NOISE
 		and	111b
 		ld	(ix+4),a
 .ins_psg:
@@ -1421,6 +1421,8 @@ setupchip:
 		ld	ix,psgcom
 		add	ix,de
 		ld	a,(hl)
+
+	; TODO: ponerlos en un buffer separado
 		ld	(ix+ALV),a	; ALV
 		inc	hl
 		ld	a,(hl)

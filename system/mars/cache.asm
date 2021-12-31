@@ -480,16 +480,6 @@ MarsSound_ReadPwm:
 ; r0 - flags
 ; r4 - READ pointer
 .not_rom:
-; 		mov	#_sysreg+comm15,r0	; *** TESTING
-; 		mov.w	@r0,r0
-; 		and	#%00010000,r0
-; 		tst	r0,r0
-; 		bf	*
-; 		mov	#_sysreg+dreqctl,r0
-; 		mov.w	@r0,r0
-; 		tst	#$01,r0
-; 		bf	*			; *** TESTING
-
 		mov 	@(mchnsnd_flags,r9),r0
 		mov 	r4,r3
 		shlr8	r3
@@ -502,9 +492,6 @@ MarsSound_ReadPwm:
 		or	r2,r3
 		mov.b	@r3+,r1
 		mov.b	@r3+,r3
-; 		mov	#$7F,r2
-; 		cmp/eq	r2,r1
-; 		bt	*
 .from_rv:
 		mov	r1,r2
 		tst	#%00001000,r0

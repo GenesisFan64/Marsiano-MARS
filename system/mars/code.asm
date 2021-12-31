@@ -1453,8 +1453,7 @@ sizeof_marsram	ds.l 0
 
 			struct MarsRam_Video
 RAM_Mars_Background	ds.w sizeof_marsbg
-RAM_Mars_HBlMdShft	ds.w 240	; Mode and Xshift bit for each HBlank
-RAM_Mars_LineTblCopy	ds.l 240	; Index | BadLine
+RAM_Mars_LineTblCopy	ds.l 240
 sizeof_marsvid		ds.l 0
 			finish
 

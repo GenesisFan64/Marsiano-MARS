@@ -65,20 +65,21 @@ thisCode_Top:
 		move.w	#$9200,d0
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
-		move.l	#ART_FGTEST,d0
-		move.w	#1*$20,d1
-		move.w	#ART_FGTEST_e-ART_FGTEST,d2
-		bsr	Video_LoadArt
-		lea	(MAP_FGTEST),a0
-		move.l	#locate(1,8,0),d0
-		move.l	#mapsize(192,224),d1
-		move.w	#1+$2000,d2
-		bsr	Video_LoadMap
-		lea	(MAP_FGTEST),a0
-		move.l	#locate(1,8+32,0),d0
-		move.l	#mapsize(192,224),d1
-		move.w	#1+$2000,d2
-		bsr	Video_LoadMap
+
+; 		move.l	#ART_FGTEST,d0
+; 		move.w	#1*$20,d1
+; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
+; 		bsr	Video_LoadArt
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(1,8,0),d0
+; 		move.l	#mapsize(192,224),d1
+; 		move.w	#1+$2000,d2
+; 		bsr	Video_LoadMap
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(1,8+32,0),d0
+; 		move.l	#mapsize(192,224),d1
+; 		move.w	#1+$2000,d2
+; 		bsr	Video_LoadMap
 
 		lea	str_Title(pc),a0		; GEMA tester text on WINDOW
 		move.l	#locate(0,2,2),d0
@@ -127,8 +128,8 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		bsr	System_VBlank
 		bsr	System_MdMarsDreq
+		bsr	System_VBlank
 		move.w	(RAM_WindowCurr).w,d2		; Window up/down
 		move.w	(RAM_WindowNew).w,d1		; animation
 		cmp.w	d2,d1
@@ -249,33 +250,25 @@ thisCode_Top:
 		move.w	d2,(RAM_HorScroll+2).w
 		move.w	d3,(RAM_VerScroll+2).w
 
+; 	BOOM TEST
+		move.w	(Controller_1+on_press),d7
+		lsr.w	#8,d7
+		btst	#bitJoyZ,d7
+		beq.s	.noah
+; 		move.w	#$20,(RAM_ShakeMe).w
+		moveq	#0,d2
+		bsr	PlayThisSfx
+.noah:
 
-; 		tst.w	(RAM_MdMarsDreq+8).w
-; 		beq.s	.noclr
-; 		clr.w	(RAM_MdMarsDreq+8).w
-; .noclr:
-; 		move.w	(Controller_1+on_press),d7
-; 		btst	#bitJoyC,d7
-; 		beq.s	.nor_m3
-; 		move.w	#1,(RAM_MdMarsDreq+8).w
-; .nor_m3:
-
-		bsr	Emilie_Move
-		bsr	Emilie_MkSprite
+; 		bsr	Emilie_Move
+; 		bsr	Emilie_MkSprite
 		rts
 
 ; 		lea	str_TempVal(pc),a0		; Main title
 ; 		move.l	#locate(0,0,0),d0
 ; 		bsr	Video_Print
 
-	; BOOM TEST
-; 		move.w	(Controller_1+on_press),d7
-; 		btst	#bitJoyA,d7
-; 		beq.s	.noah
-; 		move.w	#$20,(RAM_ShakeMe).w
-; 		moveq	#0,d2
-; 		bsr	PlayThisSfx
-; .noah:
+
 
 
 ; 		bset	#0,(RAM_BoardUpd).w

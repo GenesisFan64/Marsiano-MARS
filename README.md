@@ -2,8 +2,8 @@
 A GameBase/Engine/Library for making Sega 32X Games, in assembly.
 *WORK IN PROGRESS*
 
-Video "driver":
-- A working scrolling background in 256-color mode, Source data can be either a static image in ROM or a buffer section in RAM, in any WIDTH and HEIGHT BUT aligned in "blocks" (Ex. 4x4, 8x8, 16x16, 32x32)
+Graphics:
+- Working scrolling background in 256-color mode: Source data can be either a static image in ROM or a buffer section in RAM, in any WIDTH and HEIGHT BUT aligned in "blocks" (Ex. 4x4, 8x8, 16x16, 32x32)
 
 Sound, Genesis and 32X:
 - Runs on Z80, with DMA protection (Genesis side)
@@ -18,7 +18,7 @@ Sound, Genesis and 32X:
 Notes/Issues:
 - Genesis: DAC Wave sound (Genesis side) might play slow if track is using too much channels
 - 32X: background breaks on SOFT Reset
-- Also SOFT-Reset MIGHT crash everything. (Blue color border)
+- SOFT-Reset MIGHT crash everything. (very low chance)
 
 Planned/TODO:
 - Implement NORMAL sprites on 32X side and make a new Polygons(DDA) system (separate from sprites)
@@ -26,7 +26,7 @@ Planned/TODO:
 
 Do note that current 32X emulators ignore some hardware restrictions and bugs of the system:
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
-- RV bit: This bit sets the ROM map temporary to it's original location on the Genesis side, as a workaround for the Genesis DMA's ROM-to-VDP transfers, If you do any DMA-transfer without setting this bit: it will transfer trash data, Your Genesis-DMA transfer routines MUST be located on RAM (or just the last instruction for the last VDP write), on the SH2 side: If RV is set, any read from SH2's ROM area will return trash data.
+- RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side, as a workaround for the Genesis DMA's ROM-to-VDP transfers, If you do any DMA-transfer without setting this bit: it will transfer trash data, Your Genesis-DMA transfer routines MUST be located on RAM (or just the last instruction for the last VDP write), on the SH2 side: If RV is set, any read from SH2's ROM area will return trash data.
 - FM bit: This bit tells which system side (Genesis or 32X) can read/write to the Super VDP (The framebuffer and 256-color palette), if a CPU with NO permission touches the Super VDP, it will freeze the entire system (32X add-on or Genesis), on emulation nothing happens.
 - BUS fighting on SH2: If any of the SH2 CPUs WRITE the same location at the same time it will crash the add-on. (Only checked SDRAM area, and the comm ports)
 - PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs

@@ -7,7 +7,7 @@
 ; Variables
 ; ----------------------------------------
 
-FBVRAM_PATCH	equ $1C000		; Framebuffer location for the affected XShift lines
+FBVRAM_PATCH	equ $1D000		; Framebuffer location for the affected XShift lines
 
 ; ----------------------------------------
 ; Structs
@@ -62,7 +62,8 @@ MarsVideo_Init:
 		nop
 
 	; Clear values
-	; TODO: checar bien esto
+	; TODO: checar bien esto porque se rompe
+	; en RESET
 		mov	#RAM_Mars_Background,r1
 		mov	#0,r0
 		mov	r0,@(mbg_data,r1)
@@ -76,16 +77,18 @@ MarsVideo_Init:
 		rts
 		nop
 		align 4
+
+; Default linetable
 .def_fb:
 		mov	r2,r3
-		mov	#$1FD80/2,r0	; very last usable (blank) line
+		mov	#$1FD80/2,r0		; very last usable (blank) line
 		mov	#240,r4
 .nxt_lne:
 		mov.w	r0,@r3
 		dt	r4
 		bf/s	.nxt_lne
 		add	#2,r3
-		mov.b	@(framectl,r1),r0
+		mov.b	@(framectl,r1),r0	; Frameswap & wait
 		xor	#1,r0
 		mov	r0,r3
 		mov.b	r0,@(framectl,r1)
@@ -825,24 +828,24 @@ MarsVideo_MoveBg:
 		bt	.ydl_busy
 		cmp/pl	r1
 		bf	.reqr_b
-; 		mov	@r8,r0
-; 		mov	r0,r4
-; 		mov	@r9,r0
-; 		or	r4,r0
-; 		cmp/eq	#0,r0
-; 		bf	.ydl_busy
+		mov	@r8,r0
+		mov	r0,r4
+		mov	@r9,r0
+		or	r4,r0
+		cmp/eq	#0,r0
+		bf	.ydl_busy
 		mov	#2,r0
 		mov	r0,@r9
 		add	#$02,r5
 .reqr_b:
 		cmp/pz	r1
 		bt	.ydl_busy
-; 		mov	@r8,r0
-; 		mov	r0,r4
-; 		mov	@r9,r0
-; 		or	r4,r0
-; 		cmp/eq	#0,r0
-; 		bf	.ydl_busy
+		mov	@r8,r0
+		mov	r0,r4
+		mov	@r9,r0
+		or	r4,r0
+		cmp/eq	#0,r0
+		bf	.ydl_busy
 		mov	#2,r0
 		mov	r0,@r8
 		add	#$02,r5
@@ -961,49 +964,44 @@ MarsVideo_MakeTbl:
 ; on Real hardware
 ; ---------------------------------------
 
-; TODO: this workaround MIGHT fail
-; if the source WIDTH is exactly == 320
-
 MarsVideo_FixTblShift:
 		mov.w	@(marsGbl_XShift,gbr),r0
 		and	#1,r0
 		cmp/eq	#1,r0
 		bf	.ptchset
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
-		mov.b	@(mbg_flags,r1),r0		; Background is Indexed?
-		and	#%00000001,r0
-		tst	r0,r0
-		bf	.ptchset
+; 		mov.b	@(mbg_flags,r1),r0		; Background is Indexed?
+; 		and	#%00000001,r0
+; 		tst	r0,r0
+; 		bf	.ptchset
 		mov	r14,r13
 		mov	#_framebuffer+FBVRAM_PATCH,r12	; r13 - Output for patched pixel lines
-		mov	#$FF,r11
-		mov	#$FFFF,r10
-		mov	#-2,r9
-		mov	#224,r8
+		mov	#240,r11
+		mov	#$FF,r10
+		mov	#$FFFF,r9
+; 		mov	#-2,r8
 .loop:
 		mov.w	@r13,r0
-		mov	r0,r2
-		and	r11,r0
-		cmp/eq	r11,r0
+		and	r9,r0
+		mov	r0,r7
+		and	r10,r0
+		cmp/eq	r10,r0
 		bf	.tblexit
-		and	r10,r2
-		shll	r2
-		add	r14,r2
-		and	r9,r2
+		shll	r7
+		add	r14,r7
 		mov	r12,r0
 		shlr	r0
 		mov.w	r0,@r13
-		mov	#320+16,r3
-.copyline:
-		add	#1,r2
-		mov.b	@r2,r0
-		nop
-		mov.b	r0,@(1,r12)
+		mov	#320/2,r3
+.copy:
+		mov.w	@r7,r0
+		mov.w	r0,@r12
+		add	#2,r7
 		dt	r3
-		bf/s	.copyline
-		add	#1,r12
+		bf/s	.copy
+		add	#2,r12
 .tblexit:
-		dt	r8
+		dt	r11
 		bf/s	.loop
 		add	#2,r13
 .ptchset:
