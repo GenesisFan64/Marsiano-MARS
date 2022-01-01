@@ -106,8 +106,8 @@ thisCode_Top:
 		move.w	#1,(RAM_FadeMarsSpd).w
 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
 		move.w	#1,(RAM_FadeMarsReq).w
-		bset	#4,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait2:		btst	#4,(sysmars_reg+comm14).l	; and wait until it finishes
+		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
 		bne.s	.wait2
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
@@ -213,15 +213,12 @@ thisCode_Top:
 .nob:
 
 
-
-
-
 	; Test movement
 		move.l	(RAM_MdMarsBg).w,d0
 		move.l	(RAM_MdMarsBg+4).w,d1
 		move.w	(RAM_HorScroll+2).w,d2
 		move.w	(RAM_VerScroll+2).w,d3
-		move.l	#$10000,d5
+		move.l	#$20000,d5
 		move.l	#1,d6
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -260,8 +257,8 @@ thisCode_Top:
 		bsr	PlayThisSfx
 .noah:
 
-; 		bsr	Emilie_Move
-; 		bsr	Emilie_MkSprite
+		bsr	Emilie_Move
+		bsr	Emilie_MkSprite
 		rts
 
 ; 		lea	str_TempVal(pc),a0		; Main title
@@ -516,10 +513,10 @@ thisCode_Top:
 
 ; test playlist
 MasterTrkList:
-	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
-	dc.w 7,0
 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
 	dc.w $A,0
+	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
+	dc.w 7,0
 	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
 	dc.w 7,0
 ; 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2

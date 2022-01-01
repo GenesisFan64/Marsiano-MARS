@@ -34,7 +34,7 @@ sizeof_sndchn	ds.l 0
 ; 23011361 NTSC
 ; 22801467 PAL
 ;
-; NOTE: cycle causes a CLICK to sound
+; NOTE: The CLICK sound is normal.
 ; --------------------------------------------------------
 
 MarsSound_Init:
@@ -75,7 +75,7 @@ MarsSound_Init:
 ; r2 | Start address
 ; r3 | End address
 ; r4 | Loop address (ignored if loop flag isn't set)
-; r5 | Pitch ($xxxxxx.xx)
+; r5 | Pitch ($xxxxxx.xx, $100 default speed)
 ; r6 | Volume
 ; r7 | Flags (Currently: %xxxxslLR)
 ;      LR - output
@@ -129,11 +129,11 @@ MarsSound_SetPwm:
 ; starting from specific slot
 ;
 ; Input:
-; r1 | Channel pitch slot 0
+; r1 | Channel slot
 ; r2 | Pitch data
 ;
 ; Uses:
-; r3,r4
+; r8
 ; --------------------------------------------------------
 
 MarsSound_SetPwmPitch:
@@ -156,11 +156,11 @@ MarsSound_SetPwmPitch:
 ; MarsSound_SetVolume
 ;
 ; Input:
-; r1 | Channel pitch slot 0
-; r2 | Pitch data
+; r1 | Channel slot
+; r2 | Volume data
 ;
 ; Uses:
-; r3,r4
+; r8
 ; --------------------------------------------------------
 
 MarsSound_SetVolume:
@@ -214,7 +214,7 @@ MarsSound_PwmEnable:
 ; --------------------------------------------------------
 
 ; The trick here is to keep PWM interrupt enabled while
-; filling backup data
+; filling the backup data
 
 MarsSnd_Refill:
 		mov	#MarsSnd_PwmChnls,r8

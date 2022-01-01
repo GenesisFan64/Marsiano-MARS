@@ -3,7 +3,7 @@ A GameBase/Engine/Library for making Sega 32X Games, in assembly.
 *WORK IN PROGRESS*
 
 Graphics:
-- Working scrolling background in 256-color mode: Source data can be either a static image in ROM or a buffer section in RAM, in any WIDTH and HEIGHT BUT aligned in "blocks" (Ex. 4x4, 8x8, 16x16, 32x32)
+- A Scrolling background in 256-color mode: Source data can be either a static image in ROM (note: not RV protected) or a buffer section in RAM, in any WIDTH and HEIGHT BUT aligned in "blocks" (Ex. 4x4, 8x8, 16x16, 32x32)
 
 Sound, Genesis and 32X:
 - Runs on Z80, with DMA protection (Genesis side)
@@ -17,6 +17,7 @@ Sound, Genesis and 32X:
 
 Notes/Issues:
 - Genesis: DAC Wave sound (Genesis side) might play slow if track is using too much channels
+- PWM RV-backup: If Genesis' DMA takes too long it might break the wave playback
 - 32X: background breaks on SOFT Reset
 - SOFT-Reset MIGHT crash everything. (very low chance)
 

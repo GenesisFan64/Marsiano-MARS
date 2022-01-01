@@ -1,20 +1,20 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS Video
+; MARS Video section
 ; ----------------------------------------------------------------
 
 ; ----------------------------------------
 ; Variables
 ; ----------------------------------------
 
-FBVRAM_PATCH	equ $1D000		; Framebuffer location for the affected XShift lines
+FBVRAM_PATCH	equ $1D000	; Framebuffer location for the affected XShift lines
 
 ; ----------------------------------------
 ; Structs
 ; ----------------------------------------
 
 ; Be careful modifing these...
-; The SH2 has limitation with indexing, bytes start first
+; The SH2 has limitation with indexing, bytes go first.
 
 		struct 0
 mbg_redraw	ds.b 1
@@ -62,8 +62,7 @@ MarsVideo_Init:
 		nop
 
 	; Clear values
-	; TODO: checar bien esto porque se rompe
-	; en RESET
+	; TODO: checar bien esto porque se rompe en RESET
 		mov	#RAM_Mars_Background,r1
 		mov	#0,r0
 		mov	r0,@(mbg_data,r1)
@@ -583,6 +582,8 @@ MarsVideo_DrawAllBg:
 ; the new values
 ;
 ; r14 - Background data
+;
+; Call this during VBlank.
 ; ---------------------------------------
 
 MarsVideo_MoveBg:
@@ -644,16 +645,6 @@ MarsVideo_MoveBg:
 	; Y Framebuffer position (direct)
 	; ---------------------------------------
 
-; 	if MSCRL_HEIGHT=256
-; 		mov.w	@(mbg_yfb,r14),r0
-; 		add	r2,r0
-; 		and	#$FF,r0
-; 		mov.w	r0,@(mbg_yfb,r14)
-; 		mov.w	@(mbg_yfb_d,r14),r0
-; 		add	r2,r0
-; 		and	#$FF,r0
-; 		mov.w	r0,@(mbg_yfb_d,r14)
-; 	else
 		mov.w	@(mbg_intrl_h,r14),r0
 		mov	r0,r3
 		mov.w	@(mbg_yfb,r14),r0
@@ -857,8 +848,7 @@ MarsVideo_MoveBg:
 		and	r4,r0
 		mov.b	r0,@(mbg_xset,r14)
 
-	; Make snapshot of scroll variables
-	; to CACHE
+	; Make snapshot of scroll variables for drawing
 		cmp/pl	r5
 		bf	.dont_snap
 		mov.w	@(mbg_intrl_blk,r14),r0
@@ -870,7 +860,6 @@ MarsVideo_MoveBg:
 		mov	#Cach_YHead_D,r4
 		mov	#Cach_BgFbPos_V,r5
 		mov	#Cach_BgFbPos_H,r6
-
 		mov.w	@(mbg_xinc_l,r14),r0
 		and	r7,r0
 		mov	r0,@r1
@@ -886,7 +875,6 @@ MarsVideo_MoveBg:
 		mov.w	@(mbg_yfb,r14),r0
 		and	r7,r0
 		mov	r0,@r5
-
 		mov	@(mbg_fb,r14),r0
 		and	r7,r0
 		mov	r0,r7
@@ -905,7 +893,7 @@ MarsVideo_MoveBg:
 		ltorg
 
 ; ---------------------------------------
-; Build the linetable
+; Make a visible section
 ;
 ; r1 - Background buffer
 ; r2 - Top Y
@@ -961,7 +949,7 @@ MarsVideo_MakeTbl:
 ; ---------------------------------------
 ; Call this after ALL Framebuffer tables
 ; are set, to fix that Xshift bit issue
-; on Real hardware
+; on Real Hardware
 ; ---------------------------------------
 
 MarsVideo_FixTblShift:
@@ -1020,16 +1008,15 @@ MarsVideo_FixTblShift:
 ; Then call MarsVideo_SetBg to set
 ; the source image (ROM or RAM)
 ;
-; r1 - Background slot
+; r1 - Background buffer
 ; r2 - Output framebuffer data
-; r3 - Scroll block size (lowest possible: 4 bytes)
+; r3 - Scroll block size (4 BYTE ALIGNED)
 ; r4 - Scroll visible width
 ; r5 - Scroll visible height
-; r6 - Type: Indexed or Direct
+; r6 - Type: Indexed or Direct (TODO)
 ; ------------------------------------------------
 
 MarsVideo_MkScrlField:
-		mov	#RAM_Mars_Background,r14
 		mov	r6,r0
 		and	#1,r0
 		tst	r0,r0
@@ -1038,18 +1025,18 @@ MarsVideo_MkScrlField:
 .no_indx:
 		add	r3,r4		; add block to width/height
 		add	r3,r5
-		mov	r2,@(mbg_fbdata,r14)
+		mov	r2,@(mbg_fbdata,r1)
 		mov	r3,r0
-		mov.w	r0,@(mbg_intrl_blk,r14)
+		mov.w	r0,@(mbg_intrl_blk,r1)
 		mov	r4,r0
-		mov.w	r0,@(mbg_intrl_w,r14)
+		mov.w	r0,@(mbg_intrl_w,r1)
 		mov	r5,r0
-		mov.w	r0,@(mbg_intrl_h,r14)
+		mov.w	r0,@(mbg_intrl_h,r1)
 		mulu	r4,r5
 		sts	macl,r0
-		mov	r0,@(mbg_intrl_size,r14)
+		mov	r0,@(mbg_intrl_size,r1)
 		mov	r6,r0
-		mov.b	r0,@(mbg_flags,r14)
+		mov.b	r0,@(mbg_flags,r1)
 		rts
 		nop
 		align 4
@@ -1060,7 +1047,7 @@ MarsVideo_MkScrlField:
 ;
 ; Set pointer to read the pixel-data
 ;
-; r1 - Background slot
+; r1 - Background buffer
 ; r2 - Pixeldata output location on Framebuffer
 ; r3 - Source image WIDTH
 ; r4 - Source image HEIGHT
@@ -1069,18 +1056,18 @@ MarsVideo_MkScrlField:
 ; ------------------------------------------------
 
 MarsVideo_SetBg:
-		mov	#RAM_Mars_Background,r14
-		mov	r2,@(mbg_data,r14)
-		mov.b	@(mbg_flags,r14),r0
+		mov	#RAM_Mars_Background,r1
+		mov	r2,@(mbg_data,r1)
+		mov.b	@(mbg_flags,r1),r0
 		and	#1,r0
 		tst	r0,r0
 		bt	.indxmode
 		shll	r3
 .indxmode:
 		mov	r3,r0
-		mov.w	r0,@(mbg_width,r14)
+		mov.w	r0,@(mbg_width,r1)
 		mov	r4,r0
-		mov.w	r0,@(mbg_height,r14)
+		mov.w	r0,@(mbg_height,r1)
 		rts
 		nop
 		align 4

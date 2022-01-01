@@ -32,7 +32,7 @@ zym_ctrl_1	equ	$4000		; YM2612 reg 1
 zym_data_1	equ	$4001		; YM2612 reg 2
 zym_ctrl_2	equ	$4002		; YM2612 reg 1
 zym_data_2	equ	$4003		; YM2612 reg 2
-zbank		equ	$6000		; Z80 ROM BANK 24bits, %XXXXXXXX X0000000 00000000 (9 writes)
+zbank		equ	$6000		; Z80 ROM BANK: %XXXXXXXX X0000000 00000000 (9-byte writes)
 ; zvdp_data	equ	$7F00		; video data port
 ; zvdp_ctrl	equ	$7F04		; video control port
 zpsg_ctrl	equ	$7F11		; PSG control
@@ -41,5 +41,5 @@ zpsg_ctrl	equ	$7F11		; PSG control
 ; 32X registers
 ; ----------------------------------------------------------------
 
-sysmars_id	equ	$A130EC		; 32X's ID String: "MARS"
+sysmars_id	equ	$A130EC		; 32X's ID: "MARS"
 sysmars_reg	equ	$A15100		; MARS 32X registers section, see system/mars/map.asm for variables

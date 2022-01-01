@@ -2,7 +2,7 @@
 ; ----------------------------------------------------------------
 ; CACHE code for Master CPU
 ;
-; LIMIT: $800 bytes
+; LIMIT: $800 bytes for each CPU
 ; ----------------------------------------------------------------
 
 		align 4
@@ -10,10 +10,9 @@ CACHE_MASTER:
 		phase $C0000000
 
 ; ------------------------------------------------
-; Watchdog tasks
+; Watchdog interrupt
 ; ------------------------------------------------
 
-; Cache_OnInterrupt:
 m_irq_custom:
 		mov	.tag_FRT,r1
 		mov.b	@(7,r1), r0
@@ -24,46 +23,48 @@ m_irq_custom:
 		align 4
 .tag_FRT:	dc.l _FRT
 
-; ---------------------------------------
-; DREQ DMA Transfer, might perform
-; better here...
-; ---------------------------------------
+; OLD
+; ; ---------------------------------------
+; ; DREQ DMA Transfer, might perform
+; ; better here...
+; ; ---------------------------------------
+;
+; Mars_DoDreq:
+; 		mov	#_sysreg,r4
+; 		mov	#_DMASOURCE0,r3
+; 		mov	#_sysreg+comm14,r2
+; 		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
+; 		mov	r0,@($C,r3)
+; 		mov	@(marsGbl_DreqRead,gbr),r0
+; 		mov	r0,r1
+; 		mov	@(marsGbl_DreqWrite,gbr),r0
+; 		mov	r0,@(marsGbl_DreqRead,gbr)
+; 		mov	r1,r0
+; 		mov	r0,@(marsGbl_DreqWrite,gbr)
+; 		mov	#_sysreg+dreqfifo,r1
+; 		mov	r1,@r3			; Source
+; 		mov	r0,@(4,r3)		; Destination
+; 		mov.w	@(dreqlen,r4),r0
+; 		mov	r0,@(8,r3)		; Length
+; 		mov.b	@r2,r0
+; 		or	#%00100000,r0		; Tell MD we are ready.
+; 		mov.b	r0,@r2
+; 		mov	@($C,r3),r0		; dummy readback(?)
+; 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
+; 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+; 		mov	#1,r0			; _DMAOPERATION = 1, After this DMA will
+; 		mov	r0,@($30,r3)		; transfer data on the background
+; ; .wait_dma:
+; ; 		mov	@($C,r3),r0
+; ; 		and	#%10,r0
+; ; 		tst	r0,r0
+; ; 		bt	.wait_dma
+; 		rts
+; 		nop
+; 		align 4
 
-Mars_DoDreq:
-		mov	#_sysreg,r4
-		mov	#_DMASOURCE0,r3
-		mov	#_sysreg+comm14,r2
-		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
-		mov	r0,@($C,r3)
-		mov	@(marsGbl_DreqRead,gbr),r0
-		mov	r0,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-		mov	r1,r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
-		mov	#_sysreg+dreqfifo,r1
-		mov	r1,@r3			; Source
-		mov	r0,@(4,r3)		; Destination
-		mov.w	@(dreqlen,r4),r0
-		mov	r0,@(8,r3)		; Length
-		mov.b	@r2,r0
-		or	#%00100000,r0		; Tell MD we are ready.
-		mov.b	r0,@r2
-		mov	@($C,r3),r0		; dummy readback(?)
-		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
-		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r3)
-; .wait_dma:
-; 		mov	@($C,r3),r0		; Wait until DMA finishes
-; 		and	#%10,r0
-; 		tst	r0,r0
-; 		bt	.wait_dma
-		rts
-		nop
-		align 4
-
 ; ---------------------------------------
+; Background:
 ; Draw Left/Right sections
 ; ---------------------------------------
 
@@ -203,6 +204,7 @@ dtsk01_lrdraw:
 		align 4
 
 ; ---------------------------------------
+; Background:
 ; Draw Up/Down sections
 ; ---------------------------------------
 
@@ -346,11 +348,11 @@ Cach_Drw_L	ds.l 1
 Cach_Drw_R	ds.l 1
 Cach_XHead_L	ds.l 1		; Left draw beam
 Cach_XHead_R	ds.l 1		; Right draw beam
-Cach_YHead_D	ds.l 1		; Bottom draw beam
 Cach_YHead_U	ds.l 1		; Top draw beam
-Cach_BgFbPos_V	ds.l 1		; Framebuffer Y direct pos (mutiply externally)
+Cach_YHead_D	ds.l 1		; Bottom draw beam
+Cach_BgFbPos_V	ds.l 1		; Framebuffer Y DIRECT position (then multiply internal WIDTH externally)
 Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
-Cach_Drw_Cntr	ds.l 1
+
 ; ------------------------------------------------
 .end:		phase CACHE_MASTER+.end&$1FFF
 CACHE_MASTER_E:
@@ -429,8 +431,6 @@ MarsSound_ReadPwm:
 		bf	.loop_me
 		mov 	#0,r0
 		mov 	r0,@(mchnsnd_enbl,r9)
-; 		mov	@(mchnsnd_start,r9),r0
-; 		mov	r0,@(mchnsnd_start,r9)
 		bra	.silent
 		nop
 .loop_me:

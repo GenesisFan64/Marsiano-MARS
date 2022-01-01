@@ -3,8 +3,8 @@
 ; MD/MARS shared constants
 ; ----------------------------------------------------------------
 
-; NOTE: Be careful changing the MAX_MDDREQ value:
-; If something goes wrong set it to $800
+; NOTE: Be careful changing the MAX_MDDREQ value, it might fail on specific
+; sizes, If something goes wrong set it to $800
 
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
 MAX_MDDREQ	equ $800	; MAX size for DREQ RAM transfer in WORDS (careful for HW)
@@ -20,18 +20,27 @@ varNullVram	equ $7FF	; Default Blank tile for some video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Structures
+; Custom structures
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Variables
+; Controller
 ; --------------------------------------------------------
 
-; Read as (Controller_1)
+; Controller buffer data (after calling System_Input)
+		struct 0
+pad_id		ds.b 1			; Controller ID
+pad_ver		ds.b 1			; Controller type/revision: (ex. 0-3button 1-6button)
+on_hold		ds.w 1			; User HOLD bits
+on_press	ds.w 1			; User PRESSED bits
+sizeof_input	ds.l 0
+		finish
+
+; Read as (Controller_1) then add +on_hold or +on_press
 Controller_1	equ RAM_InputData
 Controller_2	equ RAM_InputData+sizeof_input
 
-; read as full WORD (on_hold or on_press)
+; read as full WORD
 JoyUp		equ $0001
 JoyDown		equ $0002
 JoyLeft		equ $0004
@@ -55,20 +64,11 @@ bitJoyC		equ 5
 bitJoyA		equ 6
 bitJoyStart	equ 7
 
-; left byte $xx00
+; left byte $xx00 (Read Full WORD and shift 8 bits to the right)
 bitJoyZ		equ 0
 bitJoyY		equ 1
 bitJoyX		equ 2
 bitJoyMode	equ 3
-
-; Controller buffer data (after calling System_Input)
-		struct 0
-pad_id		ds.b 1			; Controller ID
-pad_ver		ds.b 1			; Controller type/revision: (ex. 0-3button 1-6button)
-on_hold		ds.w 1			; User HOLD bits
-on_press	ds.w 1			; User PRESSED bits
-sizeof_input	ds.l 0
-		finish
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -93,7 +93,7 @@ sizeof_mdsys	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdSound
-RAM_SndSaveReg	ds.l 8
+RAM_SndSaveReg	ds.l 8			; Backup registers here instead of stack (TODO)
 sizeof_mdsnd	ds.l 0
 		finish
 		
@@ -103,22 +103,26 @@ sizeof_mdsnd	ds.l 0
 ; ----------------------------------------------------------------
 
 		struct RAM_MdVideo
-RAM_HorScroll	ds.l 240		; Horizontal scroll data
-RAM_VerScroll	ds.l 320/16		; Vertical scroll data
-RAM_Sprites	ds.w 8*70		; Sprites
-RAM_Palette	ds.w 64			; Palette
+RAM_HorScroll	ds.l 240		; DMA Horizontal scroll data
+RAM_VerScroll	ds.l 320/16		; DMA Vertical scroll data
+RAM_Sprites	ds.w 8*70		; DMA Sprites
+RAM_Palette	ds.w 64			; DMA palette
 RAM_MdMarsPalFd	ds.w 256		; Target 32X palette for FadeIn/Out
 RAM_PaletteFd	ds.w 64			; Target MD palette for FadeIn/Out
-RAM_VdpDmaList	ds.w 7*MAX_MDDMATSK
+RAM_VdpDmaList	ds.w 7*MAX_MDDMATSK	; DMA BLAST Transfer list for VBlank
 RAM_VidPrntList	ds.w 3*64		; Video_Print list: Address, Type
-RAM_VdpDmaIndx	ds.w 1
-RAM_VdpDmaMod	ds.w 1
+RAM_VdpDmaIndx	ds.w 1			; Current index in DMA BLAST list
+RAM_VdpDmaMod	ds.w 1			; Mid-write flag (just to be safe)
 RAM_VidPrntVram	ds.w 1			; Default VRAM location for ASCII text used by Video_Print
-RAM_FadeMdReq	ds.w 1			; FadeIn/Out request for 32X palette (1-FadeIn 2-FadeOut)
-RAM_FadeMdSpd	ds.w 1			; Fading speed (both In and Out)
-RAM_FadeMarsReq	ds.w 1			; Same thing but for 32X's 256-color
-RAM_FadeMarsSpd	ds.w 1			;
-RAM_FrameCount	ds.l 1			; Global frame counter
+RAM_FadeMdReq	ds.w 1			; FadeIn/Out request for Genesis palette (01-FadeIn 02-FadeOut)
+RAM_FadeMdSpd	ds.w 1			; Fading increment count
+RAM_FadeMdDel	ds.w 1			; Fading delay
+RAM_FadeMdTmr	ds.w 1			; Fading delay timer (Write to both FadeMdDel and here)
+RAM_FadeMarsReq	ds.w 1			; Same thing but for 32X's 256-color (01-FadeIn 02-FadeOut)
+RAM_FadeMarsSpd	ds.w 1			; (Hint: Set to 4 to syncronize Genesis FadeIn/Out)
+RAM_FadeMarsDel	ds.w 1
+RAM_FadeMarsTmr	ds.w 1
+RAM_FrameCount	ds.l 1			; Frames counter
 RAM_VdpRegs	ds.b 24			; VDP Register cache
 sizeof_mdvid	ds.l 0
 		finish
@@ -126,6 +130,9 @@ sizeof_mdvid	ds.l 0
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 32X control using DREQ
+;
+; *** CALL System_MdMarsDreq AFTER DOING ANY CHANGE
+; IN THIS AREA, OUTSIDE VBLANK ***
 ;
 ; Size for this buffer is set externally as MAX_MDDREQ
 ; ----------------------------------------------------------------
@@ -143,8 +150,7 @@ sizeof_dreqmd	ds.l 0
 ; ----------------------------------------------------------------
 ; MD RAM
 ;
-; *** NOTE ***
-; For SEGA CD support:
+; NOTE for porting this to Sega CD (With or without 32X):
 ; $FFFD00 to $FFFDFF is reserved for the MAIN-CPU's vectors
 ; ----------------------------------------------------------------
 

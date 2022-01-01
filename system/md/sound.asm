@@ -1,23 +1,26 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD Sound
+; GEMA Sound driver
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Init Sound
+; Initialize Sound
 ;
 ; Uses:
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-; 		align $80	; GENS emu only: comment or uncomment if it freezes
+	; This align is for GEMS emulator only
+	; in case get stuck in a black screen
+; 		align $80
+
 Sound_Init:
-		move.w	#$0100,(z80_bus).l		; Stop Z80
-		move.b	#1,(z80_reset).l		; Reset
+		move.w	#$0100,(z80_bus).l		; Request Z80 stop
+		move.b	#1,(z80_reset).l		; And reset
 .wait:
 		btst	#0,(z80_bus).l
 		bne.s	.wait
-		lea	(z80_cpu).l,a0
+		lea	(z80_cpu).l,a0			; Clean entire Z80 area first
 		move.w	#$1FFF,d0
 		moveq	#0,d1
 .cleanup:
@@ -29,11 +32,11 @@ Sound_Init:
 .copy:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copy
-		move.b	#1,(z80_reset).l		; Reset
+		move.b	#1,(z80_reset).l		; Reset again
 		nop
 		nop
 		nop
-		move.w	#0,(z80_bus).l
+		move.w	#0,(z80_bus).l			; Start Z80
 		rts
 
 ; ====================================================================
@@ -150,16 +153,13 @@ Sound_DMA_Pause:
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
 
-	; Make a data-backup of the current
-	; PWM's
+	; Make a data-backup of the current PWM's
 .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
 		bne.s	.wait_mars1
 		move.b	(sysmars_reg+comm15),d7		; Request PWM Backup
 		bset	#5,d7
 		move.b	d7,(sysmars_reg+comm15)
-		nop
-		nop
 .wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
 		bne.s	.wait_mars2
@@ -177,14 +177,13 @@ Sound_DMA_Resume:
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
+
 .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
 		bne.s	.wait_mars1
 		move.b	(sysmars_reg+comm15),d7		; Request PWM Restore
 		bset	#4,d7
 		move.b	d7,(sysmars_reg+comm15)
-		nop
-		nop
 .wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
 		bne.s	.wait_mars2
@@ -195,6 +194,7 @@ Sound_DMA_Resume:
 ; SoundReq_SetTrack
 ;
 ; a0 - Pointer to Pattern, Blocks and Instruments list
+;      in this order:
 ;  	dc.l pattern_data
 ;  	dc.l block_data
 ;  	dc.l instrument_data
