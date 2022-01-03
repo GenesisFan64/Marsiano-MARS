@@ -21,6 +21,7 @@ mbg_redraw	ds.b 1
 mbg_flags	ds.b 1		; Current type of pixel-data: Indexed or Direct
 mbg_xset	ds.b 1		; X-counter
 mbg_yset	ds.b 1		; Y-counter
+; mbg_indxinc	ds.b 1		; Index color increment
 mbg_xpos_old	ds.w 1
 mbg_ypos_old	ds.w 1
 mbg_xinc_l	ds.w 1
@@ -39,6 +40,7 @@ mbg_fb		ds.l 1		; Framebuffer TOPLEFT position
 mbg_fbdata	ds.l 1		; Pixeldata location on Framebuffer
 mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
+mbg_indxinc	ds.l 1		; Index increment (NOTE: for all 4 pixels)
 sizeof_marsbg	ds.l 0
 		finish
 

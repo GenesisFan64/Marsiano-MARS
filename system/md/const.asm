@@ -28,11 +28,23 @@ varNullVram	equ $7FF	; Default Blank tile for some video routines
 ; --------------------------------------------------------
 
 ; Controller buffer data (after calling System_Input)
+;
+; Type/Revision byte:
+;
+; ID    |
+; $0D   | $00 - Original 3 button
+;       | $01 - 6 button version: XYZM
+
 		struct 0
 pad_id		ds.b 1			; Controller ID
-pad_ver		ds.b 1			; Controller type/revision: (ex. 0-3button 1-6button)
+pad_ver		ds.b 1			; Controller type/revision
 on_hold		ds.w 1			; User HOLD bits
 on_press	ds.w 1			; User PRESSED bits
+mouse_x		ds.w 1			; Mouse X add/sub
+mouse_y		ds.w 1			; Mouse Y add/sub
+extr_3		ds.w 1
+extr_4		ds.w 1
+extr_5		ds.w 1
 sizeof_input	ds.l 0
 		finish
 
@@ -40,7 +52,7 @@ sizeof_input	ds.l 0
 Controller_1	equ RAM_InputData
 Controller_2	equ RAM_InputData+sizeof_input
 
-; read as full WORD
+; Read WORD in +on_hold or +on_press
 JoyUp		equ $0001
 JoyDown		equ $0002
 JoyLeft		equ $0004
@@ -53,9 +65,7 @@ JoyZ		equ $0100
 JoyY		equ $0200
 JoyX		equ $0400
 JoyMode		equ $0800
-
-; right byte $00xx
-bitJoyUp	equ 0
+bitJoyUp	equ 0		; right byte $00xx
 bitJoyDown	equ 1
 bitJoyLeft	equ 2
 bitJoyRight	equ 3
@@ -63,12 +73,21 @@ bitJoyB		equ 4
 bitJoyC		equ 5
 bitJoyA		equ 6
 bitJoyStart	equ 7
-
-; left byte $xx00 (Read Full WORD and shift 8 bits to the right)
-bitJoyZ		equ 0
+bitJoyZ		equ 0		; left byte $xx00 (Read Full WORD and shift 8 bits to the right)
 bitJoyY		equ 1
 bitJoyX		equ 2
 bitJoyMode	equ 3
+
+; Mega Mouse
+; Read WORD in +on_hold or +on_press
+ClickR		equ $0001
+ClickL		equ $0002
+ClickM		equ $0004	; US MOUSE ONLY
+ClickS		equ $0008	; (Untested)
+bitClickR	equ 0
+bitClickL	equ 1
+bitClickM	equ 2
+bitClickS	equ 3
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -104,7 +123,7 @@ sizeof_mdsnd	ds.l 0
 
 		struct RAM_MdVideo
 RAM_HorScroll	ds.l 240		; DMA Horizontal scroll data
-RAM_VerScroll	ds.l 320/16		; DMA Vertical scroll data
+RAM_VerScroll	ds.l 320/16		; DMA Vertical scroll data (TODO: check if this is the correct size)
 RAM_Sprites	ds.w 8*70		; DMA Sprites
 RAM_Palette	ds.w 64			; DMA palette
 RAM_MdMarsPalFd	ds.w 256		; Target 32X palette for FadeIn/Out
@@ -134,7 +153,8 @@ sizeof_mdvid	ds.l 0
 ; *** CALL System_MdMarsDreq AFTER DOING ANY CHANGE
 ; IN THIS AREA, OUTSIDE VBLANK ***
 ;
-; Size for this buffer is set externally as MAX_MDDREQ
+; Size for this buffer is set externally on
+; the MAX_MDDREQ setting.
 ; ----------------------------------------------------------------
 
 		struct RAM_MdDreq

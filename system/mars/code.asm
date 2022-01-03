@@ -760,8 +760,7 @@ SH2_M_HotStart:
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
-	; TODO: ver como mover
-	; esto al Genesis
+	; TODO: ver como mover esto al Genesis
 		mov	#RAM_Mars_Background,r1
 		mov	#$200,r2
 		mov	#8,r3

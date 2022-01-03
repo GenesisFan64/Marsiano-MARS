@@ -175,6 +175,11 @@ thisCode_Top:
 .mode0_loop:
 		bsr	Video_PalFade
 		bsr	Video_MarsPalFade
+
+		lea	str_InfoMouse(pc),a0		; GEMA tester text on WINDOW
+		move.l	#locate(0,2,4),d0
+		bsr	Video_Print
+
 ; 		move.w	(RAM_FadeMarsReq),d7
 ; 		move.w	(RAM_FadeMdReq),d6
 ; 		or.w	d6,d7
@@ -541,53 +546,47 @@ PlayThisSfx:
 		moveq	#0,d3
 		bra	Sound_TrkPlay
 
+
 Emilie_Move:
-
-
-; 		sub.l
-; 		move.b	(RAM_EmiFlags),d2
-; 		bclr	#7,d2
-; 		move.w	(RAM_EmiPosX).w,d0
-; 		move.w	(RAM_EmiMoveX).w,d1
-; 		bsr	.move_it
-; 		move.w	d0,(RAM_EmiPosX).w
-; 		move.w	(RAM_EmiPosY).w,d0
-; 		move.w	(RAM_EmiMoveY).w,d1
-; 		bsr	.move_it
-; 		move.w	d0,(RAM_EmiPosY).w
-; 		move.b	d2,(RAM_EmiFlags).w
-;
-; 		move.l	(RAM_EmiJumpSpd).l,d5
-; 		move.l	(RAM_EmiJumpY),d6
-; 		add.l	d5,d6
-; 		move.l	d6,(RAM_EmiJumpY)
-;
-; 		move.l	(RAM_EmiJumpSpd).l,d5
-; 		add.l	#$2000,d5
-; ; 		bmi.s	.toomuch
-; 		move.l	(RAM_EmiJumpY),d6
-; 		bmi.s	.toomuch
-; 		clr.l	d5
-; 		bra.s	.eximuch
-; .toomuch:
-; 		move.w	#1,(RAM_EmiUpd).w
-; .eximuch:
-; 		move.l	d5,(RAM_EmiJumpSpd).l
-; 		rts
-; .move_it:
-; 		move.w	d0,d5
-; 		move.w	d1,d4
-; 		cmp.w	d5,d4
-; 		beq.s	.same_x
-; 		move.w	#1,d6
-; 		sub.w	d5,d4
-; 		bpl.s	.reversx
-; 		move.w	#-1,d6
-; .reversx:
-; 		bset	#7,d2
 		add.w	#1,(RAM_EmiAnim).w
-; 		add.w	d6,d0
-; .same_x:
+		lea	(Controller_2),a0
+		move.b	(a0),d0
+		cmp.b	#$03,d0
+		bne.s	.not_mouse
+
+		move.w	#320,d2
+		move.w	(RAM_EmiPosX).w,d1
+		move.w	mouse_x(a0),d0
+		muls.w	#$0E,d0
+		asr.w	#4,d0
+		add.w	d0,d1
+		or.w	d1,d1
+		bpl.s	.left_x
+		clr.w	d1
+.left_x:
+		cmp.w	d2,d1
+		blt.s	.right_x
+		move.w	d2,d1
+.right_x:
+		move.w	d1,(RAM_EmiPosX).w
+
+		move.w	#224,d2
+		move.w	(RAM_EmiPosY).w,d1
+		move.w	mouse_Y(a0),d0
+		muls.w	#$0E,d0
+		asr.w	#4,d0
+		add.w	d0,d1
+		or.w	d1,d1
+		bpl.s	.left_y
+		clr.w	d1
+.left_y:
+		cmp.w	d2,d1
+		blt.s	.right_y
+		move.w	d2,d1
+.right_y:
+		move.w	d1,(RAM_EmiPosY).w
+
+.not_mouse:
 		rts
 
 Emilie_MkSprite:
@@ -728,12 +727,7 @@ Emilie_Show:
 ; ------------------------------------------------------
 
 str_Title:
-		dc.b "Project MARSIANO",$A
-		dc.b $A
-		dc.b "Probando el FadeIn/FadeOut",$A
-		dc.b $A
-		dc.b "(X)(Y) - 32X",$A
-		dc.b "(A)(B) - Genesis",0
+		dc.b "Project MARSIANO",0
 		align 2
 
 str_Cursor:	dc.b " ",$A
@@ -773,6 +767,18 @@ str_COMM:
 		dc.l sysmars_reg+comm12
 		dc.l sysmars_reg+comm14
 		align 2
+
+str_InfoMouse:
+		dc.b "\\l \\l \\l \\l",$A
+		dc.b "\\l \\l \\l \\l",0
+		dc.l RAM_InputData
+		dc.l RAM_InputData+4
+		dc.l RAM_InputData+8
+		dc.l RAM_InputData+$C
+		dc.l RAM_InputData+$10
+		dc.l RAM_InputData+$14
+		dc.l RAM_InputData+$18
+		dc.l RAM_InputData+$1C
 
 ; str_DreqMe:
 ; 		dc.b "Genesis manda por DREQ:",$A

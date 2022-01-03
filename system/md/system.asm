@@ -43,40 +43,38 @@ System_Init:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; System_Input (VBLANK ONLY)
+; System_Input
+;
+; CALL THIS ON VBLANK ONLY
 ; 
 ; Uses:
-; d4-d6,a4-a5
+; d4-d6,a4-a6
 ; --------------------------------------------------------
 
-; TODO:
-; Check if it still required to turn OFF the Z80
-; while reading the controller
-
 System_Input:
-; 		move.w	#$0100,(z80_bus).l	; Stop Z80
-.wait:
-; 		btst	#0,(z80_bus).l		; Wait for it
+; 		move.w	#$0100,(z80_bus).l
+; .wait:
+; 		btst	#0,(z80_bus).l
 ; 		bne.s	.wait
-		lea	($A10003),a4
-		lea	(RAM_InputData),a5
+		lea	(sys_data_1),a5		; BASE Genesis Input regs area
+		lea	(RAM_InputData),a6
 		bsr.s	.this_one
-		adda	#2,a4
-		adda	#sizeof_input,a5
-; 		bsr.s	.this_one
+		adda	#2,a5
+		adda	#sizeof_input,a6
+		bsr.s	.this_one
 ; 		move.w	#0,(z80_bus).l
-; 		rts
+		rts
 
 ; --------------------------------------------------------	
 ; Read port
 ; 
-; a4 - Current port
-; a5 - Output data
+; a5 - Current port
+; a6 - Output data
 ; --------------------------------------------------------
 
 .this_one:
 		bsr	.pick_id
-		move.b	d4,pad_id(a5)
+		move.b	d4,pad_id(a6)
 		cmp.w	#$F,d4
 		beq.s	.exit
 		and.w	#$F,d4
@@ -84,29 +82,101 @@ System_Input:
 		move.w	.list(pc,d4.w),d5
 		jmp	.list(pc,d5.w)
 .exit:
-		clr.b	pad_ver(a5)
+		clr.b	pad_ver(a6)
 		rts
 
 ; --------------------------------------------------------
 ; Grab ID
 ; --------------------------------------------------------
 
-.list:		dc.w .exit-.list	; $0
+.list:
+		dc.w .exit-.list	; $00
+		dc.w .exit-.list
+		dc.w .exit-.list
+		dc.w .id_03-.list	; $03 - Mega mouse
+		dc.w .exit-.list	; $04
 		dc.w .exit-.list
 		dc.w .exit-.list
 		dc.w .exit-.list
-		dc.w .exit-.list	; $4
+		dc.w .exit-.list	; $08
 		dc.w .exit-.list
 		dc.w .exit-.list
 		dc.w .exit-.list
-		dc.w .exit-.list	; $8
+		dc.w .exit-.list	; $0C
+		dc.w .id_0D-.list	; $0D - Genesis controller (3 or 6 button)
 		dc.w .exit-.list
 		dc.w .exit-.list
-		dc.w .exit-.list
-		dc.w .exit-.list	; $C
-		dc.w .id_0D-.list
-		dc.w .exit-.list
-		dc.w .exit-.list
+
+; --------------------------------------------------------
+; ID $03
+;
+; Mega Mouse
+; --------------------------------------------------------
+
+.id_03:
+		move.b	#$20,(a5)
+		move.b	#$60,6(a5)
+		btst	#4,(a5)
+		beq.w	.invalid
+		move.b	#$00,(a5)	; $0F
+		nop
+		nop
+		move.b	#$20,(a5)	; $0F
+		nop
+		nop
+		move.b	#$00,(a5)	; Yo | Xo | Ys | Xs
+		nop
+		nop
+		move.b	(a5),d5		; d5 - X/Y direction bits (Ys Xs)
+		move.b	#$20,(a5)	; C | M | R | L
+		nop
+		nop
+		move.b	(a5),d7
+ 		and.w	#%1111,d7
+		move.w	on_hold(a6),d6
+		eor.w	d7,d6
+		move.w	d7,on_hold(a6)
+		and.w	d7,d6
+		move.w	d6,on_press(a6)
+		move.b	#$00,(a5)	; X7 | X6 | X5 | X4
+		nop
+		nop
+		move.b	(a5),d7
+		move.b	#$20,(a5)	; X3 | X2 | X1 | X0
+		and.w	#%1111,d7
+		lsl.w	#4,d7
+		nop
+		move.b	(a5),d6
+		and.w	#%1111,d6
+		or.w	d6,d7
+		btst    #0,d5
+		beq.s	.x_neg
+		neg.b	d7
+		neg.w	d7
+.x_neg:
+		move.w	d7,mouse_x(a6)
+		move.b	#$00,(a5)	; Y7 | Y6 | Y5 | Y4
+		nop
+		nop
+		move.b	(a5),d7
+		move.b	#$20,(a5)	; Y3 | Y2 | Y1 | Y0
+		and.w	#%1111,d7
+		lsl.w	#4,d7
+		nop
+		move.b	(a5),d6
+		and.w	#%1111,d6
+		or.w	d6,d7
+		btst    #1,d5
+		beq.s	.y_neg
+		neg.b	d7
+		neg.w	d7
+.y_neg:
+		neg.w	d7		; Reverse Y
+		move.w	d7,mouse_y(a6)
+
+.invalid:
+		move.b	#$60,(a5)
+		rts
 
 ; --------------------------------------------------------
 ; ID $0D
@@ -115,35 +185,35 @@ System_Input:
 ; --------------------------------------------------------
 
 .id_0D:
-		move.b	#$40,(a4)	; Show CB|RLDU
+		move.b	#$40,(a5)	; Show CB|RLDU
 		nop
 		nop
-		move.b	(a4),d5
+		move.b	(a5),d5
 		and.w	#%00111111,d5
-		move.b	#$00,(a4)	; Show SA|RLDU
+		move.b	#$00,(a5)	; Show SA|RLDU
 		nop
 		nop
-		move.b	(a4),d4
+		move.b	(a5),d4
 		lsl.w	#2,d4
 		and.w	#%11000000,d4
 		or.w	d5,d4
-		move.b	#$40,(a4)	; Show CB|RLDU
+		move.b	#$40,(a5)	; Show CB|RLDU
 		not.w	d4
-		move.b	on_hold+1(a5),d5
+		move.b	on_hold+1(a6),d5
 		eor.b	d4,d5
-		move.b	#$00,(a4)	; Show SA|RLDU
-		move.b	d4,on_hold+1(a5)
+		move.b	#$00,(a5)	; Show SA|RLDU
+		move.b	d4,on_hold+1(a6)
 		and.b	d4,d5
-		move.b	d5,on_press+1(a5)
-		move.b	#$40,(a4)	; 6 button responds
+		move.b	d5,on_press+1(a6)
+		move.b	#$40,(a5)	; 6 button responds
 		nop
 		nop
-		move.b	(a4),d4		; Grab ??|MXYZ
- 		move.b	#$00,(a4)
+		move.b	(a5),d4		; Grab ??|MXYZ
+ 		move.b	#$00,(a5)
   		nop
   		nop
- 		move.b	(a4),d6		; Type: $03 old, $0F new
- 		move.b	#$40,(a4)
+ 		move.b	(a5),d6		; Type: $03 old, $0F new
+ 		move.b	#$40,(a5)
  		nop
  		nop
 		and.w	#$F,d6
@@ -152,13 +222,13 @@ System_Input:
 		beq.s	.oldpad
 		not.b	d4
  		and.w	#%1111,d4
-		move.b	on_hold(a5),d5
+		move.b	on_hold(a6),d5
 		eor.b	d4,d5
-		move.b	d4,on_hold(a5)
+		move.b	d4,on_hold(a6)
 		and.b	d4,d5
-		move.b	d5,on_press(a5)
+		move.b	d5,on_press(a6)
 .oldpad:
-		move.b	d6,pad_ver(a5)
+		move.b	d6,pad_ver(a6)
 		rts
 		
 ; --------------------------------------------------------
@@ -167,16 +237,16 @@ System_Input:
 
 .pick_id:
 		moveq	#0,d4
-		move.b	#%01110000,(a4)		; TH=1,TR=1,TL=1
+		move.b	#%01110000,(a5)		; TH=1,TR=1,TL=1
 		nop
 		nop
 		bsr	.read
-		move.b	#%00110000,(a4)		; TH=0,TR=1,TL=1
+		move.b	#%00110000,(a5)		; TH=0,TR=1,TL=1
 		nop
 		nop
 		add.w	d4,d4
 .read:
-		move.b	(a4),d5
+		move.b	(a5),d5
 		move.b	d5,d6
 		and.b	#$C,d6
 		beq.s	.step_1
