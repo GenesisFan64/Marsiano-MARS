@@ -36,7 +36,7 @@ mbg_intrl_w	ds.w 1		; Internal scrolling Width (MUST be larger than 320)
 mbg_intrl_h	ds.w 1		; Internal scrolling Height
 mbg_intrl_size	ds.l 1		;
 mbg_data	ds.l 1
-mbg_fb		ds.l 1		; Framebuffer TOPLEFT position
+mbg_fbpos	ds.l 1		; Framebuffer TOPLEFT position
 mbg_fbdata	ds.l 1		; Pixeldata location on Framebuffer
 mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
@@ -187,7 +187,7 @@ MarsVdp_Print:
 		mulu	r10,r0
 		mov	@(mbg_fbdata,r14),r0
 		mov	r0,r11
-		mov	@(mbg_fb,r14),r0
+		mov	@(mbg_fbpos,r14),r0
 		add	r0,r11
 		mov	r2,r0
 		shll2	r0
@@ -254,7 +254,7 @@ MarsVdp_Print:
 ; screen
 ;
 ; Input:
-; r1 - String data
+; r1 - LONG data
 ; r2 - X pos
 ; r3 - Y pos
 ; r4 - Type
@@ -274,7 +274,7 @@ MarsVdp_PrintVal:
 		mulu	r10,r0
 		mov	@(mbg_fbdata,r14),r0
 		mov	r0,r11
-		mov	@(mbg_fb,r14),r0
+		mov	@(mbg_fbpos,r14),r0
 		add	r0,r11
 		mov	r2,r0
 		shll2	r0
@@ -283,7 +283,7 @@ MarsVdp_PrintVal:
 		sts	macl,r0
 		add	r0,r11
 
-		mov	@r1,r4
+		mov	r1,r4
 		bsr	.put_value
 		nop
 .chr_exit:
@@ -448,7 +448,7 @@ MarsVideo_DrawAllBg:
 	; Set X/Y framebuffer blocks
 		mov.w	@(mbg_yfb,r14),r0
 		mov	r0,r4
-		mov	@(mbg_fb,r14),r3
+		mov	@(mbg_fbpos,r14),r3
 		and	r6,r4
 		and	r6,r3
 		and	r6,r2
@@ -508,12 +508,10 @@ MarsVideo_DrawAllBg:
 		mulu	r4,r10
 		sts	macl,r6
 		add	r3,r6
-; 		mov	@(mbg_intrl_size,r14),r0
 		cmp/ge	r5,r6
 		bf	.lrgrfb
 		sub	r5,r6
 .lrgrfb:
-
 	; Framebuffer X/Y add
 		mov	r13,r8		; BG X/Y add
 		mulu	r11,r2
@@ -580,8 +578,8 @@ MarsVideo_DrawAllBg:
 		ltorg
 
 ; ---------------------------------------
-; Move background and update it with
-; the new values
+; Move background and
+; update it's draw positions
 ;
 ; r14 - Background data
 ;
@@ -672,7 +670,7 @@ MarsVideo_MoveBg:
 	; ---------------------------------------
 
 		mov	@(mbg_intrl_size,r14),r3
-		mov	@(mbg_fb,r14),r0
+		mov	@(mbg_fbpos,r14),r0
 		add	r1,r0
 		cmp/pl	r1
 		bf	.yx_negtv
@@ -686,7 +684,7 @@ MarsVideo_MoveBg:
 		bt	.yx_postv
 		add	r3,r0
 .yx_postv:
-		mov	r0,@(mbg_fb,r14)
+		mov	r0,@(mbg_fbpos,r14)
 
 	; ---------------------------------------
 	; Update background draw-heads
@@ -877,7 +875,7 @@ MarsVideo_MoveBg:
 		mov.w	@(mbg_yfb,r14),r0
 		and	r7,r0
 		mov	r0,@r5
-		mov	@(mbg_fb,r14),r0
+		mov	@(mbg_fbpos,r14),r0
 		and	r7,r0
 		mov	r0,r7
 		mov.b	@(mbg_flags,r14),r0
@@ -916,7 +914,7 @@ MarsVideo_MakeTbl:
 		add	r0,r8
 		mov.w	@(mbg_yfb,r1),r0
 		mulu	r9,r0
-		mov	@(mbg_fb,r1),r5
+		mov	@(mbg_fbpos,r1),r5
 ; 		shll	r5
 		mov	r5,r7
 		sts	macl,r0

@@ -909,19 +909,45 @@ master_loop:
 		mov	#MarsVideo_BgDrawUD,r0
 		jsr	@r0
 		nop
-		mov	#RAM_Mars_Background,r1		; Make visible section on screen
-		mov	#0,r2
-		mov	#240,r3
-		bsr	MarsVideo_MakeTbl
-		nop
 
 	; ---------------------------------------
 	; Draw sprites and polygons now.
 	; ---------------------------------------
 
-		bsr	MarsVideo_FixTblShift		; Call this AFTER all linetables are set
+		mov	#16,r1
+		mov	#320-16,r2
+		mov	#3,r3
+		mov	#$0120,r4
+		mov	#TEST_VALUE,r0
+		mov	@r0,r3
+		shlr8	r3
+		mov	#TEST_VALUE,r9
+		mov	@r9,r0
+		mov	#4,r10
+		add	r10,r0
+		mov	r0,@r9
+
+		bsr	VideoMars_DrawLine
 		nop
-		mov	#_vdpreg,r1
+
+	; ---------------------------------------
+	; Build linetable
+	; ---------------------------------------
+
+		mov	#_vdpreg,r1			; SVDP FILL active?
+.wait_fb:	mov.w	@(vdpsts,r1),r0
+		and	#2,r0
+		tst	r0,r0
+		bf	.wait_fb
+		mov	#RAM_Mars_Background,r1		; Make visible background
+		mov	#0,r2				; section on screen
+		mov	#240,r3
+		bsr	MarsVideo_MakeTbl
+		nop
+	; HUD
+		bsr	MarsVideo_FixTblShift		; Fix those broken lines with XShift
+		nop
+		mov	#_vdpreg,r1			; SVDP FILL active?
 		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -930,6 +956,109 @@ master_loop:
 		nop
 		align 4
 		ltorg
+
+; r1 - Left X
+; r2 - Right X
+; r3 - Y Position (max 240)
+; r4 - Using these pixel(s)
+;
+; Uses the first background's
+; top-left and Y
+
+; TODO: a DirectColor version of this.
+VideoMars_DrawLine:
+		cmp/eq	r1,r2
+		bt	.same_x
+		mov	r2,r6
+		sub	r1,r6
+		cmp/pl	r6
+		bf	.same_x
+		shlr	r6
+		mov	#RAM_Mars_Background,r14
+		mov	#_vdpreg,r13
+		mov.w	@(mbg_intrl_w,r14),r0
+		mulu	r3,r0
+		sts	macl,r5
+		mov	@(mbg_fbdata,r14),r0
+		add	r0,r5
+		mov	@(mbg_fbpos,r14),r0
+		add	r0,r5
+		add	r1,r5
+		shlr	r5
+
+	; r5 - topleft pos
+	; r6 - length
+
+	; Cross-check
+		mov	r6,r0
+		add	r5,r0
+		mov	r0,r7
+		mov	r5,r8
+		shlr8	r7
+		shlr8	r8
+		cmp/eq	r7,r8
+		bt	.single
+		mov	r0,r8
+		and	#$FF,r0
+		cmp/eq	#0,r0
+		bt	.single
+
+	; Left write
+		mov	r6,r7
+		sub	r0,r6
+		mov	r6,r0
+		dt	r0
+		mov.w	r0,@(filllength,r13)
+		mov	r5,r0
+		mov.w	r0,@(fillstart,r13)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r13)
+.wait_l:	mov.w	@(vdpsts,r13),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_l
+
+		add	r7,r5
+		mov	#$100,r6
+		mov.w	@(fillstart,r13),r0
+		add	r6,r0
+		mov.w	r0,@(fillstart,r13)
+		sub	r0,r5
+		mov	r5,r0
+		dt	r0
+		mov.w	r0,@(filllength,r13)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r13)
+.wait_r:	mov.w	@(vdpsts,r13),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_r
+		rts
+		nop
+		align 4
+
+; Single write
+.single:
+		mov	r6,r0
+		dt	r0
+		mov.w	r0,@(filllength,r13)
+		mov	r5,r0
+		mov.w	r0,@(fillstart,r13)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r13)
+.wait_fb:	mov.w	@(vdpsts,r13),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_fb
+		rts
+		nop
+		align 4
+.same_x:
+		rts
+		nop
+		align 4
+
+TEST_VALUE:	dc.l 0
 
 ; ; this_polygon:
 ; ; 		dc.w $8000
