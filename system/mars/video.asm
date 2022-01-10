@@ -7,7 +7,16 @@
 ; Variables
 ; ----------------------------------------
 
-FBVRAM_PATCH	equ $1D000	; Framebuffer location for the affected XShift lines
+; Framebuffer location for the affected XShift lines
+FBVRAM_PATCH	equ $1D000
+
+; 3D drawing area, affects 3D positions too.
+SCREEN_WIDTH	equ	320
+SCREEN_HEIGHT	equ	224
+
+; MSB
+PLGN_TEXURE	equ	%10000000
+PLGN_TRI	equ	%01000000
 
 ; ----------------------------------------
 ; Structs
@@ -15,6 +24,7 @@ FBVRAM_PATCH	equ $1D000	; Framebuffer location for the affected XShift lines
 
 ; Be careful modifing these...
 ; The SH2 has limitation with indexing, bytes go first.
+; (dont forget to align it)
 
 		struct 0
 mbg_redraw	ds.b 1
@@ -42,6 +52,80 @@ mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
 mbg_indxinc	ds.l 1		; Index increment (NOTE: for all 4 pixels)
 sizeof_marsbg	ds.l 0
+		finish
+
+; ----------------------------------------
+
+; model objects
+		struct 0
+mdl_data	ds.l 1			; Model data pointer, if zero: no model
+mdl_option	ds.l 1			; Model options: pixelvalue add
+mdl_x_pos	ds.l 1			; X position $000000.00
+mdl_y_pos	ds.l 1			; Y position $000000.00
+mdl_z_pos	ds.l 1			; Z position $000000.00
+mdl_x_rot	ds.l 1			; X rotation $000000.00
+mdl_y_rot	ds.l 1			; Y rotation $000000.00
+mdl_z_rot	ds.l 1			; Z rotation $000000.00
+mdl_animdata	ds.l 1			; Model animation data pointer, zero: no animation
+mdl_animframe	ds.l 1			; Current frame in animation
+mdl_animtimer	ds.l 1			; Animation timer
+mdl_animspd	ds.l 1			; Animation USER speed setting
+sizeof_mdlobj	ds.l 0
+		finish
+
+; field view camera
+; 		struct 0
+; cam_x_pos	ds.l 1			; X position $000000.00
+; cam_y_pos	ds.l 1			; Y position $000000.00
+; cam_z_pos	ds.l 1			; Z position $000000.00
+; cam_x_rot	ds.l 1			; X rotation $000000.00
+; cam_y_rot	ds.l 1			; Y rotation $000000.00
+; cam_z_rot	ds.l 1			; Z rotation $000000.00
+; cam_animdata	ds.l 1			; Model animation data pointer, zero: no animation
+; cam_animframe	ds.l 1			; Current frame in animation
+; cam_animtimer	ds.l 1			; Animation timer
+; cam_animspd	ds.l 1			; Animation speed
+; sizeof_camera	ds.l 0
+; 		finish
+
+; 		struct 0
+; mdllay_data	ds.l 1			; Model layout data, zero: Don't use layout
+; mdllay_x	ds.l 1			; X position
+; mdllay_y	ds.l 1			; Y position
+; mdllay_z	ds.l 1			; Z position
+; mdllay_x_last	ds.l 1			; LAST saved X position
+; mdllay_y_last	ds.l 1			; LAST saved Y position
+; mdllay_z_last	ds.l 1			; LAST saved Z position
+; mdllay_xr_last	ds.l 1			; LAST saved X rotation
+; sizeof_layout	ds.l 0
+; 		finish
+
+		struct 0
+plypz_type	ds.l 1			; Type | Option
+plypz_mtrl	ds.l 1
+plypz_ypos	ds.l 1			; Ytop | Ybottom
+plypz_xl	ds.l 1
+plypz_xl_dx	ds.l 1
+plypz_xr	ds.l 1
+plypz_xr_dx	ds.l 1
+plypz_src_xl	ds.l 1
+plypz_src_xl_dx	ds.l 1
+plypz_src_yl	ds.l 1
+plypz_src_yl_dx	ds.l 1
+plypz_src_xr	ds.l 1
+plypz_src_xr_dx	ds.l 1
+plypz_src_yr	ds.l 1
+plypz_src_yr_dx	ds.l 1
+sizeof_plypz	ds.l 0
+		finish
+
+; $38 bytes
+		struct 0
+polygn_type	ds.l 1		; %MSTw wwww xxxx aaaa | Type bits and Material option (Width or PalIncr)
+polygn_mtrl	ds.l 1		; Material Type: Color (0-255) or Texture data address
+polygn_points	ds.l 4*2	; X/Y positions
+polygn_srcpnts	ds.w 4*2	; X/Y texture points (16-bit), ignored on solidcolor
+sizeof_polygn	ds.l 0
 		finish
 
 ; ====================================================================
@@ -768,6 +852,11 @@ MarsVideo_MoveBg:
 
 	; ---------------------------------------
 
+	; TODO: un request de Cach_Draw_All
+	; si el Xadd (r1) o Yadd (r2)
+	; son mayores que mbg_intrl_blk en vez
+	; de dibujar por secciones
+
 		mov	#Cach_Drw_U,r8
 		mov	#Cach_Drw_D,r9
 		mov.w	@(mbg_intrl_blk,r14),r0
@@ -980,7 +1069,7 @@ MarsVideo_FixTblShift:
 		mov	r12,r0
 		shlr	r0
 		mov.w	r0,@r13
-		mov	#320/2,r3
+		mov	#(320+4)/2,r3
 .copy:
 		mov.w	@r7,r0
 		mov.w	r0,@r12
@@ -1072,6 +1161,124 @@ MarsVideo_SetBg:
 		nop
 		align 4
 		ltorg
+
+; ------------------------------------------------
+
+; r1 - Left X
+; r2 - Right X
+; r3 - Y Position (max 240)
+; r4 - Using these pixel(s)
+;
+; Uses the first background's
+; top-left and Y
+
+; TODO: a DirectColor version of this
+VideoMars_DrawLine:
+		cmp/eq	r1,r2
+		bt	.same_x
+		mov	r2,r6
+		sub	r1,r6
+		cmp/pl	r6
+		bf	.same_x
+		shlr	r6
+		mov	#RAM_Mars_Background,r14
+		mov	#_vdpreg,r13
+
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r7
+		mov.w	@(mbg_intrl_w,r14),r0
+		mov	r0,r5
+		mov.w	@(mbg_yfb,r14),r0
+		add	r3,r0
+		cmp/ge	r7,r0
+		bf	.ylowr
+		sub	r7,r0
+.ylowr:
+		mulu	r5,r0
+		sts	macl,r5
+		mov	@(mbg_fbdata,r14),r0
+		add	r0,r5
+		mov	@(mbg_fbpos,r14),r0
+		add	r0,r5
+		add	r1,r5
+		mov	@(mbg_intrl_size,r14),r0
+		cmp/gt	r0,r5
+		bf	.fb_decr
+		sub	r0,r5
+.fb_decr:
+		shlr	r5
+
+	; r5 - topleft pos
+	; r6 - length
+
+	; Cross-check
+		mov	r6,r0
+		add	r5,r0
+		mov	r0,r7
+		mov	r5,r8
+		shlr8	r7
+		shlr8	r8
+		cmp/eq	r7,r8
+		bt	.single
+		mov	r0,r8
+		and	#$FF,r0
+		cmp/eq	#0,r0
+		bt	.single
+
+	; Left write
+		mov	r6,r7
+		sub	r0,r6
+		mov	r6,r0
+		dt	r0
+		mov.w	r0,@(filllength,r13)
+		mov	r5,r0
+		mov.w	r0,@(fillstart,r13)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r13)
+.wait_l:	mov.w	@(vdpsts,r13),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_l
+
+		add	r7,r5
+		mov	#$100,r6
+		mov.w	@(fillstart,r13),r0
+		add	r6,r0
+		mov.w	r0,@(fillstart,r13)
+		sub	r0,r5
+		mov	r5,r0
+		dt	r0
+		mov.w	r0,@(filllength,r13)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r13)
+.wait_r:	mov.w	@(vdpsts,r13),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_r
+		rts
+		nop
+		align 4
+
+; Single write
+.single:
+		mov	r6,r0
+		dt	r0
+		mov.w	r0,@(filllength,r13)
+		mov	r5,r0
+		mov.w	r0,@(fillstart,r13)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r13)
+.wait_fb:	mov.w	@(vdpsts,r13),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_fb
+		rts
+		nop
+		align 4
+.same_x:
+		rts
+		nop
+		align 4
 
 ; ; ------------------------------------------------
 ; ; MarsVideo_SetWatchdog

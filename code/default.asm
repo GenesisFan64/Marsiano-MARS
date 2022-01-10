@@ -66,6 +66,13 @@ thisCode_Top:
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
 
+		lea	test_polygon(pc),a0
+		lea	(RAM_MdMarsPlgn),a1
+		move.w	#($38/4)-1,d0
+.copy_polygn:
+		move.l	(a0)+,(a1)+
+		dbf	d0,.copy_polygn
+
 ; 		move.l	#ART_FGTEST,d0
 ; 		move.w	#1*$20,d1
 ; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
@@ -89,23 +96,23 @@ thisCode_Top:
 		bsr	Video_Print
 
 	; Load palettes for fade-in
-		lea	PAL_EMI(pc),a0
-		moveq	#0,d0
-		move.w	#$F,d1
-		bsr	Video_LoadPal;PalTarget
+; 		lea	PAL_EMI(pc),a0
+; 		moveq	#0,d0
+; 		move.w	#$F,d1
+; 		bsr	Video_LoadPal
 		lea	PAL_TESTBOARD(pc),a0
 		moveq	#$10,d0
 		move.w	#$F,d1
-		bsr	Video_LoadPal;Target
+		bsr	Video_LoadPal
 		lea	(TESTMARS_BG_PAL),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
-		bsr	Video_LoadPal_Mars;PalTarget_Mars
+		bsr	Video_PalTarget_Mars
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
-; 		move.w	#1,(RAM_FadeMarsSpd).w
+		move.w	#1,(RAM_FadeMarsSpd).w
 ; 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
-; 		move.w	#1,(RAM_FadeMarsReq).w
+		move.w	#1,(RAM_FadeMarsReq).w
 		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
 .wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
 		bne.s	.wait2
@@ -180,13 +187,108 @@ thisCode_Top:
 		move.w	(RAM_FadeMarsReq),d7
 		move.w	(RAM_FadeMdReq),d6
 		or.w	d6,d7
-		bne	.loop
+; 		bne	.loop
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.no_mode0
 		move.w	#1,(RAM_CurrMode).w
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
+
+	; Test movement
+		move.l	(RAM_MdMarsBg).w,d0
+		move.l	(RAM_MdMarsBg+4).w,d1
+		move.w	(RAM_HorScroll+2).w,d2
+		move.w	(RAM_VerScroll+2).w,d3
+		move.l	#$10000,d5
+		move.l	#1,d6
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyRight,d7
+		beq.s	.nor_m
+		add.l	d5,d0
+		sub.w	d6,d2
+.nor_m:
+		btst	#bitJoyLeft,d7
+		beq.s	.nol_m
+		sub.l	d5,d0
+		add.w	d6,d2
+.nol_m:
+		btst	#bitJoyDown,d7
+		beq.s	.nod_m
+		add.l	d5,d1
+		add.w	d6,d3
+.nod_m:
+		btst	#bitJoyUp,d7
+		beq.s	.nou_m
+		sub.l	d5,d1
+		sub.w	d6,d3
+.nou_m:
+		move.l	d0,(RAM_MdMarsBg).w
+		move.l	d1,(RAM_MdMarsBg+4).w
+		move.w	d2,(RAM_HorScroll+2).w
+		move.w	d3,(RAM_VerScroll+2).w
+
+; 		moveq	#0,d2
+; 		moveq	#0,d3
+; 		move.w	(Controller_2+mouse_x),d2
+; 		move.w	(Controller_2+mouse_y),d3
+; 		move.w	#$10,d4
+; 		move.w	d4,d5
+; 		tst.w	d2
+; 		bmi.s	.xminus
+; 		beq.s	.xgo
+; 		cmp.w	d4,d2
+; 		bcs.s	.xgo
+; 		move.w	d4,d2
+; 		bra.s	.xgo
+; .xminus:
+; 		neg.w	d4
+; 		cmp.w	d4,d2
+; 		bcc.s	.xgo
+; 		move.w	d4,d2
+; .xgo:
+; 		tst.w	d3
+; 		bmi.s	.yminus
+; 		beq.s	.ygo
+; 		cmp.w	d5,d3
+; 		bcs.s	.ygo
+; 		move.w	d5,d3
+; 		bra.s	.ygo
+; .yminus:
+; 		neg.w	d5
+; 		cmp.w	d5,d3
+; 		bcc.s	.ygo
+; 		move.w	d5,d3
+; .ygo:
+; 		swap	d2
+; 		swap	d3
+; 		move.l	(RAM_MdMarsBg).w,d0
+; 		move.l	(RAM_MdMarsBg+4).w,d1
+; 		add.l	d2,d0
+; 		add.l	d3,d1
+; 		move.l	d0,(RAM_MdMarsBg).w
+; 		move.l	d1,(RAM_MdMarsBg+4).w
+
+		move.w	(Controller_2+on_press),d0
+		beq.s	.redraw
+		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait3:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
+		bne.s	.wait3
+.redraw:
+
+		move.w	(Controller_2+mouse_x),d0
+		move.w	(Controller_2+mouse_y),d1
+		ext.l	d0
+		ext.l	d1
+		lea	(RAM_MdMarsPlgn),a0
+		adda	#polygn_points+8,a0
+		move.l	(a0),d4
+		add.l	d0,d4
+		move.l	d4,(a0)
+; 		move.l	4(a0),d4
+; 		add.l	d1,d4
+; 		move.l	d4,4(a0)
+
 ; 		bsr	Emilie_Move
 ; 		bsr	Emilie_MkSprite
 		rts
@@ -738,22 +840,34 @@ str_Gema:
 		dc.b "  Sound_TrkTicks",$A
 		dc.b "  Sound_GlbTempo",0
 		align 2
-str_COMM:
-		dc.b "\\w \\w \\w \\w",$A
-		dc.b "\\w \\w \\w \\w",0
-		dc.l sysmars_reg+comm0
-		dc.l sysmars_reg+comm2
-		dc.l sysmars_reg+comm4
-		dc.l sysmars_reg+comm6
-		dc.l sysmars_reg+comm8
-		dc.l sysmars_reg+comm10
-		dc.l sysmars_reg+comm12
-		dc.l sysmars_reg+comm14
-		align 2
+; str_COMM:
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b "\\w \\w \\w \\w",0
+; 		dc.l sysmars_reg+comm0
+; 		dc.l sysmars_reg+comm2
+; 		dc.l sysmars_reg+comm4
+; 		dc.l sysmars_reg+comm6
+; 		dc.l sysmars_reg+comm8
+; 		dc.l sysmars_reg+comm10
+; 		dc.l sysmars_reg+comm12
+; 		dc.l sysmars_reg+comm14
+; 		align 2
 
 str_InfoMouse:
 		dc.b "\\l \\l \\l \\l",$A
 		dc.b "\\l \\l \\l \\l",0
+		dc.l RAM_MdMarsPlgn+polygn_points+8
+		dc.l RAM_MdMarsPlgn+polygn_points+$C
+		dc.l RAM_MdMarsPlgn+polygn_points
+		dc.l RAM_MdMarsPlgn+polygn_points+4
+		dc.l RAM_MdMarsPlgn+polygn_points+$10
+		dc.l RAM_MdMarsPlgn+polygn_points+$14
+		dc.l RAM_MdMarsPlgn+polygn_points+$18
+		dc.l RAM_MdMarsPlgn+polygn_points+$1C
+; 		dc.l RAM_InputData+$18
+; 		dc.l RAM_InputData+$1C
+		align 2
+
 		dc.l RAM_InputData
 		dc.l RAM_InputData+4
 		dc.l RAM_InputData+8
@@ -762,17 +876,6 @@ str_InfoMouse:
 		dc.l RAM_InputData+$14
 		dc.l RAM_InputData+$18
 		dc.l RAM_InputData+$1C
-
-; str_DreqMe:
-; 		dc.b "Genesis manda por DREQ:",$A
-; 		dc.b "\\l \\l",0
-; 		dc.l RAM_MdMarsDreq
-; 		dc.l RAM_MdMarsDreq+(256*2)-4
-; 		align 2
-; str_TempVal:
-; 		dc.b "\\w",0
-; 		dc.l RAM_EmiFlags
-; 		align 2
 
 PAL_EMI:
 		dc.w 0
@@ -792,6 +895,18 @@ Map_Nicole:
 Dplc_Nicole:
 		include "data/md/sprites/emi_plc.asm"
 		align 2
+
+test_polygon:
+		dc.l 0
+		dc.l $0101
+		dc.l 48,-48
+		dc.l -48,-48
+		dc.l -48, 48
+		dc.l  48, 48
+		dc.w 0,0
+		dc.w 0,0
+		dc.w 0,0
+		dc.w 0,0
 
 ; ====================================================================
 ; Report size

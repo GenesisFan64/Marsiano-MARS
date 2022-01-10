@@ -159,7 +159,8 @@ sizeof_mdvid	ds.l 0
 
 		struct RAM_MdDreq
 RAM_MdMarsPal	ds.w 256
-RAM_MdMarsBg	ds.l $10
+RAM_MdMarsBg	ds.l 8
+RAM_MdMarsPlgn	ds.b $38*70		; NOTE: manual size
 sizeof_dreqmd	ds.l 0
 		finish
 	if MOMPASS=7

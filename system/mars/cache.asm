@@ -14,54 +14,469 @@ CACHE_MASTER:
 ; ------------------------------------------------
 
 m_irq_custom:
-		mov	.tag_FRT,r1
-		mov.b	@(7,r1), r0
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+
+	; Slicer goes here
+		mov	#CS3|$40,r1
+		mov	@r1,r0
+		add	#1,r0
+		mov	r0,@r1
+
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0	; OFF
+		mov.w   r0,@r1
+		or      #$20,r0		; ON
+		mov.w   r0,@r1
+		mov.w   #$5A20,r0	; Timer for the next WD
+		mov.w   r0,@r1
+		mov	@r15+,r8
+		mov	@r15+,r7
+		mov	@r15+,r6
+		mov	@r15+,r5
+		mov	@r15+,r4
+		mov	@r15+,r3
+		mov	@r15+,r2
 		rts
 		nop
 		align 4
-.tag_FRT:	dc.l _FRT
 
-; OLD
-; ; ---------------------------------------
-; ; DREQ DMA Transfer, might perform
-; ; better here...
-; ; ---------------------------------------
+; ------------------------------------------------
+; Read polygon make output pieces to
+; be processed later.
 ;
-; Mars_DoDreq:
-; 		mov	#_sysreg,r4
-; 		mov	#_DMASOURCE0,r3
-; 		mov	#_sysreg+comm14,r2
-; 		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
-; 		mov	r0,@($C,r3)
-; 		mov	@(marsGbl_DreqRead,gbr),r0
-; 		mov	r0,r1
-; 		mov	@(marsGbl_DreqWrite,gbr),r0
-; 		mov	r0,@(marsGbl_DreqRead,gbr)
-; 		mov	r1,r0
-; 		mov	r0,@(marsGbl_DreqWrite,gbr)
-; 		mov	#_sysreg+dreqfifo,r1
-; 		mov	r1,@r3			; Source
-; 		mov	r0,@(4,r3)		; Destination
-; 		mov.w	@(dreqlen,r4),r0
-; 		mov	r0,@(8,r3)		; Length
-; 		mov.b	@r2,r0
-; 		or	#%00100000,r0		; Tell MD we are ready.
-; 		mov.b	r0,@r2
-; 		mov	@($C,r3),r0		; dummy readback(?)
-; 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
-; 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-; 		mov	#1,r0			; _DMAOPERATION = 1, After this DMA will
-; 		mov	r0,@($30,r3)		; transfer data on the background
-; ; .wait_dma:
-; ; 		mov	@($C,r3),r0
-; ; 		and	#%10,r0
-; ; 		tst	r0,r0
-; ; 		bt	.wait_dma
-; 		rts
-; 		nop
-; 		align 4
+; Input:
+; r14 - Polygon data:
+; dc.l %tp------ -------- xxxxxxxx xxxxxxxx
+; dc.l texture_data
+; dc.l X,Y... (SCREEN points 0000.0000)
+; dc.w X,Y... (TEXTURE points)
+;
+; polygn_type:
+; p - Polygon type: Quad (0) or Triangle (1)
+; t - Polygon has texture data (1):
+;     polygn_mtrlopt: Texture width
+;     polygn_mtrl   : Texture data address
+;     polygn_srcpnts: Texture X/Y positions for
+;                     each edge (3 or 4)
+; x - Indexed-color increment (full word)
+;     / Texture WIDTH
+;
+; Output is stored on the
+; RAM_Mars_VdpDrwList buffer
+; ------------------------------------------------
+
+MarsVideo_SlicePlgn:
+		sts	pr,@-r15
+		mov	#Cach_DDA_Last,r13		; r13 - DDA last point
+		mov	#Cach_DDA_Top,r12		; r12 - DDA first point
+		mov	@(polygn_type,r14),r0		; Read type settings
+		shlr16	r0
+		shlr8	r0
+		tst	#PLGN_TRI,r0			; PLGN_TRI set?
+		bf	.tringl
+		add	#8,r13				; If quad: add 8
+.tringl:
+		mov	r14,r1
+		mov	r12,r2
+		mov	#Cach_DDA_Src,r3
+		add	#polygn_points,r1
+
+; ----------------------------------------
+; Polygon points
+; ----------------------------------------
+
+	; Copy polygon points Cache's DDA
+		mov	#4,r8
+		mov	#SCREEN_WIDTH/2,r6
+		mov	#SCREEN_HEIGHT/2,r7
+.setpnts:
+		mov	@r1+,r4			; Get X
+		mov	@r1+,r5			; Get Y
+		add	r6,r4			; X + width
+		add	r7,r5			; Y + height
+		mov	r4,@r2
+		mov	r5,@(4,r2)
+		dt	r8
+		bf/s	.setpnts
+		add	#8,r2
+
+	; Copy texture source points
+	; to Cache
+		mov	#4,r8
+.src_pnts:
+		mov.w	@r1+,r4
+		mov.w	@r1+,r5
+		mov	r4,@r3
+		mov	r5,@(4,r3)
+		dt	r8
+		bf/s	.src_pnts
+		add	#8,r3
+
+	; Here we search for the lowest Y point
+	; and highest Y
+	; r10 - Top Y
+	; r11 - Bottom Y
+.start_math:
+		mov	#3,r9
+		tst	#PLGN_TRI,r0			; PLGN_TRI set?
+		bf	.ytringl
+		add	#1,r9
+.ytringl:
+		mov	#$7FFFFFFF,r10
+		mov	#$FFFFFFFF,r11
+		mov 	r12,r7
+		mov	r12,r8
+.find_top:
+		mov	@(4,r7),r0
+		cmp/gt	r11,r0
+		bf	.is_low
+		mov 	r0,r11
+.is_low:
+		mov	@(4,r8),r0
+		cmp/gt	r10,r0
+		bt	.is_high
+		mov 	r0,r10
+		mov	r8,r1
+.is_high:
+		add 	#8,r7
+		dt	r9
+		bf/s	.find_top
+		add	#8,r8
+		cmp/ge	r11,r10			; Top larger than Bottom?
+		bt	.exit
+		cmp/pl	r11			; Bottom < 0?
+		bf	.exit
+		mov	#SCREEN_HEIGHT,r0	; Top > 224?
+		cmp/ge	r0,r10
+		bt	.exit
+
+	; r2 - Left DDA READ pointer
+	; r3 - Right DDA READ pointer
+	; r4 - Left X
+	; r5 - Left DX
+	; r6 - Right X
+	; r7 - Right DX
+	; r8 - Left width
+	; r9 - Right width
+	; r10 - Top Y, gets updated after calling put_piece
+	; r11 - Bottom Y
+	; r12 - First DST point
+	; r13 - Last DST point
+		mov	r1,r2				; r2 - X left to process
+		mov	r1,r3				; r3 - X right to process
+		bsr	set_left
+		nop
+		bsr	set_right
+		nop
+.next_pz:
+		mov	#SCREEN_HEIGHT,r0		; Current Y > 224?
+		cmp/gt	r0,r10
+		bt	.exit
+		cmp/ge	r11,r10				; Y top => Y bottom?
+		bt	.exit
+		mov	@(marsGbl_PlyPzList_W,gbr),r0	; r1 - Current piece to WRITE
+		mov	r0,r1
+		mov	#RAM_Mars_VdpDrwList_e,r0	; pointer reached end of the list?
+		cmp/ge	r0,r1
+		bf	.dontreset
+		mov	#RAM_Mars_VdpDrwList,r0		; Return WRITE pointer to the top of the list
+		mov	r0,r1
+		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+.dontreset:
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Tell watchdog we are mid-write
+		bsr	put_piece
+		nop
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Unlock.
+
+	; X direction update
+		cmp/gt	r9,r8				; Left width > Right width?
+		bf	.lefth2
+		bsr	set_right
+		nop
+		bra	.next_pz
+		nop
+.lefth2:
+		bsr	set_left
+		nop
+		bra	.next_pz
+		nop
+.exit:
+		lds	@r15+,pr
+		rts
+		nop
+		align 4
+		ltorg
+
+; --------------------------------
+
+set_left:
+		mov	r2,r8			; Get a copy of Xleft pointer
+		add	#$20,r8			; To read Texture SRC points
+		mov	@r8,r4
+		mov	@(4,r8),r5
+		mov	#Cach_DDA_Src_L,r8
+		mov	r4,r0
+		shll16	r0
+		mov	r0,@r8
+		mov	r5,r0
+		shll16	r0
+		mov	r0,@(8,r8)
+		mov	@r2,r1
+		mov	@(4,r2),r8
+		add	#8,r2
+		cmp/gt	r13,r2
+		bf	.lft_ok
+		mov 	r12,r2
+.lft_ok:
+		mov	@(4,r2),r0
+		sub	r8,r0
+		cmp/eq	#0,r0
+		bt	set_left
+		cmp/pz	r0
+		bf	.lft_skip
+
+		lds	r0,mach
+		mov	r2,r8
+		add	#$20,r8
+		mov 	@r8,r0
+		sub 	r4,r0
+		mov 	@(4,r8),r4
+		sub 	r5,r4
+		mov	r0,r5
+		shll8	r4
+		shll8	r5
+		sts	mach,r8
+		mov	#1,r0				; Tell WD we are using
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)	; HW Division
+		mov	#_JR,r0
+		mov	r8,@r0
+		mov	r5,@(4,r0)
+		nop
+		mov	@(4,r0),r5
+		mov	#_JR,r0
+		mov	r8,@r0
+		mov	r4,@(4,r0)
+		nop
+		mov	@(4,r0),r4
+		shll8	r4
+		shll8	r5
+		mov	#Cach_DDA_Src_L+$C,r0
+		mov	r4,@r0
+		mov	#Cach_DDA_Src_L+4,r0
+		mov	r5,@r0
+		mov	@r2,r5
+		sub 	r1,r5
+		mov 	r1,r4
+		shll8	r5
+		shll16	r4
+		mov	#_JR,r0
+		mov	r8,@r0
+		mov	r5,@(4,r0)
+		nop
+		mov	@(4,r0),r5
+		mov	#0,r0				; Unlock HW division
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)
+		shll8	r5
+.lft_skip:
+		rts
+		nop
+		align 4
+
+; --------------------------------
+
+set_right:
+		mov	r3,r9
+		add	#$20,r9
+		mov	@r9,r6
+		mov	@(4,r9),r7
+		mov	#Cach_DDA_Src_R,r9
+		mov	r6,r0
+		shll16	r0
+		mov	r0,@r9
+		mov	r7,r0
+		shll16	r0
+		mov	r0,@(8,r9)
+
+		mov	@r3,r1
+		mov	@(4,r3),r9
+		add	#-8,r3
+		cmp/ge	r12,r3
+		bt	.rgt_ok
+		mov 	r13,r3
+.rgt_ok:
+		mov	@(4,r3),r0
+		sub	r9,r0
+		cmp/eq	#0,r0
+		bt	set_right
+		cmp/pz	r0
+		bf	.rgt_skip
+		lds	r0,mach
+		mov	r3,r9
+		add	#$20,r9
+		mov 	@r9,r0
+		sub 	r6,r0
+		mov 	@(4,r9),r6
+		sub 	r7,r6
+		mov	r0,r7
+		shll8	r6
+		shll8	r7
+		sts	mach,r9
+		mov	#1,r0				; Tell WD we are using
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)	; HW Division
+		mov	#_JR,r0
+		mov	r9,@r0
+		mov	r7,@(4,r0)
+		nop
+		mov	@(4,r0),r7
+		mov	#_JR,r0
+		mov	r9,@r0
+		mov	r6,@(4,r0)
+		nop
+		mov	@(4,r0),r6
+		shll8	r6
+		shll8	r7
+		mov	#Cach_DDA_Src_R+4,r0
+		mov	r7,@r0
+		mov	#Cach_DDA_Src_R+$C,r0
+		mov	r6,@r0
+		mov	@r3,r7
+		sub 	r1,r7
+		mov 	r1,r6
+		shll16	r6
+		shll8	r7
+		mov	#_JR,r0
+		mov	r9,@r0
+		mov	r7,@(4,r0)
+		nop
+		mov	@(4,r0),r7
+		mov	#0,r0				; Unlock HW division
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)
+		shll8	r7
+.rgt_skip:
+		rts
+		nop
+		align 4
+		ltorg
+
+; --------------------------------
+; Mark piece
+; --------------------------------
+
+put_piece:
+		mov	@(4,r2),r8
+		mov	@(4,r3),r9
+		sub	r10,r8
+		sub	r10,r9
+		mov	r8,r0
+		cmp/gt	r8,r9
+		bt	.lefth
+		mov	r9,r0
+.lefth:
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r5,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+		mov	r9,@-r15
+		mov 	r4,@(plypz_xl,r1)
+		mov 	r5,@(plypz_xl_dx,r1)
+		mov 	r6,@(plypz_xr,r1)
+		mov 	r7,@(plypz_xr_dx,r1)
+		dmuls	r0,r5
+		sts	macl,r2
+		dmuls	r0,r7
+		sts	macl,r3
+		add 	r2,r4
+		add	r3,r6
+		mov	r10,r2
+		add	r0,r10
+		mov	r10,r3
+		shll16	r2
+		or	r2,r3
+		mov	r3,@(plypz_ypos,r1)
+		mov	r3,@-r15
+		mov	#Cach_DDA_Src_L,r2
+		mov	@r2,r5
+		mov	r5,@(plypz_src_xl,r1)
+		mov	@(4,r2),r7
+		mov	r7,@(plypz_src_xl_dx,r1)
+		mov	@(8,r2),r8
+		mov	r8,@(plypz_src_yl,r1)
+		mov	@($C,r2),r9
+		mov	r9,@(plypz_src_yl_dx,r1)
+		dmuls	r0,r7
+		sts	macl,r2
+		dmuls	r0,r9
+		sts	macl,r3
+		add 	r2,r5
+		add	r3,r8
+		mov	#Cach_DDA_Src_L,r2
+		mov	r5,@r2
+		mov	r8,@(8,r2)
+		mov	#Cach_DDA_Src_R,r2
+		mov	@r2,r5
+		mov	r5,@(plypz_src_xr,r1)
+		mov	@(4,r2),r7
+		mov	r7,@(plypz_src_xr_dx,r1)
+		mov	@(8,r2),r8
+		mov	r8,@(plypz_src_yr,r1)
+		mov	@($C,r2),r9
+		mov	r9,@(plypz_src_yr_dx,r1)
+		dmuls	r0,r7
+		sts	macl,r2
+		dmuls	r0,r9
+		sts	macl,r3
+		add 	r2,r5
+		add	r3,r8
+		mov	#Cach_DDA_Src_R,r2
+		mov	r5,@r2
+		mov	r8,@(8,r2)
+		mov	@r15+,r3
+		cmp/pl	r3			; TOP check, 2 steps
+		bt	.top_neg
+		shll16	r3
+		cmp/pl	r3
+		bf	.bad_piece
+.top_neg:
+		mov	@(polygn_mtrl,r14),r0
+		mov 	r0,@(plypz_mtrl,r1)
+		mov	@(polygn_type,r14),r0
+		mov 	r0,@(plypz_type,r1)
+		add	#sizeof_plypz,r1
+		mov	r1,r0
+		mov	#RAM_Mars_VdpDrwList_e,r8
+		cmp/ge	r8,r0
+		bf	.dontreset_pz
+		mov	#RAM_Mars_VdpDrwList,r0
+		mov	r0,r1
+.dontreset_pz:
+		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+		mov.w	@(marsGbl_PzListCntr,gbr),r0
+		add	#1,r0
+		mov.w	r0,@(marsGbl_PzListCntr,gbr)
+.bad_piece:
+		mov	@r15+,r9
+		mov	@r15+,r8
+		mov	@r15+,r7
+		mov	@r15+,r5
+		mov	@r15+,r3
+		mov	@r15+,r2
+		rts
+		nop
+		align 4
+		ltorg
 
 ; ---------------------------------------
 ; Background:
@@ -352,6 +767,15 @@ Cach_YHead_U	ds.l 1		; Top draw beam
 Cach_YHead_D	ds.l 1		; Bottom draw beam
 Cach_BgFbPos_V	ds.l 1		; Framebuffer Y DIRECT position (then multiply internal WIDTH externally)
 Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
+
+Cach_LnDrw_L	ds.l 14		;
+Cach_LnDrw_S	ds.l 0		; <-- Reads backwards
+Cach_DDA_Top	ds.l 2*2	; First 2 points
+Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
+Cach_DDA_Src	ds.l 4*2
+Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
+Cach_DDA_Src_R	ds.l 4
+Cach_ClrLines	ds.l 1		; Current lines to clear
 
 ; ------------------------------------------------
 .end:		phase CACHE_MASTER+.end&$1FFF
