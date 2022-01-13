@@ -80,12 +80,12 @@ bitJoyMode	equ 3
 
 ; Mega Mouse
 ; Read WORD in +on_hold or +on_press
-ClickR		equ $0001
-ClickL		equ $0002
+ClickL		equ $0001
+ClickR		equ $0002
 ClickM		equ $0004	; US MOUSE ONLY
 ClickS		equ $0008	; (Untested)
-bitClickR	equ 0
-bitClickL	equ 1
+bitClickL	equ 0
+bitClickR	equ 1
 bitClickM	equ 2
 bitClickS	equ 3
 
@@ -157,12 +157,16 @@ sizeof_mdvid	ds.l 0
 ; the MAX_MDDREQ setting.
 ; ----------------------------------------------------------------
 
-		struct RAM_MdDreq
-RAM_MdMarsPal	ds.w 256
-RAM_MdMarsBg	ds.l 8
-RAM_MdMarsPlgn	ds.b $38*70		; NOTE: manual size
-sizeof_dreqmd	ds.l 0
-		finish
+			struct RAM_MdDreq
+RAM_MdMarsPal		ds.w 256
+RAM_MdMarsBg		ds.l 8
+RAM_MdMarsPlgnNum	ds.l 1			; LONG value
+RAM_MdMarsNull2		ds.l 1
+RAM_MdMarsNull3		ds.l 1
+RAM_MdMarsNull4		ds.l 1
+RAM_MdMarsPlgn		ds.b $38*70		; NOTE: manual size
+sizeof_dreqmd		ds.l 0
+			finish
 	if MOMPASS=7
 		message "DREQ RAM: \{(sizeof_dreqmd-RAM_MdDreq)&$FFFFFF} of \{(MAX_MDDREQ)&$FFFFFF}"
 	endif

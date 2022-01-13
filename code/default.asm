@@ -33,6 +33,7 @@ RAM_EmiPosY	ds.l 1
 RAM_Ypos	ds.l 1
 RAM_XposFg	ds.l 1
 RAM_XposBg	ds.l 1
+RAM_CurrPunta	ds.w 1
 RAM_EmiChar	ds.w 1
 RAM_EmiAnim	ds.w 1
 RAM_EmiHide	ds.w 1
@@ -72,6 +73,7 @@ thisCode_Top:
 .copy_polygn:
 		move.l	(a0)+,(a1)+
 		dbf	d0,.copy_polygn
+		move.l	#1,(RAM_MdMarsPlgnNum).w
 
 ; 		move.l	#ART_FGTEST,d0
 ; 		move.w	#1*$20,d1
@@ -108,20 +110,18 @@ thisCode_Top:
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
-		bsr	Video_PalTarget_Mars
+		bsr	Video_LoadPal_Mars
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
-		move.w	#1,(RAM_FadeMarsSpd).w
+; 		move.w	#1,(RAM_FadeMarsSpd).w
 ; 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
-		move.w	#1,(RAM_FadeMarsReq).w
+; 		move.w	#1,(RAM_FadeMarsReq).w
 		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
 .wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
 		bne.s	.wait2
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
-
 		move.w	#320/2,(RAM_EmiPosX).w
 		move.w	#224/2,(RAM_EmiPosY).w
-
 		lea	MasterTrkList(pc),a0
 		move.w	$C(a0),d1
 		move.w	$E(a0),d3
@@ -152,7 +152,7 @@ thisCode_Top:
 		add.l	#1,(RAM_Framecount).l
 		bsr	System_VBlank_Exit
 		lea	str_InfoMouse(pc),a0
-		move.l	#locate(0,2,25),d0
+		move.l	#locate(0,2,23),d0
 		bsr	Video_Print
 
 		move.w	(RAM_CurrMode).w,d0
@@ -195,7 +195,6 @@ thisCode_Top:
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
 
-	; Test movement
 		move.l	(RAM_MdMarsBg).w,d0
 		move.l	(RAM_MdMarsBg+4).w,d1
 		move.w	(RAM_HorScroll+2).w,d2
@@ -227,6 +226,31 @@ thisCode_Top:
 		move.l	d1,(RAM_MdMarsBg+4).w
 		move.w	d2,(RAM_HorScroll+2).w
 		move.w	d3,(RAM_VerScroll+2).w
+
+	; Test movement
+; 		move.l	(RAM_MdMarsPlgn+polygn_points+8),d0
+; 		move.l	(RAM_MdMarsPlgn+polygn_points+$C),d1
+; 		moveq	#1,d6
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.nor_m2
+; 		add.l	d6,d0
+; .nor_m2:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.nol_m2
+; 		sub.l	d6,d0
+; .nol_m2:
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.nou_m2
+; 		sub.l	d6,d1
+; .nou_m2:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.nod_m2
+; 		add.l	d6,d1
+; .nod_m2:
+;
+; 		move.l	d0,(RAM_MdMarsPlgn+polygn_points+8)
+; 		move.l	d1,(RAM_MdMarsPlgn+polygn_points+$C)
 
 ; 		moveq	#0,d2
 ; 		moveq	#0,d3
@@ -269,28 +293,30 @@ thisCode_Top:
 ; 		move.l	d0,(RAM_MdMarsBg).w
 ; 		move.l	d1,(RAM_MdMarsBg+4).w
 
-		move.w	(Controller_2+on_press),d0
-		beq.s	.redraw
-		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait3:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
-		bne.s	.wait3
-.redraw:
-
 		move.w	(Controller_2+mouse_x),d0
 		move.w	(Controller_2+mouse_y),d1
 		ext.l	d0
 		ext.l	d1
 		lea	(RAM_MdMarsPlgn),a0
-		adda	#polygn_points+8,a0
+		adda	#polygn_points,a0
+		add.w	(RAM_CurrPunta),a0
 		move.l	(a0),d4
 		add.l	d0,d4
 		move.l	d4,(a0)
-; 		move.l	4(a0),d4
-; 		add.l	d1,d4
-; 		move.l	d4,4(a0)
+		move.l	4(a0),d4
+		add.l	d1,d4
+		move.l	d4,4(a0)
 
-; 		bsr	Emilie_Move
-; 		bsr	Emilie_MkSprite
+		move.w	(Controller_2+on_press),d0
+		move.w	d0,d1
+		btst	#bitClickL,d1
+		beq.s	.no_clkl
+		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait3:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
+		bne.s	.wait3
+		add.w	#8,(RAM_CurrPunta).w
+		and.w	#$18,(RAM_CurrPunta).w
+.no_clkl
 		rts
 
 
@@ -854,8 +880,10 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
+		dc.b "Vert: \\w",$A,$A
 		dc.b "\\l \\l \\l \\l",$A
 		dc.b "\\l \\l \\l \\l",0
+		dc.l RAM_CurrPunta
 		dc.l RAM_MdMarsPlgn+polygn_points+8
 		dc.l RAM_MdMarsPlgn+polygn_points+$C
 		dc.l RAM_MdMarsPlgn+polygn_points
@@ -864,18 +892,7 @@ str_InfoMouse:
 		dc.l RAM_MdMarsPlgn+polygn_points+$14
 		dc.l RAM_MdMarsPlgn+polygn_points+$18
 		dc.l RAM_MdMarsPlgn+polygn_points+$1C
-; 		dc.l RAM_InputData+$18
-; 		dc.l RAM_InputData+$1C
 		align 2
-
-		dc.l RAM_InputData
-		dc.l RAM_InputData+4
-		dc.l RAM_InputData+8
-		dc.l RAM_InputData+$C
-		dc.l RAM_InputData+$10
-		dc.l RAM_InputData+$14
-		dc.l RAM_InputData+$18
-		dc.l RAM_InputData+$1C
 
 PAL_EMI:
 		dc.w 0
@@ -897,16 +914,17 @@ Dplc_Nicole:
 		align 2
 
 test_polygon:
-		dc.l 0
-		dc.l $0101
-		dc.l 48,-48
-		dc.l -48,-48
-		dc.l -48, 48
-		dc.l  48, 48
-		dc.w 0,0
-		dc.w 0,0
-		dc.w 0,0
-		dc.w 0,0
+		dc.w (PLGN_TEXURE<<8)|640
+		dc.w $80
+		dc.l TESTMARS_MAJO
+		dc.l 70,-56
+		dc.l -70,-56
+		dc.l -70, 56
+		dc.l  70, 56
+		dc.w 640,0
+		dc.w   0,0
+		dc.w   0,480
+		dc.w 640,480
 
 ; ====================================================================
 ; Report size
