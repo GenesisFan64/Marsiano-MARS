@@ -519,14 +519,9 @@ HInt_Default:
 ; Sends a small section of RAM from here to 32X
 ; for controlling things like the background or sprites
 ;
-; CALL THIS DURING VBLANK ONLY, As this will try
+; CALL THIS OUTSIDE OF VBLANK, As this will try
 ; to syncronize with the SH2 to recieve the data
 ; on both VBlank(s) at the same time
-; --------------------------------------------------------
-
-; ====================================================================
-; --------------------------------------------------------
-; 32X Communication, using DREQ
 ; --------------------------------------------------------
 
 System_MdMarsDreq:
@@ -542,9 +537,9 @@ System_MdMarsDreq:
 .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Request CMD to Master
 		bne.s	.wait_cmd
 .wait_bit:
-		btst	#6,(sysmars_reg+comm14).l
+		btst	#7,(sysmars_reg+comm14).l
 		beq.s	.wait_bit
-		bclr	#6,(sysmars_reg+comm14).l
+		bclr	#7,(sysmars_reg+comm14).l
 		move.w	d6,d5
 		lsr.w	#2,d5
 		sub.w	#1,d5
@@ -555,7 +550,7 @@ System_MdMarsDreq:
 .l1:		btst	#7,dreqctl(a5)		; Got Full here?
 		bne.s	.l1
 		dbf	d5,.l0
-		btst	#2,dreqctl(a5)		; DMA got ok? (In case DREQ failed...)
+		btst	#2,dreqctl(a5)		; DMA got ok? (TODO: ver si todavia necesito esto)
 		bne	.retry
 		move.w	d7,sr
 		rts

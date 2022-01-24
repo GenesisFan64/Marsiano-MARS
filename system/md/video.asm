@@ -1062,6 +1062,27 @@ Video_LoadArt:
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
+; Video_MarsSetGfx
+; --------------------------------------------------------
+
+Video_MarsSetGfx:
+		swap	d7
+		move.w	d0,d7
+		and.w	#%00111111,d7
+		bset	#6,d7
+		move.b	d7,(sysmars_reg+comm14).l
+		swap	d7
+.wait2:		btst	#6,(sysmars_reg+comm14).l
+		bne.s	.wait2
+		rts
+
+Video_MarsRedraw:
+		bset	#6,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait2:		btst	#6,(sysmars_reg+comm14).l	; and wait until it finishes
+		bne.s	.wait2
+		rts
+
+; --------------------------------------------------------
 ; Video_LoadPal_Mars
 ;
 ; Load Indexed palette directly to Buffer

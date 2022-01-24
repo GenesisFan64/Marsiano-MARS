@@ -33,7 +33,7 @@ RAM_EmiPosY	ds.l 1
 RAM_Ypos	ds.l 1
 RAM_XposFg	ds.l 1
 RAM_XposBg	ds.l 1
-RAM_CurrPunta	ds.w 1
+RAM_CurrGfx	ds.w 1
 RAM_EmiChar	ds.w 1
 RAM_EmiAnim	ds.w 1
 RAM_EmiHide	ds.w 1
@@ -67,13 +67,13 @@ thisCode_Top:
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
 
-		lea	test_polygon(pc),a0
-		lea	(RAM_MdMarsPlgn),a1
-		move.w	#($38/4)-1,d0
-.copy_polygn:
-		move.l	(a0)+,(a1)+
-		dbf	d0,.copy_polygn
-		move.l	#1,(RAM_MdMarsPlgnNum).w
+; 		lea	test_polygon(pc),a0
+; 		lea	(RAM_MdMarsPlgn),a1
+; 		move.w	#($38/4)-1,d0
+; .copy_polygn:
+; 		move.l	(a0)+,(a1)+
+; 		dbf	d0,.copy_polygn
+; 		move.l	#1,(RAM_MdMarsPlgnNum).w
 
 ; 		move.l	#ART_FGTEST,d0
 ; 		move.w	#1*$20,d1
@@ -111,13 +111,13 @@ thisCode_Top:
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_LoadPal_Mars
+		move.w	#2,(RAM_CurrGfx).w
+		moveq	#2,d0
+		bsr	Video_MarsSetGfx
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 ; 		move.w	#1,(RAM_FadeMarsSpd).w
 ; 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
 ; 		move.w	#1,(RAM_FadeMarsReq).w
-		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
-		bne.s	.wait2
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
 		move.w	#320/2,(RAM_EmiPosX).w
@@ -227,30 +227,39 @@ thisCode_Top:
 		move.w	d2,(RAM_HorScroll+2).w
 		move.w	d3,(RAM_VerScroll+2).w
 
-	; Test movement
-; 		move.l	(RAM_MdMarsPlgn+polygn_points+8),d0
-; 		move.l	(RAM_MdMarsPlgn+polygn_points+$C),d1
-; 		moveq	#1,d6
-; 		move.w	(Controller_1+on_hold),d7
-; 		btst	#bitJoyRight,d7
-; 		beq.s	.nor_m2
-; 		add.l	d6,d0
-; .nor_m2:
-; 		btst	#bitJoyLeft,d7
-; 		beq.s	.nol_m2
-; 		sub.l	d6,d0
-; .nol_m2:
+; 	Test movement
+		move.l	#0,d0
+		move.l	#0,d1
+		moveq	#1,d6
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyB,d7
+		beq.s	.nor_m2
+		add.w	#1,(RAM_CurrGfx).w
+		move.w	(RAM_CurrGfx).w,d0
+		bsr	Video_MarsSetGfx
+.nor_m2:
+		btst	#bitJoyA,d7
+		beq.s	.nol_m2
+		sub.w	#1,(RAM_CurrGfx).w
+		move.w	(RAM_CurrGfx).w,d0
+		bsr	Video_MarsSetGfx
+.nol_m2:
 ; 		btst	#bitJoyUp,d7
 ; 		beq.s	.nou_m2
-; 		sub.l	d6,d1
+; 		move.l	#-1,d1
 ; .nou_m2:
 ; 		btst	#bitJoyDown,d7
 ; 		beq.s	.nod_m2
-; 		add.l	d6,d1
+; 		move.l	#1,d1
 ; .nod_m2:
-;
-; 		move.l	d0,(RAM_MdMarsPlgn+polygn_points+8)
-; 		move.l	d1,(RAM_MdMarsPlgn+polygn_points+$C)
+; 		lea	(RAM_MdMarsPlgn),a0
+; ; 		add.w	(RAM_CurrGfx),a0
+; 		move.l	(a0),d4
+; 		add.l	d0,d4
+; 		move.l	d4,(a0)
+; 		move.l	4(a0),d4
+; 		add.l	d1,d4
+; 		move.l	d4,4(a0)
 
 ; 		moveq	#0,d2
 ; 		moveq	#0,d3
@@ -298,8 +307,7 @@ thisCode_Top:
 		ext.l	d0
 		ext.l	d1
 		lea	(RAM_MdMarsPlgn),a0
-		adda	#polygn_points,a0
-		add.w	(RAM_CurrPunta),a0
+; 		add.w	(RAM_CurrGfx),a0
 		move.l	(a0),d4
 		add.l	d0,d4
 		move.l	d4,(a0)
@@ -309,13 +317,13 @@ thisCode_Top:
 
 		move.w	(Controller_2+on_press),d0
 		move.w	d0,d1
-		btst	#bitClickL,d1
+		btst	#bitJoyC,d1
 		beq.s	.no_clkl
-		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait3:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
+		bset	#6,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait3:		btst	#6,(sysmars_reg+comm14).l	; and wait until it finishes
 		bne.s	.wait3
-		add.w	#8,(RAM_CurrPunta).w
-		and.w	#$18,(RAM_CurrPunta).w
+; 		add.w	#8,(RAM_CurrGfx).w
+; 		and.w	#$18,(RAM_CurrGfx).w
 .no_clkl
 		rts
 
@@ -880,18 +888,18 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "Vert: \\w",$A,$A
+		dc.b "GfxMode: \\w",$A,$A
 		dc.b "\\l \\l \\l \\l",$A
 		dc.b "\\l \\l \\l \\l",0
-		dc.l RAM_CurrPunta
-		dc.l RAM_MdMarsPlgn+polygn_points+8
-		dc.l RAM_MdMarsPlgn+polygn_points+$C
-		dc.l RAM_MdMarsPlgn+polygn_points
-		dc.l RAM_MdMarsPlgn+polygn_points+4
-		dc.l RAM_MdMarsPlgn+polygn_points+$10
-		dc.l RAM_MdMarsPlgn+polygn_points+$14
-		dc.l RAM_MdMarsPlgn+polygn_points+$18
-		dc.l RAM_MdMarsPlgn+polygn_points+$1C
+		dc.l RAM_CurrGfx
+		dc.l RAM_MdMarsPlgn+8
+		dc.l RAM_MdMarsPlgn+$C
+		dc.l RAM_MdMarsPlgn
+		dc.l RAM_MdMarsPlgn+4
+		dc.l RAM_MdMarsPlgn+$10
+		dc.l RAM_MdMarsPlgn+$14
+		dc.l RAM_MdMarsPlgn+$18
+		dc.l RAM_MdMarsPlgn+$1C
 		align 2
 
 PAL_EMI:
@@ -913,18 +921,6 @@ Dplc_Nicole:
 		include "data/md/sprites/emi_plc.asm"
 		align 2
 
-test_polygon:
-		dc.w (PLGN_TEXURE<<8)|640
-		dc.w $80
-		dc.l TESTMARS_MAJO
-		dc.l 70,-56
-		dc.l -70,-56
-		dc.l -70, 56
-		dc.l  70, 56
-		dc.w 640,0
-		dc.w   0,0
-		dc.w   0,480
-		dc.w 640,480
 
 ; ====================================================================
 ; Report size

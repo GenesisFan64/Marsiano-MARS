@@ -160,11 +160,7 @@ sizeof_mdvid	ds.l 0
 			struct RAM_MdDreq
 RAM_MdMarsPal		ds.w 256
 RAM_MdMarsBg		ds.l 8
-RAM_MdMarsPlgnNum	ds.l 1			; LONG value
-RAM_MdMarsNull2		ds.l 1
-RAM_MdMarsNull3		ds.l 1
-RAM_MdMarsNull4		ds.l 1
-RAM_MdMarsPlgn		ds.b $38*70		; NOTE: manual size
+RAM_MdMarsPlgn		ds.l 2*4
 sizeof_dreqmd		ds.l 0
 			finish
 	if MOMPASS=7
