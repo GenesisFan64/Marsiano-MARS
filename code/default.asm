@@ -111,8 +111,8 @@ thisCode_Top:
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_LoadPal_Mars
-		move.w	#2,(RAM_CurrGfx).w
-		moveq	#2,d0
+		move.w	#3,(RAM_CurrGfx).w
+		moveq	#3,d0
 		bsr	Video_MarsSetGfx
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 ; 		move.w	#1,(RAM_FadeMarsSpd).w
@@ -654,12 +654,14 @@ thisCode_Top:
 
 ; test playlist
 MasterTrkList:
+	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
+	dc.w 7,0
 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
 	dc.w $A,0
 	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
 	dc.w 7,0
-	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
-	dc.w 7,0
+
+
 ; 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
 ; 	dc.w 2,1
 ; 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
@@ -888,10 +890,11 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "GfxMode: \\w",$A,$A
+		dc.b "GfxMode: \\w \\w",$A,$A
 		dc.b "\\l \\l \\l \\l",$A
 		dc.b "\\l \\l \\l \\l",0
 		dc.l RAM_CurrGfx
+		dc.l sysmars_reg+comm14
 		dc.l RAM_MdMarsPlgn+8
 		dc.l RAM_MdMarsPlgn+$C
 		dc.l RAM_MdMarsPlgn

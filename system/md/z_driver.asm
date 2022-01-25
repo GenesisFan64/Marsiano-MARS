@@ -1090,22 +1090,16 @@ mars_scomm:
 		rst	8
 		xor	a
 		ld	(marsUpd),a
+
 .wait_enter:
 		nop
 		ld	a,(iy+comm15)	; check if we got mid-process
-		and	10110000b
-		or	a
-		jr	nz,.wait_enter
-		set	7,a
-		ld	(iy+comm15),a
-		nop
-		nop
-.wait_other:
-		nop
-		ld	a,(iy+comm15)
 		and	00110000b
 		or	a
-		jr	nz,.wait_other
+		jr	nz,.wait_enter
+		set	1,(iy+standby)
+.wait_cmd:	bit	1,(iy+standby)	; Request Slave CMD
+		jr	nz,.wait_cmd
 		ld	c,4		; c - Passes
 .next_pass:
 		push	iy
@@ -1126,12 +1120,12 @@ mars_scomm:
 		inc	hl
 		djnz	.next_comm
 		ld	a,(iy+comm15)	; Send CLK to Slave CMD
-		set	6,a
+		set	7,a
 		ld	(iy+comm15),a
 		rst	8
 .w_pass2:
 		ld	a,(iy+comm15)	; CLK cleared?
-		bit	6,a
+		bit	7,a
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass
