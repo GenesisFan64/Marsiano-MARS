@@ -146,26 +146,26 @@ RAM_VdpRegs	ds.b 24			; VDP Register cache
 sizeof_mdvid	ds.l 0
 		finish
 
-; ====================================================================
-; ----------------------------------------------------------------
-; 32X control using DREQ
+; ; ====================================================================
+; ; ----------------------------------------------------------------
+; ; 32X control using DREQ
+; ;
+; ; *** CALL System_MdMarsDreq AFTER DOING ANY CHANGE
+; ; IN THIS AREA, OUTSIDE VBLANK ***
+; ;
+; ; Size for this buffer is set externally on
+; ; the MAX_MDDREQ setting.
+; ; ----------------------------------------------------------------
 ;
-; *** CALL System_MdMarsDreq AFTER DOING ANY CHANGE
-; IN THIS AREA, OUTSIDE VBLANK ***
-;
-; Size for this buffer is set externally on
-; the MAX_MDDREQ setting.
-; ----------------------------------------------------------------
-
-			struct RAM_MdDreq
-RAM_MdMarsPal		ds.w 256
-RAM_MdMarsBg		ds.l 8
-RAM_MdMarsPlgn		ds.l 2*4
-sizeof_dreqmd		ds.l 0
-			finish
-	if MOMPASS=7
-		message "DREQ RAM: \{(sizeof_dreqmd-RAM_MdDreq)&$FFFFFF} of \{(MAX_MDDREQ)&$FFFFFF}"
-	endif
+; 			struct RAM_MdDreq
+; RAM_MdMarsPal		ds.w 256
+; RAM_MdMarsBg		ds.l 8
+; RAM_MdMarsPlgn		ds.l 2*4
+; sizeof_dreqmd		ds.l 0
+; 			finish
+; 	if MOMPASS=7
+; 		message "DREQ RAM: \{(sizeof_dreqmd-RAM_MdDreq)&$FFFFFF} of \{(MAX_MDDREQ)&$FFFFFF}"
+; 	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------

@@ -17,8 +17,8 @@
 ; ----------------------------------------
 ; Normal sprite settings
 ; ----------------------------------------
-;
-; MAX_MSPR	equ	128	; Maximum sprites
+
+MAX_MSPR	equ	128	; Maximum sprites
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -30,20 +30,16 @@ marsGbl_DreqRead	ds.l 1	; DREQ Read/Write pointers
 marsGbl_DreqWrite	ds.l 1	; these get swapped on VBlank
 marsGbl_PlyPzList_R	ds.l 1	; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
-marsGbl_IndxPlgn	ds.l 1	; Current polygon to slice
-marsGbl_CurrZList	ds.l 1	; Current Zsort entry
-marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
-marsGbl_MdlFacesCntr	ds.w 1	; And the number of faces stored on that list
+marsGbl_CurrPlgn	ds.l 1	; Current polygon to slice
 marsGbl_WdgMode		ds.w 1	; Current Watchdog task
-marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
-marsGbl_PolyReady	ds.w 1	; Mid-read list read
+marsGbl_GrphsCopy	ds.w 1	; Copy of graphics mode
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
-; marsGbl_DrwPause	ds.w 1	; Pause background drawing
-; marsGbl_DivStop_M	ds.w 1	; Flag to tell Watchdog we are in the middle of hardware division
-; marsGbl_DreqNum		ds.w 1	; DREQ buffer number
+marsGbl_DrwPause	ds.w 1	; Pause background drawing
+marsGbl_DivStop_M	ds.w 1	; Flag to tell Watchdog we are in the middle of hardware division
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
-marsGbl_CurrFb		ds.w 1	; Current framebuffer number (It's a byte)
+marsGbl_XPatch		ds.w 1	; Redraw counter for the $xxFF fix, set to 0 on X/Y change
+marsGbl_CurrFb		ds.w 1	; Current framebuffer number (Note: it's a byte)
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -568,6 +564,18 @@ s_irq_cmd:
 		mov	r4,@-r15
 		mov	r5,@-r15
 		mov	r6,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+		mov	r9,@-r15
+		mov	r10,@-r15
+		mov	r11,@-r15
+		mov	r12,@-r15
+		mov	r13,@-r15
+		mov	r14,@-r15
+		sts	macl,@-r15
+		sts	mach,@-r15
+		sts	pr,@-r15
+
 		mov	#_sysreg+comm15,r4	; control comm
 		mov	#MarsSnd_PwmControl,r2
 		mov	#4,r3			; number of passes (hard-coded, check Z80)
@@ -591,7 +599,202 @@ s_irq_cmd:
 		mov.b	r0,@r4
 		dt	r3
 		bf	.wait_1
+	; ---------------------------------
+	; *** GEMA PWM DRIVER ***
+	; ---------------------------------
+		mov	#0,r1				; r1 - Current PWM slot
+		mov	#MarsSnd_PwmControl,r14
+		mov	#MAX_PWMCHNL,r10
+.next_chnl:
+		mov.b	@r14,r0
+		and	#$FF,r0
+		cmp/eq	#0,r0
+		bt	.no_req
+		xor	r13,r13
+		mov.b	r13,@r14
+		mov	r0,r7
+		and	#%111,r0
+		cmp/eq	#4,r0
+		bt	.pwm_keycut
+		cmp/eq	#2,r0
+		bf	.no_keyoff
+.pwm_keycut:
+		mov	#0,r2
+		mov	#MarsSound_PwmEnable,r0
+		jsr	@r0
+		nop
+		bra	.no_req
+		nop
+	; Normal playback
+.no_keyoff:
+		mov	r7,r0
+		tst	#$10,r0
+		bt	.no_pitchbnd
+		mov	r14,r13
+		add	#8,r13		; skip COM
+		mov.b	@r13,r0		; r2 - Get pitch MSB bits
+		add	#8,r13
+		and	#%11,r0
+		shll8	r0
+		mov	r0,r2
+		mov.b	@r13,r0		; Pitch LSB
+		add	#8,r13
+		and	#$FF,r0
+		or	r2,r0
+		mov	r0,r2
+		mov	#MarsSound_SetPwmPitch,r0
+		jsr	@r0
+		nop
+.no_pitchbnd:
+		mov	r7,r0
+		tst	#$20,r0
+		bt	.no_volumebnd
+		mov	r0,r7
+		mov	r14,r13
+		add	#8,r13		; point to volume values
+		mov.b	@r13,r0
+		and	#%11111100,r0	; skip MSB pitch bits
+		mov	r0,r2
+		mov	#MarsSound_SetVolume,r0
+		jsr	@r0
+		nop
+.no_volumebnd:
+		mov	r7,r0
+		tst	#$01,r0		; key-on?
+		bt	.no_req
+		mov	r14,r13
+		add	#8,r13		; skip COM
+		mov.b	@r13,r0
+		add	#8,r13
+		mov	r0,r5
+		and	#%11111100,r0	; skip MSB pitch bits
+		mov	r0,r6		; r6 - Volume
+		mov	r5,r0		; r5 - Get pitch MSB bits
+		and	#%00000011,r0
+		shll8	r0
+		mov	r0,r5
+		mov.b	@r13,r0		; Pitch LSB
+		add	#8,r13
+		and	#$FF,r0
+		or	r5,r0
+		mov	r0,r5
+		mov.b	@r13,r0		; flags | SH2 BANK
+		add	#8,r13
+		mov	r0,r7		; r7 - Flags
+		and	#%1111,r0
+		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
+		shll16	r8
+		shll8	r8
+		shlr2	r7
+		shlr2	r7
+		mov.b	@r13,r0		; r2 - START point
+		add	#8,r13
+		and	#$FF,r0
+		shll16	r0
+		mov	r0,r3
+		mov.b	@r13,r0
+		add	#8,r13
+		and	#$FF,r0
+		shll8	r0
+		mov	r0,r2
+		mov.b	@r13,r0
+		add	#8,r13
+		and	#$FF,r0
+		or	r3,r0
+		or	r2,r0
+		mov	r0,r2
+		mov	r2,r4		; r4 - START copy
+		or	r8,r2		; add CS2
+		mov.b	@r2+,r0		; r3 - Length
+		and	#$FF,r0
+		mov	r0,r3
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll8	r0
+		or	r0,r3
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll16	r0
+		or	r0,r3
+		add	r4,r3		; add end+start
+		or	r8,r3		; add CS2
+		mov.b	@r2+,r0		; get loop point
+		and	#$FF,r0
+		mov	r0,r4
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll8	r0
+		or	r0,r4
+		mov.b	@r2+,r0
+		and	#$FF,r0
+		shll16	r0
+		or	r0,r4
+		mov	#%11111100,r0
+		and	r0,r8
+		mov	#MarsSound_SetPwm,r0
+		jsr	@r0
+		nop
+.no_req:
+		add	#1,r1		; next PWM slot
+		dt	r10
+		bf/s	.next_chnl
+		add	#1,r14		; next PWM entry
+		mov	#_sysreg+comm15,r1
+		mov.b	@r1,r0		; Now we are free.
+		and	#%01111111,r0
+		mov.b	r0,@r1
+.no_ztrnsfr:
 
+; 	; ---------------------------------
+; 	; PWM wave backup Enter/Exit bits
+; 	;
+; 	; In case Genesis side wants
+; 	; to do it's DMA
+; 	; ---------------------------------
+;
+; 		mov	#_sysreg+comm15,r9	; ENTER
+; 		mov.b	@r9,r0
+; 		and	#%00100000,r0
+; 		cmp/eq	#%00100000,r0
+; 		bf	.refill_in
+; 		mov	#MarsSnd_Refill,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#MarsSnd_RvMode,r1	; Set backup-playback flag
+; 		mov	#1,r0
+; 		mov	r0,@r1
+; 		mov.b	@r9,r0			; Refill is ready.
+; 		and	#%11011111,r0
+; 		mov.b	r0,@r9
+; .refill_in:
+; 		mov	#_sysreg+comm15,r9	; EXIT
+; 		mov.b	@r9,r0
+; 		and	#%00010000,r0
+; 		cmp/eq	#%00010000,r0
+; 		bf	.refill_out
+; 		mov	#MarsSnd_RvMode,r1	; Clear backup-playback flag
+; 		mov	#0,r0
+; 		mov	r0,@r1
+; 		mov.b	@r9,r0
+; 		and	#%11101111,r0
+; 		mov.b	r0,@r9
+; .refill_out:
+
+	; ---------------------------------
+	; *** END of PWM driver for GEMA
+	; ---------------------------------
+
+		lds	@r15+,pr
+		lds	@r15+,mach
+		lds	@r15+,macl
+		mov	@r15+,r14
+		mov	@r15+,r13
+		mov	@r15+,r12
+		mov	@r15+,r11
+		mov	@r15+,r10
+		mov	@r15+,r9
+		mov	@r15+,r8
+		mov	@r15+,r7
 		mov	@r15+,r6
 		mov	@r15+,r5
 		mov	@r15+,r4
@@ -902,7 +1105,7 @@ master_loop:
 		dc.l mstr_gfx_0
 		dc.l mstr_gfx_1
 		dc.l mstr_gfx_2
-		dc.l mstr_gfx_3
+		dc.l mstr_gfx_2
 
 ; ---------------------------------------
 ; Mode 0: BLANK
@@ -922,28 +1125,11 @@ mstr_gfx_0:
 		nop
 
 ; ---------------------------------------
-; Mode 1: (TODO)
-; ---------------------------------------
-
-mstr_gfx_1:
-		tst	r2,r2
-		bt	.lel
-		mov.b	@r1,r0
-		and	#%10111111,r0
-		mov.b	r0,@r1
-		mov 	#_vdpreg,r1
-		mov	#2,r0
-		mov.b	r0,@(bitmapmd,r1)
-.lel:
-		bra	mstr_nextframe
-		nop
-
-; ---------------------------------------
-; Mode 2: Scrolling background and
+; Mode 1: Scrolling background and
 ; sprites
 ; ---------------------------------------
 
-mstr_gfx_2:
+mstr_gfx_1:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
@@ -971,7 +1157,7 @@ mstr_gfx_2:
 .lel:
 	; ---------------------------------------
 		mov	#RAM_Mars_Background,r14	; Move background
-		mov	#Dreq_BgControl,r13
+		mov	#Dreq_BgXpos,r13
 		mov	@(marsGbl_DreqRead,gbr),r0
 		add	r0,r13
 		mov	@r13+,r1
@@ -1019,10 +1205,10 @@ mstr_gfx_2:
 		ltorg
 
 ; ---------------------------------------
-; Mode 3: Polygons and models
+; Mode 2: Polygons
 ; ---------------------------------------
 
-mstr_gfx_3:
+mstr_gfx_2:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
@@ -1052,6 +1238,20 @@ mstr_gfx_3:
 		bf/s	.nxt_lne
 		add	#2,r3
 .no_redraw:
+; 	---------------------------------------
+; 	***READ MODELS HERE AND UPDATE POLYGONS
+		mov	@(marsGbl_DreqRead,gbr),r0	; Set WD Polygon pointer/number
+		mov	#Dreq_Polygons,r1
+		add	r0,r1
+		mov	#test_polygon+polygn_points,r2
+		mov	@r1+,r3
+		mov	@r1+,r4
+		mov	r3,@r2
+		mov	r4,@(4,r2)
+		mov	#test_polygon,r0		; ***TEMPORAL***
+		mov	r0,@(marsGbl_CurrPlgn,gbr)
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
 
 	; ---------------------------------------
 	; Prepare WATCHDOG interrupt
@@ -1061,30 +1261,6 @@ mstr_gfx_3:
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-		mov.w	@(marsGbl_PolyReady,gbr),r0
-		tst	r0,r0
-		bt	.no_swap
-		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
-		xor	#1,r0
-		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_PolyReady,gbr)
-.no_swap:
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.page_2
-		mov	#RAM_Mars_PlgnList_0,r0
-		mov	#RAM_Mars_PlgnNum_0,r1
-		bra	.cont_plgn
-		nop
-.page_2:
-		mov	#RAM_Mars_PlgnList_1,r0
-		mov	#RAM_Mars_PlgnNum_1,r1
-		nop
-.cont_plgn:
-		mov	r0,@(marsGbl_IndxPlgn,gbr)
-		mov	@r1,r0
-		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A20,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
@@ -1092,21 +1268,19 @@ mstr_gfx_3:
 		mov.w	r0,@r1
 
 	; ---------------------------------------
-	; Clear screen
+	; Draw polygons using pieces
 	; ---------------------------------------
 
 		mov	#_vdpreg,r1
 		mov	#$100,r2
 		mov	r2,r3
 		mov	#240,r4
-		mov	#320/2,r5
-		mov	#0,r6
 .fb_loop:
-		mov	r5,r0
+		mov	#320/2,r0
 		mov.w	r0,@(filllength,r1)
 		mov	r2,r0
 		mov.w	r0,@(fillstart,r1)
-		mov	r6,r0
+		mov	#0,r0
 		mov.w	r0,@(filldata,r1)
 .wait_fb2:	mov.w	@(vdpsts,r1),r0
 		and	#%10,r0
@@ -1115,16 +1289,23 @@ mstr_gfx_3:
 		dt	r4
 		bf/s	.fb_loop
 		add	r3,r2
-
-	; ---------------------------------------
-
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+.wait_pz:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Active polygon pieces?
 		tst	r0,r0
-		bt	.no_pz
+		bt	.wait_pz
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+		cmp/pl	r0
+		bf	.no_polygns
+		mov	r0,r1
+.nxt_pz:
+		mov	r1,@-r15
 		mov	#VideoMars_DrwPlgnPz,r0
 		jsr	@r0
 		nop
-.no_pz:
+		mov	@r15+,r1
+		dt	r1
+		bf/s	.nxt_pz
+		add	#sizeof_plypz,r14
+.no_polygns:
 
 ; ---------------------------------------
 ; *** Frameswap exit, JUMP only
@@ -1219,14 +1400,6 @@ SH2_S_HotStart:
 		nop
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
-
-	; TEMPORAL
-		mov	#MarsObj_test,r0
-		mov	#RAM_Mars_Objects,r1
-		mov	r0,@(mdl_data,r1)
-		mov	#-$C0000,r0
-		mov	r0,@(mdl_z_pos,r1)
-
 		bra	slave_loop
 		nop
 		align 4
@@ -1237,262 +1410,250 @@ SH2_S_HotStart:
 ; --------------------------------------------------------
 
 slave_loop:
-	; ---------------------------------
-	; *** GEMA PWM DRIVER ***
-	; ---------------------------------
-		mov	#0,r1				; r1 - Current PWM slot
-		mov	#MarsSnd_PwmControl,r14
-		mov	#MAX_PWMCHNL,r10
-.next_chnl:
-		mov.b	@r14,r0
-		and	#$FF,r0
-		cmp/eq	#0,r0
-		bt	.no_req
-		xor	r13,r13
-		mov.b	r13,@r14
-		mov	r0,r7
-		and	#%111,r0
-		cmp/eq	#4,r0
-		bt	.pwm_keycut
-		cmp/eq	#2,r0
-		bf	.no_keyoff
-.pwm_keycut:
-		mov	#0,r2
-		mov	#MarsSound_PwmEnable,r0
-		jsr	@r0
-		nop
-		bra	.no_req
-		nop
-	; Normal playback
-.no_keyoff:
-		mov	r7,r0
-		tst	#$10,r0
-		bt	.no_pitchbnd
-		mov	r14,r13
-		add	#8,r13		; skip COM
-		mov.b	@r13,r0		; r2 - Get pitch MSB bits
-		add	#8,r13
-		and	#%11,r0
-		shll8	r0
-		mov	r0,r2
-		mov.b	@r13,r0		; Pitch LSB
-		add	#8,r13
-		and	#$FF,r0
-		or	r2,r0
-		mov	r0,r2
-		mov	#MarsSound_SetPwmPitch,r0
-		jsr	@r0
-		nop
-.no_pitchbnd:
-		mov	r7,r0
-		tst	#$20,r0
-		bt	.no_volumebnd
-		mov	r0,r7
-		mov	r14,r13
-		add	#8,r13		; point to volume values
-		mov.b	@r13,r0
-		and	#%11111100,r0	; skip MSB pitch bits
-		mov	r0,r2
-		mov	#MarsSound_SetVolume,r0
-		jsr	@r0
-		nop
-.no_volumebnd:
-		mov	r7,r0
-		tst	#$01,r0		; key-on?
-		bt	.no_req
-		mov	r14,r13
-		add	#8,r13		; skip COM
-		mov.b	@r13,r0
-		add	#8,r13
-		mov	r0,r5
-		and	#%11111100,r0	; skip MSB pitch bits
-		mov	r0,r6		; r6 - Volume
-		mov	r5,r0		; r5 - Get pitch MSB bits
-		and	#%00000011,r0
-		shll8	r0
-		mov	r0,r5
-		mov.b	@r13,r0		; Pitch LSB
-		add	#8,r13
-		and	#$FF,r0
-		or	r5,r0
-		mov	r0,r5
-		mov.b	@r13,r0		; flags | SH2 BANK
-		add	#8,r13
-		mov	r0,r7		; r7 - Flags
-		and	#%1111,r0
-		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
-		shll16	r8
-		shll8	r8
-		shlr2	r7
-		shlr2	r7
-		mov.b	@r13,r0		; r2 - START point
-		add	#8,r13
-		and	#$FF,r0
-		shll16	r0
-		mov	r0,r3
-		mov.b	@r13,r0
-		add	#8,r13
-		and	#$FF,r0
-		shll8	r0
-		mov	r0,r2
-		mov.b	@r13,r0
-		add	#8,r13
-		and	#$FF,r0
-		or	r3,r0
-		or	r2,r0
-		mov	r0,r2
-		mov	r2,r4		; r4 - START copy
-		or	r8,r2		; add CS2
-		mov.b	@r2+,r0		; r3 - Length
-		and	#$FF,r0
-		mov	r0,r3
-		mov.b	@r2+,r0
-		and	#$FF,r0
-		shll8	r0
-		or	r0,r3
-		mov.b	@r2+,r0
-		and	#$FF,r0
-		shll16	r0
-		or	r0,r3
-		add	r4,r3		; add end+start
-		or	r8,r3		; add CS2
-		mov.b	@r2+,r0		; get loop point
-		and	#$FF,r0
-		mov	r0,r4
-		mov.b	@r2+,r0
-		and	#$FF,r0
-		shll8	r0
-		or	r0,r4
-		mov.b	@r2+,r0
-		and	#$FF,r0
-		shll16	r0
-		or	r0,r4
-		mov	#%11111100,r0
-		and	r0,r8
-		mov	#MarsSound_SetPwm,r0
-		jsr	@r0
-		nop
-.no_req:
-		add	#1,r1		; next PWM slot
-		dt	r10
-		bf/s	.next_chnl
-		add	#1,r14		; next PWM entry
-		mov	#_sysreg+comm15,r1
-		mov.b	@r1,r0		; Now we are free.
-		and	#%01111111,r0
-		mov.b	r0,@r1
-.no_ztrnsfr:
 
-; 	; ---------------------------------
-; 	; PWM wave backup Enter/Exit bits
+; 	; *** GEMA PWM DRIVER ***
 ; 	;
-; 	; In case Genesis side wants
-; 	; to do it's DMA
+; 	; COMM15: %RCIOxxxx
+; 	; R - REQUEST
+; 	;     Request new PWM channels to play from the Z80.
+; 	;     it requires usage of the next bit:
+; 	; C - CLOCK, for the Z80-to-SH2 transfer part
+; 	;     The Z80 will copy the pwmcom buffer to
+; 	;     comms 0,2,4,6,8,10,12, the writes CLOCK
+; 	;     the SH2 side (here) will copy those bytes to the
+; 	;     MarsSnd_PwmControl buffer in 4 packets
+; 	;     (hardcoded on both CPUs), bit clears on finish.
+; 	; I - PWM RV-protection Enter
+; 	;     Makes a temporal backup of the playing sample in
+; 	;     CACHE and sets a RV-backup flag so it keeps playing
+; 	;     the sample like normal while the Genesis does it's
+; 	;     DMA Transfers (Only for samples stored in the ROM area)
+; 	;     Write to this bit on the Genesis side and wait
+; 	;     until it clears.
+; 	; O - PWM RV-protection exit
+; 	;     Set this after ALL DMA task from the Genesis side
+; 	;     are finished.
+; 	;     Same thing: Write to this bit on the Genesis
+; 	;     wait until it clears.
+; 	;
+; 	; the other bits are free to use
+; 		mov	#_sysreg+comm15,r9	; control comm
+; 		mov.b	@r9,r0
+; 		mov	#%10000000,r1
+; 		and	r1,r0
+; 		tst	r0,r0
+; 		bf	.non_zero
+; 		bra	.no_ztrnsfr
+; 		nop
+; .non_zero:
+; 		mov	#MarsSnd_PwmControl,r7
+; 		mov	#4,r5			; number of passes (hard-coded, check Z80)
+; .wait_1:
+; 		nop
+; 		nop
+; 		mov.b	@r9,r0			; wait first CLOCK
+; 		and	#%01000000,r0		; from Z80
+; 		tst	r0,r0
+; 		bt	.wait_1
+; 		mov	#7,r6
+; 		mov	#_sysreg+comm0,r8
+; .copy_1:
+; 		mov.w	@r8+,r0
+; 		mov.w	r0,@r7
+; 		dt	r6
+; 		bf/s	.copy_1
+; 		add	#2,r7
+; 		mov.b	@r9,r0			; tell Z80 CLK finished
+; 		and	#%10111111,r0
+; 		mov.b	r0,@r9
+; 		dt	r5
+; 		bf	.wait_1
+; 	; *** TRANSFER END
+;
+; 	; ---------------------------------
+; 	; Process PWM
 ; 	; ---------------------------------
 ;
-; 		mov	#_sysreg+comm15,r9	; ENTER
-; 		mov.b	@r9,r0
-; 		and	#%00100000,r0
-; 		cmp/eq	#%00100000,r0
-; 		bf	.refill_in
-; 		mov	#MarsSnd_Refill,r0
+; 		mov	#0,r1				; r1 - Current PWM slot
+; 		mov	#MarsSnd_PwmControl,r14
+; 		mov	#MAX_PWMCHNL,r10
+; .next_chnl:
+; 		mov.b	@r14,r0
+; 		and	#$FF,r0
+; 		cmp/eq	#0,r0
+; 		bt	.no_req
+; 		xor	r13,r13
+; 		mov.b	r13,@r14
+; 		mov	r0,r7
+; 		and	#%111,r0
+; 		cmp/eq	#4,r0
+; 		bt	.pwm_keycut
+; 		cmp/eq	#2,r0
+; 		bf	.no_keyoff
+; .pwm_keycut:
+; 		mov	#0,r2
+; 		mov	#MarsSound_PwmEnable,r0
 ; 		jsr	@r0
 ; 		nop
-; 		mov	#MarsSnd_RvMode,r1	; Set backup-playback flag
-; 		mov	#1,r0
-; 		mov	r0,@r1
-; 		mov.b	@r9,r0			; Refill is ready.
-; 		and	#%11011111,r0
-; 		mov.b	r0,@r9
-; .refill_in:
-; 		mov	#_sysreg+comm15,r9	; EXIT
-; 		mov.b	@r9,r0
-; 		and	#%00010000,r0
-; 		cmp/eq	#%00010000,r0
-; 		bf	.refill_out
-; 		mov	#MarsSnd_RvMode,r1	; Clear backup-playback flag
-; 		mov	#0,r0
-; 		mov	r0,@r1
-; 		mov.b	@r9,r0
-; 		and	#%11101111,r0
-; 		mov.b	r0,@r9
-; .refill_out:
+; 		bra	.no_req
+; 		nop
+;
+; 	; Normal playback
+; .no_keyoff:
+; 		mov	r7,r0
+; 		tst	#$10,r0
+; 		bt	.no_pitchbnd
+; 		mov	r14,r13
+; 		add	#8,r13		; skip COM
+; 		mov.b	@r13,r0		; r2 - Get pitch MSB bits
+; 		add	#8,r13
+; 		and	#%11,r0
+; 		shll8	r0
+; 		mov	r0,r2
+; 		mov.b	@r13,r0		; Pitch LSB
+; 		add	#8,r13
+; 		and	#$FF,r0
+; 		or	r2,r0
+; 		mov	r0,r2
+; 		mov	#MarsSound_SetPwmPitch,r0
+; 		jsr	@r0
+; 		nop
+; .no_pitchbnd:
+; 		mov	r7,r0
+; 		tst	#$20,r0
+; 		bt	.no_volumebnd
+; 		mov	r0,r7
+; 		mov	r14,r13
+; 		add	#8,r13		; point to volume values
+; 		mov.b	@r13,r0
+; 		and	#%11111100,r0	; skip MSB pitch bits
+; 		mov	r0,r2
+; 		mov	#MarsSound_SetVolume,r0
+; 		jsr	@r0
+; 		nop
+; .no_volumebnd:
+; 		mov	r7,r0
+; 		tst	#$01,r0		; key-on?
+; 		bt	.no_req
+; 		mov	r14,r13
+; 		add	#8,r13		; skip COM
+; 		mov.b	@r13,r0
+; 		add	#8,r13
+; 		mov	r0,r5
+; 		and	#%11111100,r0	; skip MSB pitch bits
+; 		mov	r0,r6		; r6 - Volume
+; 		mov	r5,r0		; r5 - Get pitch MSB bits
+; 		and	#%00000011,r0
+; 		shll8	r0
+; 		mov	r0,r5
+; 		mov.b	@r13,r0		; Pitch LSB
+; 		add	#8,r13
+; 		and	#$FF,r0
+; 		or	r5,r0
+; 		mov	r0,r5
+; 		mov.b	@r13,r0		; flags | SH2 BANK
+; 		add	#8,r13
+; 		mov	r0,r7		; r7 - Flags
+; 		and	#%1111,r0
+; 		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
+; 		shll16	r8
+; 		shll8	r8
+; 		shlr2	r7
+; 		shlr2	r7
+; 		mov.b	@r13,r0		; r2 - START point
+; 		add	#8,r13
+; 		and	#$FF,r0
+; 		shll16	r0
+; 		mov	r0,r3
+; 		mov.b	@r13,r0
+; 		add	#8,r13
+; 		and	#$FF,r0
+; 		shll8	r0
+; 		mov	r0,r2
+; 		mov.b	@r13,r0
+; 		add	#8,r13
+; 		and	#$FF,r0
+; 		or	r3,r0
+; 		or	r2,r0
+; 		mov	r0,r2
+; 		mov	r2,r4		; r4 - START copy
+; 		or	r8,r2		; add CS2
+; 		mov.b	@r2+,r0		; r3 - Length
+; 		and	#$FF,r0
+; 		mov	r0,r3
+; 		mov.b	@r2+,r0
+; 		and	#$FF,r0
+; 		shll8	r0
+; 		or	r0,r3
+; 		mov.b	@r2+,r0
+; 		and	#$FF,r0
+; 		shll16	r0
+; 		or	r0,r3
+; 		add	r4,r3		; add end+start
+; 		or	r8,r3		; add CS2
+; 		mov.b	@r2+,r0		; get loop point
+; 		and	#$FF,r0
+; 		mov	r0,r4
+; 		mov.b	@r2+,r0
+; 		and	#$FF,r0
+; 		shll8	r0
+; 		or	r0,r4
+; 		mov.b	@r2+,r0
+; 		and	#$FF,r0
+; 		shll16	r0
+; 		or	r0,r4
+; 		mov	#%11111100,r0
+; 		and	r0,r8
+; 		mov	#MarsSound_SetPwm,r0
+; 		jsr	@r0
+; 		nop
+; .no_req:
+; 		add	#1,r1		; next PWM slot
+; 		dt	r10
+; 		bf/s	.next_chnl
+; 		add	#1,r14		; next PWM entry
+; 		mov	#_sysreg+comm15,r1
+; 		mov.b	@r1,r0		; Now we are free.
+; 		and	#%01111111,r0
+; 		mov.b	r0,@r1
+; .no_ztrnsfr:
 
 	; ---------------------------------
-	; *** END of PWM driver for GEMA
+	; PWM wave backup Enter/Exit bits
+	;
+	; In case Genesis side wants
+	; to do it's DMA
 	; ---------------------------------
 
-; ---------------------------------------
-; ***READ MODELS HERE AND UPDATE POLYGONS
-; ---------------------------------------
-
-		mov	#RAM_Mars_Objects,r4
-		mov	#Dreq_Polygons,r1
-		mov	@(marsGbl_DreqRead,gbr),r0
-		add	r0,r1
-		mov	@r1+,r2
-		mov	@r1+,r3
-		shll8	r2
-		shll8	r3
-		mov	r2,@(mdl_x_pos,r4)
-		mov	r3,@(mdl_y_pos,r4)
-
-		mov	#RAM_Mars_Objects,r1
-		mov	#4,r2
-		mov	@(mdl_x_rot,r1),r0
-		add	r2,r0
-		mov	r0,@(mdl_x_rot,r1)
-; 		mov	@(mdl_z_rot,r1),r0
-; 		add	r2,r0
-; 		mov	r0,@(mdl_z_rot,r1)
-
-		mov.w	@(marsGbl_PolyReady,gbr),r0
-		tst	r0,r0
-		bf	.wait_mid
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_MdlFacesCntr,gbr)
-		mov 	#RAM_Mars_Polygons_0,r1
-		mov	#RAM_Mars_PlgnList_0,r2
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.go_mdl
-		mov 	#RAM_Mars_Polygons_1,r1
-		mov	#RAM_Mars_PlgnList_1,r2
-.go_mdl:
-		mov	r1,r0
-		mov	r0,@(marsGbl_CurrFacePos,gbr)
-		mov	r2,r0
-		mov	r0,@(marsGbl_CurrZList,gbr)
-		mov	#RAM_Mars_Objects,r14		; Build all objects
-		mov	#MAX_MODELS,r13
-.loop:
-		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
-		cmp/pl	r0
-		bf	.invlid
-		mov	#MarsMdl_ReadModel,r0
+		mov	#_sysreg+comm15,r9	; ENTER
+		mov.b	@r9,r0
+		and	#%00100000,r0
+		cmp/eq	#%00100000,r0
+		bf	.refill_in
+		mov	#MarsSnd_Refill,r0
 		jsr	@r0
-		mov	r13,@-r15
-		mov	@r15+,r13
-		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0	; Ran out of space to store faces?
-		mov	#MAX_FACES,r1
-		cmp/ge	r1,r0
-		bt	.skip
-.invlid:
-		dt	r13
-		bf/s	.loop
-		add	#sizeof_mdlobj,r14
-.skip:
-		mov 	#RAM_Mars_PlgnNum_0,r13
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.page_2
-		mov 	#RAM_Mars_PlgnNum_1,r13
-.page_2:
-		mov.w	@(marsGbl_MdlFacesCntr,gbr),r0
-		mov	r0,@r13
+		nop
+		mov	#MarsSnd_RvMode,r1	; Set backup-playback flag
 		mov	#1,r0
-		mov.w	r0,@(marsGbl_PolyReady,gbr)
-.wait_mid:
+		mov	r0,@r1
+		mov.b	@r9,r0			; Refill is ready.
+		and	#%11011111,r0
+		mov.b	r0,@r9
+.refill_in:
+		mov	#_sysreg+comm15,r9	; EXIT
+		mov.b	@r9,r0
+		and	#%00010000,r0
+		cmp/eq	#%00010000,r0
+		bf	.refill_out
+		mov	#MarsSnd_RvMode,r1	; Clear backup-playback flag
+		mov	#0,r0
+		mov	r0,@r1
+		mov.b	@r9,r0
+		and	#%11101111,r0
+		mov.b	r0,@r9
+.refill_out:
+	; *** END of PWM driver for GEMA
+
 		bra	slave_loop
 		nop
 		align 4
@@ -1539,18 +1700,18 @@ s_irq_custom:
 ; ----------------------------------------------------------------
 
 		align 4
-; test_polygon:
-; 		dc.w (PLGN_TEXURE<<8)|640
-; 		dc.w $80
-; 		dc.l TESTMARS_MAJO
-; 		dc.l 70,-40
-; 		dc.l -70,-40
-; 		dc.l -70, 40
-; 		dc.l  70, 40
-; 		dc.w 640,0
-; 		dc.w   0,0
-; 		dc.w   0,480
-; 		dc.w 640,480
+test_polygon:
+		dc.w (PLGN_TEXURE<<8)|640
+		dc.w $80
+		dc.l TESTMARS_MAJO
+		dc.l 70,-40
+		dc.l -70,-40
+		dc.l -70, 40
+		dc.l  70, 40
+		dc.w 640,0
+		dc.w   0,0
+		dc.w   0,480
+		dc.w 640,480
 
 
 		align 4
@@ -1600,16 +1761,12 @@ sizeof_marsram	ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
+; RAM_Mars_BgData		ds.b (320+8)*(224+8)
 RAM_Mars_Background	ds.w sizeof_marsbg
-RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
-RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Objects list
-RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
-RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
-RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
-RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
-RAM_Mars_PlgnNum_0	ds.l 1
-RAM_Mars_PlgnNum_1	ds.l 1
-RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Output polygon pieces to process
+RAM_Mars_PlgnList	ds.l 2*NUM_POLYGONS
+RAM_Mars_Polygons_0	ds.b sizeof_polygn*NUM_POLYGONS
+RAM_Mars_Polygons_1	ds.b sizeof_polygn*NUM_POLYGONS
+RAM_Mars_VdpDrwList	ds.b sizeof_plypz*256		; Output polygon pieces to process
 RAM_Mars_VdpDrwList_e	ds.l 0				; (END point)
 sizeof_marsvid		ds.l 0
 			finish
@@ -1625,21 +1782,3 @@ sizeof_marssys		ds.l 0
 			finish
 
 ; ====================================================================
-; ----------------------------------------------------------------
-; DREQ Genesis control
-;
-; Read these labels directly and add
-; marsGbl_DreqRead to them:
-;
-;	mov	#DREQ_LABEL,r14
-; 	mov	@(marsGbl_DreqRead,gbr),r0
-; 	add	r0,r14
-;
-; *** Make sure it matches on the Genesis side manually ***
-; ----------------------------------------------------------------
-
-			struct 0
-Dreq_Palette		ds.w 256
-Dreq_BgControl		ds.l 8
-Dreq_Polygons		ds.l 2*4
-			finish

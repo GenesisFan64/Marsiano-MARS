@@ -62,25 +62,17 @@ SmpIns_PIANO_1:
 SmpIns_SSTR162A:
 	gSmpl "sound/instr/smpl/SSTR162A.wav",0
 
+
+
 ; --------------------------------------------------------
 ; Other
 ; --------------------------------------------------------
 
-Textr_TEST_TEXTURE:
 TESTMARS_BG:
 	binclude "data/mars/test_art.bin"
 	align 4
 
-	binclude "data/mars/objects/mtrl/test_tex_art.bin"
+TESTMARS_MAJO:
+	binclude "data/mars/polygon/majo_art.bin"
 	align 4
-
-; --------------------------------------------------------
-; Models
-; --------------------------------------------------------
-
-	include "data/mars/objects/mdl/test/head.asm"
-
-; TESTMARS_MAJO:
-; 	binclude "data/mars/polygon/majo_art.bin"
-; 	align 4
 

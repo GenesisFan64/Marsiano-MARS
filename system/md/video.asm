@@ -1096,7 +1096,7 @@ Video_PalTarget_Mars:
 		lea	(RAM_MdMarsPalFd),a6
 		bra.s	vidMars_Pal
 Video_LoadPal_Mars:
-		lea	(RAM_MdMarsPal),a6
+		lea	(RAM_MdDreq+Dreq_Palette),a6
 vidMars_Pal:
 		move.l	a0,a5
 		moveq	#0,d7
@@ -1158,7 +1158,7 @@ Video_MarsPalFade:
 
 .fade_in:
 		lea	(RAM_MdMarsPalFd),a6
-		lea	(RAM_MdMarsPal),a5
+		lea	(RAM_MdDreq+Dreq_Palette),a5
 		move.w	#256,d0				; Num of colors
 		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
 		move.w	d0,d6
@@ -1229,7 +1229,7 @@ Video_MarsPalFade:
 ; --------------------------------------------
 
 .fade_out:
-		lea	(RAM_MdMarsPal),a6
+		lea	(RAM_MdDreq+Dreq_Palette),a6
 		move.w	#256,d0				; Num of colors
 		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
 		move.w	d0,d6

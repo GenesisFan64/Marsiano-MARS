@@ -7,6 +7,7 @@
 		include	"system/md/const.asm"	; MD variables and shared vars
 		include	"system/md/map.asm"	; Genesis hardware map
 		include	"system/mars/map.asm"	; MARS map
+		include	"system/mars/dreq.asm"	; MARS DREQ (shared)
 		include	"system/head.asm"	; 32X header
 		include "code/global.asm"	; Global user variables for the Genesis
 

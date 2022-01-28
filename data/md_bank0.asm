@@ -12,7 +12,7 @@
 		align 2
 TESTMARS_BG_PAL:
 		binclude "data/mars/test_pal.bin"
-		binclude "data/mars/objects/mtrl/test_tex_pal.bin"
+		binclude "data/mars/polygon/majo_pal.bin"
 		align 2
 MAP_FGTEST:	binclude "data/md/bg/fg_map.bin"
 		align 2

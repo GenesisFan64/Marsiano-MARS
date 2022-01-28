@@ -111,8 +111,8 @@ thisCode_Top:
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_LoadPal_Mars
-		move.w	#3,(RAM_CurrGfx).w
-		moveq	#3,d0
+		move.w	#2,(RAM_CurrGfx).w
+		moveq	#2,d0
 		bsr	Video_MarsSetGfx
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 ; 		move.w	#1,(RAM_FadeMarsSpd).w
@@ -195,8 +195,8 @@ thisCode_Top:
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
 
-		move.l	(RAM_MdMarsBg).w,d0
-		move.l	(RAM_MdMarsBg+4).w,d1
+		move.l	(RAM_MdDreq+Dreq_BgXPos).w,d0
+		move.l	(RAM_MdDreq+Dreq_BgYPos).w,d1
 		move.w	(RAM_HorScroll+2).w,d2
 		move.w	(RAM_VerScroll+2).w,d3
 		move.l	#$10000,d5
@@ -222,8 +222,8 @@ thisCode_Top:
 		sub.l	d5,d1
 		sub.w	d6,d3
 .nou_m:
-		move.l	d0,(RAM_MdMarsBg).w
-		move.l	d1,(RAM_MdMarsBg+4).w
+		move.l	d0,(RAM_MdDreq+Dreq_BgXPos).w
+		move.l	d1,(RAM_MdDreq+Dreq_BgYPos).w
 		move.w	d2,(RAM_HorScroll+2).w
 		move.w	d3,(RAM_VerScroll+2).w
 
@@ -306,14 +306,29 @@ thisCode_Top:
 		move.w	(Controller_2+mouse_y),d1
 		ext.l	d0
 		ext.l	d1
-		lea	(RAM_MdMarsPlgn),a0
-; 		add.w	(RAM_CurrGfx),a0
+		lea	(RAM_MdDreq+Dreq_Polygons),a0
 		move.l	(a0),d4
 		add.l	d0,d4
 		move.l	d4,(a0)
 		move.l	4(a0),d4
 		add.l	d1,d4
 		move.l	d4,4(a0)
+
+		move.l	#1,d0
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyRight,d7
+		beq.s	.nor_m3
+		move.l	(a0),d4
+		add.l	d0,d4
+		move.l	d4,(a0)
+.nor_m3:
+		btst	#bitJoyLeft,d7
+		beq.s	.nol_m4
+		move.l	(a0),d4
+		sub.l	d0,d4
+		move.l	d4,(a0)
+.nol_m4:
+
 
 		move.w	(Controller_2+on_press),d0
 		move.w	d0,d1
@@ -654,14 +669,12 @@ thisCode_Top:
 
 ; test playlist
 MasterTrkList:
-	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
-	dc.w 7,0
 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
 	dc.w $A,0
 	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
 	dc.w 7,0
-
-
+	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
+	dc.w 7,0
 ; 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
 ; 	dc.w 2,1
 ; 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
@@ -890,19 +903,18 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "GfxMode: \\w \\w",$A,$A
-		dc.b "\\l \\l \\l \\l",$A
-		dc.b "\\l \\l \\l \\l",0
+		dc.b "GfxMode: \\w",0
+; 		dc.b "\\l \\l \\l \\l",$A
+; 		dc.b "\\l \\l \\l \\l",0
 		dc.l RAM_CurrGfx
-		dc.l sysmars_reg+comm14
-		dc.l RAM_MdMarsPlgn+8
-		dc.l RAM_MdMarsPlgn+$C
-		dc.l RAM_MdMarsPlgn
-		dc.l RAM_MdMarsPlgn+4
-		dc.l RAM_MdMarsPlgn+$10
-		dc.l RAM_MdMarsPlgn+$14
-		dc.l RAM_MdMarsPlgn+$18
-		dc.l RAM_MdMarsPlgn+$1C
+; 		dc.l RAM_MdMarsPlgn+8
+; 		dc.l RAM_MdMarsPlgn+$C
+; 		dc.l RAM_MdMarsPlgn
+; 		dc.l RAM_MdMarsPlgn+4
+; 		dc.l RAM_MdMarsPlgn+$10
+; 		dc.l RAM_MdMarsPlgn+$14
+; 		dc.l RAM_MdMarsPlgn+$18
+; 		dc.l RAM_MdMarsPlgn+$1C
 		align 2
 
 PAL_EMI:

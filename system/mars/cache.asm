@@ -23,11 +23,9 @@ m_irq_custom:
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 
-		mov.w	@(marsGbl_PlgnCntr,gbr),r0
+		mov.w	@(marsGbl_WdgMode,gbr),r0
 		cmp/eq	#0,r0
-		bf	wdg_task_0
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		bt	wdg_task_0
 
 		mov.l   #$FFFFFE80,r1			; Stop watchdog
 		mov.w   #$A518,r0
@@ -37,15 +35,19 @@ m_irq_custom:
 		align 4
 
 wdg_task_0:
+		mov.w	@(marsGbl_PlgnCntr,gbr),r0
+		cmp/pl	r0
+		bt	.valid
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		bra	wdm_exit
+		nop
+		align 4
+.valid:
 		dt	r0
 		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
-		mov	@(marsGbl_IndxPlgn,gbr),r0
-; 		mov	r0,r1
-		mov	@(4,r0),r14
-; 		xor	r0,r0
-; 		mov	r0,@r1
-; 		mov	r0,@(4,r1)
-
+		mov	@(marsGbl_CurrPlgn,gbr),r0
+		mov	r0,r14
 		mov	#Cach_Bkup_S,r0
 		mov	r2,@-r0
 		mov	r3,@-r0
@@ -233,9 +235,10 @@ wdg_task_0:
 		mov	@r0+,r3
 		mov	@r0+,r2
 
-		mov	@(marsGbl_IndxPlgn,gbr),r0
-		add	#8,r0
-		mov	r0,@(marsGbl_IndxPlgn,gbr)
+		mov	#sizeof_polygn,r0
+		add	r0,r14
+		mov	r14,r0
+		mov	r0,@(marsGbl_CurrPlgn,gbr)
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0	; OFF
 		mov.w   r0,@r1
@@ -396,15 +399,6 @@ set_right:
 ; --------------------------------
 
 put_piece:
-		mov	@(4,r2),r8
-		mov	@(4,r3),r9
-		sub	r10,r8
-		sub	r10,r9
-		mov	r8,r0
-		cmp/gt	r8,r9
-		bt	.lefth
-		mov	r9,r0
-.lefth:
 		mov 	r4,@(plypz_xl,r1)
 		mov 	r5,@(plypz_xl_dx,r1)
 		mov 	r6,@(plypz_xr,r1)
@@ -491,12 +485,7 @@ put_piece:
 ; Draw polygon pieces
 ; ---------------------------------------
 
-go_drwtask_exit:
-
 VideoMars_DrwPlgnPz:
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-		cmp/pl	r0
-		bf	go_drwtask_exit
 		mov	@(marsGbl_PlyPzList_R,gbr),r0	; r14 - Current pieces pointer to READ
 		mov	r0,r14
 		mov	@(plypz_ypos,r14),r9		; Start grabbing StartY/EndY positions
@@ -743,17 +732,11 @@ drwtex_gonxtpz:
 		mov	#RAM_Mars_VdpDrwList,r0
 .reset_rd:
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		cmp/pl	r0
-		bf	.finish_it
-		bra	VideoMars_DrwPlgnPz
-		nop
-.finish_it:
-		bra	drwtask_exit
-		nop
+		bra	drwtask_return
+		mov	#$10,r2				; Timer for next watchdog
 		align 4
 tag_width:	dc.l SCREEN_WIDTH
 tag_yhght:	dc.l SCREEN_HEIGHT
@@ -771,6 +754,8 @@ tag_yhght:	dc.l SCREEN_HEIGHT
 ; ------------------------------------
 
 drwtsk_solidmode:
+ bra *
+ nop
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r6
 		mov	@(plypz_type,r14),r5
@@ -846,7 +831,7 @@ drwsld_nxtline:
 		shll8	r0
 		or	r6,r0
 		mov.w	r0,@(8,r13)	; Set data
-; .wait:		mov.w	@(10,r13),r0
+; .wait:	mov.w	@(10,r13),r0
 ; 		tst	#2,r0
 ; 		bf	.wait
 
@@ -901,6 +886,8 @@ drwsld_nextpz:
 		bra	VideoMars_DrwPlgnPz
 		nop
 .finish_it:
+
+drwtask_return:
 
 drwtask_exit:
 		rts
@@ -1159,8 +1146,6 @@ MarsSound_ReadPwm:
 		align 4
 MarsSnd_RvMode	ds.l 1
 MarsSnd_Active	ds.l 1
-Cach_CurrPlygn	ds.b sizeof_polygn	; Current polygon in modelread
-
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF
 CACHE_SLAVE_E:
