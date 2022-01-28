@@ -8,6 +8,7 @@
 
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
 MAX_MDDREQ	equ $800	; MAX size for DREQ RAM transfer in WORDS (careful for HW)
+MAX_MODELS	equ 16
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -20,8 +21,26 @@ varNullVram	equ $7FF	; Default Blank tile for some video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Custom structures
+; Shared structs for both Genesis and 32X
 ; ----------------------------------------------------------------
+
+; model objects
+;
+		struct 0
+mdl_data	ds.l 1			; Model data pointer, if zero: no model
+mdl_option	ds.l 1			; Model options: pixelvalue add
+mdl_x_pos	ds.l 1			; X position $000000.00
+mdl_y_pos	ds.l 1			; Y position $000000.00
+mdl_z_pos	ds.l 1			; Z position $000000.00
+mdl_x_rot	ds.l 1			; X rotation $000000.00
+mdl_y_rot	ds.l 1			; Y rotation $000000.00
+mdl_z_rot	ds.l 1			; Z rotation $000000.00
+mdl_animdata	ds.l 1			; Model animation data pointer, zero: no animation
+mdl_animframe	ds.l 1			; Current frame in animation
+mdl_animtimer	ds.l 1			; Animation timer
+mdl_animspd	ds.l 1			; Animation USER speed setting
+sizeof_mdlobj	ds.l 0
+		finish
 
 ; --------------------------------------------------------
 ; Controller
@@ -80,12 +99,12 @@ bitJoyMode	equ 3
 
 ; Mega Mouse
 ; Read WORD in +on_hold or +on_press
-ClickL		equ $0001
-ClickR		equ $0002
+ClickR		equ $0001
+ClickL		equ $0002
 ClickM		equ $0004	; US MOUSE ONLY
 ClickS		equ $0008	; (Untested)
-bitClickL	equ 0
-bitClickR	equ 1
+bitClickR	equ 0
+bitClickL	equ 1
 bitClickM	equ 2
 bitClickS	equ 3
 
@@ -157,12 +176,11 @@ sizeof_mdvid	ds.l 0
 ; ; the MAX_MDDREQ setting.
 ; ; ----------------------------------------------------------------
 ;
-; 			struct RAM_MdDreq
-; RAM_MdMarsPal		ds.w 256
-; RAM_MdMarsBg		ds.l 8
-; RAM_MdMarsPlgn		ds.l 2*4
-; sizeof_dreqmd		ds.l 0
-; 			finish
+; 		struct RAM_MdDreq
+; RAM_MdMarsPal	ds.w 256
+; RAM_MdMarsBg	ds.l $10
+; sizeof_dreqmd	ds.l 0
+; 		finish
 ; 	if MOMPASS=7
 ; 		message "DREQ RAM: \{(sizeof_dreqmd-RAM_MdDreq)&$FFFFFF} of \{(MAX_MDDREQ)&$FFFFFF}"
 ; 	endif

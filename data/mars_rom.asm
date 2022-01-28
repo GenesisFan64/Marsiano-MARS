@@ -71,8 +71,3 @@ SmpIns_SSTR162A:
 TESTMARS_BG:
 	binclude "data/mars/test_art.bin"
 	align 4
-
-TESTMARS_MAJO:
-	binclude "data/mars/polygon/majo_art.bin"
-	align 4
-

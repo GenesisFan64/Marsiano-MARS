@@ -15,13 +15,11 @@
 
 			struct 0
 Dreq_Palette		ds.w 256
-Dreq_BgXPos		ds.l 1
-Dreq_BgYPos		ds.l 1
-Dreq_Polygons		ds.l 2*4
+Dreq_BgXpos		ds.l 1
+Dreq_BgYpos		ds.l 1
 sizeof_dreq		ds.l 0
 			finish
 
 	if MOMPASS=7
 		message "DREQ RAM: \{sizeof_dreq} of \{MAX_MDDREQ}"
 	endif
-
