@@ -115,12 +115,12 @@ thisCode_Top:
 		move.w	#320/2,(RAM_EmiPosX).w
 		move.w	#224/2,(RAM_EmiPosY).w
 
-		lea	MasterTrkList(pc),a0
-		move.w	$C(a0),d1
-		move.w	$E(a0),d3
-		moveq	#0,d0
-		moveq	#0,d2
-		bsr	Sound_TrkPlay
+; 		lea	MasterTrkList(pc),a0
+; 		move.w	$C(a0),d1
+; 		move.w	$E(a0),d3
+; 		moveq	#0,d0
+; 		moveq	#0,d2
+; 		bsr	Sound_TrkPlay
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -177,10 +177,10 @@ thisCode_Top:
 ; 		move.w	(RAM_FadeMdReq),d6
 ; 		or.w	d6,d7
 ; 		bne.s	.loop
-
-		lea	str_InfoMouse(pc),a0		; GEMA tester text on WINDOW
-		move.l	#locate(0,2,25),d0
-		bsr	Video_Print
+;
+; 		lea	str_InfoMouse(pc),a0		; GEMA tester text on WINDOW
+; 		move.l	#locate(0,2,25),d0
+; 		bsr	Video_Print
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -215,12 +215,12 @@ thisCode_Top:
 .nob:
 
 
-	; Test movement
+; 	Test movement
 		move.l	(RAM_MdDreq+Dreq_BgXpos).w,d0
 		move.l	(RAM_MdDreq+Dreq_BgYpos).w,d1
 		move.w	(RAM_HorScroll+2).w,d2
 		move.w	(RAM_VerScroll+2).w,d3
-		move.l	#$20000,d5
+		move.l	#$10000,d5
 		move.l	#1,d6
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -259,8 +259,8 @@ thisCode_Top:
 		bsr	PlayThisSfx
 .noah:
 
-		bsr	Emilie_Move
-		bsr	Emilie_MkSprite
+; 		bsr	Emilie_Move
+; 		bsr	Emilie_MkSprite
 		rts
 
 ; 		lea	str_TempVal(pc),a0		; Main title

@@ -1091,44 +1091,44 @@ mars_scomm:
 		xor	a
 		ld	(marsUpd),a
 
-.wait_enter:
-		nop
-		ld	a,(iy+comm15)	; check if we got mid-process
-		and	00110000b
-		or	a
-		jr	nz,.wait_enter
-		set	1,(iy+standby)
-.wait_cmd:	bit	1,(iy+standby)	; Request Slave CMD
-		jr	nz,.wait_cmd
-		ld	c,4		; c - Passes
-.next_pass:
-		push	iy
-		pop	hl
-		rst	8
-		ld	de,comm0
-		add	hl,de
-		ld	b,7
-.next_comm:
-		ld	d,(ix)
-		ld	e,(ix+1)
-		inc	ix
-		inc	ix
-		rst	8
-		ld	(hl),d
-		inc	hl
-		ld	(hl),e
-		inc	hl
-		djnz	.next_comm
-		ld	a,(iy+comm15)	; Send CLK to Slave CMD
-		set	7,a
-		ld	(iy+comm15),a
-		rst	8
-.w_pass2:
-		ld	a,(iy+comm15)	; CLK cleared?
-		bit	7,a
-		jr	nz,.w_pass2
-		dec	c
-		jr	nz,.next_pass
+; .wait_enter:
+; 		nop
+; 		ld	a,(iy+comm15)	; check if we got mid-process
+; 		and	00110000b
+; 		or	a
+; 		jr	nz,.wait_enter
+; 		set	1,(iy+standby)
+; .wait_cmd:	bit	1,(iy+standby)	; Request Slave CMD
+; 		jr	nz,.wait_cmd
+; 		ld	c,4		; c - Passes
+; .next_pass:
+; 		push	iy
+; 		pop	hl
+; 		rst	8
+; 		ld	de,comm0
+; 		add	hl,de
+; 		ld	b,7
+; .next_comm:
+; 		ld	d,(ix)
+; 		ld	e,(ix+1)
+; 		inc	ix
+; 		inc	ix
+; 		rst	8
+; 		ld	(hl),d
+; 		inc	hl
+; 		ld	(hl),e
+; 		inc	hl
+; 		djnz	.next_comm
+; 		ld	a,(iy+comm15)	; Send CLK to Slave CMD
+; 		set	7,a
+; 		ld	(iy+comm15),a
+; 		rst	8
+; .w_pass2:
+; 		ld	a,(iy+comm15)	; CLK cleared?
+; 		bit	7,a
+; 		jr	nz,.w_pass2
+; 		dec	c
+; 		jr	nz,.next_pass
 
 ; clear COM bits
 .blocked:

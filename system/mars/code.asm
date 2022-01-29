@@ -22,7 +22,7 @@ marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
 marsGbl_IndxPlgn	ds.l 1	; Current polygon to slice
 marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
-marsGbl_DreqSlave	ds.w 1	; DREQ mid-swap flag
+marsGbl_DreqSwap	ds.w 1	; DREQ mid-swap flag
 marsGbl_CurrNumFaces	ds.w 1	; And the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1	; Current Watchdog task
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
@@ -343,31 +343,61 @@ m_irq_cmd:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_sysreg+cmdintclr,r1
-		mov.w	r0,@r1
-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
-		mov	#_sysreg,r4
-		mov	#_DMASOURCE0,r3
-		mov	#_sysreg+comm14,r2
-		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
-		mov	r0,@($C,r3)
-		mov	#_sysreg+dreqfifo,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r1,@r3			; Source
-		mov	r0,@(4,r3)		; Destination
-		mov.w	@(dreqlen,r4),r0
-		mov	r0,@(8,r3)		; Length
-		mov.b	@r2,r0
-		or	#%01000000,r0		; Tell Genesis we are few instructions away from
-		mov.b	r0,@r2			; reading the DREQ FIFO port
-		mov	@($C,r3),r0		; (?)
-		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
-		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r3)
+		mov	r5,@-r15
+		mov	#_sysreg+cmdintclr,r1
+		mov.w	r0,@r1
+
+		mov	#_sysreg+comm14,r3	; control comm
+		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	r0,r2
+		mov	#_sysreg+dreqsource+2,r4
+		mov.w	@r4,r4
+.wait_1:
+		mov.b	@r3,r0			; wait first CLOCK
+		and	#%10000000,r0		; from Z80
+		tst	r0,r0
+		bt	.wait_1
+		mov	#_sysreg+comm0,r1
+.copy_1:
+		mov	@r1+,r0
+		mov	r0,@r2
+		add	#4,r2
+		mov	@r1+,r0
+		mov	r0,@r2
+		add	#4,r2
+		mov.b	@r3,r0			; tell Z80 CLK finished
+		and	#%01111111,r0
+		mov.b	r0,@r3
+		dt	r4
+		bf	.wait_1
+
+	; Never got this to work on HW
+; 		mov	#_sysreg+cmdintclr,r4
+; 		mov	@(marsGbl_DreqRead,gbr),r0
+; 		mov	r0,r1
+; 		mov	#_DMASOURCE0,r2
+; 		mov.l   #_sysreg,r3
+; 		mov.l   #_sysreg+dreqfifo,r0
+; 		mov.l   r0,@(0,r2)
+; 		mov.l   r1,@(4,r2)
+; 		mov.w   @($10,r3),r0
+; 		mov.l   r0,@(8,r2)
+; 		mov.l   #$44E1,r0
+; 		mov.l   r0,@($0C,r2)
+; 		mov.l   #1,r0
+; 		mov.l   r0,@($30,r2)
+; 		mov.w	r0,@r4
+; .dma_wait:
+; 		mov	@($C,r2),r0
+; 		tst     #2,r0
+; 		bt      .dma_wait
+; 		mov     #0,r0
+; 		mov	r0,@($30,r2)
+
+		mov	@r15+,r5
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -1051,15 +1081,17 @@ master_loop:
 	; we are still on VBlank
 	; ---------------------------------------
 
+		stc	sr,@-r15
+		mov	#$F0,r0			; Interrupts OFF
+		ldc	r0,sr
 		mov	#_vdpreg,r1
 .wait:		mov.b	@(vdpsts,r1),r0
 		and	#$20,r0
 		tst	r0,r0			; Palette unlocked?
 		bt	.wait
-		mov	#Dreq_Palette,r13
+		mov	#Dreq_Palette,r1
 		mov	@(marsGbl_DreqRead,gbr),r0
-		add	r0,r13
-		mov	r0,r1
+		add	r0,r1
 		mov	#_palette,r2
  		mov	#256/16,r3
 .copy_pal:
@@ -1070,40 +1102,22 @@ master_loop:
 	endm
 		dt	r3
 		bf	.copy_pal
-
-	; ---------------------------------------
-
-		mov	#_DMACHANNEL0,r1		; Check if DMA is active
-		mov	@r1,r0				;
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet			; Not yet.
-		stc	sr,@-r15
-		mov.l	#$F0,r0				; Interrupts OFF, Ignore new requests
-		ldc	r0,sr
-.wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
-		and	#%10,r0
-		tst	r0,r0
-		bt	.wait_dma
-		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
-		mov	r0,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-		mov	r1,r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
-		ldc	@r15+,sr			; Interrupts ON, recieve requests again
-.not_yet:
+		ldc	@r15+,sr
 
 	; ---------------------------------------
 	; Control background position
 	; ---------------------------------------
 
+		stc	sr,@-r15
+		mov	#$F0,r0			; Interrupts OFF
+		ldc	r0,sr
 		mov	#RAM_Mars_Background,r14
 		mov	#Dreq_BgXpos,r13
 		mov	@(marsGbl_DreqRead,gbr),r0
 		add	r0,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
+		ldc	@r15+,sr
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
 		mov	#RAM_Mars_Background,r14
@@ -1161,7 +1175,8 @@ master_loop:
 	; ---------------------------------------
 	; Draw sprites and polygons now.
 	; ---------------------------------------
-
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_ModelsReady,gbr)
 		bsr	MarsVideo_FixTblShift		; Call this AFTER all linetables are set
 		nop
 		mov	#_vdpreg,r1
@@ -1299,6 +1314,13 @@ SH2_S_HotStart:
 		nop
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
+
+		mov	#RAM_Mars_Objects,r1
+		mov	#MarsObj_test,r0
+		mov	r0,@(mdl_data,r1)
+		mov	#-$C0000,r0
+		mov	r0,@(mdl_z_pos,r1)
+
 		bra	slave_loop
 		nop
 		align 4
@@ -1309,224 +1331,12 @@ SH2_S_HotStart:
 ; --------------------------------------------------------
 
 slave_loop:
-;
-; 	; *** GEMA PWM DRIVER ***
-; 	;
-; 	; COMM15: %RCIOxxxx
-; 	; R - REQUEST
-; 	;     Request new PWM channels to play from the Z80.
-; 	;     it requires usage of the next bit:
-; 	; C - CLOCK, for the Z80-to-SH2 transfer part
-; 	;     The Z80 will copy the pwmcom buffer to
-; 	;     comms 0,2,4,6,8,10,12, the writes CLOCK
-; 	;     the SH2 side (here) will copy those bytes to the
-; 	;     MarsSnd_PwmControl buffer in 4 packets
-; 	;     (hardcoded on both CPUs), bit clears on finish.
-; 	; I - PWM RV-protection Enter
-; 	;     Makes a temporal backup of the playing sample in
-; 	;     CACHE and sets a RV-backup flag so it keeps playing
-; 	;     the sample like normal while the Genesis does it's
-; 	;     DMA Transfers (Only for samples stored in the ROM area)
-; 	;     Write to this bit on the Genesis side and wait
-; 	;     until it clears.
-; 	; O - PWM RV-protection exit
-; 	;     Set this after ALL DMA task from the Genesis side
-; 	;     are finished.
-; 	;     Same thing: Write to this bit on the Genesis
-; 	;     wait until it clears.
-; 	;
-; 	; the other bits are free to use
-; 		mov	#_sysreg+comm15,r9	; control comm
-; 		mov.b	@r9,r0
-; 		mov	#%10000000,r1
-; 		and	r1,r0
-; 		tst	r0,r0
-; 		bf	.non_zero
-; 		bra	.no_ztrnsfr
-; 		nop
-; .non_zero:
-; 		mov	#MarsSnd_PwmControl,r7
-; 		mov	#4,r5			; number of passes (hard-coded, check Z80)
-; .wait_1:
-; 		nop
-; 		nop
-; 		mov.b	@r9,r0			; wait first CLOCK
-; 		and	#%01000000,r0		; from Z80
-; 		tst	r0,r0
-; 		bt	.wait_1
-; 		mov	#7,r6
-; 		mov	#_sysreg+comm0,r8
-; .copy_1:
-; 		mov.w	@r8+,r0
-; 		mov.w	r0,@r7
-; 		dt	r6
-; 		bf/s	.copy_1
-; 		add	#2,r7
-; 		mov.b	@r9,r0			; tell Z80 CLK finished
-; 		and	#%10111111,r0
-; 		mov.b	r0,@r9
-; 		dt	r5
-; 		bf	.wait_1
-; 	; *** TRANSFER END
-;
-; 	; ---------------------------------
-; 	; Process PWM
-; 	; ---------------------------------
-;
-; 		mov	#0,r1				; r1 - Current PWM slot
-; 		mov	#MarsSnd_PwmControl,r14
-; 		mov	#MAX_PWMCHNL,r10
-; .next_chnl:
-; 		mov.b	@r14,r0
-; 		and	#$FF,r0
-; 		cmp/eq	#0,r0
-; 		bt	.no_req
-; 		xor	r13,r13
-; 		mov.b	r13,@r14
-; 		mov	r0,r7
-; 		and	#%111,r0
-; 		cmp/eq	#4,r0
-; 		bt	.pwm_keycut
-; 		cmp/eq	#2,r0
-; 		bf	.no_keyoff
-; .pwm_keycut:
-; 		mov	#0,r2
-; 		mov	#MarsSound_PwmEnable,r0
-; 		jsr	@r0
-; 		nop
-; 		bra	.no_req
-; 		nop
-;
-; 	; Normal playback
-; .no_keyoff:
-; 		mov	r7,r0
-; 		tst	#$10,r0
-; 		bt	.no_pitchbnd
-; 		mov	r14,r13
-; 		add	#8,r13		; skip COM
-; 		mov.b	@r13,r0		; r2 - Get pitch MSB bits
-; 		add	#8,r13
-; 		and	#%11,r0
-; 		shll8	r0
-; 		mov	r0,r2
-; 		mov.b	@r13,r0		; Pitch LSB
-; 		add	#8,r13
-; 		and	#$FF,r0
-; 		or	r2,r0
-; 		mov	r0,r2
-; 		mov	#MarsSound_SetPwmPitch,r0
-; 		jsr	@r0
-; 		nop
-; .no_pitchbnd:
-; 		mov	r7,r0
-; 		tst	#$20,r0
-; 		bt	.no_volumebnd
-; 		mov	r0,r7
-; 		mov	r14,r13
-; 		add	#8,r13		; point to volume values
-; 		mov.b	@r13,r0
-; 		and	#%11111100,r0	; skip MSB pitch bits
-; 		mov	r0,r2
-; 		mov	#MarsSound_SetVolume,r0
-; 		jsr	@r0
-; 		nop
-; .no_volumebnd:
-; 		mov	r7,r0
-; 		tst	#$01,r0		; key-on?
-; 		bt	.no_req
-; 		mov	r14,r13
-; 		add	#8,r13		; skip COM
-; 		mov.b	@r13,r0
-; 		add	#8,r13
-; 		mov	r0,r5
-; 		and	#%11111100,r0	; skip MSB pitch bits
-; 		mov	r0,r6		; r6 - Volume
-; 		mov	r5,r0		; r5 - Get pitch MSB bits
-; 		and	#%00000011,r0
-; 		shll8	r0
-; 		mov	r0,r5
-; 		mov.b	@r13,r0		; Pitch LSB
-; 		add	#8,r13
-; 		and	#$FF,r0
-; 		or	r5,r0
-; 		mov	r0,r5
-; 		mov.b	@r13,r0		; flags | SH2 BANK
-; 		add	#8,r13
-; 		mov	r0,r7		; r7 - Flags
-; 		and	#%1111,r0
-; 		mov	r0,r8		; r8 - SH2 section (ROM or SDRAM)
-; 		shll16	r8
-; 		shll8	r8
-; 		shlr2	r7
-; 		shlr2	r7
-; 		mov.b	@r13,r0		; r2 - START point
-; 		add	#8,r13
-; 		and	#$FF,r0
-; 		shll16	r0
-; 		mov	r0,r3
-; 		mov.b	@r13,r0
-; 		add	#8,r13
-; 		and	#$FF,r0
-; 		shll8	r0
-; 		mov	r0,r2
-; 		mov.b	@r13,r0
-; 		add	#8,r13
-; 		and	#$FF,r0
-; 		or	r3,r0
-; 		or	r2,r0
-; 		mov	r0,r2
-; 		mov	r2,r4		; r4 - START copy
-; 		or	r8,r2		; add CS2
-; 		mov.b	@r2+,r0		; r3 - Length
-; 		and	#$FF,r0
-; 		mov	r0,r3
-; 		mov.b	@r2+,r0
-; 		and	#$FF,r0
-; 		shll8	r0
-; 		or	r0,r3
-; 		mov.b	@r2+,r0
-; 		and	#$FF,r0
-; 		shll16	r0
-; 		or	r0,r3
-; 		add	r4,r3		; add end+start
-; 		or	r8,r3		; add CS2
-; 		mov.b	@r2+,r0		; get loop point
-; 		and	#$FF,r0
-; 		mov	r0,r4
-; 		mov.b	@r2+,r0
-; 		and	#$FF,r0
-; 		shll8	r0
-; 		or	r0,r4
-; 		mov.b	@r2+,r0
-; 		and	#$FF,r0
-; 		shll16	r0
-; 		or	r0,r4
-; 		mov	#%11111100,r0
-; 		and	r0,r8
-; 		mov	#MarsSound_SetPwm,r0
-; 		jsr	@r0
-; 		nop
-; .no_req:
-; 		add	#1,r1		; next PWM slot
-; 		dt	r10
-; 		bf/s	.next_chnl
-; 		add	#1,r14		; next PWM entry
-; 		mov	#_sysreg+comm15,r1
-; 		mov.b	@r1,r0		; Now we are free.
-; 		and	#%01111111,r0
-; 		mov.b	r0,@r1
-; .no_ztrnsfr:
-
 	; ---------------------------------
 	; PWM wave backup Enter/Exit bits
 	;
 	; In case Genesis side wants
 	; to do it's DMA
 	; ---------------------------------
-
-; 		stc	sr,@-r15
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
 		mov	#_sysreg+comm15,r9	; ENTER
 		mov.b	@r9,r0
 		and	#%00100000,r0
@@ -1554,10 +1364,66 @@ slave_loop:
 		and	#%11101111,r0
 		mov.b	r0,@r9
 .refill_out:
-; 		ldc	@r15+,sr			; Interrupts ON, recieve requests again
 
-	; *** END of PWM driver for GEMA
+; ---------------------------------------
+; ***READ MODELS HERE AND UPDATE POLYGONS
+; ---------------------------------------
 
+		mov	#RAM_Mars_Objects,r2
+		mov	#$100,r1
+		mov	@(mdl_x_rot,r2),r0
+		add	r1,r0
+		mov	r0,@(mdl_x_rot,r2)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
+		mov 	#RAM_Mars_Polygons_0,r1
+		mov	#RAM_Mars_PlgnList_0,r2
+		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
+		tst     #1,r0
+		bt	.go_mdl
+		mov 	#RAM_Mars_Polygons_1,r1
+		mov	#RAM_Mars_PlgnList_1,r2
+.go_mdl:
+		mov	r1,r0
+		mov	r0,@(marsGbl_CurrFacePos,gbr)
+		mov	r2,r0
+		mov	r0,@(marsGbl_CurrZList,gbr)
+		mov	#RAM_Mars_Objects,r14
+		mov	#MAX_MODELS,r13
+.loop:
+		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
+		cmp/pl	r0
+		bf	.invlid
+		mov	#MarsMdl_ReadModel,r0
+		jsr	@r0
+		mov	r13,@-r15
+		mov	@r15+,r13
+		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
+		mov	#MAX_FACES,r1
+		cmp/ge	r1,r0
+		bt	.skip
+.invlid:
+		dt	r13
+		bf/s	.loop
+		add	#sizeof_mdlobj,r14
+.skip:
+		mov 	#RAM_Mars_PlgnNum_0,r13
+		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
+		tst     #1,r0
+		bt	.page_2
+		mov 	#RAM_Mars_PlgnNum_1,r13
+.page_2:
+		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
+		mov	r0,@r13
+
+		mov.w	@(marsGbl_ModelsReady,gbr),r0
+		tst	r0,r0
+		bf	slave_loop
+		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
+		xor	#1,r0
+		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_ModelsReady,gbr)
 		bra	slave_loop
 		nop
 		align 4
@@ -1569,6 +1435,8 @@ slave_loop:
 ; ------------------------------------------------
 
 s_irq_custom:
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	r2,@-r15
 		mov	#_FRT,r1
 		mov.b   @(7,r1),r0
@@ -1618,16 +1486,16 @@ m_ascii		binclude "system/mars/data/m_ascii.bin"
 SH2_RAM:
 		struct SH2_RAM
 	if MOMPASS=1
-MarsRam_System	ds.l 0
-MarsRam_Video	ds.l 0
 MarsRam_Dreq0	ds.l 0
 MarsRam_Dreq1	ds.l 0
+MarsRam_System	ds.l 0
+MarsRam_Video	ds.l 0
 sizeof_marsram	ds.l 0
 	else
-MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
-MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
 MarsRam_Dreq0	ds.b MAX_MDDREQ				; Shared with Genesis side
 MarsRam_Dreq1	ds.b MAX_MDDREQ
+MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
+MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
 sizeof_marsram	ds.l 0
 	endif
 
