@@ -11,7 +11,7 @@ MAX_FACES	equ 384
 MAX_SVDP_PZ	equ 384+64
 MAX_MSPR	equ 70			; Maximum sprites
 
-FBVRAM_PATCH	equ $1D000		; Framebuffer location for the affected XShift lines
+FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift lines
 MAX_ZDIST	equ -$14000		; Max drawing distance (-Z max)
 
 ; ----------------------------------------

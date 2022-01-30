@@ -33,6 +33,7 @@ RAM_EmiPosY	ds.l 1
 RAM_Ypos	ds.l 1
 RAM_XposFg	ds.l 1
 RAM_XposBg	ds.l 1
+RAM_CurrGfx	ds.w 1
 RAM_EmiChar	ds.w 1
 RAM_EmiAnim	ds.w 1
 RAM_EmiHide	ds.w 1
@@ -66,6 +67,14 @@ thisCode_Top:
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
 
+; 		lea	test_polygon(pc),a0
+; 		lea	(RAM_MdMarsPlgn),a1
+; 		move.w	#($38/4)-1,d0
+; .copy_polygn:
+; 		move.l	(a0)+,(a1)+
+; 		dbf	d0,.copy_polygn
+; 		move.l	#1,(RAM_MdMarsPlgnNum).w
+
 ; 		move.l	#ART_FGTEST,d0
 ; 		move.w	#1*$20,d1
 ; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
@@ -89,38 +98,40 @@ thisCode_Top:
 		bsr	Video_Print
 
 	; Load palettes for fade-in
-		lea	PAL_EMI(pc),a0
-		moveq	#0,d0
-		move.w	#$F,d1
-		bsr	Video_PalTarget
+; 		lea	PAL_EMI(pc),a0
+; 		moveq	#0,d0
+; 		move.w	#$F,d1
+; 		bsr	Video_LoadPal
 		lea	PAL_TESTBOARD(pc),a0
 		moveq	#$10,d0
 		move.w	#$F,d1
-		bsr	Video_PalTarget
+		bsr	Video_LoadPal
 		lea	(TESTMARS_BG_PAL),a0
 		moveq	#0,d0
 		move.w	#256,d1
-		moveq	#1,d2
-		bsr	Video_PalTarget_Mars
-		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
+		moveq	#0,d2
+		bsr	Video_FadePal_Mars
+		move.w	#0,(RAM_CurrGfx).w
+		moveq	#0,d0
+		bsr	Video_MarsSetGfx
+; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 		move.w	#1,(RAM_FadeMarsSpd).w
-		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
+; 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
 		move.w	#1,(RAM_FadeMarsReq).w
-		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
-		bne.s	.wait2
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
-
 		move.w	#320/2,(RAM_EmiPosX).w
 		move.w	#224/2,(RAM_EmiPosY).w
+		lea	MasterTrkList(pc),a0
+		move.w	$C(a0),d1
+		move.w	$E(a0),d3
+		moveq	#0,d0
+		moveq	#0,d2
+		bsr	Sound_TrkPlay
 
-; 		lea	MasterTrkList(pc),a0
-; 		move.w	$C(a0),d1
-; 		move.w	$E(a0),d3
-; 		moveq	#0,d0
-; 		moveq	#0,d2
-; 		bsr	Sound_TrkPlay
+; 		lea	(RAM_MdDreq+Dreq_Models),a0
+; 		move.l	#MarsObj_test,mdl_data(a0)
+; 		move.l	#-$C0000,mdl_z_pos(a0)
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -128,6 +139,7 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
+; 		bsr	System_MdMarsDreq
 		bsr	System_VBlank
 		move.w	(RAM_WindowCurr).w,d2		; Window up/down
 		move.w	(RAM_WindowNew).w,d1		; animation
@@ -143,7 +155,10 @@ thisCode_Top:
 .same_w:
 		add.l	#1,(RAM_Framecount).l
 		bsr	System_VBlank_Exit
-		bsr	System_MdMarsDreq
+		lea	str_InfoMouse(pc),a0
+		move.l	#locate(0,2,23),d0
+		bsr	Video_Print
+
 		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -159,6 +174,7 @@ thisCode_Top:
 .list:
 		bra.w	.mode0
 		bra.w	.mode1
+		bra.w	.mode0
 
 ; --------------------------------------------------
 ; Mode 0
@@ -168,20 +184,14 @@ thisCode_Top:
 		tst.w	(RAM_CurrMode).w
 		bmi	.mode0_loop
 		or.w	#$8000,(RAM_CurrMode).w
-	; This mode's initial values go here
 
 .mode0_loop:
 		bsr	Video_PalFade
 		bsr	Video_MarsPalFade
-; 		move.w	(RAM_FadeMarsReq),d7
-; 		move.w	(RAM_FadeMdReq),d6
-; 		or.w	d6,d7
-; 		bne.s	.loop
-;
-; 		lea	str_InfoMouse(pc),a0		; GEMA tester text on WINDOW
-; 		move.l	#locate(0,2,25),d0
-; 		bsr	Video_Print
-
+		move.w	(RAM_FadeMarsReq),d7
+		move.w	(RAM_FadeMdReq),d6
+		or.w	d6,d7
+; 		bne	.loop
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.no_mode0
@@ -189,33 +199,6 @@ thisCode_Top:
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
 
-		move.w	(Controller_1+on_hold),d7
-		lsr.w	#8,d7
-		btst	#bitJoyX,d7
-		beq.s	.nox
-		move.w	#4,(RAM_FadeMarsSpd).w
-		move.w	#2,(RAM_FadeMarsReq).w
-.nox:
-		btst	#bitJoyY,d7
-		beq.s	.noy
-		move.w	#4,(RAM_FadeMarsSpd).w
-		move.w	#1,(RAM_FadeMarsReq).w
-.noy:
-
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyA,d7
-		beq.s	.noa
-		move.w	#1,(RAM_FadeMdSpd).w
-		move.w	#2,(RAM_FadeMdReq).w
-.noa:
-		btst	#bitJoyB,d7
-		beq.s	.nob
-		move.w	#1,(RAM_FadeMdSpd).w
-		move.w	#1,(RAM_FadeMdReq).w
-.nob:
-
-
-; 	Test movement
 		move.l	(RAM_MdDreq+Dreq_BgXpos).w,d0
 		move.l	(RAM_MdDreq+Dreq_BgYpos).w,d1
 		move.w	(RAM_HorScroll+2).w,d2
@@ -243,25 +226,130 @@ thisCode_Top:
 		sub.l	d5,d1
 		sub.w	d6,d3
 .nou_m:
-
 		move.l	d0,(RAM_MdDreq+Dreq_BgXpos).w
 		move.l	d1,(RAM_MdDreq+Dreq_BgYpos).w
 		move.w	d2,(RAM_HorScroll+2).w
 		move.w	d3,(RAM_VerScroll+2).w
 
-; 	BOOM TEST
+; 	Test movement
+		move.l	#0,d0
+		move.l	#0,d1
 		move.w	(Controller_1+on_press),d7
-		lsr.w	#8,d7
-		btst	#bitJoyZ,d7
-		beq.s	.noah
-; 		move.w	#$20,(RAM_ShakeMe).w
-		moveq	#0,d2
-		bsr	PlayThisSfx
-.noah:
+		btst	#bitJoyB,d7
+		beq.s	.nor_m2
+		add.w	#1,(RAM_CurrGfx).w
+		move.w	(RAM_CurrGfx).w,d0
+		bsr	Video_MarsSetGfx
+.nor_m2:
+		btst	#bitJoyA,d7
+		beq.s	.nol_m2
+		sub.w	#1,(RAM_CurrGfx).w
+		move.w	(RAM_CurrGfx).w,d0
+		bsr	Video_MarsSetGfx
+.nol_m2:
 
+
+; 		lea	(RAM_MdDreq+Dreq_Models),a0
+; 		add.l	#$1000,mdl_x_rot(a0)
+; 		move.w	(Controller_2+mouse_x),d0
+; 		move.w	(Controller_2+mouse_y),d1
+; 		ext.l	d0
+; 		ext.l	d1
+; 		lsl.l	#8,d0
+; 		lsl.l	#8,d1
+; 		move.l	mdl_x_pos(a0),d4
+; 		add.l	d0,d4
+; 		move.l	d4,mdl_x_pos(a0)
+; 		move.l	mdl_z_pos(a0),d4
+; 		add.l	d1,d4
+; 		move.l	d4,mdl_z_pos(a0)
+;
+; 		move.w	(Controller_2+on_press),d0
+; 		move.w	d0,d1
+; 		btst	#bitJoyC,d1
+; 		beq.s	.no_clkl
+; 		bset	#6,(sysmars_reg+comm14).l	; Request REDRAW on Master
+; .wait3:		btst	#6,(sysmars_reg+comm14).l	; and wait until it finishes
+; 		bne.s	.wait3
+; ; 		add.w	#8,(RAM_CurrGfx).w
+; ; 		and.w	#$18,(RAM_CurrGfx).w
+; .no_clkl
+		rts
+
+
+;
+; 		move.w	(Controller_1+on_hold),d7
+; 		lsr.w	#8,d7
+; 		btst	#bitJoyX,d7
+; 		beq.s	.nox
+; 		move.w	#4,(RAM_FadeMarsSpd).w
+; 		move.w	#2,(RAM_FadeMarsReq).w
+; .nox:
+; 		btst	#bitJoyY,d7
+; 		beq.s	.noy
+; 		move.w	#4,(RAM_FadeMarsSpd).w
+; 		move.w	#1,(RAM_FadeMarsReq).w
+; .noy:
+;
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyA,d7
+; 		beq.s	.noa
+; 		move.w	#1,(RAM_FadeMdSpd).w
+; 		move.w	#2,(RAM_FadeMdReq).w
+; .noa:
+; 		btst	#bitJoyB,d7
+; 		beq.s	.nob
+; 		move.w	#1,(RAM_FadeMdSpd).w
+; 		move.w	#1,(RAM_FadeMdReq).w
+; .nob:
+;
+;
+; 	; Test movement
+; 		move.l	(RAM_MdMarsBg).w,d0
+; 		move.l	(RAM_MdMarsBg+4).w,d1
+; 		move.w	(RAM_HorScroll+2).w,d2
+; 		move.w	(RAM_VerScroll+2).w,d3
+; 		move.l	#$20000,d5
+; 		move.l	#1,d6
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.nor_m
+; 		add.l	d5,d0
+; 		sub.w	d6,d2
+; .nor_m:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.nol_m
+; 		sub.l	d5,d0
+; 		add.w	d6,d2
+; .nol_m:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.nod_m
+; 		add.l	d5,d1
+; 		add.w	d6,d3
+; .nod_m:
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.nou_m
+; 		sub.l	d5,d1
+; 		sub.w	d6,d3
+; .nou_m:
+;
+; 		move.l	d0,(RAM_MdMarsBg).w
+; 		move.l	d1,(RAM_MdMarsBg+4).w
+; 		move.w	d2,(RAM_HorScroll+2).w
+; 		move.w	d3,(RAM_VerScroll+2).w
+;
+; ; 	BOOM TEST
+; 		move.w	(Controller_1+on_press),d7
+; 		lsr.w	#8,d7
+; 		btst	#bitJoyZ,d7
+; 		beq.s	.noah
+; ; 		move.w	#$20,(RAM_ShakeMe).w
+; 		moveq	#0,d2
+; 		bsr	PlayThisSfx
+; .noah:
+;
 ; 		bsr	Emilie_Move
 ; 		bsr	Emilie_MkSprite
-		rts
 
 ; 		lea	str_TempVal(pc),a0		; Main title
 ; 		move.l	#locate(0,0,0),d0
@@ -515,12 +603,14 @@ thisCode_Top:
 
 ; test playlist
 MasterTrkList:
+	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
+	dc.w 7,0
 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
 	dc.w $A,0
 	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
 	dc.w 7,0
-	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
-	dc.w 7,0
+
+
 ; 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
 ; 	dc.w 2,1
 ; 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
@@ -587,23 +677,6 @@ Emilie_Move:
 		rts
 
 Emilie_MkSprite:
-		lea	(vdp_data),a6
-		tst.w	(RAM_EmiHide).w
-		bne	.hidefuji
-
-; 		move.w	(RAM_EmiChar),d2
-; 		move.w	(RAM_EmiAnim),d3
-; 		lsr.w	#3,d3
-; 		and.w	#7,d3
-; 		add.w	d3,d2
-; 		move.w	#$20*$20,d1
-; 		mulu.w	d1,d2
-; 		move.l	#ART_EMI,d0
-; 		add.l	d2,d0
-; 		and.l	#-2,d0
-; 		move.w	#1,d2
-; 		bsr	Video_DmaSet
-.no_updgfx:
 		lea	(RAM_Sprites),a6
 		move.l	(RAM_EmiPosY),d0
 		move.l	(RAM_EmiPosX),d1
@@ -724,7 +797,7 @@ Emilie_Show:
 ; ------------------------------------------------------
 
 str_Title:
-		dc.b "Project MARSIANO",0
+		dc.b "Project MARSIANO 202X",0
 		align 2
 
 str_Cursor:	dc.b " ",$A
@@ -752,41 +825,24 @@ str_Gema:
 		dc.b "  Sound_TrkTicks",$A
 		dc.b "  Sound_GlbTempo",0
 		align 2
-str_COMM:
-		dc.b "\\w \\w \\w \\w",$A
-		dc.b "\\w \\w \\w \\w",0
-		dc.l sysmars_reg+comm0
-		dc.l sysmars_reg+comm2
-		dc.l sysmars_reg+comm4
-		dc.l sysmars_reg+comm6
-		dc.l sysmars_reg+comm8
-		dc.l sysmars_reg+comm10
-		dc.l sysmars_reg+comm12
-		dc.l sysmars_reg+comm14
-		align 2
+; str_COMM:
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b "\\w \\w \\w \\w",0
+; 		dc.l sysmars_reg+comm0
+; 		dc.l sysmars_reg+comm2
+; 		dc.l sysmars_reg+comm4
+; 		dc.l sysmars_reg+comm6
+; 		dc.l sysmars_reg+comm8
+; 		dc.l sysmars_reg+comm10
+; 		dc.l sysmars_reg+comm12
+; 		dc.l sysmars_reg+comm14
+; 		align 2
 
 str_InfoMouse:
-		dc.b "\\l \\l \\l \\l",$A
-		dc.b "\\l \\l \\l \\l",0
-		dc.l RAM_InputData
-		dc.l RAM_InputData+4
-		dc.l RAM_InputData+8
-		dc.l RAM_InputData+$C
-		dc.l RAM_InputData+$10
-		dc.l RAM_InputData+$14
-		dc.l RAM_InputData+$18
-		dc.l RAM_InputData+$1C
-
-; str_DreqMe:
-; 		dc.b "Genesis manda por DREQ:",$A
-; 		dc.b "\\l \\l",0
-; 		dc.l RAM_MdMarsDreq
-; 		dc.l RAM_MdMarsDreq+(256*2)-4
-; 		align 2
-; str_TempVal:
-; 		dc.b "\\w",0
-; 		dc.l RAM_EmiFlags
-; 		align 2
+		dc.b "GfxMode: \\w comm12: \\w",0
+		dc.l RAM_CurrGfx
+		dc.l sysmars_reg+comm12
+		align 2
 
 PAL_EMI:
 		dc.w 0
@@ -806,6 +862,7 @@ Map_Nicole:
 Dplc_Nicole:
 		include "data/md/sprites/emi_plc.asm"
 		align 2
+
 
 ; ====================================================================
 ; Report size

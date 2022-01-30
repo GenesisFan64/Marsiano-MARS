@@ -402,7 +402,7 @@ System_VBlank:
 		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
 		beq.s	System_VBlank
-		bsr	System_Input		; Read inputs ASAP
+		bsr	System_Input			; Read inputs FIRST
 
 	; DMA'd Scroll and Palette
 		lea	(vdp_ctrl),a6
@@ -436,23 +436,23 @@ System_VBlank:
 		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
 		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
 		move.w	#$C000,d7
-		move.w	#$0000|$80,-(sp)		; Palette is transfered below so
-		move.w	d7,(a6)				; those dots will not be shown
+		move.w	#$0000|$80,-(sp)		; Palette is transfered here so
+		move.w	d7,(a6)				; those dots will not get shown
 		move.w	(sp)+,(a6)			; on non-CRT displays
 ; 		bsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
 
-
 		bsr	Video_DmaBlast		; DMA tasks
 		add.l	#1,(RAM_Framecount).l
 		rts
 
 System_VBlank_Exit:
-		move.w	(vdp_ctrl),d4
+		bsr	System_MdMarsDreq
+.exit:		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
-		bne.s	System_VBlank_Exit
+		bne.s	.exit
 		rts
 
 ; --------------------------------------------------------
@@ -529,8 +529,8 @@ HInt_Default:
 ; 32X Communication, using DREQ
 ; --------------------------------------------------------
 
-; Give up on DREQ, using comms again.
-; only comm0,2,4,6
+; DREQ is unstable, using comms again.
+; but only comm0,2,4,6
 
 System_MdMarsDreq:
 		move.w	sr,d7
@@ -538,7 +538,7 @@ System_MdMarsDreq:
 		lea	(RAM_MdDreq),a6
 		lea	(sysmars_reg+comm0).l,a5
 		move.w	#MAX_MDDREQ/8,d6
-		move.w	d6,(sysmars_reg+dreqsource+2).l	; recycling this register for the size
+		move.w	d6,(sysmars_reg+dreqlen).l	; recycling this register for the size
 		sub.w	#1,d6
 		move.l	#$C0000000,(vdp_ctrl).l
 		move.w	#$00E,(vdp_data).l
@@ -557,7 +557,7 @@ System_MdMarsDreq:
 		move.w	d7,sr
 		rts
 
-	; OLD
+	; DREQ is not very stable.
 ; 		lea	(RAM_MdDreq),a6
 ; 		lea	($A15112).l,a5
 ; 		move.w	#MAX_MDDREQ/2,d6

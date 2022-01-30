@@ -1061,6 +1061,38 @@ Video_LoadArt:
 ; to transfer the changes to the 32X side
 ; ----------------------------------------------------------------
 
+; ====================================================================
+; ----------------------------------------------------------------
+; 32X EXCLUSIVE Video routines
+;
+; After any use of these routines call System_MdMarsDreq
+; to transfer the changes to the 32X side
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; Video_MarsSetGfx
+; --------------------------------------------------------
+
+Video_MarsSetGfx:
+		swap	d7
+		move.w	d0,d7
+		and.w	#%11,d7
+		move.b	(sysmars_reg+comm14).l,d6
+		and.b	#%11110000,d6
+		or.b	d7,d6
+		bset	#6,d6
+		move.b	d6,(sysmars_reg+comm14).l
+		swap	d7
+.wait2:		btst	#6,(sysmars_reg+comm14).l
+		bne.s	.wait2
+		rts
+
+Video_MarsRedraw:
+		bset	#6,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait2:		btst	#6,(sysmars_reg+comm14).l	; and wait until it finishes
+		bne.s	.wait2
+		rts
+
 ; --------------------------------------------------------
 ; Video_LoadPal_Mars
 ;
@@ -1071,7 +1103,7 @@ Video_LoadArt:
 ; d2 - Priority bit OFF/ON
 ; --------------------------------------------------------
 
-Video_PalTarget_Mars:
+Video_FadePal_Mars:
 		lea	(RAM_MdMarsPalFd),a6
 		bra.s	vidMars_Pal
 Video_LoadPal_Mars:
