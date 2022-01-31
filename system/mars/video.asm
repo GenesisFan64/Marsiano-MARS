@@ -1898,7 +1898,7 @@ MarsMdl_ReadModel:
 		mov	#RAM_Mars_PlgnList_0,r6
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
 		tst     #1,r0
-		bt	.page_2
+		bf	.page_2
 		mov	#RAM_Mars_PlgnList_1,r6
 .page_2:
 		cmp/ge	r6,r7

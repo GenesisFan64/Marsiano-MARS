@@ -1074,22 +1074,20 @@ Video_LoadArt:
 ; --------------------------------------------------------
 
 Video_MarsSetGfx:
-		swap	d7
 		move.w	d0,d7
 		and.w	#%11,d7
 		move.b	(sysmars_reg+comm14).l,d6
-		and.b	#%11110000,d6
+		and.b	#%00001100,d6
 		or.b	d7,d6
-		bset	#6,d6
+		bset	#5,d6
 		move.b	d6,(sysmars_reg+comm14).l
-		swap	d7
-.wait2:		btst	#6,(sysmars_reg+comm14).l
+.wait2:		btst	#5,(sysmars_reg+comm14).l
 		bne.s	.wait2
 		rts
 
 Video_MarsRedraw:
-		bset	#6,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait2:		btst	#6,(sysmars_reg+comm14).l	; and wait until it finishes
+		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
+.wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
 		bne.s	.wait2
 		rts
 

@@ -111,8 +111,8 @@ thisCode_Top:
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
-		move.w	#0,(RAM_CurrGfx).w
-		moveq	#0,d0
+		move.w	#1,(RAM_CurrGfx).w
+		moveq	#1,d0
 		bsr	Video_MarsSetGfx
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 		move.w	#1,(RAM_FadeMarsSpd).w

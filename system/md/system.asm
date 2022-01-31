@@ -526,7 +526,7 @@ HInt_Default:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; 32X Communication, using DREQ
+; 32X Communication
 ; --------------------------------------------------------
 
 ; DREQ is unstable, using comms again.
@@ -538,20 +538,22 @@ System_MdMarsDreq:
 		lea	(RAM_MdDreq),a6
 		lea	(sysmars_reg+comm0).l,a5
 		move.w	#MAX_MDDREQ/8,d6
-		move.w	d6,(sysmars_reg+dreqlen).l	; recycling this register for the size
+; 		move.w	d6,(sysmars_reg+dreqlen).l	; recycling this register for the size
 		sub.w	#1,d6
 		move.l	#$C0000000,(vdp_ctrl).l
 		move.w	#$00E,(vdp_data).l
+		bset	#7,(sysmars_reg+comm14).l
 		bset	#0,(sysmars_reg+standby).l
 .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Request CMD to Master
 		bne.s	.wait_cmd
 .next:
 		move.l	(a6)+,(a5)
 		move.l	(a6)+,4(a5)
-		bset	#7,(sysmars_reg+comm14).l
-.wait:		btst	#7,(sysmars_reg+comm14).l
+		bset	#6,(sysmars_reg+comm14).l
+.wait:		btst	#6,(sysmars_reg+comm14).l
 		bne.s	.wait
 		dbf	d6,.next
+		bclr	#7,(sysmars_reg+comm14).l
 		move.l	#$C0000000,(vdp_ctrl).l
 		move.w	#$000,(vdp_data).l
 		move.w	d7,sr

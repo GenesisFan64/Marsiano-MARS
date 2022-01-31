@@ -364,12 +364,11 @@ m_irq_cmd:
 		mov	#_sysreg+comm14,r3	; control comm
 		mov	@(marsGbl_DreqRead,gbr),r0
 		mov	r0,r2
-		mov	#_sysreg+dreqlen,r4
-		mov.w	@r4,r4
 .wait_1:
-		mov.b	@r3,r0			; wait CLOCK
-		and	#%10000000,r0		; from Z80
-		tst	r0,r0
+		mov.b	@r3,r0
+		tst	#%10000000,r0		; 68k enter/exit
+		bt	.exit_c
+		tst	#%01000000,r0		; wait CLOCK
 		bt	.wait_1
 		mov	#_sysreg+comm0,r1
 .copy_1:
@@ -380,10 +379,14 @@ m_irq_cmd:
 		mov	r0,@r2
 		add	#4,r2
 		mov.b	@r3,r0			; CLK done
-		and	#%01111111,r0
+		and	#%10111111,r0
 		mov.b	r0,@r3
-		dt	r4
-		bf	.wait_1
+		bra	.wait_1
+		nop
+.exit_c:
+
+; 		dt	r4
+; 		bf	.wait_1
 
 	; DREQ is not very stable.
 ; 		mov	#_sysreg+cmdintclr,r4
@@ -1089,8 +1092,8 @@ master_loop:
 	; we are still on VBlank
 	; ---------------------------------------
 
-		stc	sr,@-r15
-		mov	#$F0,r0			; Interrupts OFF
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#_vdpreg,r1
 .wait:		mov.b	@(vdpsts,r1),r0
@@ -1121,7 +1124,7 @@ master_loop:
 		add	r0,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
-		ldc	@r15+,sr
+		ldc	@r15+,sr		; SR back
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
 		bsr	MarsVideo_MoveBg
@@ -1140,7 +1143,7 @@ master_loop:
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		mov	r0,r2
-		mov	#%01000000,r3
+		mov	#%00100000,r3
 		and	#%00000011,r0
 		and	r3,r2
 		shll2	r0
@@ -1163,7 +1166,7 @@ mstr_gfx_0:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
-		and	#%10111111,r0
+		and	#%11011111,r0
 		mov.b	r0,@r1
 		mov 	#_vdpreg,r1
 		mov	#0,r0
@@ -1181,7 +1184,7 @@ mstr_gfx_1:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
-		and	#%10111111,r0
+		and	#%11011111,r0
 		mov.b	r0,@r1
 		mov	#Cach_Drw_All,r1		; DrawAll request (2 times)
 		mov	#2,r0
@@ -1202,6 +1205,8 @@ mstr_gfx_1:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_ModelsReady,gbr)
 .lel:
 	; ---------------------------------------
 ; 		mov	#RAM_Mars_Background,r14	; Move background
@@ -1260,7 +1265,7 @@ mstr_gfx_2:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
-		and	#%10111111,r0
+		and	#%11011111,r0
 		mov.b	r0,@r1
 		mov	#Cach_Drw_All,r1		; DrawAll request (2 times)
 		mov	#2,r0
@@ -1269,12 +1274,6 @@ mstr_gfx_2:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 .lel:
-		mov	#_sysreg+comm14,r1
-.wait_1:	mov.b	@r1,r0
-		and	#%00001000,r0
-		tst	r0,r0
-		bt	.wait_1
-
 		mov	#Cach_Drw_All,r13		; DrawAll != 0?
 		mov	@r13,r0
 		cmp/eq	#0,r0
@@ -1293,17 +1292,16 @@ mstr_gfx_2:
 		add	#2,r3
 .no_redraw:
 
+		mov	#_sysreg+comm14,r1
+.wait_1:	mov.b	@r1,r0
+		and	#%00001000,r0
+		tst	r0,r0
+		bt	.wait_1
 	; ---------------------------------------
 	; Prepare WATCHDOG interrupt
-		mov	#RAM_Mars_VdpDrwList,r0		; Reset DDA pieces Read/Write points
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; And counter
-		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		mov.w	r0,@(marsGbl_WdgMode,gbr)
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
 		tst     #1,r0
-		bt	.page_2
+		bf	.page_2
 		mov	#RAM_Mars_PlgnList_0,r0
 		mov	#RAM_Mars_PlgnNum_0,r1
 		bra	.cont_plgn
@@ -1316,6 +1314,13 @@ mstr_gfx_2:
 		mov	r0,@(marsGbl_IndxPlgn,gbr)
 		mov	@r1,r0
 		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
+		mov	#RAM_Mars_VdpDrwList,r0		; Reset DDA pieces Read/Write points
+		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; And counter
+		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+
 ; 		mov	#_CCR,r1			; <-- Required for Watchdog
 ; 		mov	#%00001000,r0			; Two-way mode
 ; 		mov.w	r0,@r1
@@ -1360,7 +1365,10 @@ mstr_gfx_2:
 		mov	#VideoMars_DrwPlgnPz,r0
 		jsr	@r0
 		nop
-
+		mov	#_sysreg+comm14,r1
+		mov.b	@r1,r0
+		and	#%11110111,r0
+		mov.b	r0,@r1
 .no_swap:
 
 
@@ -1369,13 +1377,6 @@ mstr_gfx_2:
 ; ---------------------------------------
 
 mstr_nextframe:
-		mov	#_sysreg+comm14,r1
-		mov.b	@r1,r0
-		and	#%11110111,r0
-		mov.b	r0,@r1
-
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_ModelsReady,gbr)
 		mov	#_vdpreg,r1
 .wait_fb:	mov.w	@(vdpsts,r1),r0			; SVDP FILL active?
 		and	#2,r0
@@ -1574,28 +1575,33 @@ slave_loop:
 		and	#%11101111,r0
 		mov.b	r0,@r9
 .refill_out:
+		mov	#_sysreg+comm14,r1
+		mov.b	@r1,r0
+		and	#%11,r0
+		cmp/eq	#2,r0
+		bf	slave_loop
 
 ; ---------------------------------------
 ; ***READ MODELS HERE AND UPDATE POLYGONS
 ; ---------------------------------------
-
-		mov	#_sysreg+comm12+1,r1
-		mov.b	@r1,r0
-		add	#1,r0
-		mov.b	r0,@r1
 
 		mov	#RAM_Mars_Objects,r2	; temporal rotation
 		mov	#$4000,r1
 		mov	@(mdl_x_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_x_rot,r2)
+		mov	#_sysreg+comm12+1,r1
+		mov.b	@r1,r0
+		add	#1,r0
+		mov.b	r0,@r1
+
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1
 		mov	#RAM_Mars_PlgnList_0,r2
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
 		tst     #1,r0
-		bt	.go_mdl
+		bf	.go_mdl
 		mov 	#RAM_Mars_Polygons_1,r1
 		mov	#RAM_Mars_PlgnList_1,r2
 .go_mdl:
@@ -1622,21 +1628,21 @@ slave_loop:
 		bf/s	.loop
 		add	#sizeof_mdlobj,r14
 .skip:
-		mov 	#RAM_Mars_PlgnNum_0,r13
+		mov 	#RAM_Mars_PlgnNum_0,r1
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
 		tst     #1,r0
-		bt	.page_2
-		mov 	#RAM_Mars_PlgnNum_1,r13
+		bf	.page_2
+		mov 	#RAM_Mars_PlgnNum_1,r1
 .page_2:
 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
-		mov	r0,@r13
+		mov	r0,@r1
 
 		mov	#_sysreg+comm14,r1
-.wait_redy:
+.wait_in:
 		mov.b	@r1,r0
 		and	#%00001000,r0
 		tst	r0,r0
-		bf	.wait_redy
+		bf	.wait_in
 ; .wait_redy:	mov.w	@(marsGbl_ModelsReady,gbr),r0
 ; 		tst	r0,r0
 ; 		bf	.wait_redy
