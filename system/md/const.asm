@@ -3,11 +3,8 @@
 ; MD/MARS shared constants
 ; ----------------------------------------------------------------
 
-; NOTE: Be careful changing the MAX_MDDREQ value, it might fail on specific
-; sizes, If something goes wrong set it to $800
-
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-MAX_MDDREQ	equ $300	; MAX size for DREQ RAM transfer (8-byte aligned)
+MAX_MDDREQ	equ $380	; MAX size for "DREQ" RAM transfer (8-byte aligned)
 MAX_MODELS	equ 16
 
 ; ====================================================================
@@ -116,6 +113,7 @@ bitClickS	equ 3
 		struct RAM_MdSystem
 RAM_InputData	ds.b sizeof_input*4		; Input data section
 RAM_SaveData	ds.b $200			; SRAM data cache
+RAM_DmaCode	ds.b $180
 RAM_SysRandVal	ds.l 1				; Random value
 RAM_SysRandSeed	ds.l 1				; Randomness seed
 RAM_initflug	ds.l 1				; "INIT" flag

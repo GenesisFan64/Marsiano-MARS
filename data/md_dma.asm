@@ -6,6 +6,10 @@
 ; ----------------------------------------------------------------
 
 		align $8000
+ASCII_FONT:	binclude "system/md/data/font.bin"
+ASCII_FONT_e:
+		align 2
+
 ART_BGTEST:	binclude "data/md/bg/bg_art.bin"
 ART_BGTEST_e:
 ART_FGTEST:	binclude "data/md/bg/fg_art.bin"

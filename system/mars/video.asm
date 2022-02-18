@@ -7,12 +7,10 @@
 ; Settings
 ; ----------------------------------------
 
-MAX_FACES	equ 384
-MAX_SVDP_PZ	equ 384+64
-MAX_MSPR	equ 70			; Maximum sprites
-
+MAX_FACES	equ 700
+MAX_SVDP_PZ	equ 700+128
 FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift lines
-MAX_ZDIST	equ -$14000		; Max drawing distance (-Z max)
+MAX_ZDIST	equ -$10000		; Max drawing distance (-Z max)
 
 ; ----------------------------------------
 ; Variables
@@ -451,6 +449,8 @@ MarsVdp_PrintVal:
 ; MUST BE ZERO BEFORE GETTING HERE ***
 ; ---------------------------------------
 
+; TODO: no dibuja unos rows
+
 MarsVideo_DrawAllBg:
 		sts	pr,@-r15
 		mov	#RAM_Mars_Background,r14
@@ -567,13 +567,13 @@ MarsVideo_DrawAllBg:
 		add	r7,r6
 		cmp/ge	r10,r6
 		bf/s	.nxt_x
-		add	r7,r3		; No MAP WIDTH check needed here
+		add	r7,r3		; No MAP WIDTH check needed here (TODO: maybe yes?)
 		mov	@r15+,r1
 		mov	@r15+,r3
 		mov	@r15+,r6
 
 		add	r7,r4
-		cmp/gt	r8,r4
+		cmp/ge	r8,r4
 		bf	.nxt_y_l
 		sub	r8,r4
 .nxt_y_l:
@@ -1931,13 +1931,6 @@ MarsMdl_ReadModel:
 	endm
 		mov	r1,r0
 		mov	r0,@(marsGbl_CurrFacePos,gbr)
-
-; 		mov	r0,r1
-; 		mov	@(marsGbl_ZSortReq,gbr),r0
-; 		cmp/eq	#1,r0
-; 		bt	.face_out
-; 		mov	#1,r0
-; 		mov.w	r0,@(marsGbl_ZSortReq,gbr)
 .face_out:
 		dt	r9
 		bt	.finish_this
@@ -2063,13 +2056,14 @@ mdlrd_setpoint:
 	; this is the best I got,
 	; It breaks on large faces
 		mov 	#_JR,r8
-		mov	#320<<16,r7
+		mov	#256<<17,r7
 		neg	r4,r0		; reverse Z
-; 		add	#-16,r0
 		cmp/pl	r0
 		bt	.inside
-		shlr	r7
-
+		mov	#1,r0
+		shlr2	r7
+		shlr2	r7
+; 		shlr	r7
 		dmuls	r7,r2
 		sts	mach,r0
 		sts	macl,r2
@@ -2078,6 +2072,8 @@ mdlrd_setpoint:
 		sts	mach,r0
 		sts	macl,r3
 		xtrct	r0,r3
+
+
 		bra	.zmulti
 		nop
 .inside:

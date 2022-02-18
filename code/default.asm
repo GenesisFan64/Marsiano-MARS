@@ -106,13 +106,13 @@ thisCode_Top:
 		moveq	#$10,d0
 		move.w	#$F,d1
 		bsr	Video_LoadPal
-		lea	(TESTMARS_BG_PAL),a0
+		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
-		move.w	#1,(RAM_CurrGfx).w
-		moveq	#1,d0
+		move.w	#2,(RAM_CurrGfx).w
+		moveq	#2,d0
 		bsr	Video_MarsSetGfx
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 		move.w	#1,(RAM_FadeMarsSpd).w
@@ -154,7 +154,7 @@ thisCode_Top:
 		move.w	(RAM_WindowCurr).w,(vdp_ctrl).l
 .same_w:
 		add.l	#1,(RAM_Framecount).l
-		bsr	System_VBlank_Exit
+		bsr	System_MdMarsDreq
 		lea	str_InfoMouse(pc),a0
 		move.l	#locate(0,2,23),d0
 		bsr	Video_Print
@@ -234,20 +234,34 @@ thisCode_Top:
 ; 	Test movement
 		move.l	#0,d0
 		move.l	#0,d1
+		moveq	#0,d2
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyB,d7
 		beq.s	.nor_m2
 		add.w	#1,(RAM_CurrGfx).w
 		move.w	(RAM_CurrGfx).w,d0
 		bsr	Video_MarsSetGfx
+		moveq	#1,d2
 .nor_m2:
 		btst	#bitJoyA,d7
 		beq.s	.nol_m2
 		sub.w	#1,(RAM_CurrGfx).w
 		move.w	(RAM_CurrGfx).w,d0
 		bsr	Video_MarsSetGfx
+		moveq	#1,d2
 .nol_m2:
-
+		tst.w	d2
+		beq.s	.no_chng
+		lea	(MDLDATA_PAL_TEST),a0
+		cmp.w	#2,(RAM_CurrGfx).w
+		beq.s	.thispal
+		lea	(TESTMARS_BG_PAL),a0
+.thispal:
+		moveq	#0,d0
+		move.w	#256,d1
+		moveq	#0,d2
+		bsr	Video_LoadPal_Mars
+.no_chng:
 
 ; 		lea	(RAM_MdDreq+Dreq_Models),a0
 ; 		add.l	#$1000,mdl_x_rot(a0)

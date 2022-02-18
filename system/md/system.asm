@@ -448,31 +448,31 @@ System_VBlank:
 		add.l	#1,(RAM_Framecount).l
 		rts
 
-System_VBlank_Exit:
-		bsr	System_MdMarsDreq
-.exit:		move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		bne.s	.exit
-		rts
+; System_VBlank_Exit:
+; ; .exit:		move.w	(vdp_ctrl),d4
+; ; 		btst	#bitVint,d4
+; ; 		bne.s	.exit
+; 		bsr	System_MdMarsDreq
+; 		rts
 
-; --------------------------------------------------------
-; System_JumpRamCode
+; ; --------------------------------------------------------
+; ; System_JumpRamCode
+; ;
+; ; Transfer user code to RAM and jump into it.
+; ;
+; ; Input:
+; ; d0 - ROM pointer to code
+; ; --------------------------------------------------------
 ;
-; Transfer user code to RAM and jump into it.
-;
-; Input:
-; d0 - ROM pointer to code
-; --------------------------------------------------------
-
-System_JumpRamCode:
-		or.l	#$880000,d0
-		move.l	d0,a0
-		lea	(RAMCODE_USER),a1
-		move.w	#$8000-1,d7
-.copyme2:
-		move.b	(a0)+,(a1)+
-		dbf	d7,.copyme2
-		jmp	(RAMCODE_USER).l
+; System_JumpRamCode:
+; 		or.l	#$880000,d0
+; 		move.l	d0,a0
+; 		lea	(RAMCODE_USER),a1
+; 		move.w	#$8000-1,d7
+; .copyme2:
+; 		move.b	(a0)+,(a1)+
+; 		dbf	d7,.copyme2
+; 		jmp	(RAMCODE_USER).l
 
 ; --------------------------------------------------------
 ; Initialize current screen mode

@@ -26,7 +26,6 @@ marsGbl_DreqSwap	ds.w 1	; DREQ mid-swap flag
 marsGbl_CurrNumFaces	ds.w 1	; And the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1	; Current Watchdog task
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
-; marsGbl_ModelsReady	ds.w 1	; Mid-read list read
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
@@ -361,6 +360,9 @@ m_irq_cmd:
 		mov	#_sysreg+cmdintclr,r1
 		mov.w	r0,@r1
 
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
 		mov	#_sysreg+comm14,r3	; control comm
 		mov	@(marsGbl_DreqRead,gbr),r0
 		mov	r0,r2
@@ -384,6 +386,11 @@ m_irq_cmd:
 		bra	.wait_1
 		nop
 .exit_c:
+		mov	#$FFFFFE80,r1
+		mov.w	#$5A20,r0		; Watchdog pre-timer
+		mov.w	r0,@r1
+		mov.w	#$A518|$20,r0		; Enable Watchdog
+		mov.w	r0,@r1
 
 ; 		dt	r4
 ; 		bf	.wait_1
@@ -1113,28 +1120,13 @@ master_loop:
 	endm
 		dt	r3
 		bf	.copy_pal
-
-	; ---------------------------------------
-	; Control background position
-	; ---------------------------------------
-
-		mov	#RAM_Mars_Background,r14
-		mov	#Dreq_BgXpos,r13
-		mov	@(marsGbl_DreqRead,gbr),r0
-		add	r0,r13
-		mov	@r13+,r1
-		mov	@r13+,r2
-		ldc	@r15+,sr		; SR back
-		mov	r1,@(mbg_xpos,r14)
-		mov	r2,@(mbg_ypos,r14)
-		bsr	MarsVideo_MoveBg
-		nop
-		mov	#_vdpreg,r1		; Still on VBlank?
-.no_vbl:
-		mov.b	@(vdpsts,r1),r0
-		and	#$80,r0
-		tst	r0,r0
-		bf	.no_vbl
+		ldc	@r15+,sr
+; 		mov	#_vdpreg,r1		; Still on VBlank?
+; .no_vbl:
+; 		mov.b	@(vdpsts,r1),r0
+; 		and	#$80,r0
+; 		tst	r0,r0
+; 		bf	.no_vbl
 
 ; ---------------------------------------
 ; Pick graphics mode on comm14
@@ -1205,21 +1197,24 @@ mstr_gfx_1:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_ModelsReady,gbr)
 .lel:
 	; ---------------------------------------
-; 		mov	#RAM_Mars_Background,r14	; Move background
-; 		mov	#Dreq_BgXpos,r13
-; 		mov	@(marsGbl_DreqRead,gbr),r0
-; 		add	r0,r13
-; 		mov	@r13+,r1
-; 		mov	@r13+,r2
-; 		mov	r1,@(mbg_xpos,r14)
-; 		mov	r2,@(mbg_ypos,r14)
-; 		mov	#RAM_Mars_Background,r14
-; 		bsr	MarsVideo_MoveBg
-; 		nop
+	; Control background position
+	; ---------------------------------------
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#RAM_Mars_Background,r14
+		mov	#Dreq_BgXpos,r13
+		mov	@(marsGbl_DreqRead,gbr),r0
+		add	r0,r13
+		mov	@r13+,r1
+		mov	@r13+,r2
+		ldc	@r15+,sr
+		mov	r1,@(mbg_xpos,r14)
+		mov	r2,@(mbg_ypos,r14)
+		bsr	MarsVideo_MoveBg
+		nop
 	; ---------------------------------------
 		mov	#Cach_Drw_All,r13		; DrawAll != 0?
 		mov	@r13,r0
@@ -1294,9 +1289,10 @@ mstr_gfx_2:
 
 		mov	#_sysreg+comm14,r1
 .wait_1:	mov.b	@r1,r0
-		and	#%00001000,r0
+		and	#%00010000,r0
 		tst	r0,r0
 		bt	.wait_1
+
 	; ---------------------------------------
 	; Prepare WATCHDOG interrupt
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
@@ -1321,11 +1317,11 @@ mstr_gfx_2:
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 
-; 		mov	#_CCR,r1			; <-- Required for Watchdog
-; 		mov	#%00001000,r0			; Two-way mode
-; 		mov.w	r0,@r1
-; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-; 		mov.w	r0,@r1
+		mov	#_CCR,r1			; <-- Required for Watchdog
+		mov	#%00001000,r0			; Two-way mode
+		mov.w	r0,@r1
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r1
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A20,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
@@ -1362,12 +1358,15 @@ mstr_gfx_2:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		tst	r0,r0
 		bt	.no_swap
+.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
+		tst	r0,r0
+		bt	.wait_wd
 		mov	#VideoMars_DrwPlgnPz,r0
 		jsr	@r0
 		nop
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
-		and	#%11110111,r0
+		and	#%11101111,r0
 		mov.b	r0,@r1
 .no_swap:
 
@@ -1528,7 +1527,7 @@ SH2_S_HotStart:
 		mov	#RAM_Mars_Objects,r1
 		mov	#MarsObj_test,r0
 		mov	r0,@(mdl_data,r1)
-		mov	#-$C0000,r0
+		mov	#-$80000,r0
 		mov	r0,@(mdl_z_pos,r1)
 
 		bra	slave_loop
@@ -1586,10 +1585,15 @@ slave_loop:
 ; ---------------------------------------
 
 		mov	#RAM_Mars_Objects,r2	; temporal rotation
-		mov	#$4000,r1
+		mov	#$10000,r1
 		mov	@(mdl_x_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_x_rot,r2)
+; 		mov	#$1000,r1
+; 		mov	@(mdl_z_pos,r2),r0
+; 		sub	r1,r0
+; 		mov	r0,@(mdl_z_pos,r2)
+
 		mov	#_sysreg+comm12+1,r1
 		mov.b	@r1,r0
 		add	#1,r0
@@ -1636,24 +1640,18 @@ slave_loop:
 .page_2:
 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
 		mov	r0,@r1
-
 		mov	#_sysreg+comm14,r1
 .wait_in:
 		mov.b	@r1,r0
-		and	#%00001000,r0
+		and	#%00010000,r0
 		tst	r0,r0
 		bf	.wait_in
-; .wait_redy:	mov.w	@(marsGbl_ModelsReady,gbr),r0
-; 		tst	r0,r0
-; 		bf	.wait_redy
 		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
 		mov.b	@r1,r0
-		or	#%00001000,r0
+		or	#%00010000,r0
 		mov.b	r0,@r1
-; 		mov	#1,r0
-; 		mov.w	r0,@(marsGbl_ModelsReady,gbr)
 		bra	slave_loop
 		nop
 		align 4
@@ -1717,13 +1715,11 @@ SH2_RAM:
 		struct SH2_RAM
 	if MOMPASS=1
 MarsRam_Dreq0	ds.l 0
-; MarsRam_Dreq1	ds.l 0
 MarsRam_System	ds.l 0
 MarsRam_Video	ds.l 0
 sizeof_marsram	ds.l 0
 	else
 MarsRam_Dreq0	ds.b MAX_MDDREQ				; Shared with Genesis side
-; MarsRam_Dreq1	ds.b MAX_MDDREQ
 MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
 sizeof_marsram	ds.l 0
@@ -1756,17 +1752,18 @@ sizeof_marsram	ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
-RAM_Mars_Background	ds.w sizeof_marsbg
-RAM_Mars_ObjCamera	ds.b sizeof_camera		; Camera buffer
-RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Output polygon pieces to process
-RAM_Mars_VdpDrwList_e	ds.l 0				; (END point)
+RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
+RAM_Mars_ObjCamera	ds.b sizeof_camera		; 3D Camera buffer
+RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Sprites / Polygon pieces
+RAM_Mars_VdpDrwList_e	ds.l 0				; (END point label)
 RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
-RAM_Mars_PlgnNum_0	ds.l 1
+RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
+RAM_Mars_Background	ds.w sizeof_marsbg
+; RAM_Mars_BgData		ds.b (320+16)*(224+16)
 RAM_Mars_Palette	ds.w 256
 sizeof_marsvid		ds.l 0
 			finish

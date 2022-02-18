@@ -304,3 +304,16 @@ Sound_GlbTempo:
 		move.w	d1,d7		; d1 - Tempo MSB
 		bsr	sndReq_sword
 		bra 	sndReq_Exit
+
+; --------------------------------------------------------
+
+		align 4
+Z80_CODE:
+		cpu Z80			; Set Z80 here
+		phase 0			; And set PC to 0
+		include "system/md/z_driver.asm"
+		cpu 68000
+		padding off
+		phase Z80_CODE+*
+Z80_CODE_END:
+		align 2

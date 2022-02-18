@@ -56,6 +56,14 @@ Video_Init:
 		add.w	#$100,d6
 		dbf	d7,.loop
 .exit:
+
+	; DMA RV bit safe code
+		lea	(dmacode_start),a1
+		lea	(RAM_DmaCode).l,a0
+		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
+.copysafe:
+		move.l	(a1)+,(a0)+
+		dbf	d0,.copysafe
 		rts
 
 ; ====================================================================
@@ -865,58 +873,6 @@ Video_Copy:
 ; --------------------------------------------------------
 
 ; --------------------------------------------------------
-; Video_DmaBlast
-;
-; Process DMA tasks from a predefined list in RAM
-; **CALL THIS DURING VBLANK ONLY**
-;
-; Uses:
-; d5-d7,a3-a4
-; --------------------------------------------------------
-
-; Entry format:
-; $94xx,$93xx,$96xx,$95xx,$97xx (SIZE,SOURCE)
-; $40000080 (vdp destination + dma bit)
-
-Video_DmaBlast:
-		tst.w	(RAM_VdpDmaMod).w		; Got mid-write?
-		bne.s	.exit
-		tst.w	(RAM_VdpDmaIndx).w		; Index != 0?
-		beq.s	.exit
-		lea	(vdp_ctrl),a4
-		lea	(RAM_VdpDmaList).w,a3
-		move.w	#$8100,d7			; DMA ON
-		move.b	(RAM_VdpRegs+1),d7
-		bset	#bitDmaEnbl,d7
-		move.w	d7,(a4)
-		bsr	Sound_DMA_Pause			; Request Z80 stop and SH2 backup
-		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
-.next:		tst.w	(RAM_VdpDmaIndx).w
-		beq.s	.end
-		move.l	(a3),(a4)			; Size
-		clr.l	(a3)+
-		move.l	(a3),(a4)			; Source
-		clr.l	(a3)+
-		move.w	(a3),(a4)
-		clr.w	(a3)+
-		move.w	(a3),d6				; Destination
-		clr.w	(a3)+
-		move.w	(a3),d5
-		clr.w	(a3)+
-		move.w	d6,(a4)
-		move.w	d5,(a4)
-		sub.w	#7*2,(RAM_VdpDmaIndx).w
-		bra.s	.next
-.end:
-		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
-		bsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
-		move.w	#$8100,d7			; DMA OFF
-		move.b	(RAM_VdpRegs+1).w,d7
-		move.w	d7,(a4)
-.exit:
-		rts
-
-; --------------------------------------------------------
 ; Sets a new DMA transfer task to the Blast list
 ;
 ; *** ONLY CALL THIS OUTSIDE OF VBLANK ***
@@ -973,6 +929,23 @@ Video_DmaSet:
 		rts
 
 ; --------------------------------------------------------
+; Video_DmaBlast
+;
+; Process DMA tasks from a predefined list in RAM
+; **CALL THIS DURING VBLANK ONLY**
+;
+; Uses:
+; d5-d7,a3-a4
+; --------------------------------------------------------
+
+; Entry format:
+; $94xx,$93xx,$96xx,$95xx,$97xx (SIZE,SOURCE)
+; $40000080 (vdp destination + dma bit)
+
+Video_DmaBlast:
+		jmp	(RAMDMA_Blast+RAM_DmaCode).l
+
+; --------------------------------------------------------
 ; Load graphics using DMA, direct
 ;
 ; d0 | LONG - Art data
@@ -986,80 +959,7 @@ Video_DmaSet:
 ; --------------------------------------------------------
 
 Video_LoadArt:
-		move.w	sr,-(sp)
-		or	#$700,sr
-		lea	(vdp_ctrl),a4
-		move.w	#$8100,d6		; DMA ON
-		move.b	(RAM_VdpRegs+1),d6
-		bset	#bitDmaEnbl,d6
-		move.w	d6,(a4)
-		move.w	d2,d6			; Length
-		move.l	#$94009300,d5
-		lsr.w	#1,d6
-		move.b	d6,d5
-		swap	d5
-		lsr.w	#8,d6
-		move.b	d6,d5
-		swap	d5
-		move.l	d5,(a4)
-		move.l	d0,d6			; Source
-  		lsr.l	#1,d6
- 		move.l	#$96009500,d5
- 		move.b	d6,d5
- 		lsr.l	#8,d6
- 		swap	d5
- 		move.b	d6,d5
- 		move.l	d5,(a4)
- 		move.w	#$9700,d5
- 		lsr.l	#8,d6
- 		move.b	d6,d5
- 		move.w	d5,(a4)
-		move.w	d1,d6			; Destination
-; 		and.w	#$7FF,d6
-; 		lsl.w	#5,d6
-		move.w	d6,d5
-		and.l	#$3FE0,d6
-		ori.w	#$4000,d6
-
-		lsr.w	#8,d5
-		lsr.w	#6,d5
-		andi.w	#%11,d5
-		ori.w	#$80,d5
-		move.l	d0,d7
-		swap	d7
-		lsr.w	#8,d7
-		cmp.b	#$FF,d7
-		beq.s	.from_ram
-		bsr	Sound_DMA_Pause
-		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
- 		move.w	d5,-(sp)
-		move.w	d6,(a4)				; d6 - First word
-		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
-		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
-		move.w	#$8100,d6			; DMA OFF
-		move.b	(RAM_VdpRegs+1),d6
-		move.w	d6,(a4)
-		move.w	(sp)+,sr
-		bra	Sound_DMA_Resume
-
-; TODO: check if Source RAM transfers are safe without turining off Z80
-.from_ram:
-		move.w	d7,(a4)
- 		move.w	d5,-(sp)
-		move.w	(sp)+,(a4)			; Second write
-		move.w	#$8100,d7
-		move.b	(RAM_VdpRegs+1),d7
-		move.w	d7,(a4)
-		move.w	(sp)+,sr
-		rts
-
-; ====================================================================
-; ----------------------------------------------------------------
-; 32X EXCLUSIVE Video routines
-;
-; After any use of these routines call System_MdMarsDreq
-; to transfer the changes to the 32X side
-; ----------------------------------------------------------------
+		jmp	(RAMDMA_Load+RAM_DmaCode).l
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1322,6 +1222,114 @@ list_vdpregs:
 ASCII_PAL:	dc.w $0000,$0EEE,$0CCC,$0AAA,$0888,$0444,$000E,$0008
 		dc.w $00EE,$0088,$00E0,$0080,$0E00,$0800,$0000,$0000
 ASCII_PAL_e:
-ASCII_FONT:	binclude "system/md/data/font.bin"
-ASCII_FONT_e:
-		align 2
+
+; --------------------------------------------------------
+
+dmacode_start:
+		phase 0
+RAMDMA_Load:
+		move.w	sr,-(sp)
+		or	#$700,sr
+		lea	(vdp_ctrl),a4
+		move.w	#$8100,d6		; DMA ON
+		move.b	(RAM_VdpRegs+1),d6
+		bset	#bitDmaEnbl,d6
+		move.w	d6,(a4)
+		move.w	d2,d6			; Length
+		move.l	#$94009300,d5
+		lsr.w	#1,d6
+		move.b	d6,d5
+		swap	d5
+		lsr.w	#8,d6
+		move.b	d6,d5
+		swap	d5
+		move.l	d5,(a4)
+		move.l	d0,d6			; Source
+  		lsr.l	#1,d6
+ 		move.l	#$96009500,d5
+ 		move.b	d6,d5
+ 		lsr.l	#8,d6
+ 		swap	d5
+ 		move.b	d6,d5
+ 		move.l	d5,(a4)
+ 		move.w	#$9700,d5
+ 		lsr.l	#8,d6
+ 		move.b	d6,d5
+ 		move.w	d5,(a4)
+		move.w	d1,d6			; Destination
+; 		and.w	#$7FF,d6
+; 		lsl.w	#5,d6
+		move.w	d6,d5
+		and.l	#$3FE0,d6
+		ori.w	#$4000,d6
+
+		lsr.w	#8,d5
+		lsr.w	#6,d5
+		andi.w	#%11,d5
+		ori.w	#$80,d5
+		move.l	d0,d7
+		swap	d7
+		lsr.w	#8,d7
+		cmp.b	#$FF,d7
+		beq.s	.from_ram
+		jsr	Sound_DMA_Pause
+		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
+ 		move.w	d5,-(sp)
+		move.w	d6,(a4)				; d6 - First word
+		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
+		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
+		move.w	#$8100,d6			; DMA OFF
+		move.b	(RAM_VdpRegs+1),d6
+		move.w	d6,(a4)
+		move.w	(sp)+,sr
+		jmp	Sound_DMA_Resume
+.from_ram:
+		move.w	d7,(a4)
+ 		move.w	d5,-(sp)
+		move.w	(sp)+,(a4)			; Second write
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1),d7
+		move.w	d7,(a4)
+		move.w	(sp)+,sr
+		rts
+
+RAMDMA_Blast:
+		tst.w	(RAM_VdpDmaMod).w		; Got mid-write?
+		bne.s	.exit
+		tst.w	(RAM_VdpDmaIndx).w		; Index != 0?
+		beq.s	.exit
+		lea	(vdp_ctrl),a4
+		lea	(RAM_VdpDmaList).w,a3
+		move.w	#$8100,d7			; DMA ON
+		move.b	(RAM_VdpRegs+1),d7
+		bset	#bitDmaEnbl,d7
+		move.w	d7,(a4)
+		jsr	Sound_DMA_Pause			; Request Z80 stop and SH2 backup
+		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
+.next:		tst.w	(RAM_VdpDmaIndx).w
+		beq.s	.end
+		move.l	(a3),(a4)			; Size
+		clr.l	(a3)+
+		move.l	(a3),(a4)			; Source
+		clr.l	(a3)+
+		move.w	(a3),(a4)
+		clr.w	(a3)+
+		move.w	(a3),d6				; Destination
+		clr.w	(a3)+
+		move.w	(a3),d5
+		clr.w	(a3)+
+		move.w	d6,(a4)
+		move.w	d5,(a4)
+		sub.w	#7*2,(RAM_VdpDmaIndx).w
+		bra.s	.next
+.end:
+		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
+		jsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
+		move.w	#$8100,d7			; DMA OFF
+		move.b	(RAM_VdpRegs+1).w,d7
+		move.w	d7,(a4)
+.exit:
+		rts
+		dephase
+		phase $880000+*
+dmacode_end:

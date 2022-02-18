@@ -913,8 +913,8 @@ drwtask_exit:
 		align 4
 Cach_Bkup_L	ds.l 16		;
 Cach_Bkup_S	ds.l 0		; <-- Reads backwards
-Cach_BkupP_L	ds.l 6
-Cach_BkupP_S	ds.l 0
+; Cach_BkupP_L	ds.l 6
+; Cach_BkupP_S	ds.l 0
 Cach_DDA_Top	ds.l 2*2	; First 2 points
 Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2
