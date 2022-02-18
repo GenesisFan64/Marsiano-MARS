@@ -353,72 +353,31 @@ m_irq_cmd:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
 		mov	#_sysreg+cmdintclr,r1
 		mov.w	r0,@r1
 
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0		; Disable Watchdog
-		mov.w	r0,@r1
-		mov	#_sysreg+comm14,r3	; control comm
-		mov	@(marsGbl_DreqRead,gbr),r0
-		mov	r0,r2
-.wait_1:
-		mov.b	@r3,r0
-		tst	#%10000000,r0		; 68k enter/exit
-		bt	.exit_c
-		tst	#%01000000,r0		; wait CLOCK
-		bt	.wait_1
-		mov	#_sysreg+comm0,r1
-.copy_1:
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
-		mov.b	@r3,r0			; CLK done
-		and	#%10111111,r0
-		mov.b	r0,@r3
-		bra	.wait_1
-		nop
-.exit_c:
-		mov	#$FFFFFE80,r1
-		mov.w	#$5A20,r0		; Watchdog pre-timer
-		mov.w	r0,@r1
-		mov.w	#$A518|$20,r0		; Enable Watchdog
-		mov.w	r0,@r1
-
-; 		dt	r4
-; 		bf	.wait_1
-
-	; DREQ is not very stable.
-; 		mov	#_sysreg+cmdintclr,r4
-; 		mov	@(marsGbl_DreqRead,gbr),r0
-; 		mov	r0,r1
-; 		mov	#_DMASOURCE0,r2
-; 		mov.l   #_sysreg,r3
-; 		mov.l   #_sysreg+dreqfifo,r0
-; 		mov.l   r0,@(0,r2)
-; 		mov.l   r1,@(4,r2)
-; 		mov.w   @($10,r3),r0
-; 		mov.l   r0,@(8,r2)
-; 		mov.l   #$44E1,r0
-; 		mov.l   r0,@($0C,r2)
-; 		mov.l   #1,r0
-; 		mov.l   r0,@($30,r2)
-; 		mov.w	r0,@r4
-; .dma_wait:
-; 		mov	@($C,r2),r0
-; 		tst     #2,r0
-; 		bt      .dma_wait
-; 		mov     #0,r0
-; 		mov	r0,@($30,r2)
-
-		mov	@r15+,r5
+		mov	r2,@-r15
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	#_sysreg,r4
+		mov	#_DMASOURCE0,r3
+		mov	#_sysreg+comm14,r2
+		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
+		mov	r0,@($C,r3)
+		mov	#_sysreg+dreqfifo,r1
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r1,@r3			; Source
+		mov	r0,@(4,r3)		; Destination
+		mov.w	@(dreqlen,r4),r0
+		mov	r0,@(8,r3)		; Length
+		mov.b	@r2,r0
+		or	#%01000000,r0		; Tell Genesis we are few instructions away from
+		mov.b	r0,@r2			; reading the DREQ FIFO port
+		mov	@($C,r3),r0		; (?)
+		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
+		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	#1,r0			; _DMAOPERATION = 1
+		mov	r0,@($30,r3)
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -1044,8 +1003,8 @@ SH2_M_HotStart:
 		nop
 		mov	#MarsRam_Dreq0,r0
 		mov	r0,@(marsGbl_DreqRead,gbr)
-; 		mov	#MarsRam_Dreq1,r0
-; 		mov	r0,@(marsGbl_DreqWrite,gbr)
+		mov	#MarsRam_Dreq1,r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
 		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
@@ -1121,12 +1080,37 @@ master_loop:
 		dt	r3
 		bf	.copy_pal
 		ldc	@r15+,sr
-; 		mov	#_vdpreg,r1		; Still on VBlank?
-; .no_vbl:
-; 		mov.b	@(vdpsts,r1),r0
-; 		and	#$80,r0
-; 		tst	r0,r0
-; 		bf	.no_vbl
+
+	; ---------------------------------------
+
+		mov	#_DMACHANNEL0,r1		; Check if DMA is active
+		mov	@r1,r0				;
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet			; Not yet.
+		stc	sr,@-r15
+		mov.l	#$F0,r0				; Interrupts OFF, Ignore new requests
+		ldc	r0,sr
+.wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
+		and	#%10,r0
+		tst	r0,r0
+		bt	.wait_dma
+		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
+		mov	r0,r1
+		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	r0,@(marsGbl_DreqRead,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_DreqWrite,gbr)
+		ldc	@r15+,sr			; Interrupts ON, recieve requests again
+.not_yet:
+
+
+		mov	#_vdpreg,r1		; Still on VBlank?
+.no_vbl:
+		mov.b	@(vdpsts,r1),r0
+		and	#$80,r0
+		tst	r0,r0
+		bf	.no_vbl
 
 ; ---------------------------------------
 ; Pick graphics mode on comm14
@@ -1715,11 +1699,13 @@ SH2_RAM:
 		struct SH2_RAM
 	if MOMPASS=1
 MarsRam_Dreq0	ds.l 0
+MarsRam_Dreq1	ds.l 0
 MarsRam_System	ds.l 0
 MarsRam_Video	ds.l 0
 sizeof_marsram	ds.l 0
 	else
 MarsRam_Dreq0	ds.b MAX_MDDREQ				; Shared with Genesis side
+MarsRam_Dreq1	ds.b MAX_MDDREQ
 MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
 sizeof_marsram	ds.l 0

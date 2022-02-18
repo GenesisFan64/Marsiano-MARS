@@ -511,79 +511,45 @@ VInt_Default:
 
 HInt_Default:
 		rte
-		
-; ====================================================================
-; --------------------------------------------------------
-; System_MdMarsDreq
-;
-; Sends a small section of RAM from here to 32X
-; for controlling things like the background or sprites
-;
-; CALL THIS DURING VBLANK ONLY, As this will try
-; to syncronize with the SH2 to recieve the data
-; on both VBlank(s) at the same time
-; --------------------------------------------------------
 
 ; ====================================================================
 ; --------------------------------------------------------
-; 32X Communication
+; 32X Communication, using DREQ
+;
+; **** THIS CODE MUST BE AT $880000 area,
+; If this code is on RAM, the transfer will miss word
+; writes
 ; --------------------------------------------------------
-
-; DREQ is unstable, using comms again.
-; but only comm0,2,4,6
 
 System_MdMarsDreq:
+		lea	(RAM_MdDreq),a6
+		lea	($A15112).l,a5
+		move.w	#MAX_MDDREQ/2,d6
 		move.w	sr,d7
 		move.w	#$2700,sr
-		lea	(RAM_MdDreq),a6
-		lea	(sysmars_reg+comm0).l,a5
-		move.w	#MAX_MDDREQ/8,d6
-; 		move.w	d6,(sysmars_reg+dreqlen).l	; recycling this register for the size
-		sub.w	#1,d6
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$00E,(vdp_data).l
-		bset	#7,(sysmars_reg+comm14).l
-		bset	#0,(sysmars_reg+standby).l
-.wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Request CMD to Master
+.retry:
+		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LEN
+		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
+		bset	#0,(sysmars_reg+standby).l	; Request CMD to Master
+.wait_cmd:	btst	#0,(sysmars_reg+standby).l	; And wait for clear
 		bne.s	.wait_cmd
-.next:
-		move.l	(a6)+,(a5)
-		move.l	(a6)+,4(a5)
-		bset	#6,(sysmars_reg+comm14).l
-.wait:		btst	#6,(sysmars_reg+comm14).l
-		bne.s	.wait
-		dbf	d6,.next
-		bclr	#7,(sysmars_reg+comm14).l
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$000,(vdp_data).l
+.wait_bit:
+		btst	#6,(sysmars_reg+comm14).l	; Now wait until SH2
+		beq.s	.wait_bit			; responds
+		bclr	#6,(sysmars_reg+comm14).l
+		move.w	d6,d5
+		lsr.w	#2,d5
+		sub.w	#1,d5
+.l0:		move.w  (a6)+,(a5)		; From here the SH2 reads FIFO using DMA
+		move.w  (a6)+,(a5)		; First In, First Out
+		move.w  (a6)+,(a5)
+		move.w  (a6)+,(a5)
+.l1:		btst	#7,dreqctl(a5)		; Got Full here?
+		bne.s	.l1
+		dbf	d5,.l0
+		btst	#2,dreqctl(a5)		; DMA got ok?
+		bne	.retry
 		move.w	d7,sr
-		rts
-
-	; DREQ is not very stable.
-; 		lea	(RAM_MdDreq),a6
-; 		lea	($A15112).l,a5
-; 		move.w	#MAX_MDDREQ/2,d6
-; 		move.w	sr,d7
-; 		move.w	#$2700,sr
-; .retry:
-; 		move.w	d6,(sysmars_reg+dreqlen).l
-; 		bset	#2,(sysmars_reg+dreqctl).l
-; 		bset	#0,(sysmars_reg+standby).l
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Request CMD to Master
-; 		bne.s	.wait_cmd
-; 		move.w	d6,d5
-; 		lsr.w	#2,d5
-; 		sub.w	#1,d5
-; .l0:		move.w  (a6)+,(a5)		; From here the SH2 reads FIFO using DMA
-; 		move.w  (a6)+,(a5)		; First In, First Out
-; 		move.w  (a6)+,(a5)
-; 		move.w  (a6)+,(a5)
-; .l1:		btst	#7,dreqctl(a5)		; Got Full here?
-; 		bne.s	.l1
-; 		dbf	d5,.l0
-; 		btst	#2,dreqctl(a5)		; DMA got ok? (In case DREQ failed...)
-; 		bne	.retry
-; 		move.w	d7,sr
 		rts
 
 ; ====================================================================
