@@ -12,7 +12,7 @@
 
 	; This align is for GEMS emulator only
 	; in case get stuck in a black screen
-		align $80
+; 		align $80
 
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
@@ -129,7 +129,7 @@ sndReq_sbyte:
 ; --------------------------------------------------------
 ; Sound_DMA_Pause
 ;
-; Call this BEFORE doing any DMA task
+; Call this BEFORE making any DMA task
 ;
 ; Uses:
 ; d7

@@ -155,7 +155,7 @@ commZRead	db 0		; cmd read pointer (here)
 commZWrite	db 0		; cmd fifo wptr (from 68k)
 marsBlock	db 0		; 1 - to disable PWM comm
 palMode		db 0
-sbeatPtck	dw 224		; Sub beats per tick (8frac), default is 120bpm
+sbeatPtck	dw 210		; Sub beats per tick (8frac), default is 120bpm
 sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
 
 ; --------------------------------------------------------

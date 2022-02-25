@@ -369,7 +369,7 @@ m_irq_cmd:
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
-		mov	r0,@(8,r3)		; Length
+		mov	r0,@(8,r3)		; Length (from the 68k side)
 		mov.b	@r2,r0
 		or	#%01000000,r0		; Tell Genesis we are few instructions away from
 		mov.b	r0,@r2			; reading the DREQ FIFO port
@@ -377,7 +377,7 @@ m_irq_cmd:
 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r3)
+		mov	r0,@($30,r3)		; DMA is now busy writing data to the WRITE buffer
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -1131,8 +1131,8 @@ master_loop:
 .list:
 		dc.l mstr_gfx_0
 		dc.l mstr_gfx_1
-		dc.l mstr_gfx_2
-		dc.l mstr_gfx_0
+		dc.l mstr_gfx_1
+		dc.l mstr_gfx_3
 
 ; ---------------------------------------
 ; Mode 0: BLANK
@@ -1228,19 +1228,16 @@ mstr_gfx_1:
 		nop
 		bsr	MarsVideo_FixTblShift		; Fix those Xshift lines
 		nop
-; .wait_pz:	mov.w	@(marsGbl_PlgnCntr,gbr),r0	; Active polygon pieces?
-; 		cmp/pl	r0
-; 		bt	.wait_pz
 		bra	mstr_nextframe
 		nop
 		align 4
 		ltorg
 
 ; ---------------------------------------
-; Mode 2: 3D MODE Polygons-only
+; Mode 3: 3D MODE Polygons-only
 ; ---------------------------------------
 
-mstr_gfx_2:
+mstr_gfx_3:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
@@ -1339,6 +1336,9 @@ mstr_gfx_2:
 
 	; ---------------------------------------
 
+		mov.w	@(marsGbl_PlgnCntr,gbr),r0	; Active polygon pieces?
+		cmp/pl	r0
+		bt	.no_swap
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		tst	r0,r0
 		bt	.no_swap
@@ -1348,12 +1348,11 @@ mstr_gfx_2:
 		mov	#VideoMars_DrwPlgnPz,r0
 		jsr	@r0
 		nop
+.no_swap:
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		and	#%11101111,r0
 		mov.b	r0,@r1
-.no_swap:
-
 
 ; ---------------------------------------
 ; *** Frameswap exit, JUMP only
@@ -1492,7 +1491,8 @@ SH2_S_HotStart:
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#_sysreg,r1
-		mov	#PWMIRQ_ON|CMDIRQ_ON,r0		; Enable these interrupts
+; 		mov	#PWMIRQ_ON|CMDIRQ_ON,r0		; Enable these interrupts
+		mov	#CMDIRQ_ON,r0		; Enable these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
 		mov 	#$C0000000,r2
@@ -1561,7 +1561,7 @@ slave_loop:
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		and	#%11,r0
-		cmp/eq	#2,r0
+		cmp/eq	#3,r0
 		bf	slave_loop
 
 ; ---------------------------------------
@@ -1569,14 +1569,18 @@ slave_loop:
 ; ---------------------------------------
 
 		mov	#RAM_Mars_Objects,r2	; temporal rotation
-		mov	#$10000,r1
+		mov	#$4000,r1
 		mov	@(mdl_x_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_x_rot,r2)
-; 		mov	#$1000,r1
-; 		mov	@(mdl_z_pos,r2),r0
-; 		sub	r1,r0
-; 		mov	r0,@(mdl_z_pos,r2)
+		mov	#$4000,r1
+		mov	@(mdl_y_rot,r2),r0
+		add	r1,r0
+		mov	r0,@(mdl_y_rot,r2)
+		mov	#$4000,r1
+		mov	@(mdl_z_rot,r2),r0
+		add	r1,r0
+		mov	r0,@(mdl_z_rot,r2)
 
 		mov	#_sysreg+comm12+1,r1
 		mov.b	@r1,r0

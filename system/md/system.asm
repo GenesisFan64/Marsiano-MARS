@@ -516,15 +516,15 @@ HInt_Default:
 ; --------------------------------------------------------
 ; 32X Communication, using DREQ
 ;
-; **** THIS CODE MUST BE AT $880000 area,
-; If this code is on RAM, the transfer will miss word
-; writes
+; Call this during VBlank
+;
+; NOTE: THIS CODE MUST BE AT $880000 area.
 ; --------------------------------------------------------
 
 System_MdMarsDreq:
-		lea	(RAM_MdDreq),a6
-		lea	($A15112).l,a5
-		move.w	#MAX_MDDREQ/2,d6
+		lea	(RAM_MdDreq),a6			; Data to send (RAM section)
+		lea	($A15112).l,a5			; DREQ fifo port
+		move.w	#MAX_MDDREQ/2,d6		; Size in bytes
 		move.w	sr,d7
 		move.w	#$2700,sr
 .retry:

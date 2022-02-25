@@ -69,8 +69,8 @@ SmpIns_SSTR162A:
 TESTMARS_BG:
 	binclude "data/mars/test_art.bin"
 	align 4
-Textr_Yui:
-	binclude "data/mars/objects/mtrl/test_tex_art.bin"
+Textr_smoke:
+	binclude "data/mars/objects/mtrl/smoke_art.bin"
 	align 4
 
 ; --------------------------------------------------------

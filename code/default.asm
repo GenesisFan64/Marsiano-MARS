@@ -111,8 +111,8 @@ thisCode_Top:
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
-		move.w	#2,(RAM_CurrGfx).w
-		moveq	#2,d0
+		move.w	#3,(RAM_CurrGfx).w
+		moveq	#3,d0
 		bsr	Video_MarsSetGfx
 ; 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 		move.w	#1,(RAM_FadeMarsSpd).w
@@ -199,6 +199,15 @@ thisCode_Top:
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
 
+		move.w	(Controller_1+on_press),d7
+		lsr.w	#8,d7
+		btst	#bitJoyZ,d7
+		beq.s	.noah
+; 		move.w	#$20,(RAM_ShakeMe).w
+		moveq	#0,d2
+		bsr	PlayThisSfx
+.noah:
+
 		move.l	(RAM_MdDreq+Dreq_BgXpos).w,d0
 		move.l	(RAM_MdDreq+Dreq_BgYpos).w,d1
 		move.w	(RAM_HorScroll+2).w,d2
@@ -253,7 +262,7 @@ thisCode_Top:
 		tst.w	d2
 		beq.s	.no_chng
 		lea	(MDLDATA_PAL_TEST),a0
-		cmp.w	#2,(RAM_CurrGfx).w
+		cmp.w	#3,(RAM_CurrGfx).w
 		beq.s	.thispal
 		lea	(TESTMARS_BG_PAL),a0
 .thispal:
@@ -617,16 +626,15 @@ thisCode_Top:
 
 ; test playlist
 MasterTrkList:
-	dc.l GemaTrk_patt_HILLS,GemaTrk_blk_HILLS,GemaTrk_ins_HILLS
-	dc.w 7,0
-	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
-	dc.w $A,0
-	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
-	dc.w 7,0
+	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
+	dc.w 3,%0001
+; 	dc.l GemaTrk_patt_bemine,GemaTrk_blk_bemine,GemaTrk_ins_bemine
+; 	dc.w $A,0
+; 	dc.l GemaTrk_patt_Vectr,GemaTrk_blk_Vectr,GemaTrk_ins_Vectr
+; 	dc.w 7,0
 
 
-; 	dc.l GemaTrk_patt_TEST2,GemaTrk_blk_TEST2,GemaTrk_ins_TEST2
-; 	dc.w 2,1
+
 ; 	dc.l GemaTrk_patt_chrono,GemaTrk_blk_chrono,GemaTrk_ins_chrono
 ; 	dc.w 3,1
 ; 	dc.l GemaTrk_mecano_patt,GemaTrk_mecano_blk,GemaTrk_mecano_ins
