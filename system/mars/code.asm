@@ -362,6 +362,8 @@ m_irq_cmd:
 		mov	#_sysreg,r4
 		mov	#_DMASOURCE0,r3
 		mov	#_sysreg+comm14,r2
+		mov	#0,r0
+		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
 		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
@@ -377,7 +379,11 @@ m_irq_cmd:
 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r3)		; DMA is now busy writing data to the WRITE buffer
+		mov	r0,@($30,r3)
+; .wait_dma:
+; 		mov	@($C,r3), r0
+; 		tst	#2,r0
+; 		bt	.wait_dma
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -1048,23 +1054,23 @@ master_loop:
 .wait_frmswp:	mov.b	@(framectl,r1),r0		; Framebuffer ready?
 		cmp/eq	r0,r2
 		bf	.wait_frmswp
- 		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
-		mov	#_vdpreg+shift,r1		; For the indexed-scrolling
-		and	#1,r0
-		mov.w	r0,@r1
 
 	; ---------------------------------------
 	; New frame is now shown on screen but
 	; we are still on VBlank
 	; ---------------------------------------
 
-		stc	sr,@-r15		; Interrupts OFF
+		stc	sr,@-r15			; Interrupts OFF
 		mov	#$F0,r0
 		ldc	r0,sr
+ 		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
+		mov	#_vdpreg+shift,r1		; For the indexed-scrolling
+		and	#1,r0
+		mov.w	r0,@r1
 		mov	#_vdpreg,r1
 .wait:		mov.b	@(vdpsts,r1),r0
 		and	#$20,r0
-		tst	r0,r0			; Palette unlocked?
+		tst	r0,r0				; Palette unlocked?
 		bt	.wait
 		mov	#Dreq_Palette,r1
 		mov	@(marsGbl_DreqRead,gbr),r0
@@ -1084,17 +1090,17 @@ master_loop:
 	; ---------------------------------------
 
 		mov	#_DMACHANNEL0,r1		; Check if DMA is active
-		mov	@r1,r0				;
+		mov	@r1,r0
 		and	#%01,r0
 		tst	r0,r0
-		bt	.not_yet			; Not yet.
-		stc	sr,@-r15
-		mov.l	#$F0,r0				; Interrupts OFF, Ignore new requests
-		ldc	r0,sr
+		bt	.not_yet
 .wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
 		and	#%10,r0
 		tst	r0,r0
 		bt	.wait_dma
+		stc	sr,@-r15
+		mov.l	#$F0,r0				; Interrupts OFF, Ignore new requests
+		ldc	r0,sr
 		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
 		mov	r0,r1
 		mov	@(marsGbl_DreqWrite,gbr),r0
@@ -1103,8 +1109,6 @@ master_loop:
 		mov	r0,@(marsGbl_DreqWrite,gbr)
 		ldc	@r15+,sr			; Interrupts ON, recieve requests again
 .not_yet:
-
-
 		mov	#_vdpreg,r1		; Still on VBlank?
 .no_vbl:
 		mov.b	@(vdpsts,r1),r0

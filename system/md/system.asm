@@ -500,7 +500,6 @@ Mode_Init:
 VInt_Default:
 		movem.l	d0-a6,-(sp)
 		bsr	System_Input
-		bsr	System_MdMarsDreq
 		add.l	#1,(RAM_FrameCount).l
 		movem.l	(sp)+,d0-a6		
 		rte
@@ -528,14 +527,15 @@ System_MdMarsDreq:
 		move.w	sr,d7
 		move.w	#$2700,sr
 .retry:
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$00E,(vdp_data).l
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LEN
 		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request CMD to Master
-.wait_cmd:	btst	#0,(sysmars_reg+standby).l	; And wait for clear
-		bne.s	.wait_cmd
-.wait_bit:
-		btst	#6,(sysmars_reg+comm14).l	; Now wait until SH2
-		beq.s	.wait_bit			; responds
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; And wait for clear
+; 		bne.s	.wait_cmd
+.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait for response from CMD
+		beq.s	.wait_bit
 		bclr	#6,(sysmars_reg+comm14).l
 		move.w	d6,d5
 		lsr.w	#2,d5
@@ -549,6 +549,8 @@ System_MdMarsDreq:
 		dbf	d5,.l0
 		btst	#2,dreqctl(a5)		; DMA got ok?
 		bne	.retry
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$000,(vdp_data).l
 		move.w	d7,sr
 		rts
 

@@ -4,7 +4,7 @@
 ; ----------------------------------------------------------------
 
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-MAX_MDDREQ	equ $500	; MAX size for "DREQ" RAM transfer (8-byte aligned) $380 Stable
+MAX_MDDREQ	equ $600	; MAX size for "DREQ" RAM transfer (8-byte aligned) $380 Stable
 MAX_MODELS	equ 16
 
 ; ====================================================================

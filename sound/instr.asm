@@ -24,20 +24,22 @@ gSmpl macro locate,loop
 ; --------------------------------------------------------
 
 	align 4			; FIRST ALIGN FOR PWMs
-DacIns_Magic2:
-	gSmpl "sound/instr/smpl/magic_2.wav",0
-DacIns_Snare_Gem:
-	gSmpl "sound/instr/smpl/snare_lobo.wav",0
-DacIns_CdSnare:
-	gSmpl "sound/instr/smpl/cd_snare.wav",0
-DacIns_SaurKick:
-	gSmpl "sound/instr/smpl/sauron_kick.wav",0
-DacIns_SaurSnare:
-	gSmpl "sound/instr/smpl/sauron_snare.wav",0
-DacIns_String1:
-	gSmpl "sound/instr/smpl/string_1.wav",0
-DacIns_LowString:
-	gSmpl "sound/instr/smpl/lowstring.wav",1200
+DacIns_wegot_kick:
+	gSmpl "sound/instr/smpl/wegot_kick.wav",0
+DacIns_wegot_crash:
+	gSmpl "sound/instr/smpl/wegot_crash.wav",0
+; DacIns_Snare_Gem:
+; 	gSmpl "sound/instr/smpl/snare_lobo.wav",0
+; DacIns_CdSnare:
+; 	gSmpl "sound/instr/smpl/cd_snare.wav",0
+; DacIns_SaurKick:
+; 	gSmpl "sound/instr/smpl/sauron_kick.wav",0
+; DacIns_SaurSnare:
+; 	gSmpl "sound/instr/smpl/sauron_snare.wav",0
+; DacIns_String1:
+; 	gSmpl "sound/instr/smpl/string_1.wav",0
+; DacIns_LowString:
+; 	gSmpl "sound/instr/smpl/lowstring.wav",1200
 
 ; --------------------------------------------------------
 ; FM instruments/patches
@@ -115,14 +117,14 @@ FmIns_Bass_1:
 ; 		binclude "sound/instr/fm/bass_5.gsx",$2478,$20
 FmIns_Bass_club:
 		binclude "sound/instr/fm/bass_club.gsx",$2478,$20
-; FmIns_Bass_groove:
-; 		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
-; FmIns_Bass_groove_2:
-; 		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
+FmIns_Bass_donna:
+		binclude "sound/instr/fm/bass_donna.gsx",$2478,$20
+FmIns_Bass_groove_2:
+		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
 ; FmIns_Bass_groove_gem:
 ; 		binclude "sound/instr/fm/bass_groove_gem.gsx",$2478,$20
-; FmIns_Bass_italo:
-; 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
+FmIns_Bass_italo:
+		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
 ; FmIns_Bass_kon:
 ; 		binclude "sound/instr/fm/bass_kon.gsx",$2478,$20
 

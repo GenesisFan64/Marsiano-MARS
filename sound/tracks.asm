@@ -101,30 +101,13 @@ GemaPat_Test:
 	binclude "sound/tracks/wegot_patt.bin"
 GemaIns_Test:
 	gInsFm 0,FmIns_PSynth_plus
-	gInsFm 0,FmIns_Bass_1
-	gInsFm -36,FmIns_DrumKick_gem
-	gInsFm -12,FmIns_Trumpet_2
-	gInsFm +12,FmIns_PSynth_plus
+	gInsFm 0,FmIns_Bass_groove_2
+	gInsDac -36,DacIns_wegot_kick,0
 	gInsFm 0,FmIns_Bass_club
 	gInsFm3 0,FmIns_Fm3_OpenHat
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
+	gInsPsg 0,$20,$50,$00,$00,$04
+	gInsDac -36,DacIns_wegot_crash,0
+	gInsPsgN 0,$00,$00,$00,$00,$04,%100
 	gInsNull
 	gInsNull
 

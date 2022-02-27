@@ -449,7 +449,7 @@ while reading:
 
         # set texture
         a=img_width
-        b=img_height
+        b=img_height-1			# FIXME
         c=(int(x_curr[1])-1)*4
         vertex_list[c+2]=a
         vertex_list[c+3]=b
