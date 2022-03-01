@@ -57,7 +57,9 @@ Video_Init:
 		dbf	d7,.loop
 .exit:
 
-	; DMA RV bit safe code
+; 	DMA RV bit safe code
+;	TODO: solo copiarme el write final en vez
+;	de todo el codigo.
 		lea	(dmacode_start),a1
 		lea	(RAM_DmaCode).l,a0
 		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
@@ -1223,6 +1225,8 @@ ASCII_PAL:	dc.w $0000,$0EEE,$0CCC,$0AAA,$0888,$0444,$000E,$0008
 		dc.w $00EE,$0088,$00E0,$0080,$0E00,$0800,$0000,$0000
 ASCII_PAL_e:
 
+; --------------------------------------------------------
+; RAM-code, these routines use the RV bit
 ; --------------------------------------------------------
 
 dmacode_start:

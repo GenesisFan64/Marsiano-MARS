@@ -9,10 +9,9 @@
 ; -17 - 8000
 
 ; Instrument macros
-; do note that some 24-bit pointers add 90h to the MSB
+; do note that some 24-bit pointers add 90h to the MSB automaticly.
 ;
-; TODO: this might fail to work. if possible use ALL instruments
-; on your tracks
+; TODO: this might fail.
 gInsNull macro
 	dc.b  -1,$00,$00,$00
 	dc.b $00,$00,$00,$00
@@ -36,17 +35,16 @@ gInsPsgN macro pitch,alv,atk,slv,dky,rrt,mode
 	endm
 
 ; fmins - 24-bit ROM pointer to patch data
-; automaticly sets to the $900000 area
 gInsFm macro pitch,fmins
-	dc.b $A0,pitch,((fmins>>16)&$FF)|$90,((fmins>>8)&$FF)
+	dc.b $A0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
 ; Same as gInsFm
-; But the last 4 words are manually-set frequencies
+; But the last 4 words on the patch data are the custom frequencies
 ; for each operator in this order: OP1 OP2 OP3 OP4
 gInsFm3	macro pitch,fmins
-	dc.b $B0,pitch,((fmins>>16)&$FF)|$90,((fmins>>8)&$FF)
+	dc.b $B0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
 	dc.b fmins&$FF,$00,$00,$00
 	endm
 
@@ -54,21 +52,20 @@ gInsFm3	macro pitch,fmins
 ;        dc.b end,end,end	; 24-bit LENGTH of the sample
 ;        dc.b loop,loop,loop	; 24-bit Loop point
 ;        dc.b (sound data)	; Then the actual sound data
-;
-; flags: %0-dont loop, %1-loop
+; flags: %0-don't loop
+; 	 %1-loop
 gInsDac	macro pitch,start,flags
-	dc.b $C0|flags,pitch,((start>>16)&$FF)|$90,((start>>8)&$FF)
+	dc.b $C0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
 	dc.b start&$FF,0,0,0
 	endm
 
 ; start: Pointer to sample data:
 ;        dc.b end,end,end	; 24-bit LENGTH of the sample
 ;        dc.b loop,loop,loop	; 24-bit Loop point
-;        dc.b (sound data)	; Then the actual sound data
-;
+;        dc.b (data)		; Then the actual sound data
 ; flags: %00SL
-;        L - Loop sample
-;        S - Sample is in stereo
+;        L - Loop sample No/Yes
+;        S - Sample data is in stereo
 gInsPwm	macro pitch,start,flags
 	dc.b $D0|flags,pitch,((start>>24)&$FF),((start>>16)&$FF)
 	dc.b ((start>>8)&$FF),start&$FF,0,0
@@ -105,9 +102,9 @@ GemaIns_Test:
 	gInsDac -36,DacIns_wegot_kick,0
 	gInsFm 0,FmIns_Bass_club
 	gInsFm3 0,FmIns_Fm3_OpenHat
-	gInsPsg 0,$20,$50,$00,$00,$04
+	gInsPsg 0,$20,$40,$10,$01,$04
 	gInsDac -36,DacIns_wegot_crash,0
-	gInsPsgN 0,$00,$00,$00,$00,$04,%100
+	gInsPsgN 0,$00,$00,$00,$00,$10,%100
 	gInsNull
 	gInsNull
 

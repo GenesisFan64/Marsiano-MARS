@@ -4120,12 +4120,12 @@ wavFreq_List:	dw 100h		; C-0
 		dw 100h		; C-5 22050
 		dw 110h		; C#5
 		dw 120h		; D-5
-		dw 12Ch		; D#5
+		dw 12Eh		; D#5
 		dw 142h		; E-5
-		dw 158h		; F-5
+		dw 15Ah		; F-5
 		dw 16Ah		; F#5 32000 +6
-		dw 17Eh		; G-5
-		dw 190h		; G#5
+		dw 17Fh		; G-5
+		dw 191h		; G#5
 		dw 1ACh		; A-5
 		dw 1C2h		; A#5
 		dw 1E0h		; B-5

@@ -38,7 +38,7 @@ MdRamCode_end:
 ; Instruments must be located in a non-autobanked area
 ; ----------------------------------------------------------------
 
-		include "sound/instr.asm"
+
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -48,6 +48,8 @@ MdRamCode_end:
 	; First one is smaller than the others...
 		phase $900000+*				; Only one currently
 		include "sound/tracks.asm"
+		include "sound/instr.asm"
+		include "sound/smpl_dac.asm"
 		include "data/md_bank0.asm"
 		dephase
 ; 		org $100000-4				; Fill this bank and
@@ -101,12 +103,13 @@ MARS_RAMDATA_E:
 		phase CS1+*
 		align 4
 		include "data/mars_rom.asm"
+		include "sound/smpl_pwm.asm"
 		dephase
 
 ; ====================================================================
 ; ---------------------------------------------
 ; End
 ; ---------------------------------------------
-		
+
 ROM_END:
 		align $8000
