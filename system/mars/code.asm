@@ -1283,11 +1283,30 @@ mstr_gfx_3:
 		add	#2,r3
 .no_redraw:
 
+		mov	#RAM_Mars_Objects,r2	; temporal rotation
+		mov	#$2000,r1
+		mov	@(mdl_x_rot,r2),r0
+		add	r1,r0
+		mov	r0,@(mdl_x_rot,r2)
+		mov	#$2000,r1
+		mov	@(mdl_y_rot,r2),r0
+		add	r1,r0
+		mov	r0,@(mdl_y_rot,r2)
+		mov	#$2000,r1
+		mov	@(mdl_z_rot,r2),r0
+		add	r1,r0
+		mov	r0,@(mdl_z_rot,r2)
+
+	; Request MODEL reading
 		mov	#_sysreg+comm14,r1
-.wait_1:	mov.b	@r1,r0
+		mov.b	@r1,r0
+		or	#%00010000,r0
+		mov.b	r0,@r1
+.wait_slv:
+		mov.b	@r1,r0
 		and	#%00010000,r0
 		tst	r0,r0
-		bt	.wait_1
+		bf	.wait_slv
 
 	; ---------------------------------------
 	; Prepare WATCHDOG interrupt
@@ -1572,35 +1591,27 @@ slave_loop:
 		and	#%11101111,r0
 		mov.b	r0,@r9
 .refill_out:
-		mov	#_sysreg+comm14,r1
-		mov.b	@r1,r0
-		and	#%11,r0
-		cmp/eq	#3,r0
-		bf	slave_loop
 
 ; ---------------------------------------
 ; ***READ MODELS HERE AND UPDATE POLYGONS
 ; ---------------------------------------
 
-		mov	#RAM_Mars_Objects,r2	; temporal rotation
-		mov	#$2000,r1
-		mov	@(mdl_x_rot,r2),r0
-		add	r1,r0
-		mov	r0,@(mdl_x_rot,r2)
-		mov	#$2000,r1
-		mov	@(mdl_y_rot,r2),r0
-		add	r1,r0
-		mov	r0,@(mdl_y_rot,r2)
-		mov	#$2000,r1
-		mov	@(mdl_z_rot,r2),r0
-		add	r1,r0
-		mov	r0,@(mdl_z_rot,r2)
+		mov	#_sysreg+comm14,r1
+		mov.b	@r1,r0
+		and	#%00010000,r0
+		tst	r0,r0
+		bt	slave_loop
+		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
+		xor	#1,r0
+		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
+		mov.b	@r1,r0
+		and	#%11101111,r0
+		mov.b	r0,@r1
 
 		mov	#_sysreg+comm12+1,r1
 		mov.b	@r1,r0
 		add	#1,r0
 		mov.b	r0,@r1
-
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1
@@ -1642,18 +1653,6 @@ slave_loop:
 .page_2:
 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
 		mov	r0,@r1
-		mov	#_sysreg+comm14,r1
-.wait_in:
-		mov.b	@r1,r0
-		and	#%00010000,r0
-		tst	r0,r0
-		bf	.wait_in
-		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
-		xor	#1,r0
-		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
-		mov.b	@r1,r0
-		or	#%00010000,r0
-		mov.b	r0,@r1
 		bra	slave_loop
 		nop
 		align 4

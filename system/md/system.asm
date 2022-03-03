@@ -524,7 +524,7 @@ System_MdMarsDreq:
 		move.w	#$00E,(vdp_data).l
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LEN
 		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
-		bset	#0,(sysmars_reg+standby).l	; Request CMD to Master
+		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
 ; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
 ; 		bne.s	.wait_cmd
 .wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal

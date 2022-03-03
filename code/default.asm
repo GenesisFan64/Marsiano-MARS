@@ -109,8 +109,8 @@ thisCode_Top:
 		moveq	#3,d0
 		bsr	Video_MarsSetGfx
 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
-		move.w	#1,(RAM_FadeMarsSpd).w
 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
+		move.w	#4,(RAM_FadeMarsSpd).w
 		move.w	#1,(RAM_FadeMarsReq).w
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		move.b	#%111,(RAM_VdpRegs+$B).l	; Horizontall linescroll
@@ -626,7 +626,7 @@ thisCode_Top:
 ; test playlist
 MasterTrkList:
 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
-	dc.w 6,%001
+	dc.w 14,%001
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
 	dc.w 3,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
