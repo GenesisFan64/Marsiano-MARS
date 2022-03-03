@@ -341,13 +341,6 @@ m_irq_pwm:
 		nop
 		align 4
 
-; =================================================================
-; ------------------------------------------------
-; Master | CMD Interrupt
-;
-; This recieves DREQ FIFO from 68K
-; ------------------------------------------------
-
 m_irq_cmd:
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -355,30 +348,32 @@ m_irq_cmd:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-; 		mov	#_sysreg+cmdintclr,r1
-; 		mov.w	r0,@r1
+		mov	#_sysreg+cmdintclr,r1
+		mov.w	r0,@r1
 
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
 		mov	#_sysreg,r4
 		mov	#_DMASOURCE0,r3
-		mov	#_sysreg+cmdintclr,r2
+		mov	#_sysreg+comm14,r2
 		mov	#0,r0
 		mov	r0,@($30,r3)
-		mov	#%0100010011100000,r0		; Transfer mode + DMA disabled (first)
+		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
 		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
 		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r1,@r3				; Source
-		mov	r0,@(4,r3)			; Destination
+		mov	r1,@r3			; Source
+		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
-		mov	r0,@(8,r3)			; Length (from 68k)
-		mov.w	r2,@r2				; Clear interrupt here, this tells 68k to start pre-filling
-		mov	@($C,r3),r0			; (?)
-		mov	#%0100010011100001,r0		; Transfer mode + DMA enabled
-		mov	r0,@($C,r3)			; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
-		mov	#1,r0				; _DMAOPERATION = 1
+		mov	r0,@(8,r3)		; Length (from the 68k side)
+		mov.b	@r2,r0
+		or	#%01000000,r0		; Tell Genesis we are few instructions away from
+		mov.b	r0,@r2			; reading the DREQ FIFO port
+		mov	@($C,r3),r0		; (?)
+		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
+		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
 ; .wait_dma:
 ; 		mov	@($C,r3), r0
@@ -1024,7 +1019,7 @@ SH2_M_HotStart:
 		dt	r3
 		bf/s	.copy
 		add 	#4,r2
-		mov	#_DMACHANNEL0,r1		; Prepare DREQ stuff
+		mov	#_DMACHANNEL0,r1		; Force DMA channel 0 to stop
 		mov	#0,r0
 		mov	r0,@($30,r1)
 		mov	r0,@($C,r1)
@@ -1130,10 +1125,10 @@ master_loop:
 		and	#%01,r0
 		tst	r0,r0
 		bt	.not_yet
-.wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
-		and	#%10,r0
-		tst	r0,r0
-		bt	.wait_dma
+; .wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
+; 		and	#%10,r0				; TODO: checar en hardware
+; 		tst	r0,r0
+; 		bt	.wait_dma
 		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
 		mov	r0,r1
 		mov	@(marsGbl_DreqWrite,gbr),r0
@@ -1588,15 +1583,15 @@ slave_loop:
 ; ---------------------------------------
 
 		mov	#RAM_Mars_Objects,r2	; temporal rotation
-		mov	#$4000,r1
+		mov	#$2000,r1
 		mov	@(mdl_x_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_x_rot,r2)
-		mov	#$4000,r1
+		mov	#$2000,r1
 		mov	@(mdl_y_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_y_rot,r2)
-		mov	#$4000,r1
+		mov	#$2000,r1
 		mov	@(mdl_z_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_z_rot,r2)

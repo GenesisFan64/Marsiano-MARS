@@ -16,7 +16,6 @@
 ; Sizes
 ; Normal FM ins: $20
 ; Special FM ins: $28
-;
 
 ; FM3 Special
 FmIns_Fm3_OpenHat:
@@ -63,16 +62,16 @@ FmIns_DrumKick_gem:
 ; ; ;
 ; ; ; ; FmIns_Bass_gum:
 ; ; ; ; 		binclude "sound/instr/fm/bass_gum.gsx",$2478,$20
-; FmIns_Bass_calm:
-; 		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
+FmIns_Bass_calm:
+		binclude "sound/instr/fm/bass_calm.gsx",$2478,$20
 ; FmIns_Bass_heavy:
 ; 		binclude "sound/instr/fm/bass_heavy.gsx",$2478,$20
 ; FmIns_Bass_ambient:
 ; 		binclude "sound/instr/fm/bass_ambient.gsx",$2478,$20
 ; ; ; FmIns_Brass_gummy:
 ; ; ; 		binclude "sound/instr/fm/brass_gummy.gsx",$2478,$20
-; ; ; FmIns_Flaute_1:
-; ; ; 		binclude "sound/instr/fm/flaute_1.gsx",$2478,$20
+; FmIns_Flaute_1:
+; 		binclude "sound/instr/fm/flaute_1.gsx",$2478,$20
 FmIns_Bass_1:
 		binclude "sound/instr/fm/bass_1.gsx",$2478,$20
 ; FmIns_Bass_2:
@@ -123,19 +122,19 @@ FmIns_Bass_italo:
 ; ; 		binclude "sound/instr/fm/piano_small.gsx",$2478,$20
 ; ; FmIns_Piano:
 ; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
-; FmIns_Trumpet_1:
-; 		binclude "sound/instr/fm/trumpet_1.gsx",$2478,$20
+FmIns_Trumpet_1:
+		binclude "sound/instr/fm/trumpet_1.gsx",$2478,$20
 FmIns_Trumpet_2:
 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
-; FmIns_Trumpet_kon:
-; 		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
+FmIns_Trumpet_kon:
+		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
 ; FmIns_Trumpet_puy:
 ; 		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
-; FmIns_Trumpet_carnival:
-; 		binclude "sound/instr/fm/trumpet_carnivl.gsx",$2478,$20
+FmIns_Trumpet_carnival:
+		binclude "sound/instr/fm/trumpet_carnivl.gsx",$2478,$20
 
-; ; ; FmIns_Bell_Glass:
-; ; ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
+; FmIns_Bell_Glass:
+; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
 ; FmIns_Marimba_1:
 ; 		binclude "sound/instr/fm/marimba_1.gsx",$2478,$20
 
@@ -151,8 +150,8 @@ FmIns_Ding_toy:
 ; 		binclude "sound/instr/fm/bell_china.gsx",$2478,$20
 FmIns_Brass_Eur:
 		binclude "sound/instr/fm/brass_eur.gsx",$2478,$20
-; FmIns_Brass_Puy:
-; 		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
+FmIns_Brass_Puy:
+		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
 FmIns_Flaute_cave:
 		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
 FmIns_Banjo_puy:

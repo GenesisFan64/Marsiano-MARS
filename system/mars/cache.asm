@@ -241,7 +241,7 @@ wdg_task_0:
 		mov.w   r0,@r1
 		or      #$20,r0		; ON
 		mov.w   r0,@r1
-		mov.w   #$5A10,r0	; Timer for the next WD
+		mov.w   #$5A08,r0	; Timer for the next WD
 		mov.w   r0,@r1
 wdm_exit:
 		rts

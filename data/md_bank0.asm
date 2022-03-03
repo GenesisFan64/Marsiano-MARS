@@ -14,7 +14,7 @@ TESTMARS_BG_PAL:
 		binclude "data/mars/test_pal.bin"
 		align 2
 MDLDATA_PAL_TEST:
-		binclude "data/mars/objects/mtrl/smoke_pal.bin"
+		binclude "data/mars/objects/mtrl/test_tex_pal.bin"
 		align 2
 
 MAP_FGTEST:	binclude "data/md/bg/fg_map.bin"

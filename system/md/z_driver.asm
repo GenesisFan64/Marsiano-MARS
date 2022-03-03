@@ -27,25 +27,23 @@ ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test DAC playback
 
 ; trkBuff struct
 ; LIMIT: 20h (32) bytes
-trk_romBlk	equ 0		; 24-bit base block data
-trk_romPatt	equ 3		; 24-bit base patt data
-trk_romIns	equ 6		; 24-bit ROM instrument pointers
-trk_romPattRd	equ 9		; same but for reading
-trk_Read	equ 12		; Current track position (in cache)
-trk_Rows	equ 14		; Current track length
-trk_Halfway	equ 16		; Only 00h or 80h
-trk_currBlk	equ 17		; Current block
-trk_setBlk	equ 18		; Start on this block
-trk_status	equ 19		; %ERPB xxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats
-trk_tickTmr	equ 20		; Ticks timer
-trk_tickSet	equ 21		; Ticks set for this track
-trk_numChnls	equ 22		; Number of channels for this track slot (max: MAX_TRKCHN)
-trk_sizeIns	equ 23		; Max instruments used
+trk_romBlk	equ 0	; 24-bit base block data
+trk_romPatt	equ 3	; 24-bit base patt data
+trk_romIns	equ 6	; 24-bit ROM instrument pointers
+trk_romPattRd	equ 9	; same but for reading
+trk_Read	equ 12	; Current track position (in cache)
+trk_Rows	equ 14	; Current track length
+trk_Halfway	equ 16	; Only 00h or 80h
+trk_currBlk	equ 17	; Current block
+trk_setBlk	equ 18	; Start on this block
+trk_status	equ 19	; %ERPB Sxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats / S-silence
+trk_tickTmr	equ 20	; Ticks timer
+trk_tickSet	equ 21	; Ticks set for this track
+trk_numChnls	equ 22	; Number of channels for this track slot (max: MAX_TRKCHN)
+trk_sizeIns	equ 23	; Max instruments used
 trk_rowPause	equ 24
-trk_HdHalfway	equ 25		; Track heads reload byte
-trk_CachNotes	equ 26		; Track pattern buffer location (100h bytes)
-; trk_CachHeads	equ 28		; Buff'd Track heads
-; trk_CachIns	equ 30
+trk_HdHalfway	equ 25	; Track heads reload byte
+trk_CachNotes	equ 26	; Track pattern buffer location (100h bytes)
 
 ; Track data: 8 bytes only
 chnl_Chip	equ 0		; MUST BE at 0
@@ -133,7 +131,7 @@ PWINSL		equ	48
 ; --------------------------------------------------------
 
 ; NOTE: This plays at 18000hz
-		org	8
+		org 8
 dac_me:		exx			; <-- opcode changes between EXX(play) and RET(stop)
 		ex	af,af'		; get our alt A/F
 		ld	b,l		; save l to b
@@ -149,14 +147,46 @@ dac_me:		exx			; <-- opcode changes between EXX(play) and RET(stop)
 		ex	af,af'
 		exx
 		ret
+
+; --------------------------------------------------------
+
+x68ksrclsb	db 0			; transferRom temporal LSB
+x68ksrcmid	db 0			; transferRom temporal MID
+currTickBits	db 0			; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
+marsUpd		db 0			; flag to request a PWM transfer
+
+; --------------------------------------------------------
+; RST 20h (dac_me)
+;
+; Check if the WAVE cache needs refilling
+;
+; Breaks ALL registers if refill is
+; needed.
+;
+; *** self-modifiable code ***
+; --------------------------------------------------------
+
+		org 20h
+dac_fill:	push	af		; <-- code changes between PUSH AF(playing) and RET(stopped)
+		ld	a,(dDacFifoMid)
+		exx
+		xor	h		; xx.00
+		exx
+		and	80h
+		jp	nz,dac_refill
+		pop	af
+		ret
+
+; --------------------------------------------------------
+
 commZRomBlk	db 0		; 68k ROM block flag
 commZRomRd	db 0		; Z80 ROM reading flag
 commZRead	db 0		; cmd read pointer (here)
 commZWrite	db 0		; cmd fifo wptr (from 68k)
-marsBlock	db 0		; 1 - to disable PWM comm
-palMode		db 0
-sbeatPtck	dw 210		; Sub beats per tick (8frac), default is 120bpm
-sbeatAcc	dw 0		; Accumulates ^^ each tick to track sub beats
+marsBlock	db 0		; flag to temporally disable PWM communication
+palMode		db 0		; PAL speed flag (TODO)
+sbeatPtck	dw 200+12	; Global tempo (sub beats)
+sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
 
 ; --------------------------------------------------------
 ; Z80 Interrupt at 0038h
@@ -184,7 +214,7 @@ z80_init:
 drv_loop:
 		rst	8
 		call	get_tick	; Check for tick on VBlank
-		call	dac_fill
+		rst	20h
 		rst	8
 		ld	b,0		; b - Reset current flags (beat|tick)
 		ld	a,(tickCnt)
@@ -329,21 +359,20 @@ drv_loop:
 ; --------------------------------------------------------
 
 .cmnd_trkstop:
-		call	get_cmdbyte		; Get track slot
-		call	get_trkindx		; and read index iy
-		ld	(iy+trk_status),0
-		call	track_out
-		jp	.next_cmd
+; 		call	get_cmdbyte			; Get track slot
+; 		call	get_trkindx			; and read index iy
+; 		call	track_out
+; 		jp	.next_cmd
 
 ; --------------------------------------------------------
 ; $03 - Pause track
 ; --------------------------------------------------------
 
 .cmnd_trkpause:
-		call	get_cmdbyte		; Get track slot
-		call	get_trkindx		; and read index iy
-		res	7,(iy+trk_status)	; Slot OFF
-; 		call	track_out
+		call	get_cmdbyte			; Get track slot
+		call	get_trkindx			; and read index iy
+		res	7,(iy+trk_status)		; Playback OFF
+		call	track_out
 		jp	.next_cmd
 
 ; --------------------------------------------------------
@@ -354,7 +383,6 @@ drv_loop:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iy
 		set	7,(iy+trk_status)	; Slot ON
-; 		call	track_out
 		jp	.next_cmd
 
 ; --------------------------------------------------------
@@ -439,7 +467,7 @@ get_cmdbyte:
 ; --------------------------------------------------------
 
 updtrack:
-		call	dac_fill
+		rst	20h
 		ld	iy,trkBuff_0		; BGM
 		rst	8
 		ld	de,insDataC_0
@@ -663,7 +691,7 @@ updtrack:
 		cp	070h
 		ret	c
 .grab_asap:
-		call	dac_fill		; refill request
+		rst	20h			; refill request
 		ld	a,(iy+trk_Halfway)	; +80h to halfway
 		ld	d,h
 		ld	e,a
@@ -723,8 +751,6 @@ updtrack:
 ; If set to -1 it will end the track,
 ; so you can put multiple SFX into the
 ; track file and call them by block.
-;
-; USE THE EFFECT ONLY
 ; ----------------------------------------
 
 .eff_C:
@@ -800,7 +826,7 @@ updtrack:
 		ld	(iy+trk_Rows),c		; Save this number of rows to buffer
 		ld	(iy+(trk_Rows+1)),b	; on Tick pauses
 		push	bc			; Save bc
-		call	dac_fill
+		rst	20h			; refill wave
 
 	; Detect pattern size... last moment addition
 	; for patterns lower than 80h.
@@ -854,15 +880,16 @@ updtrack:
 ; ----------------------------------------
 
 .effect_fill:
-		call	dac_fill
+		rst	20h			; Refill wave data
 		res	5,b			; Reset refill-from-effect flag
 		ld	(iy+trk_status),b
-		call	.go_effect
-		ret
+		jr	.go_effect
+; 		call	.go_effect
+; 		ret
 
 ; returns bc as row counter
 .first_fill:
-		call	dac_fill
+		rst	20h
 		res	6,b			; Reset FILL flag
 		ld	(iy+trk_status),b
 		push	iy
@@ -877,22 +904,21 @@ updtrack:
 		push	de
 		push	bc
 		rst	8
-		call	trkout_unlk		; search and unlink last used channels
-		ld	(ix+chnl_Ins),0
-; 		ld	(ix+chnl_Note),-2
-; 		ld	(ix+chnl_Flags),1
+		ld	a,(ix+chnl_Chip)
+		or	a
+		jr	z,.nochip
+		ld	(ix+chnl_Note),-2
+		ld	(ix+chnl_Flags),1
 		rst	8
+.nochip:
 		pop	bc
 		pop	de
 .dntslnce:
 		add	ix,de
 		djnz	.clrf
-		ld	a,1			; Request chip cleanup
-		ld	(flagResChip),a
 		ld	(iy+trk_rowPause),0	; Reset row timer
 		ld	a,(iy+trk_setBlk)	; Set current block
 		ld 	(iy+trk_currBlk),a
-
 .go_effect:
 		rst	8			; First cache fills
 		ld	l,(iy+trk_romIns)	; Recieve almost 100h of instrument pointers
@@ -903,20 +929,12 @@ updtrack:
 		ld	c,(iy+trk_sizeIns)
 		call	transferRom
 		rst	8
-; 		ld	e,(iy+trk_CachHeads)	; de - Cache headers
-; 		ld	d,(iy+(trk_CachHeads+1))
-; 		ld	l,(iy+trk_romPatt)	; hl - ROM pattern data BASE
-; 		ld	h,(iy+(trk_romPatt+1))
-; 		ld	a,(iy+(trk_romPatt+2))
-; 		ld	bc,MAX_TRKHEADS
-; 		call	transferRom
 		ld	l,(iy+trk_CachNotes)	; Read first cache notes
 		ld	h,(iy+(trk_CachNotes+1))
 		ld	de,80h
 		add	hl,de
 		ld	(iy+trk_Read),l
 		ld	(iy+((trk_Read+1))),h
-; 		call	dac_fill
 		ld	a,(iy+trk_currBlk)
 		jp	.set_track
 
@@ -927,7 +945,6 @@ updtrack:
 .trkend_effC:
 		call	track_out
 		rst	8
-		ld	(iy+trk_status),0	; Track status
 		ld	(iy+trk_rowPause),0
 		ld	(iy+trk_tickTmr),0
 		ld	bc,0			; Set bc rowcount to 0
@@ -949,7 +966,6 @@ track_out:
 .clrfe:
 		push	de
 		push	bc
-		call	trkout_unlk
 		ld	a,(ix+chnl_Chip)
 		or	a
 		jr	z,.nochip
@@ -963,97 +979,7 @@ track_out:
 		pop	de
 		add	ix,de
 		djnz	.clrfe
-		ld	a,1			; Request chip cleanup
-		ld	(flagResChip),a
-		ret
-
-; ----------------------------------------
-; Unlink current channel
-; ----------------------------------------
-
-trkout_unlk:
-		ld	a,(ix+chnl_Chip)
-		or	a
-		ret	z
-		ret	p
-		push	ix
-		pop	de
-		ld	c,a
-		and	11110000b
-		cp	80h
-		jr	z,.is_psg
-		cp	90h
-		jr	z,.is_psgn
-		cp	0A0h		;
-		jr	z,.is_fm
-		cp	0B0h		; For FM3 special
-		jr	z,.is_fm
-		cp	0C0h		; For FM6 DAC
-		jr	z,.is_fm
-		cp	0D0h		; For PWM
-		jr	z,.is_pwm
-		ret
-; PSG/PSGN
-.is_psg:
-		ld	b,0
-		ld	a,c
-		and	011b
-		ld	hl,tblPSG
-		rst	8
-		add	a,a		; *08h
-		add	a,a
-		add	a,a
-		ld	c,a
-		rst	8
-		add	hl,bc
-		jr	.ispsg_c
-.is_psgn:
-		ld	hl,tblPSGN
-.ispsg_c:
-		ld	a,(hl)
-		cp	e
-		ret	nz
-		rst	8
-		inc	hl
-		ld	a,(hl)
-		cp	d
-		ret	nz
-		ld	(hl),0
-		dec	hl
-		ld	(hl),0
-		ld	a,c
-		cp	90h
-		ret	z
-		rst	8
-		ret
-; FM
-.is_pwm:
-		ld	hl,tblPWM
-		jr	.tlb_cont
-.is_fm:
-		ld	hl,tblFM
-.tlb_cont:
-		ld	a,c
-		and	000111b
-		rst	8
-		add	a,a		; *08h
-		add	a,a
-		add	a,a
-		ld	b,0
-		ld	c,a
-		rst	8
-		add	hl,bc
-		ld	a,(hl)
-		cp	e
-		ret	nz
-		rst	8
-		inc	hl
-		ld	a,(hl)
-		cp	d
-		ret	nz
-		ld	(hl),0
-		dec	hl
-		ld	(hl),0
+		set	3,(iy+trk_status)
 		ret
 
 ; --------------------------------------------------------
@@ -1146,43 +1072,16 @@ setupchip:
 		call	.mk_chip
 		ld	hl,insDataC_1
 		ld	iy,trkBuff_1
-		call	.mk_chip
-
-	; Check if there's floating
-	; channels to auto-mute by request
-		ld	a,(flagResChip)
-		or	a
-		ret	z
-		xor	a
-		ld	(flagResChip),a
-		ld	iy,tblPWM	; 32X only
-		ld	ix,pwmcom
-; 		ld	b,0D0h
-		call	.silnc_list
-		ld	a,1
-		rst	8
-		ld	(marsUpd),a
-		ld	iy,tblFM6
-		ld	ix,daccom
-; 		ld	b,0C0h
-		call	.silnc_singl
-		ld	iy,tblPSGN
-		ld	ix,psgcom+3
-; 		ld	b,90h
-		call	.silnc_singl
-		rst	8
-		ld	iy,tblFM	; silence floating channels
-		ld	ix,fmcom	; includes FM3 special
-; 		ld	b,0A0h
-		call	.silnc_list
-		ld	iy,tblPSG
-		ld	ix,psgcom
-; 		ld	b,080h
-		jr	.silnc_list
 .mk_chip:
-		ld	a,(iy+trk_status)
+		bit	3,(iy+trk_status)	; stop-all bit?
+		jr	nz,.stopall
+		ld	a,(iy+trk_status)	; enable bit? (as plus/minus test)
 		or	a
 		ret	p
+		jr	.clr
+.stopall:
+		res	3,(iy+trk_status)
+.clr:
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
 ; 		rst	8
@@ -1201,85 +1100,6 @@ setupchip:
 		ret
 
 ; ----------------------------------------
-; iy - table
-; ix - chip com port
-;  b - target ID
-;  c - ignore ID
-.silnc_singl:
-		ld	a,(iy+1)	; Get link MSB
-		rst	8
-		ld	h,a		; hl - link
-		ld	l,(iy)
-		ld	a,(hl)		; *** DIRECT chnl_Chip
-		ld	e,a
-		or	a
-		jr	z,.fltin_s
-		rst	8
-		ld	a,e
-		and	11110000b
-		cp	b
-		ret 	nz
-.fltin_s:
-		push	ix
-		pop	hl
-		add	hl,de
-		ld	a,(hl)		; already set?
-		and	0111b
-		or	a
-		ret	nz
-		ld	(hl),100b
-		ld	(iy),0
-		ld	(iy+1),0
-; 		ld	(iy+3),0
-; 		ld	(iy+4),0
-; 		ld	(iy+5),0
-; 		ld	(iy+6),0
-; 		ld	(iy+7),0
-		ret
-.silnc_list:
-		ld	a,(iy+1)	; Get link MSB
-		cp	-1		; if 0FFxxh, end
-		ret	z
-		or	a		; if 00xx, mute it
-		jr	z,.flotin
-		ld	h,a		; hl - link
-		ld	l,(iy)
-		ld	a,(hl)		; *** DIRECT chnl_Chip
-		and	11110000b
-		or	a
-		jr	nz,.busy
-; 		and	11110000b
-; 		cp	b
-; 		jr	z,.busy
-
-.flotin:
-		rst	8
-		ld	a,(iy+2)
-		and	000111b		;
-		ld	d,0
-		ld	e,a
-		rst	8
-		push	ix
-		pop	hl
-		add	hl,de
-		ld	a,(hl)		; already set?
-		and	0111b
-		or	a
-		jr	nz,.busy
-		ld	(hl),100b
-		ld	(iy),0
-		ld	(iy+1),0
-; 		ld	(iy+3),0
-; 		ld	(iy+4),0
-; 		ld	(iy+5),0
-; 		ld	(iy+6),0
-; 		ld	(iy+7),0
-.busy:
-		ld	de,8
-		add	iy,de
-		jr	.silnc_list
-
-; ----------------------------------------
 ; Channel requested update
 ;
 ; iy - Current channel
@@ -1296,7 +1116,7 @@ setupchip:
 		jr	z,.ran_out
 		ld	(currInsPos),hl
 		ld	(currTblPos),ix
-		call	dac_fill
+		rst	20h
 		bit	1,(iy+chnl_Flags)
 		call	nz,.req_ins
 		bit	2,(iy+chnl_Flags)
@@ -1318,7 +1138,7 @@ setupchip:
 		pop	bc
 		ret
 .no_chnl:
-		call	.chip_swap		; TODO: check if this breaks.
+		call	.chip_swap		; TODO: check if this breaks...
 		ld	(iy+chnl_Chip),0
 ; 		ld	(ix+chnl_Flags),0
 		pop	bc
@@ -2726,15 +2546,20 @@ setupchip:
 
 ; This auto-replaces the LINKED channel
 .chk_tbln:
-		push	iy
-		pop	de		; de - Copy of curr track-channel
-		rst	8
-		ld	a,(ix+1)
-		or	a
-		jr	z,.new
-		cp	d		; Same Channel MSB?
-		jr	z,.new
-		jr	nc,.busy_s	; If not, skip
+
+	; TODO: priority overwrite goes here...
+; 		push	iy
+; 		pop	de		; de - Copy of curr track-channel
+; 		rst	8
+; 		ld	a,(ix+1)	; MSB | LSB
+; 		or	(ix)		; Check if blank
+; 		jr	z,.new
+; 		ld	a,(ix+1)	; MSB | LSB
+; 		cp	d		; Same MSB?
+; 		jr	nz,.busy_s
+; 		ld	a,(ix)
+; 		cp	e		; Same LSB?
+; 		jr	nc,.busy_s
 .new:
 		rst	8
 		ld	(ix),e		; NEW slot
@@ -2758,17 +2583,15 @@ setupchip:
 		push	iy
 		pop	de		; de - Copy of curr track-channel
 		rst	8
-		cp	d
+		cp	d		; check if link matches
 		jr	nz,.diffr
 		ld	a,(ix)
 		cp	e
 		jr	nz,.diffr
 		xor	a		; return 0
 		ret
-
-; d - MSB to check for auto-priority
 .diffr:
-		ld	a,c		; already found link at bc?
+		ld	a,c		; bc link already set?
 		or	b
 		jr	nz,.alrdfnd
 		rst	8
@@ -2787,9 +2610,10 @@ setupchip:
 		jr	z,.fndlink
 		cp	-1
 		jr	z,.fndlink
-		ld	a,e		; Check if MSB is higher
-		cp	d
-		jr	nc,.alrdfnd
+		jr	.alrdfnd
+; 		ld	a,e		; TODO: priority.
+; 		cp	d
+; 		jr	nc,.alrdfnd
 .fndlink:
 		push	ix		; bc - got new link
 		pop	bc
@@ -2804,11 +2628,6 @@ setupchip:
 		ld	a,c		; found free link?
 		or	b
 		jr	z,.fndslot
-
-
-; 		cp	d		; Same Channel MSB?
-; 		jr	z,.fndslot	; If not, skip
-; 		jr	c,.fndslot
 		push	bc
 		pop	ix		; tell ix is the new slot
 		push	iy
@@ -2958,8 +2777,8 @@ showRom:
 ; readRomB:
 ; Reads a byte from ROM safetly, for a single and quick
 ; byte-read only, NOT autoswitchable.
-; CALL showRom FIRST, DO NOT CALL dac_fill BEFORE
-; GETTING HERE
+; CALL showRom FIRST, DO NOT CALL RST 20h (dac_fill)
+; BEFORE GETTING HERE
 ;
 ; Input:
 ; hl - ROM position in Z80's area
@@ -3580,9 +3399,9 @@ chip_env:
 ; only call this if needed
 .fm_insupd:
 		push	bc
-		call	.fm_keyoff	; restart chip channel
-		call	dac_fill	; TODO: check if it slowdowns here...
-		push	ix		; copy ix to hl
+		call	.fm_keyoff		; restart chip channel
+		rst	20h;call dac_fill	; TODO: ver si se pone lento aqui...
+		push	ix			; copy ix to hl
 		pop	hl
 		ld	a,c
 		and	011b
@@ -3784,22 +3603,6 @@ dac_play:
 		ret
 
 ; --------------------------------------------------------
-; dac_fill
-;
-; Refills a half of the WAVE FIFO data, automatic
-;
-; *** self-modifiable code ***
-; --------------------------------------------------------
-
-dac_fill:	push	af		; <-- code changes between PUSH AF(playing) and RET(stopped)
-		ld	a,(dDacFifoMid)
-		exx
-		xor	h		; xx.00
-		exx
-		and	80h
-		jp	nz,dac_refill
-		pop	af
-		ret
 
 ; First wave fill
 dac_firstfill:
@@ -4220,18 +4023,17 @@ trkPointers:
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
+trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
+trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
+
 insDataC_0	ds 8*16		; Instrument data for each Track slot
 insDataC_1	ds 8*16		; 8*MAX_INS
-x68ksrclsb	db 0			; transferRom temporal LSB
-x68ksrcmid	db 0			; transferRom temporal MID
 currInsData	dw 0
 currTblPos	dw 0
 currInsPos	dw 0
 currTrkCtrl	dw 0
-currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
-marsUpd		db 0		; update PWM sound
-tickFlag	dw 0			; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
-tickCnt		db 0			; Tick counter (PUT THIS TAG AFTER tickFlag)
+tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
+tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 wave_Start	dw 0		; START: 68k 24-bit pointer
 		db 0
 wave_Len	dw 0		; LENGTH 24-bit
@@ -4292,19 +4094,16 @@ pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 
-		org 1B00h
+		org 1C00h
 dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
 trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
 trkData_1	ds 100h
-trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
 commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
 dDacPntr	db 0,0,0		; WAVE play current ROM position
 dDacCntr	db 0,0,0		; WAVE play length counter
 dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
 psgHatMode	db 0
 fmSpcMode	db 0
-flagResChip	db 0			; reset chips flag
 trkHdOut	ds 6			; temporal Header for reading Track position/row count
-trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
 
 ; Stack area

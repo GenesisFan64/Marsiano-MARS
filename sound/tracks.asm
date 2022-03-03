@@ -89,14 +89,44 @@ GemaSfxIns_Boom:
 	gInsFm 0,FmIns_Ding_toy
 
 GemaTrkData_Test:
-	dc.l GemaPat_Test
-	dc.l GemaBlk_Test
-	dc.l GemaIns_Test
+	dc.l GemaPat_Test3
+	dc.l GemaBlk_Test3
+	dc.l GemaIns_Test3
 GemaBlk_Test:
-	binclude "sound/tracks/wegot_blk.bin"
+	binclude "sound/tracks/test_blk.bin"
 GemaPat_Test:
-	binclude "sound/tracks/wegot_patt.bin"
+	binclude "sound/tracks/test_patt.bin"
 GemaIns_Test:
+; 	gInsDac 0,DacIns_Test,0
+	gInsPwm 0,PwmIns_Test_st,%10
+
+; 	gInsFm -12,FmIns_Brass_Eur
+; 	gInsFm 0,FmIns_Bass_italo
+; 	gInsDac -36,DacIns_wegot_kick,0
+; 	gInsPsgN 0,$00,$00,$00,$00,$10,%100
+; 	gInsNull
+;
+; 	gInsPsg 0,$40,$50,$10,$06,$08
+; 	gInsDac +16,DacIns_snare_magn,0
+; 	gInsFm -24,FmIns_Brass_Eur
+; 	gInsNull
+; 	gInsNull
+;
+; 	gInsNull
+; 	gInsNull
+; 	gInsFm -12,FmIns_Flaute_cave
+; 	gInsNull
+; 	gInsNull
+
+GemaTrkData_Test2:
+	dc.l GemaPat_Test2
+	dc.l GemaBlk_Test2
+	dc.l GemaIns_Test2
+GemaBlk_Test2:
+	binclude "sound/tracks/wegot_blk.bin"
+GemaPat_Test2:
+	binclude "sound/tracks/wegot_patt.bin"
+GemaIns_Test2:
 	gInsFm 0,FmIns_PSynth_plus
 	gInsFm 0,FmIns_Bass_groove_2
 	gInsDac -36,DacIns_wegot_kick,0
@@ -107,6 +137,32 @@ GemaIns_Test:
 	gInsPsgN 0,$00,$00,$00,$00,$10,%100
 	gInsNull
 	gInsNull
+
+GemaTrkData_Test3:
+	dc.l GemaPat_Test
+	dc.l GemaBlk_Test
+	dc.l GemaIns_Test
+GemaBlk_Test3:
+	binclude "sound/tracks/vuela_blk.bin"
+GemaPat_Test3:
+	binclude "sound/tracks/vuela_patt.bin"
+GemaIns_Test3:
+	gInsFm -12,FmIns_Brass_Eur
+	gInsFm 0,FmIns_Bass_italo
+	gInsDac -36,DacIns_wegot_kick,0
+	gInsPsgN 0,$00,$00,$00,$00,$0E,%100
+	gInsNull
+	gInsPsg 0,$20,$40,$10,$06,$08
+	gInsDac +16,DacIns_snare_magn,0
+	gInsFm -24,FmIns_Brass_Eur
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsFm -24,FmIns_Trumpet_carnival
+	gInsFm -12,FmIns_Ding_toy
+	gInsNull
+
 
 ; GemaTrkData_Test:
 ; 	dc.l GemaPat_Test

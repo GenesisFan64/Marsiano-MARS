@@ -504,17 +504,19 @@ VInt_Default:
 HInt_Default:
 		rte
 
+; ====================================================================
 ; --------------------------------------------------------
-; 32X DREQ Communication
+; 32X Communication, using DREQ
 ;
-; THIS CODE ONLY WORKS PROPERLY IN THE
-; $880000/$900000 AREAS
+; Call this during VBlank
+;
+; NOTE: THIS CODE MUST BE AT $880000 area.
 ; --------------------------------------------------------
 
 System_MdMarsDreq:
-		lea	(RAM_MdDreq),a6		; Data to send (RAM section)
-		lea	($A15112).l,a5		; DREQ fifo port
-		move.w	#MAX_MDDREQ/2,d6	; Size in bytes
+		lea	(RAM_MdDreq),a6			; Data to send (RAM section)
+		lea	($A15112).l,a5			; DREQ fifo port
+		move.w	#MAX_MDDREQ/2,d6		; Size in bytes
 		move.w	sr,d7
 		move.w	#$2700,sr
 .retry:
@@ -522,21 +524,24 @@ System_MdMarsDreq:
 		move.w	#$00E,(vdp_data).l
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LEN
 		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
+		bset	#0,(sysmars_reg+standby).l	; Request CMD to Master
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
+; 		bne.s	.wait_cmd
+.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal
+		beq.s	.wait_bit
+		bclr	#6,(sysmars_reg+comm14).l
 		move.w	d6,d5
 		lsr.w	#2,d5
 		sub.w	#1,d5
-		bset	#0,(sysmars_reg+standby).l	; Request CMD to Master
-.wait_cmd:	btst	#0,(sysmars_reg+standby).l
-		bne.s	.wait_cmd
-.l0:		move.w  (a6)+,(a5)			; From here the SH2 reads FIFO using DMA
-		move.w  (a6)+,(a5)			; First In, First Out
+.l0:		move.w  (a6)+,(a5)		; From here the SH2 reads FIFO using DMA
+		move.w  (a6)+,(a5)		; First In, First Out
 		move.w  (a6)+,(a5)
 		move.w  (a6)+,(a5)
-.l1:		btst	#7,dreqctl(a5)			; Got Full here?
+.l1:		btst	#7,dreqctl(a5)		; Got Full here?
 		bne.s	.l1
 		dbf	d5,.l0
-; 		btst	#2,dreqctl(a5)			; DMA got ok?
-; 		bne	.retry
+		btst	#2,dreqctl(a5)		; DMA got ok?
+		bne	.retry
 		move.l	#$C0000000,(vdp_ctrl).l
 		move.w	#$000,(vdp_data).l
 		move.w	d7,sr

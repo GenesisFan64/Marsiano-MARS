@@ -13,23 +13,17 @@ gSmpl macro locate,loop
 	dc.b ((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
 	binclude locate,$2C	; actual data
 .end
-	align 4			; align 4 for pwm's
 	endm
 
-	align 4			; FIRST ALIGN FOR PWMs
+DacIns_Test:
+	gSmpl "sound/instr/smpl/baila.wav",0
+
 DacIns_wegot_kick:
 	gSmpl "sound/instr/smpl/wegot_kick.wav",0
 DacIns_wegot_crash:
 	gSmpl "sound/instr/smpl/wegot_crash.wav",0
-; DacIns_Snare_Gem:
-; 	gSmpl "sound/instr/smpl/snare_lobo.wav",0
-; DacIns_CdSnare:
-; 	gSmpl "sound/instr/smpl/cd_snare.wav",0
-; DacIns_SaurKick:
-; 	gSmpl "sound/instr/smpl/sauron_kick.wav",0
-; DacIns_SaurSnare:
-; 	gSmpl "sound/instr/smpl/sauron_snare.wav",0
-; DacIns_String1:
-; 	gSmpl "sound/instr/smpl/string_1.wav",0
-; DacIns_LowString:
-; 	gSmpl "sound/instr/smpl/lowstring.wav",1200
+
+DacIns_snare_lobo:
+	gSmpl "sound/instr/smpl/snare_lobo.wav",0
+DacIns_snare_magn:
+	gSmpl "sound/instr/smpl/snare_magn.wav",0

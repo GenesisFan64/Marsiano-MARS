@@ -144,7 +144,7 @@ Video_Update:
 ; in the middle of the screen.
 ; --------------------------------------------------------
 
-Video_PalTarget:
+Video_FadePal:
 		lea	(RAM_PaletteFd),a6
 		bra.s	vidMd_Pal
 Video_LoadPal:
@@ -496,7 +496,7 @@ Video_PrintInit:
 		moveq	#$30,d0
 		move.w	#$F,d1
 		bsr	Video_LoadPal
-		bsr	Video_PalTarget
+		bsr	Video_FadePal
 		move.l	#ASCII_FONT,d0
 		move.w	#$580*$20,d1
 		move.w	#ASCII_FONT_e-ASCII_FONT,d2
@@ -1119,6 +1119,8 @@ Video_MarsPalFade:
 		or.w	d4,d6
 		lsr.w	#8,d1
 		lsr.w	#2,d1
+		and.w	#$8000,d7
+		or.w	d7,d6
 		move.w	d6,(a5)+
 		adda	#2,a6
 		cmp.w	#%111,d2

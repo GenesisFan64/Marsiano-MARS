@@ -219,7 +219,8 @@ Sound_TrkPlay:
 		bsr	sndReq_sbyte
 		move.b	d2,d7		; d2 - Start block
 		bsr	sndReq_sbyte
-		move.b	d3,d7		; d3 - Flags
+		move.b	d3,d7		; d3 - Flags (%321 enable these timers)
+		and.w	#%111,d7
 		bsr	sndReq_sbyte
 		move.l	(a0)+,d7	; Patt data point
 		bsr	sndReq_saddr
