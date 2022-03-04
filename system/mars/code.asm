@@ -22,8 +22,8 @@ marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
 marsGbl_IndxPlgn	ds.l 1	; Current polygon to slice
 marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
-marsGbl_DreqSwap	ds.w 1	; DREQ mid-swap flag
-marsGbl_CurrNumFaces	ds.w 1	; And the number of faces stored on that list
+marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
+marsGbl_UpdModels	ds.w 1	; Flag to update models
 marsGbl_WdgMode		ds.w 1	; Current Watchdog task
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
@@ -357,12 +357,8 @@ m_irq_cmd:
 		mov	#_sysreg,r4
 		mov	#_DMASOURCE0,r3
 		mov	#_sysreg+comm14,r2
-		mov	#0,r0
-		mov	r0,@($30,r3)
-		mov	#%0100010011100000,r0	; Transfer mode but DMA enable bit is 0
-		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
+		mov	@(marsGbl_DreqRead,gbr),r0
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
@@ -375,14 +371,21 @@ m_irq_cmd:
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
-; .wait_dma:
-; 		mov	@($C,r3), r0
-; 		tst	#2,r0
-; 		bt	.wait_dma
 
-	; Make new changes here using the
-	; current _DreqRead buffer. while the DMA
-	; write to the _DreqWrite area
+; 		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
+; 		mov	r0,r1
+; 		mov	@(marsGbl_DreqWrite,gbr),r0
+; 		mov	r0,@(marsGbl_DreqRead,gbr)
+; 		mov	r1,r0
+; 		mov	r0,@(marsGbl_DreqWrite,gbr)
+.wait_dma:
+		mov	@($C,r3),r0
+		tst	#2,r0
+		bt	.wait_dma
+		mov	#0,r0			; _DMAOPERATION = 0
+		mov	r0,@($30,r3)
+
+	; Copy palette
 		mov	#Dreq_Palette,r1
 		mov	@(marsGbl_DreqRead,gbr),r0
 		add	r0,r1
@@ -403,6 +406,16 @@ m_irq_cmd:
 		dt	r3
 		bf/s	.copy_pal
 		add	#4,r2
+
+	; Set X/Y pos
+		mov	#RAM_Mars_Bg2,r3
+		mov	#Dreq_BgXpos,r4
+		mov	@(marsGbl_DreqRead,gbr),r0
+		add	r0,r4
+		mov	@r4+,r1
+		mov	@r4+,r2
+		mov	r1,@(0,r3)
+		mov	r2,@(4,r3)
 
 		mov	@r15+,r4
 		mov	@r15+,r3
@@ -1108,35 +1121,34 @@ master_loop:
 	; Control background position
 	; ---------------------------------------
 		mov	#RAM_Mars_Background,r14
-		mov	#Dreq_BgXpos,r13
-		mov	@(marsGbl_DreqRead,gbr),r0
-		add	r0,r13
+		mov	#RAM_Mars_Bg2,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
 		bsr	MarsVideo_MoveBg
 		nop
+		ldc	@r15+,sr			; Interrupts ON
 
 	; ---------------------------------------
 
-		mov	#_DMACHANNEL0,r1		; Check if DMA is active
-		mov	@r1,r0
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet
-; .wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
-; 		and	#%10,r0				; TODO: checar en hardware
+; 		mov	#_DMACHANNEL0,r1		; Check if DMA is active
+; 		mov	@r1,r0
+; 		and	#%01,r0
 ; 		tst	r0,r0
-; 		bt	.wait_dma
-		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
-		mov	r0,r1
-		mov	@(marsGbl_DreqWrite,gbr),r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-		mov	r1,r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
-.not_yet:
-		ldc	@r15+,sr			; Interrupts ON
+; 		bt	.not_yet
+; ; .wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
+; ; 		and	#%10,r0				; TODO: checar en hardware
+; ; 		tst	r0,r0
+; ; 		bt	.wait_dma
+; 		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
+; 		mov	r0,r1
+; 		mov	@(marsGbl_DreqWrite,gbr),r0
+; 		mov	r0,@(marsGbl_DreqRead,gbr)
+; 		mov	r1,r0
+; 		mov	r0,@(marsGbl_DreqWrite,gbr)
+; .not_yet:
+; 		ldc	@r15+,sr			; Interrupts ON
 		mov	#_vdpreg,r1
 .no_vbl:
 		mov.b	@(vdpsts,r1),r0			; Still on VBlank?
@@ -1283,21 +1295,23 @@ mstr_gfx_3:
 		add	#2,r3
 .no_redraw:
 
+	; Update model positions here
 		mov	#RAM_Mars_Objects,r2	; temporal rotation
 		mov	#$2000,r1
 		mov	@(mdl_x_rot,r2),r0
 		add	r1,r0
 		mov	r0,@(mdl_x_rot,r2)
-		mov	#$2000,r1
-		mov	@(mdl_y_rot,r2),r0
-		add	r1,r0
-		mov	r0,@(mdl_y_rot,r2)
-		mov	#$2000,r1
-		mov	@(mdl_z_rot,r2),r0
-		add	r1,r0
-		mov	r0,@(mdl_z_rot,r2)
+; 		mov	#$2000,r1
+; 		mov	@(mdl_y_rot,r2),r0
+; 		add	r1,r0
+; 		mov	r0,@(mdl_y_rot,r2)
+; 		mov	#$2000,r1
+; 		mov	@(mdl_z_rot,r2),r0
+; 		add	r1,r0
+; 		mov	r0,@(mdl_z_rot,r2)
 
-	; Request MODEL reading
+	; ---------------------------------------
+	; Request model rendering
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		or	#%00010000,r0
@@ -1343,46 +1357,11 @@ mstr_gfx_3:
 		mov.w	#$A538,r0			; Enable Watchdog
 		mov.w	r0,@r1
 
-	; ---------------------------------------
-	; Clear screen
-	; ---------------------------------------
-
-		mov	#_vdpreg,r1
-		mov	#$100,r2
-		mov	r2,r3
-		mov	#240,r4
-		mov	#320/2,r5
-		mov	#0,r6
-.fb_loop:
-		mov	r5,r0
-		mov.w	r0,@(filllength,r1)
-		mov	r2,r0
-		mov.w	r0,@(fillstart,r1)
-		mov	r6,r0
-		mov.w	r0,@(filldata,r1)
-.wait_fb2:	mov.w	@(vdpsts,r1),r0
-		and	#%10,r0
-		tst	r0,r0
-		bf	.wait_fb2
-		dt	r4
-		bf/s	.fb_loop
-		add	r3,r2
-
-	; ---------------------------------------
-
-		mov.w	@(marsGbl_PlgnCntr,gbr),r0	; Active polygon pieces?
-		cmp/pl	r0
-		bt	.no_swap
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-		tst	r0,r0
-		bt	.no_swap
-.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
-		tst	r0,r0
-		bt	.wait_wd
-		mov	#VideoMars_DrwPlgnPz,r0
+		mov	#VidCacheMars_DoPolygns,r0
 		jsr	@r0
 		nop
-.no_swap:
+
+
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		and	#%11101111,r0
@@ -1721,8 +1700,8 @@ MarsRam_System	ds.l 0
 MarsRam_Video	ds.l 0
 sizeof_marsram	ds.l 0
 	else
-MarsRam_Dreq0	ds.b MAX_MDDREQ				; Shared with Genesis side
-MarsRam_Dreq1	ds.b MAX_MDDREQ
+MarsRam_Dreq0	ds.b MAX_DREQ				; Shared with Genesis side
+MarsRam_Dreq1	ds.b MAX_DREQ
 MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
 sizeof_marsram	ds.l 0
@@ -1766,7 +1745,7 @@ RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
 RAM_Mars_Background	ds.w sizeof_marsbg
-; RAM_Mars_BgData		ds.b (320+16)*(224+16)
+RAM_Mars_Bg2		ds.l 2
 RAM_Mars_Palette	ds.w 256
 sizeof_marsvid		ds.l 0
 			finish

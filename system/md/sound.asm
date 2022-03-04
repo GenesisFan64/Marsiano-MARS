@@ -231,7 +231,7 @@ Sound_TrkPlay:
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------
-; SoundReq_StopTrack
+; SoundReq_StopTrack (Pause too.)
 ;
 ; d0 - Slot
 ; --------------------------------------------------------
@@ -245,20 +245,6 @@ Sound_TrkStop:
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------
-; Sound_TrkPause
-;
-; d0 - Slot
-; --------------------------------------------------------
-
-Sound_TrkPause:
-		bsr	sndReq_Enter
-		move.w	#$02,d7		; Command $01
-		bsr	sndReq_scmd
-		move.b	d0,d7		; d0 - Slot
-		bsr	sndReq_sbyte
-		bra 	sndReq_Exit
-
-; --------------------------------------------------------
 ; Sound_TrkResume
 ;
 ; d0 - Slot
@@ -266,7 +252,7 @@ Sound_TrkPause:
 
 Sound_TrkResume:
 		bsr	sndReq_Enter
-		move.w	#$03,d7		; Command $01
+		move.w	#$02,d7		; Command $01
 		bsr	sndReq_scmd
 		move.b	d0,d7		; d0 - Slot
 		bsr	sndReq_sbyte

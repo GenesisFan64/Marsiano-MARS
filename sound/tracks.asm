@@ -98,7 +98,7 @@ GemaPat_Test:
 	binclude "sound/tracks/test_patt.bin"
 GemaIns_Test:
 ; 	gInsDac 0,DacIns_Test,0
-	gInsPwm 0,PwmIns_Test_st,%10
+	gInsPwm 0,PwmIns_Test_st,%11
 
 ; 	gInsFm -12,FmIns_Brass_Eur
 ; 	gInsFm 0,FmIns_Bass_italo

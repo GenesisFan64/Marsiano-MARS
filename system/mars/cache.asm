@@ -491,8 +491,56 @@ put_piece:
 ; Draw polygon pieces
 ; ---------------------------------------
 
-go_drwtask_exit:
+VidCacheMars_DoPolygns:
+	; ---------------------------------------
+	; Clear screen
+	; ---------------------------------------
 
+		mov	#_vdpreg,r1
+		mov	#$100,r2
+		mov	r2,r3
+		mov	#240,r4
+		mov	#320/2,r5
+		mov	#0,r6
+.fb_loop:
+		mov	r5,r0
+		mov.w	r0,@(filllength,r1)
+		mov	r2,r0
+		mov.w	r0,@(fillstart,r1)
+		mov	r6,r0
+		mov.w	r0,@(filldata,r1)
+.wait_fb2:	mov.w	@(vdpsts,r1),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_fb2
+		dt	r4
+		bf/s	.fb_loop
+		add	r3,r2
+
+	; ---------------------------------------
+
+		mov.w	@(marsGbl_PlgnCntr,gbr),r0	; Active polygon pieces?
+		cmp/pl	r0
+		bt	.no_swap
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+		tst	r0,r0
+		bt	.no_swap
+.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
+		tst	r0,r0
+		bt	.wait_wd
+		sts	pr,@-r15
+		mov	#VideoMars_DrwPlgnPz,r0
+		jsr	@r0
+		nop
+		lds	@r15+,pr
+.no_swap:
+		rts
+		nop
+		align 4
+
+go_drwtask_exit:
+		bra	drwtask_exit
+		nop
 VideoMars_DrwPlgnPz:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		cmp/pl	r0
@@ -647,40 +695,16 @@ drwsld_nxtline_tex:
 		xor	r11,r11				; And reset XL to 0
 .tl_fix:
 
-	; ***OLD, STABLE
+	; ***STABLE
 		sub 	r11,r12
 		cmp/pl	r12
 		bf	.tex_skip_line
-; 		mov	#RAM_Mars_Background,r4
-; 		mov	@(mbg_fbdata,r4),r10
-; 		mov	@(mbg_fbpos,r4),r0
-; 		add	r0,r10
-; 		mov.w	@(mbg_intrl_w,r4),r0
-; 		mov	r0,r2
-; 		mov.w	@(mbg_yfb,r4),r0
-; 		mulu	r2,r0
-; 		sts	macl,r0
-; 		add	r0,r10
-; 		mov 	r9,r0				; Y position * $200
-; 		mulu	r0,r2				; background
-; 		sts	macl,r0
-; 		add 	r0,r10				; Add Y
-; 		add 	r11,r10				; Add X
-; 		mov	@(mbg_intrl_size,r4),r0
-; 		cmp/ge	r0,r10
-; 		bf	.lrgrsx
-; 		sub	r0,r10
-; .lrgrsx:
-; 		mov	#_overwrite,r0
-; 		add	r0,r10
-
 		mov	#_framebuffer+$200,r10
 		mov 	r9,r0				; Y position * $200
 		shll8	r0
 		shll	r0
 		add 	r0,r10				; Add Y
 		add 	r11,r10				; Add X
-
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r11		; r11 - texture data
 		mov	@(plypz_type,r14),r4		;  r4 - texture width|palinc
@@ -706,7 +730,7 @@ drwsld_nxtline_tex:
 		dt	r12
 		bf/s	.tex_xloop
 		add	r8,r7			; Update Y
-	; ****OLD
+	; ***STABLE
 
 .tex_skip_line:
 		mov	@r15+,r13
@@ -913,8 +937,6 @@ drwtask_exit:
 		align 4
 Cach_Bkup_L	ds.l 16		;
 Cach_Bkup_S	ds.l 0		; <-- Reads backwards
-; Cach_BkupP_L	ds.l 6
-; Cach_BkupP_S	ds.l 0
 Cach_DDA_Top	ds.l 2*2	; First 2 points
 Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2

@@ -399,9 +399,13 @@ System_SramInit:
 ; --------------------------------------------------------
 
 System_VBlank:
+		lea	(RAM_MdDreq),a0
+		move.w	#MAX_DREQ,d0
+		bsr	System_SendDreq
+.wait_vblnk:
 		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
-		beq.s	System_VBlank
+		beq.s	.wait_vblnk
 		bsr	System_Input			; Read inputs FIRST
 
 	; DMA'd Scroll and Palette
@@ -513,37 +517,37 @@ HInt_Default:
 ; NOTE: THIS CODE MUST BE AT $880000 area.
 ; --------------------------------------------------------
 
-System_MdMarsDreq:
-		lea	(RAM_MdDreq),a6			; Data to send (RAM section)
-		lea	($A15112).l,a5			; DREQ fifo port
-		move.w	#MAX_MDDREQ/2,d6		; Size in bytes
+System_SendDreq:
 		move.w	sr,d7
 		move.w	#$2700,sr
-.retry:
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$00E,(vdp_data).l
+		lea	($A15112).l,a5			; DREQ fifo port
+		move.w	d0,d6				; Size in bytes
+		lsr.w	#1,d6
+; .retry:
+; 		move.l	#$C0000000,(vdp_ctrl).l
+; 		move.w	#$00E,(vdp_data).l
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LEN
 		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
-; 		bne.s	.wait_cmd
-.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Not needed, we will check
+; 		bne.s	.wait_cmd			; for this bit instead:
+.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal to activate
 		beq.s	.wait_bit
-		bclr	#6,(sysmars_reg+comm14).l
+		bclr	#6,(sysmars_reg+comm14).l	; Clear it afterwards.
 		move.w	d6,d5
 		lsr.w	#2,d5
 		sub.w	#1,d5
-.l0:		move.w  (a6)+,(a5)		; From here the SH2 reads FIFO using DMA
-		move.w  (a6)+,(a5)		; First In, First Out
-		move.w  (a6)+,(a5)
-		move.w  (a6)+,(a5)
-.l1:		btst	#7,dreqctl(a5)		; Got Full here?
+.l0:		move.w  (a0)+,(a5)			; *** CRITICAL PART ***
+		move.w  (a0)+,(a5)
+		move.w  (a0)+,(a5)
+		move.w  (a0)+,(a5)
+.l1:		btst	#7,dreqctl(a5)			; Got Full here?
 		bne.s	.l1
 		dbf	d5,.l0
-		btst	#2,dreqctl(a5)		; DMA got ok?
-		bne	.retry
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$000,(vdp_data).l
+; 		btst	#2,dreqctl(a5)			; DMA got ok? (failsafe, supposedly)
+; 		bne	.retry
+; 		move.l	#$C0000000,(vdp_ctrl).l
+; 		move.w	#$000,(vdp_data).l
 		move.w	d7,sr
 		rts
 

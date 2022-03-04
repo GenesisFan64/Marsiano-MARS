@@ -10,7 +10,7 @@
 
 var_MoveSpd	equ	$4000
 MAX_TSTTRKS	equ	3
-MAX_TSTENTRY	equ	5
+MAX_TSTENTRY	equ	4
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -134,7 +134,6 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-; 		bsr	System_MdMarsDreq
 		bsr	System_VBlank
 		move.w	(RAM_WindowCurr).w,d2		; Window up/down
 		move.w	(RAM_WindowNew).w,d1		; animation
@@ -149,11 +148,9 @@ thisCode_Top:
 		move.w	(RAM_WindowCurr).w,(vdp_ctrl).l
 .same_w:
 		add.l	#1,(RAM_Framecount).l
-		bsr	System_MdMarsDreq
 		lea	str_InfoMouse(pc),a0
 		move.l	#locate(0,2,23),d0
 		bsr	Video_Print
-
 		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -252,9 +249,11 @@ thisCode_Top:
 		tst.w	d2
 		beq.s	.no_chng
 		lea	(MDLDATA_PAL_TEST),a0
+; 		moveq	#0,d2
 		cmp.w	#3,(RAM_CurrGfx).w
 		beq.s	.thispal
 		lea	(TESTMARS_BG_PAL),a0
+
 .thispal:
 		moveq	#0,d0
 		move.w	#256,d1
@@ -262,15 +261,15 @@ thisCode_Top:
 		bsr	Video_LoadPal_Mars
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 .no_chng:
-		bsr	.wave_backgrnd
-		rts
+; 		bsr	.wave_backgrnd
+; 		rts
 
 .wave_backgrnd:
 	; wave background
 		lea	(RAM_HorScroll),a0
 		moveq	#112-1,d7
 		move.w	(RAM_WaveTmr),d0
-		move.w	#6,d1
+		move.w	#8,d1
 .next:
 		bsr	System_SineWave
 		lsr.l	#8,d2
@@ -288,7 +287,7 @@ thisCode_Top:
 		lea	(RAM_VerScroll),a0
 		moveq	#(320/16)-1,d7
 		move.w	(RAM_WaveTmr),d0
-		move.w	#4,d1
+		move.w	#6,d1
 .next2:
 		bsr	System_SineWave_Cos
 		lsr.l	#8,d2
@@ -519,7 +518,7 @@ thisCode_Top:
 
 	; LEFT/RIGHT
 		lea	(RAM_CurrTrack),a1
-		cmp.w	#4,(RAM_CurrSelc).w
+		cmp.w	#3,(RAM_CurrSelc).w
 		bne.s	.toptrk
 		add	#2,a1
 .toptrk:
@@ -598,7 +597,7 @@ thisCode_Top:
 		dc.w .task_02-.tasklist
 		dc.w .task_03-.tasklist
 		dc.w .task_04-.tasklist
-		dc.w .task_05-.tasklist
+; 		dc.w .task_05-.tasklist
 
 ; d0 - Track slot
 .task_00:
@@ -613,13 +612,11 @@ thisCode_Top:
 .task_01:
 		bra	Sound_TrkStop
 .task_02:
-		bra	Sound_TrkPause
-.task_03:
 		bra	Sound_TrkResume
-.task_04:
+.task_03:
 		move.w	(RAM_CurrTicks).w,d1
 		bra	Sound_TrkTicks
-.task_05:
+.task_04:
 		move.w	(RAM_CurrTempo).w,d1
 		bra	Sound_GlbTempo
 
@@ -821,7 +818,7 @@ str_Cursor:	dc.b " ",$A
 
 str_Status:
 		dc.b "\\w",$A,$A
-		dc.b "\\w",$A,$A,$A,$A
+		dc.b "\\w",$A,$A,$A
 		dc.b "\\w",$A
 		dc.b "\\w",0
 		dc.l RAM_CurrIndx
@@ -835,8 +832,7 @@ str_Gema:
 		dc.b "Track index -----",$A,$A
 		dc.b "  Sound_TrkPlay",$A
 		dc.b "  Sound_TrkStop",$A
-		dc.b "  Sound_TrkPause**",$A
-		dc.b "  Sound_TrkResume**",$A
+		dc.b "  Sound_TrkResume",$A
 		dc.b "  Sound_TrkTicks",$A
 		dc.b "  Sound_GlbTempo",0
 		align 2
@@ -854,8 +850,10 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "comm12: \\w",0
+		dc.b "comm12: \\w",$A,$A
+		dc.b "Frames: \\l",0
 		dc.l sysmars_reg+comm12
+		dc.l RAM_Framecount
 		align 2
 
 PAL_EMI:

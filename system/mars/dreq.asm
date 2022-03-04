@@ -21,5 +21,5 @@ sizeof_dreq		ds.l 0
 			finish
 
 	if MOMPASS=7
-		message "DREQ RAM: \{sizeof_dreq} of \{MAX_MDDREQ}"
+		message "DREQ RAM: \{sizeof_dreq} of \{MAX_DREQ}"
 	endif

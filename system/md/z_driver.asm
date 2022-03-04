@@ -44,6 +44,7 @@ trk_sizeIns	equ 23	; Max instruments used
 trk_rowPause	equ 24
 trk_HdHalfway	equ 25	; Track heads reload byte
 trk_CachNotes	equ 26	; Track pattern buffer location (100h bytes)
+trk_CmdReq	equ 28	; Track command requests
 
 ; Track data: 8 bytes only
 chnl_Chip	equ 0		; MUST BE at 0
@@ -116,14 +117,15 @@ PWINSL		equ	48
 ; keep playing the sample while processing code
 ;
 ; Input (EXX):
-;  c - WAVEFIFO MSB
+;  c - WAVE buffer MSB
 ; de - Pitch (xx.00)
-; h  - WAVEFIFO LSB (as xx.00)
+; h  - WAVE buffer LSB (as xx.00)
 ;
 ; Uses (EXX):
 ; b
 ;
 ; *** self-modifiable code ***
+;
 ; call dac_on to enable WAVE playback
 ; or
 ; call dac_off to disable it
@@ -132,57 +134,55 @@ PWINSL		equ	48
 
 ; NOTE: This plays at 18000hz
 		org 8
-dac_me:		exx			; <-- opcode changes between EXX(play) and RET(stop)
-		ex	af,af'		; get our alt A/F
-		ld	b,l		; save l to b
-		ld	a,2Ah		; Prepare DAC register
+dac_me:		exx			; <-- this changes between EXX(play) and RET(stop)
+		ex	af,af'		; Swap af
+		ld	b,l		; Save pitch's .00 to b
+		ld	a,2Ah		; Prepare YM register 2Ah
 		ld	(Zym_ctrl_1),a
-		ld	l,h		; xx.00 to 00xx
-		ld	h,c		; Buffer MSB | 00xx
-		ld	a,(hl)		; Write WAVE byte
-		ld	(Zym_data_1),a
+		ld	l,h		; L - xx.00 to 00xx
+		ld	h,c		; H - Wave buffer MSB | 00xx
+		ld	a,(hl)		; Now read byte from the wave buffer
+		ld	(Zym_data_1),a	; and write it to DAC
 		ld	h,l		; get hl back
-		ld	l,b
-		add	hl,de		; Add pitch for next byte
-		ex	af,af'
+		ld	l,b		; Get .00 back from b to l
+		add	hl,de		; Pitch increment hl
+		ex	af,af'		; return af
 		exx
 		ret
 
 ; --------------------------------------------------------
 
-x68ksrclsb	db 0			; transferRom temporal LSB
-x68ksrcmid	db 0			; transferRom temporal MID
-currTickBits	db 0			; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
-marsUpd		db 0			; flag to request a PWM transfer
+commZRomBlk	db 0			; 68k ROM block flag
+commZRomRd	db 0			; Z80 ROM reading flag
+commZRead	db 0			; cmd read pointer (here)
+commZWrite	db 0			; cmd fifo wptr (from 68k)
 
 ; --------------------------------------------------------
 ; RST 20h (dac_me)
 ;
-; Check if the WAVE cache needs refilling
-;
-; Breaks ALL registers if refill is
-; needed.
+; Checks if the WAVE cache needs refilling, this
+; breaks ALL registers if refill is requested.
 ;
 ; *** self-modifiable code ***
 ; --------------------------------------------------------
 
 		org 20h
-dac_fill:	push	af		; <-- code changes between PUSH AF(playing) and RET(stopped)
-		ld	a,(dDacFifoMid)
+dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
+		ld	a,(dDacFifoMid)	; a - Get current wavebuffer LSB (00h or 80h)
 		exx
-		xor	h		; xx.00
+		xor	h		; 00xx.00
 		exx
-		and	80h
-		jp	nz,dac_refill
+		and	80h		; Compare bit
+		jp	nz,dac_refill	; If not, refill and update LSB to check
 		pop	af
 		ret
 
 ; --------------------------------------------------------
 
-commZRomBlk	db 0		; 68k ROM block flag
-commZRomRd	db 0		; Z80 ROM reading flag
-commZRead	db 0		; cmd read pointer (here)
-commZWrite	db 0		; cmd fifo wptr (from 68k)
+x68ksrclsb	db 0		; transferRom temporal LSB
+x68ksrcmid	db 0		; transferRom temporal MID
+currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
+marsUpd		db 0		; flag to request a PWM transfer
 marsBlock	db 0		; flag to temporally disable PWM communication
 palMode		db 0		; PAL speed flag (TODO)
 sbeatPtck	dw 200+12	; Global tempo (sub beats)
@@ -213,8 +213,8 @@ z80_init:
 
 drv_loop:
 		rst	8
-		call	get_tick	; Check for tick on VBlank
-		rst	20h
+		call	get_tick	; Check for Tick on VBlank
+		rst	20h		; first dacfill
 		rst	8
 		ld	b,0		; b - Reset current flags (beat|tick)
 		ld	a,(tickCnt)
@@ -239,32 +239,30 @@ drv_loop:
 		jr	z,.neither
 		ld	(currTickBits),a; Save BEAT/TICK bits
 		call	get_tick
-		call	setupchip	; Setup note changes to soundchips
+		call	setupchip	; Send changes to sound chips
 		call	get_tick
 		call	updtrack	; Update track data
 		call	get_tick
 		rst	8
 .neither:
-		call	mars_scomm
+		call	mars_scomm	; 32X communication for PWM playback
 		call	get_tick
 		rst	8
 .next_cmd:
-; 		call	dac_fill	; Critical for syncing wave
-		ld	a,(commZWrite)
+		ld	a,(commZWrite)	; Check command READ and WRITE indexes
 		ld	b,a
 		ld	a,(commZRead)
 		cp	b
-		jr	z,drv_loop
+		jr	z,drv_loop	; If both are equal: no commands
 		call	get_cmdbyte
 		cp	-1		; Get -1 (Start of command)
 		jr	nz,drv_loop
 		call	get_cmdbyte	; Read cmd number
-		add	a,a
+		add	a,a		; * 2
 		ld	hl,.list
 		ld	d,0
 		ld	e,a
 		add	hl,de
-; 		call	dac_fill
 		ld	a,(hl)
 		inc	hl
 		ld	h,(hl)
@@ -272,12 +270,12 @@ drv_loop:
 		jp	(hl)
 .list:
 		dw .cmnd_trkplay	; $00 - Play
-		dw .cmnd_trkstop	; $01 - Stop
-		dw .cmnd_trkpause	; $02 - Pause
-		dw .cmnd_trkresume	; $03 - Resume
-		dw .cmnd_0		; $04 - Fade out
-		dw .cmnd_0		; $05 - Fade in
-		dw .cmnd_0		; $06 - Set master volume
+		dw .cmnd_trkstop	; $01 - Stop/Pause
+		dw .cmnd_trkresume	; $02 - Resume
+		dw .cmnd_0		; $03 -
+		dw .cmnd_0		; $04 -
+		dw .cmnd_0		; $05 -
+		dw .cmnd_0		; $06 -
 		dw .cmnd_0		; $07 -
 		dw .cmnd_trkticks	; $08 - Set ticks
 		dw .cmnd_0		; $09 -
@@ -287,7 +285,7 @@ drv_loop:
 		dw .cmnd_0		; $0D -
 		dw .cmnd_0		; $0E -
 		dw .cmnd_0		; $0F -
-		dw .cmnd_trktempo	; $10 - Set global tempo
+		dw .cmnd_trktempo	; $10 - Set global subbeats
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
@@ -369,9 +367,8 @@ drv_loop:
 ; --------------------------------------------------------
 
 .cmnd_trkpause:
-		call	get_cmdbyte			; Get track slot
-		call	get_trkindx			; and read index iy
-		res	7,(iy+trk_status)		; Playback OFF
+		call	get_cmdbyte		; Get track slot
+		call	get_trkindx		; and read index iy
 		call	track_out
 		jp	.next_cmd
 
@@ -427,6 +424,9 @@ get_trkindx:
 		push	hl
 		pop	iy
 		ret
+trkPointers:
+		dw trkBuff_0
+		dw trkBuff_1
 
 ; --------------------------------------------------------
 ; Read cmd byte, auto re-aligns to 7Fh
@@ -490,6 +490,9 @@ updtrack:
 		ld	b,(iy+trk_status)	; b - Track status
 		bit	7,b			; Active?
 		ret	z
+		ld	a,(iy+trk_CmdReq)	; Any mid-request?
+		or	a
+		ret	nz
 		ld	(currInsData),de	; save temporal InsData
 		rst	8
 		ld	a,(currTickBits)	; a - Tick/Beat bits
@@ -624,7 +627,7 @@ updtrack:
 		call	.inc_cpatt
 .no_eff:
 		rst	8
-		ld	a,b		; Merge Impulse recycle bits to main bits
+		ld	a,b			; Merge the Impulse recycle bits to main bits
 		srl	a
 		srl	a
 		srl	a
@@ -653,11 +656,10 @@ updtrack:
 		cp	1		; Effect A: Tick set
 		call	z,.eff_A
 		cp	2		; Effect B: Position Jump
-		call	z,.eff_B	; *** a is trashed after this
+		call	z,.eff_B
 		cp	3		; Effect C: Pattern break
 		call	z,.eff_C
 		jp	.next_note
-
 .rnout_chnls:
 		pop	bc
 		jp	.next_note
@@ -734,8 +736,6 @@ updtrack:
 		ld	e,(ix+chnl_EffArg)	; e - Block SLOT to jump
 		ld 	(iy+trk_currBlk),e
 		rst	8
-; 		ld	e,(iy+trk_tickSet)	; Reset our Tick timer
-; 		ld	(iy+trk_tickTmr),e
 		ld	(iy+trk_rowPause),0	; Reset rowpause
 		ld	(ix+chnl_EffId),0	; (failsafe)
 		ld	(ix+chnl_EffArg),0
@@ -744,9 +744,9 @@ updtrack:
 		ret
 
 ; ----------------------------------------
-; Effect C: Pattern break/exit (custom)
+; Effect C: Pattern break/exit
 ; ***Not exactly as in Impulse but
-; moves to the next block
+; jumps to the next block
 ;
 ; If set to -1 it will end the track,
 ; so you can put multiple SFX into the
@@ -755,9 +755,9 @@ updtrack:
 
 .eff_C:
 		ld	bc,0			; clear rowcount
-		ld	a,(ix+chnl_EffArg)	; Arg is 0FFh?
-		cp	-1			; Use it as track-end (for SFX)
-		jp	z,.trkend_effC
+		ld	a,(ix+chnl_EffArg)
+		cp	-1			; EffArg == -1?
+		jp	z,.trkend_effC		; Use it as track-end (for SFX)
 
 ; ----------------------------------------
 ; If pattern finished, load the next one
@@ -901,8 +901,6 @@ updtrack:
 		ld	de,8
 		ld	b,MAX_TRKCHN
 .clrf:
-		push	de
-		push	bc
 		rst	8
 		ld	a,(ix+chnl_Chip)
 		or	a
@@ -911,9 +909,6 @@ updtrack:
 		ld	(ix+chnl_Flags),1
 		rst	8
 .nochip:
-		pop	bc
-		pop	de
-.dntslnce:
 		add	ix,de
 		djnz	.clrf
 		ld	(iy+trk_rowPause),0	; Reset row timer
@@ -964,8 +959,6 @@ track_out:
 		ld	de,8
 		ld	b,MAX_TRKCHN
 .clrfe:
-		push	de
-		push	bc
 		ld	a,(ix+chnl_Chip)
 		or	a
 		jr	z,.nochip
@@ -975,11 +968,10 @@ track_out:
 		or	1
 		ld	(ix+chnl_Flags),a
 .nochip:
-		pop	bc
-		pop	de
 		add	ix,de
 		djnz	.clrfe
-		set	3,(iy+trk_status)
+		ld	a,-1			; STOPALL track command
+		ld	(iy+trk_CmdReq),a
 		ret
 
 ; --------------------------------------------------------
@@ -1015,12 +1007,12 @@ mars_scomm:
 		ld	(marsUpd),a
 .wait_enter:
 		nop
-		ld	a,(iy+comm15)	; check if we got mid-process
+		ld	a,(iy+comm15)	; check if 68k got first.
 		and	00110000b
 		or	a
 		jr	nz,.wait_enter
-		set	1,(iy+standby)
-.wait_cmd:	bit	1,(iy+standby)	; Request Slave CMD
+		set	1,(iy+standby)	; Request Slave CMD
+.wait_cmd:	bit	1,(iy+standby)
 		jr	nz,.wait_cmd
 		ld	c,14		; c - Passes
 .next_pass:
@@ -1073,14 +1065,14 @@ setupchip:
 		ld	hl,insDataC_1
 		ld	iy,trkBuff_1
 .mk_chip:
-		bit	3,(iy+trk_status)	; stop-all bit?
-		jr	nz,.stopall
 		ld	a,(iy+trk_status)	; enable bit? (as plus/minus test)
 		or	a
 		ret	p
-		jr	.clr
-.stopall:
-		res	3,(iy+trk_status)
+		ld	a,(iy+trk_CmdReq)
+		ld	(iy+trk_CmdReq),0
+		cp	-1
+		jr	nz,.clr
+		res	7,(iy+trk_status)
 .clr:
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
@@ -1108,11 +1100,11 @@ setupchip:
 .do_chnl:
 		push	bc
 		call	.check_ins
-		cp	-1
+		cp	-1			; NULL instrument?
 		jr	z,.no_chnl
-		call	.chip_swap	; check if tracker channel swapped chip
-		call	.check_chnl	; a - chip requested
-		cp	-1		; Ran out of chip channels.
+		call	.chip_swap		; check if this channel switched chip
+		call	.check_chnl		; a - chip requested
+		cp	-1
 		jr	z,.ran_out
 		ld	(currInsPos),hl
 		ld	(currTblPos),ix
@@ -1138,7 +1130,7 @@ setupchip:
 		pop	bc
 		ret
 .no_chnl:
-		call	.chip_swap		; TODO: check if this breaks...
+; 		call	.chip_swap
 		ld	(iy+chnl_Chip),0
 ; 		ld	(ix+chnl_Flags),0
 		pop	bc
@@ -2036,9 +2028,6 @@ setupchip:
 		ld	(ix+1),0
 		ld	(ix+3),0	; pitch zero
 		ld	(iy+chnl_Chip),0
-; 		ld	a,(iy+chnl_Flags)
-; 		and	11001111b
-; 		ld	(iy+chnl_Flags),a
 		ret
 
 ; Play PSG note
@@ -2284,14 +2273,13 @@ setupchip:
 		ret
 
 ; keyoff/cut
+.fm_keycut:
+		ld	c,100b
+		jp	.chnl_unlink
 .fm_keyoff:
 		ld	c,010b
 		ld	(hl),c
 		ret
-.fm_keycut:
-		ld	c,100b
-.fm_dlink:
-		jp	.chnl_unlink
 
 ; ----------------------------------------
 ; Channel chip swap
@@ -2547,7 +2535,7 @@ setupchip:
 ; This auto-replaces the LINKED channel
 .chk_tbln:
 
-	; TODO: priority overwrite goes here...
+; 	TODO: priority overwrite goes here...
 ; 		push	iy
 ; 		pop	de		; de - Copy of curr track-channel
 ; 		rst	8
@@ -3181,8 +3169,6 @@ chip_env:
 	; iy - FM com
 	; ix - FM current instrument data
 	;  c - FM channel ID
-
-
 		ld	iy,fmcom
 		ld	ix,fmins_com
 		ld	bc,0500h
@@ -3270,7 +3256,6 @@ chip_env:
 		or	a
 		ret	z
 		ld	(iy),0		; Reset
-
 		bit	2,a		; Key-cut (010b) bit?
 		jp	nz,.fm_keycut
 		bit	1,a		; Key-off (100b) bit?
@@ -3377,7 +3362,6 @@ chip_env:
 		ld	e,c
 		ld	d,28h
 		jp	fm_send_1
-
 ; d - 0B4h+
 .fm_panupd:
 		ld	a,c
@@ -4013,10 +3997,6 @@ fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
 		dw 0AD00h,0A900h
 		dw 0AE00h,0AA00h
 daccom:		db 0			; single byte for key on, off and cut
-
-trkPointers:
-		dw trkBuff_0
-		dw trkBuff_1
 
 ; ====================================================================
 ; ----------------------------------------------------------------
