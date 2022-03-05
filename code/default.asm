@@ -149,7 +149,7 @@ thisCode_Top:
 .same_w:
 		add.l	#1,(RAM_Framecount).l
 		lea	str_InfoMouse(pc),a0
-		move.l	#locate(0,2,23),d0
+		move.l	#locate(0,1,1),d0
 		bsr	Video_Print
 		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
@@ -850,8 +850,7 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "comm12: \\w",$A,$A
-		dc.b "Frames: \\l",0
+		dc.b "comm12: \\w MD Frames: \\l",0
 		dc.l sysmars_reg+comm12
 		dc.l RAM_Framecount
 		align 2

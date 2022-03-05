@@ -491,53 +491,6 @@ put_piece:
 ; Draw polygon pieces
 ; ---------------------------------------
 
-VidCacheMars_DoPolygns:
-	; ---------------------------------------
-	; Clear screen
-	; ---------------------------------------
-
-		mov	#_vdpreg,r1
-		mov	#$100,r2
-		mov	r2,r3
-		mov	#240,r4
-		mov	#320/2,r5
-		mov	#0,r6
-.fb_loop:
-		mov	r5,r0
-		mov.w	r0,@(filllength,r1)
-		mov	r2,r0
-		mov.w	r0,@(fillstart,r1)
-		mov	r6,r0
-		mov.w	r0,@(filldata,r1)
-.wait_fb2:	mov.w	@(vdpsts,r1),r0
-		and	#%10,r0
-		tst	r0,r0
-		bf	.wait_fb2
-		dt	r4
-		bf/s	.fb_loop
-		add	r3,r2
-
-	; ---------------------------------------
-
-		mov.w	@(marsGbl_PlgnCntr,gbr),r0	; Active polygon pieces?
-		cmp/pl	r0
-		bt	.no_swap
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-		tst	r0,r0
-		bt	.no_swap
-.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
-		tst	r0,r0
-		bt	.wait_wd
-		sts	pr,@-r15
-		mov	#VideoMars_DrwPlgnPz,r0
-		jsr	@r0
-		nop
-		lds	@r15+,pr
-.no_swap:
-		rts
-		nop
-		align 4
-
 go_drwtask_exit:
 		bra	drwtask_exit
 		nop
@@ -943,11 +896,6 @@ Cach_DDA_Src	ds.l 4*2
 Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
 Cach_DDA_Src_R	ds.l 4
 
-Cach_Drw_All	ds.l 1		; Draw timers moved here
-Cach_Drw_U	ds.l 1
-Cach_Drw_D	ds.l 1
-Cach_Drw_L	ds.l 1
-Cach_Drw_R	ds.l 1
 Cach_XHead_L	ds.l 1		; Left draw beam
 Cach_XHead_R	ds.l 1		; Right draw beam
 Cach_YHead_U	ds.l 1		; Top draw beam

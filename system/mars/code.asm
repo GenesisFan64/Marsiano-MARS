@@ -15,8 +15,8 @@
 ; ----------------------------------------------------------------
 
 			struct 0
-marsGbl_DreqRead	ds.l 1	; DREQ Read/Write pointers
-marsGbl_DreqWrite	ds.l 1	; these get swapped on VBlank
+; marsGbl_DreqRead	ds.l 1	; DREQ Read/Write pointers
+; marsGbl_DreqWrite	ds.l 1	; these get swapped on VBlank
 marsGbl_PlyPzList_R	ds.l 1	; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
 marsGbl_IndxPlgn	ds.l 1	; Current polygon to slice
@@ -30,6 +30,13 @@ marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
 marsGbl_CurrFb		ds.w 1	; Current framebuffer number (It's a byte)
+
+marsGbl_BgDrwAll	ds.w 1	; Write 2 to request FULL redraw
+marsGbl_BgDrwR		ds.w 1	;
+marsGbl_BgDrwL		ds.w 1	;
+marsGbl_BgDrwU		ds.w 1	;
+marsGbl_BgDrwD		ds.w 1	;
+
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -358,7 +365,7 @@ m_irq_cmd:
 		mov	#_DMASOURCE0,r3
 		mov	#_sysreg+comm14,r2
 		mov	#_sysreg+dreqfifo,r1
-		mov	@(marsGbl_DreqRead,gbr),r0
+		mov	#RAM_Mars_DreqDma,r0
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0
@@ -371,13 +378,6 @@ m_irq_cmd:
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
-
-; 		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
-; 		mov	r0,r1
-; 		mov	@(marsGbl_DreqWrite,gbr),r0
-; 		mov	r0,@(marsGbl_DreqRead,gbr)
-; 		mov	r1,r0
-; 		mov	r0,@(marsGbl_DreqWrite,gbr)
 .wait_dma:
 		mov	@($C,r3),r0
 		tst	#2,r0
@@ -385,37 +385,18 @@ m_irq_cmd:
 		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
 
-	; Copy palette
-		mov	#Dreq_Palette,r1
-		mov	@(marsGbl_DreqRead,gbr),r0
-		add	r0,r1
-		mov	#RAM_Mars_Palette,r2
-		mov	#(256/2)/4,r3
-.copy_pal:
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
+	; Copy-paste DREQ data into a safe location
+	; If this CPU reads from the data we just
+	; recieved: the next DMA's will not work.
+		mov	#RAM_Mars_DreqDma,r1
+		mov	#RAM_Mars_DreqRead,r2
+		mov	#MAX_DREQ/4,r3		; copying as LONGS.
+.copy_safe:
 		mov	@r1+,r0
 		mov	r0,@r2
 		dt	r3
-		bf/s	.copy_pal
+		bf/s	.copy_safe
 		add	#4,r2
-
-	; Set X/Y pos
-		mov	#RAM_Mars_Bg2,r3
-		mov	#Dreq_BgXpos,r4
-		mov	@(marsGbl_DreqRead,gbr),r0
-		add	r0,r4
-		mov	@r4+,r1
-		mov	@r4+,r2
-		mov	r1,@(0,r3)
-		mov	r2,@(4,r3)
 
 		mov	@r15+,r4
 		mov	@r15+,r3
@@ -1036,10 +1017,10 @@ SH2_M_HotStart:
 		mov	#0,r0
 		mov	r0,@($30,r1)
 		mov	r0,@($C,r1)
-		mov	#MarsRam_Dreq0,r0
-		mov	r0,@(marsGbl_DreqRead,gbr)
-		mov	#MarsRam_Dreq1,r0
-		mov	r0,@(marsGbl_DreqWrite,gbr)
+; 		mov	#RAM_Mars_DreqDma,r0
+; 		mov	r0,@(marsGbl_DreqRead,gbr)
+; 		mov	#MarsRam_Dreq1,r0
+; 		mov	r0,@(marsGbl_DreqWrite,gbr)
 
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
@@ -1073,6 +1054,17 @@ SH2_M_HotStart:
 ; MASTER Loop
 ; ----------------------------------------------------------------
 
+; comm14 bits:
+; %?DRM 00VV
+; D - DMA signal bit for 68k
+; R - FULL screen redraw
+; M - Request 3d-model processing.
+; V - Pseudo graphics mode:
+; 	00 - Nothing
+; 	01 - ??? free
+; 	10 - 2D Scrolling mode
+; 	11 - 3D Mode
+
 master_loop:
 		mov	#_sysreg+comm12,r1
 		mov.b	@r1,r0
@@ -1105,7 +1097,7 @@ master_loop:
 		and	#$20,r0
 		tst	r0,r0				; Palette unlocked?
 		bt	.wait
-		mov	#RAM_Mars_Palette,r1
+		mov	#RAM_Mars_DreqRead+Dreq_Palette,r1
 		mov	#_palette,r2
  		mov	#256/16,r3
 .copy_pal:
@@ -1121,7 +1113,7 @@ master_loop:
 	; Control background position
 	; ---------------------------------------
 		mov	#RAM_Mars_Background,r14
-		mov	#RAM_Mars_Bg2,r13
+		mov	#RAM_Mars_DreqRead+Dreq_BgXpos,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
 		mov	r1,@(mbg_xpos,r14)
@@ -1174,8 +1166,8 @@ master_loop:
 		align 4
 .list:
 		dc.l mstr_gfx_0
-		dc.l mstr_gfx_1
-		dc.l mstr_gfx_1
+		dc.l mstr_gfx_0
+		dc.l mstr_gfx_2
 		dc.l mstr_gfx_3
 
 ; ---------------------------------------
@@ -1200,15 +1192,14 @@ mstr_gfx_0:
 ; sprites
 ; ---------------------------------------
 
-mstr_gfx_1:
+mstr_gfx_2:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
 		and	#%11011111,r0
 		mov.b	r0,@r1
-		mov	#Cach_Drw_All,r1		; DrawAll request (2 times)
 		mov	#2,r0
-		mov	r0,@r1
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov	#RAM_Mars_Background,r1
 		mov	#$200,r2
 		mov	#16,r3
@@ -1227,12 +1218,16 @@ mstr_gfx_1:
 		mov.b	r0,@(bitmapmd,r1)
 .lel:
 	; ---------------------------------------
-		mov	#Cach_Drw_All,r13		; DrawAll != 0?
-		mov	@r13,r0
+		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
 		dt	r0
-		mov	r0,@r13
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		mov	#_vdpreg,r1
+.wait_fb2:	mov.w	@(vdpsts,r1),r0
+		and	#%10,r0
+		tst	r0,r0
+		bf	.wait_fb2
 		bsr	MarsVideo_DrawAllBg
 		nop
 		bra	.from_drwall			; Don't need to draw off-screen
@@ -1253,8 +1248,8 @@ mstr_gfx_1:
 		mov	#224,r3
 		bsr	MarsVideo_MakeTbl
 		nop
-		bsr	MarsVideo_FixTblShift		; Fix those Xshift lines
-		nop
+		bsr	MarsVideo_FixTblShift		; Fix those broken lines that
+		nop					; the Xshift register can't move
 		bra	mstr_nextframe
 		nop
 		align 4
@@ -1270,19 +1265,17 @@ mstr_gfx_3:
 		mov.b	@r1,r0
 		and	#%11011111,r0
 		mov.b	r0,@r1
-		mov	#Cach_Drw_All,r1		; DrawAll request (2 times)
 		mov	#2,r0
-		mov	r0,@r1
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 .lel:
-		mov	#Cach_Drw_All,r13		; DrawAll != 0?
-		mov	@r13,r0
+		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
 		dt	r0
-		mov	r0,@r13
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov	#_framebuffer,r3
 		mov	#$200/2,r0
 		mov	r0,r1
@@ -1345,7 +1338,6 @@ mstr_gfx_3:
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-
 		mov	#_CCR,r1			; <-- Required for Watchdog
 		mov	#%00001000,r0			; Two-way mode
 		mov.w	r0,@r1
@@ -1357,11 +1349,44 @@ mstr_gfx_3:
 		mov.w	#$A538,r0			; Enable Watchdog
 		mov.w	r0,@r1
 
-		mov	#VidCacheMars_DoPolygns,r0
+	; ---------------------------------------
+	; Clear screen
+	; ---------------------------------------
+		mov	#_vdpreg,r1
+		mov	#$100,r2
+		mov	r2,r3
+		mov	#240,r4
+		mov	#320/2,r5
+		mov	#0,r6
+.fb_loop:
+		mov	r5,r0
+		mov.w	r0,@(filllength,r1)
+		mov	r2,r0
+		mov.w	r0,@(fillstart,r1)
+		mov	r6,r0
+		mov.w	r0,@(filldata,r1)
+.wait_fb2:	mov.w	@(vdpsts,r1),r0
+		tst	#%10,r0
+		bf	.wait_fb2
+		dt	r4
+		bf/s	.fb_loop
+		add	r3,r2
+
+	; ---------------------------------------
+
+		mov.w	@(marsGbl_PlgnCntr,gbr),r0	; Active polygon pieces?
+		cmp/pl	r0
+		bt	.no_swap
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+		tst	r0,r0
+		bt	.no_swap
+; .wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
+; 		tst	r0,r0
+; 		bt	.wait_wd
+		mov	#VideoMars_DrwPlgnPz,r0
 		jsr	@r0
 		nop
-
-
+.no_swap:
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		and	#%11101111,r0
@@ -1694,17 +1719,13 @@ m_ascii		binclude "system/mars/data/m_ascii.bin"
 SH2_RAM:
 		struct SH2_RAM
 	if MOMPASS=1
-MarsRam_Dreq0	ds.l 0
-MarsRam_Dreq1	ds.l 0
-MarsRam_System	ds.l 0
-MarsRam_Video	ds.l 0
-sizeof_marsram	ds.l 0
+MarsRam_System		ds.l 0
+MarsRam_Video		ds.l 0
+sizeof_marsram		ds.l 0
 	else
-MarsRam_Dreq0	ds.b MAX_DREQ				; Shared with Genesis side
-MarsRam_Dreq1	ds.b MAX_DREQ
-MarsRam_System	ds.b (sizeof_marssys-MarsRam_System)
-MarsRam_Video	ds.b (sizeof_marsvid-MarsRam_Video)
-sizeof_marsram	ds.l 0
+MarsRam_System		ds.b (sizeof_marssys-MarsRam_System)
+MarsRam_Video		ds.b (sizeof_marsvid-MarsRam_Video)
+sizeof_marsram		ds.l 0
 	endif
 
 .here:
@@ -1745,8 +1766,6 @@ RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
 RAM_Mars_Background	ds.w sizeof_marsbg
-RAM_Mars_Bg2		ds.l 2
-RAM_Mars_Palette	ds.w 256
 sizeof_marsvid		ds.l 0
 			finish
 
@@ -1756,6 +1775,8 @@ sizeof_marsvid		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
+RAM_Mars_DreqDma	ds.b MAX_DREQ			; *DMA ACCESS ONLY*
+RAM_Mars_DreqRead	ds.b MAX_DREQ			; Copy-paste for safe reading...
 RAM_Mars_Global		ds.l sizeof_MarsGbl		; gbr values go here.
 sizeof_marssys		ds.l 0
 			finish

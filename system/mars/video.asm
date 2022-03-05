@@ -713,14 +713,14 @@ MarsVideo_BgDrawLR:
 		mulu	r3,r0
 		sts	macl,r0
 		add	r0,r8
-		mov	#Cach_Drw_R,r1
-		mov	#Cach_Drw_L,r2
-		mov	@r1,r0
+
+		mov.w	@(marsGbl_BgDrwR,gbr),r0
 		cmp/eq	#0,r0
 		bf	.dtsk01_dright
-		mov	@r2,r0
+		mov.w	@(marsGbl_BgDrwL,gbr),r0
 		cmp/eq	#0,r0
 		bf	.dtsk01_dleft
+
 .nxt_drawud:
 		rts
 		nop
@@ -728,14 +728,14 @@ MarsVideo_BgDrawLR:
 
 .dtsk01_dleft:
 		dt	r0
-		mov	r0,@r2
+		mov.w	r0,@(marsGbl_BgDrwL,gbr)
 		mov	#Cach_XHead_L,r0
 		mov	@r0,r0
 		bra	dtsk01_lrdraw
 		mov	r0,r5
 .dtsk01_dright:
 		dt	r0
-		mov	r0,@r1
+		mov.w	r0,@(marsGbl_BgDrwR,gbr)
 		mov	#320,r3			; Set FB position
 		mov.b	@(mbg_flags,r14),r0
 		and	#1,r0
@@ -851,17 +851,17 @@ MarsVideo_BgDrawUD:
 		bra	.wrpagain
 		sub	r5,r6
 .upwrp:
-		mov	#Cach_Drw_U,r1
-		mov	#Cach_Drw_D,r2
-		mov	@r1,r0
+; 		mov	#Cach_Drw_U,r1
+; 		mov	#Cach_Drw_D,r2
+		mov.w	@(marsGbl_BgDrwU,gbr),r0
 		cmp/eq	#0,r0
 		bf	.tsk00_up
-		mov	@r2,r0
+		mov.w	@(marsGbl_BgDrwD,gbr),r0
 		cmp/eq	#0,r0
 		bt	drw_ud_exit
 .tsk00_down:
 		dt	r0
-		mov	r0,@r2
+		mov.w	r0,@(marsGbl_BgDrwD,gbr)
 
 		mov	#Cach_YHead_D,r0
 		mov	@r0,r0
@@ -873,7 +873,7 @@ MarsVideo_BgDrawUD:
 		mov	r6,r9
 .tsk00_up:
 		dt	r0
-		mov	r0,@r1
+		mov.w	r0,@(marsGbl_BgDrwU,gbr)
 		mov	#Cach_YHead_U,r0
 		mov	@r0,r0
 		mulu	r7,r0
@@ -1137,8 +1137,8 @@ MarsVideo_MoveBg:
 
 	; ---------------------------------------
 
-		mov	#Cach_Drw_U,r8
-		mov	#Cach_Drw_D,r9
+; 		mov	#Cach_Drw_U,r8
+; 		mov	#Cach_Drw_D,r9
 		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r3
 		and	r0,r3			; r3 - block size to check
@@ -1150,31 +1150,28 @@ MarsVideo_MoveBg:
 		bt	.ydr_busy
 		cmp/pl	r2
 		bf	.reqd_b
-		mov	@r8,r0
+		mov.w	@(marsGbl_BgDrwU,gbr),r0
 		mov	r0,r4
-		mov	@r9,r0
+		mov.w	@(marsGbl_BgDrwD,gbr),r0
 		or	r4,r0
 		cmp/eq	#0,r0
 		bf	.ydr_busy
 		mov	#2,r0
-		mov	r0,@r9
+		mov.w	r0,@(marsGbl_BgDrwD,gbr)
 		add	#$01,r5
 .reqd_b:
 		cmp/pz	r2
 		bt	.ydr_busy
-		mov	@r8,r0
+		mov.w	@(marsGbl_BgDrwU,gbr),r0
 		mov	r0,r4
-		mov	@r9,r0
+		mov.w	@(marsGbl_BgDrwD,gbr),r0
 		or	r4,r0
 		cmp/eq	#0,r0
 		bf	.ydr_busy
 		mov	#2,r0
-		mov	r0,@r8
+		mov.w	r0,@(marsGbl_BgDrwU,gbr)
 		add	#$01,r5
 .ydr_busy:
-
-		mov	#Cach_Drw_L,r8
-		mov	#Cach_Drw_R,r9
 		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r4
 		mov	r6,r0
@@ -1188,26 +1185,26 @@ MarsVideo_MoveBg:
 		bt	.ydl_busy
 		cmp/pl	r1
 		bf	.reqr_b
-		mov	@r8,r0
+		mov.w	@(marsGbl_BgDrwL,gbr),r0
 		mov	r0,r4
-		mov	@r9,r0
+		mov.w	@(marsGbl_BgDrwR,gbr),r0
 		or	r4,r0
 		cmp/eq	#0,r0
 		bf	.ydl_busy
 		mov	#2,r0
-		mov	r0,@r9
+		mov.w	r0,@(marsGbl_BgDrwR,gbr)
 		add	#$02,r5
 .reqr_b:
 		cmp/pz	r1
 		bt	.ydl_busy
-		mov	@r8,r0
+		mov.w	@(marsGbl_BgDrwL,gbr),r0
 		mov	r0,r4
-		mov	@r9,r0
+		mov.w	@(marsGbl_BgDrwR,gbr),r0
 		or	r4,r0
 		cmp/eq	#0,r0
 		bf	.ydl_busy
 		mov	#2,r0
-		mov	r0,@r8
+		mov.w	r0,@(marsGbl_BgDrwL,gbr)
 		add	#$02,r5
 .ydl_busy:
 		mov.w	@(mbg_intrl_blk,r14),r0

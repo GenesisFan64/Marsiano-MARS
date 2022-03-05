@@ -15,11 +15,14 @@
 
 			struct 0
 Dreq_Palette		ds.w 256
+Dreq_Models		ds.b sizeof_mdlobj*MAX_MODELS
 Dreq_BgXpos		ds.l 1
 Dreq_BgYpos		ds.l 1
 sizeof_dreq		ds.l 0
 			finish
 
+MAX_DREQ		equ sizeof_dreq
+
 	if MOMPASS=7
-		message "DREQ RAM: \{sizeof_dreq} of \{MAX_DREQ}"
+		message "DREQ RAM uses: \{sizeof_dreq}"
 	endif

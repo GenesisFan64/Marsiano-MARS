@@ -4,7 +4,7 @@
 ; ----------------------------------------------------------------
 
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-MAX_DREQ	equ $400	; MAX DREQ bytes for non-visual stuff
+
 MAX_MODELS	equ 16
 
 ; ====================================================================
