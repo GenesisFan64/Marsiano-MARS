@@ -124,9 +124,9 @@ thisCode_Top:
 		moveq	#0,d2
 		bsr	Sound_TrkPlay
 
-; 		lea	(RAM_MdDreq+Dreq_Models),a0
-; 		move.l	#MarsObj_test,mdl_data(a0)
-; 		move.l	#-$C0000,mdl_z_pos(a0)
+		lea	(RAM_MdDreq+Dreq_Objects),a0
+		move.l	#MarsObj_test,mdl_data(a0)
+		move.l	#-$80000,mdl_z_pos(a0)
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -296,6 +296,11 @@ thisCode_Top:
 		add.w	#4,d0
 		dbf	d7,.next2
 		add.w	#1,(RAM_WaveTmr2).w
+
+		lea	(RAM_MdDreq+Dreq_Objects),a0
+		add.l	#$4000,mdl_x_rot(a0)
+; 		add.l	#$2000,mdl_y_rot(a0)
+; 		add.l	#$2000,mdl_z_rot(a0)
 		rts
 
 ;

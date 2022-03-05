@@ -44,8 +44,8 @@ MarsSound_Init:
 		ldc	r0,gbr
 		mov	#$0105,r0
 		mov.w	r0,@(timerctl,gbr)
-; 		mov	#((((23011361<<1)/22050+1)>>1)+1),r0	; 22050 best
-		mov	#((((23011361<<1)/16000+1)>>1)+1),r0	; 22050 best
+		mov	#((((23011361<<1)/22050+1)>>1)+1),r0	; 22050 best
+; 		mov	#((((23011361<<1)/16000+1)>>1)+1),r0	; 22050 best
 		mov.w	r0,@(cycle,gbr)
 		mov	#1,r0
 		mov.w	r0,@(monowidth,gbr)

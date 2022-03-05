@@ -4,7 +4,6 @@
 ; ----------------------------------------------------------------
 
 MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-
 MAX_MODELS	equ 16
 
 ; ====================================================================
@@ -206,7 +205,7 @@ RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
 RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
 RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
 RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal
-RAM_MdDreq	ds.b MAX_DREQ
+RAM_MdDreq	ds.b sizeof_dreq
 sizeof_mdram	ds.l 0
 	endif
 

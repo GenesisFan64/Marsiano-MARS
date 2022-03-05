@@ -400,7 +400,7 @@ System_SramInit:
 
 System_VBlank:
 		lea	(RAM_MdDreq),a0
-		move.w	#MAX_DREQ,d0
+		move.w	#sizeof_dreq,d0
 		bsr	System_SendDreq
 .wait_vblnk:
 		move.w	(vdp_ctrl),d4

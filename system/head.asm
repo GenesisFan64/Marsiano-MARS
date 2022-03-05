@@ -275,6 +275,10 @@ MD_ErrorTrap:
 
 MD_Init:
 		move.w	#$2700,sr			; Disable interrupts
+.wait_dma:	move.w	(vdp_ctrl).l,d0			; Wait a frame
+		btst	#1,d0
+		bne.s	.wait_dma
+
 		lea	(sysmars_reg).l,a5
 		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?

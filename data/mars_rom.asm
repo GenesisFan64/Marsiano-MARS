@@ -70,7 +70,7 @@ TESTMARS_BG:
 	binclude "data/mars/test_art.bin"
 	align 4
 Textr_smoke:
-	binclude "data/mars/objects/mtrl/test_tex_art.bin"
+	binclude "data/mars/objects/mtrl/smoke_art.bin"
 	align 4
 
 ; --------------------------------------------------------

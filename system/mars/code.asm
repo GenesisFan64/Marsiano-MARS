@@ -348,6 +348,11 @@ m_irq_pwm:
 		nop
 		align 4
 
+; =================================================================
+; ------------------------------------------------
+; Master | CMD Interrupt
+; ------------------------------------------------
+
 m_irq_cmd:
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -378,6 +383,11 @@ m_irq_cmd:
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
+		nop				; Warm up.
+		nop
+		nop
+		nop
+		nop
 .wait_dma:
 		mov	@($C,r3),r0
 		tst	#2,r0
@@ -385,19 +395,22 @@ m_irq_cmd:
 		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
 
-	; Copy-paste DREQ data into a safe location
-	; If this CPU reads from the data we just
-	; recieved: the next DMA's will not work.
+	; Copy-Paste DREQ data into a safe location.
+	;
+	; After exiting this interrupt, if the CPU tries
+	; to read from the Destination data that we just
+	; recieved (at any location), the next DMA will
+	; get cancelled until that CPU stops messing with
+	; that peculiar location.
 		mov	#RAM_Mars_DreqDma,r1
 		mov	#RAM_Mars_DreqRead,r2
-		mov	#MAX_DREQ/4,r3		; copying as LONGS.
+		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS.
 .copy_safe:
 		mov	@r1+,r0
 		mov	r0,@r2
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
-
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -461,7 +474,7 @@ m_irq_v:
 
 ; =================================================================
 ; ------------------------------------------------
-; Master | VRES Interrupt (RESET on Genesis)
+; Master | VRES Interrupt (RESET button on Genesis)
 ; ------------------------------------------------
 
 m_irq_vres:
@@ -470,45 +483,43 @@ m_irq_vres:
 		mov.l	#_sysreg,r0
 		ldc	r0,gbr
 		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
+		mov	#_DMACHANNEL0,r1
+		mov	@r1,r0
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:
+		mov	@r1,r0
+		tst	#2,r0
+		bt	.wait_dma
+.not_yet:
+		mov	#_DMAOPERATION,r1
+		mov	#0,r0
+		mov	r0,@r1
+		mov	#$FFFFFE80,r1
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 
-	; TODO: Checar bien esto.
-	; Ya no se traba mucho como antes pero
-	; igual por si el USER resetea a lo wey.
-	;
-	; Mismo para SLAVE
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.mars_reset
 .md_reset:
-		mov.l	#"68UP",r1		; wait for the 68K to show up
-		mov.l	@(comm12,gbr),r0
+		mov	#"68UP",r1		; wait for the 68K to show up
+		mov	@(comm12,gbr),r0
 		cmp/eq	r0,r1
 		bf	.md_reset
 .sh_wait:
-		mov.l	#"S_OK",r1		; wait for the Slave CPU to show up
-		mov.l	@(comm4,gbr),r0
+		mov	#"S_OK",r1		; wait for the Slave CPU to show up
+		mov	@(comm4,gbr),r0
 		cmp/eq	r0,r1
 		bf	.sh_wait
-		mov.l	#"M_OK",r0		; let the others know master ready
-		mov.l	r0,@(comm0,gbr)
-		mov.l   #$FFFFFE80,r1		; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		mov.b	r0,@r1
-
-		mov.l	#CS3|$40000-8,r15	; Set reset values
-		mov.l	#SH2_M_HotStart,r0
-		mov.l	r0,@r15
+		mov	#"M_OK",r0		; let the others know master ready
+		mov	r0,@(comm0,gbr)
+		mov	#CS3|$40000-8,r15
+		mov	#SH2_M_HotStart,r0
+		mov	r0,@r15
 		mov.w	#$F0,r0
-		mov.l	r0,@(4,r15)
-		mov.l	#_DMAOPERATION,r1
-		mov.l	#0,r0
-		mov.l	r0,@r1			; Turn any DMA tasks OFF
-		mov.l	#_DMACHANNEL0,r1
-		mov.l	#0,r0
-		mov.l	r0,@r1
-		mov.l	#%0100010011100000,r1
-		mov.l	r0,@r1			; Channel control
+		mov	r0,@(4,r15)
 		rte
 		nop
 .mars_reset:
@@ -547,16 +558,15 @@ s_irq_pwm:
 		mov	#_sysreg+pwmintclr,r1
 		mov.w	r0,@r1
 
-		mov	#_sysreg+monowidth,r1
-		mov.b	@r1,r0
- 		tst	#$80,r0
- 		bf	.exit
+.hold_on:	mov	#_sysreg+monowidth,r1	; PWM full?
+		mov.b	@r1,r0			; Wait until any of
+ 		tst	#$80,r0			; L/R regs get free.
+ 		bf	.hold_on
 		sts	pr,@-r15
 		mov	#MarsSound_ReadPwm,r0
 		jsr	@r0
 		nop
 		lds	@r15+,pr
-.exit:
 		rts
 		nop
 		align 4
@@ -871,7 +881,7 @@ s_irq_v:
 
 ; =================================================================
 ; ------------------------------------------------
-; Slave | VRES Interrupt (Pressed RESET on Genesis)
+; Slave | VRES Interrupt (RESET button on Genesis)
 ; ------------------------------------------------
 
 s_irq_vres:
@@ -880,34 +890,42 @@ s_irq_vres:
 		mov.l	#_sysreg,r0
 		ldc	r0,gbr
 		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
+		mov	#_DMACHANNEL0,r1
+		mov	@r1,r0
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:
+		mov	@r1,r0
+		tst	#2,r0
+		bt	.wait_dma
+.not_yet:
+		mov	#_DMAOPERATION,r1
+		mov	#0,r0
+		mov	r0,@r1
+		mov	#$FFFFFE80,r1
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 		mov.b	@(dreqctl,gbr),r0
 		tst	#1,r0
 		bf	.mars_reset
 .md_reset:
-		mov.l	#"68UP",r1		; wait for the 68k to show up
-		mov.l	@(comm12,gbr),r0
+		mov	#"68UP",r1		; wait for the 68k to show up
+		mov	@(comm12,gbr),r0
 		cmp/eq	r0,r1
 		bf	.md_reset
-		mov.l	#"S_OK",r0		; tell the others slave is ready
-		mov.l	r0,@(comm4,gbr)
+		mov	#"S_OK",r0		; tell the others slave is ready
+		mov	r0,@(comm4,gbr)
 .sh_wait:
-		mov.l	#"M_OK",r1		; wait for the slave to show up
-		mov.l	@(comm0,gbr),r0
+		mov	#"M_OK",r1		; wait for the slave to show up
+		mov	@(comm0,gbr),r0
 		cmp/eq	r0,r1
 		bf	.sh_wait
-		mov.l	#CS3|$3F000-8,r15
-		mov.l	#SH2_S_HotStart,r0
-		mov.l	r0,@r15
+		mov	#CS3|$3F000-8,r15
+		mov	#SH2_S_HotStart,r0
+		mov	r0,@r15
 		mov.w	#$F0,r0
-		mov.l	r0,@(4,r15)
-		mov.l	#_DMAOPERATION,r1
-		mov.l	#0,r0
-		mov.l	r0,@r1			; DMA off
-		mov.l	#_DMACHANNEL0,r1
-		mov.l	#0,r0
-		mov.l	r0,@r1
-		mov.l	#%0100010011100000,r1
-		mov.l	r0,@r1			; Channel control
+		mov	r0,@(4,r15)
 		rte
 		nop
 .mars_reset:
@@ -1120,27 +1138,10 @@ master_loop:
 		mov	r2,@(mbg_ypos,r14)
 		bsr	MarsVideo_MoveBg
 		nop
-		ldc	@r15+,sr			; Interrupts ON
 
 	; ---------------------------------------
 
-; 		mov	#_DMACHANNEL0,r1		; Check if DMA is active
-; 		mov	@r1,r0
-; 		and	#%01,r0
-; 		tst	r0,r0
-; 		bt	.not_yet
-; ; .wait_dma:	mov	@r1,r0				; Middle of DMA transfer?
-; ; 		and	#%10,r0				; TODO: checar en hardware
-; ; 		tst	r0,r0
-; ; 		bt	.wait_dma
-; 		mov	@(marsGbl_DreqRead,gbr),r0	; Swap READ/WRITE pointers
-; 		mov	r0,r1
-; 		mov	@(marsGbl_DreqWrite,gbr),r0
-; 		mov	r0,@(marsGbl_DreqRead,gbr)
-; 		mov	r1,r0
-; 		mov	r0,@(marsGbl_DreqWrite,gbr)
-; .not_yet:
-; 		ldc	@r15+,sr			; Interrupts ON
+		ldc	@r15+,sr			; Interrupts ON
 		mov	#_vdpreg,r1
 .no_vbl:
 		mov.b	@(vdpsts,r1),r0			; Still on VBlank?
@@ -1288,23 +1289,23 @@ mstr_gfx_3:
 		add	#2,r3
 .no_redraw:
 
-	; Update model positions here
-		mov	#RAM_Mars_Objects,r2	; temporal rotation
-		mov	#$2000,r1
-		mov	@(mdl_x_rot,r2),r0
-		add	r1,r0
-		mov	r0,@(mdl_x_rot,r2)
-; 		mov	#$2000,r1
-; 		mov	@(mdl_y_rot,r2),r0
-; 		add	r1,r0
-; 		mov	r0,@(mdl_y_rot,r2)
-; 		mov	#$2000,r1
-; 		mov	@(mdl_z_rot,r2),r0
-; 		add	r1,r0
-; 		mov	r0,@(mdl_z_rot,r2)
-
 	; ---------------------------------------
 	; Request model rendering
+		stc	sr,@-r15		; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
+; 		bsr	mstr_waitdma
+; 		nop
+		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1
+		mov	#RAM_Mars_Objects,r2
+		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
+.copy_safe:
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.copy_safe
+		add	#4,r2
+		ldc	@r15+,sr
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
 		or	#%00010000,r0
@@ -1408,6 +1409,21 @@ mstr_nextframe:
 		mov.b	r0,@(marsGbl_CurrFb,gbr)	; copy new bit for checking
 		bra	master_loop
 		nop
+		align 4
+
+; mstr_waitdma:
+; 		mov	#_DMACHANNEL0,r1
+; 		mov	@r1,r0
+; 		and	#%01,r0
+; 		tst	r0,r0
+; 		bt	.not_yet
+; .wait_dma:	mov	@r1,r0
+; 		tst	#%10,r0
+; 		bt	.wait_dma
+; .not_yet:
+; 		rts
+; 		nop
+; 		align 4
 
 ; 	; ---------------------------------------
 ; 	; Interact with background
@@ -1544,12 +1560,6 @@ SH2_S_HotStart:
 		nop
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
-
-		mov	#RAM_Mars_Objects,r1
-		mov	#MarsObj_test,r0
-		mov	r0,@(mdl_data,r1)
-		mov	#-$80000,r0
-		mov	r0,@(mdl_z_pos,r1)
 
 		bra	slave_loop
 		nop
@@ -1775,9 +1785,9 @@ sizeof_marsvid		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
-RAM_Mars_DreqDma	ds.b MAX_DREQ			; *DMA ACCESS ONLY*
-RAM_Mars_DreqRead	ds.b MAX_DREQ			; Copy-paste for safe reading...
-RAM_Mars_Global		ds.l sizeof_MarsGbl		; gbr values go here.
+RAM_Mars_DreqDma	ds.b sizeof_dreq	; *DMA ACCESS ONLY*
+RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy-paste for safe reading...
+RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here.
 sizeof_marssys		ds.l 0
 			finish
 

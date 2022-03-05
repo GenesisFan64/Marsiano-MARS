@@ -1591,6 +1591,21 @@ MarsMdl_Init:
 		dt	r2
 		bf/s	.clnup
 		add	#sizeof_mdlobj,r1
+
+	; Clear background and it's draw
+	; requests
+		mov	#RAM_Mars_Background,r1
+		mov	#sizeof_marsbg/2,r2
+.clrbg:
+		mov	r0,@r1
+		dt	r2
+		bf/s	.clrbg
+		add	#2,r1
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		mov.w	r0,@(marsGbl_BgDrwR,gbr)
+		mov.w	r0,@(marsGbl_BgDrwL,gbr)
+		mov.w	r0,@(marsGbl_BgDrwU,gbr)
+		mov.w	r0,@(marsGbl_BgDrwD,gbr)
 		rts
 		nop
 		align 4
