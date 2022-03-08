@@ -31,10 +31,10 @@ mdl_z_pos	ds.l 1			; Z position $000000.00
 mdl_x_rot	ds.l 1			; X rotation $000000.00
 mdl_y_rot	ds.l 1			; Y rotation $000000.00
 mdl_z_rot	ds.l 1			; Z rotation $000000.00
-mdl_animdata	ds.l 1			; Model animation data pointer, zero: no animation
-mdl_animframe	ds.l 1			; Current frame in animation
-mdl_animtimer	ds.l 1			; Animation timer
-mdl_animspd	ds.l 1			; Animation USER speed setting
+; mdl_animdata	ds.l 1			; Model animation data pointer, zero: no animation
+; mdl_animframe	ds.l 1			; Current frame in animation
+; mdl_animtimer	ds.l 1			; Animation timer
+; mdl_animspd	ds.l 1			; Animation USER speed setting
 sizeof_mdlobj	ds.l 0
 		finish
 

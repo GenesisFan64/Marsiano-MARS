@@ -399,9 +399,7 @@ System_SramInit:
 ; --------------------------------------------------------
 
 System_VBlank:
-		lea	(RAM_MdDreq),a0
-		move.w	#sizeof_dreq,d0
-		bsr	System_SendDreq
+
 .wait_vblnk:
 		move.w	(vdp_ctrl),d4
 		btst	#bitVint,d4
@@ -510,44 +508,43 @@ HInt_Default:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; 32X Communication, using DREQ
+; Send data to the 32X using DREQ
 ;
-; Call this during VBlank
+; Input:
+; a0 - Data to send
+; d0 - Size (8byte aligned)
 ;
-; NOTE: THIS CODE MUST BE AT $880000 area.
+; NOTE: THIS CODE ONLY WORKS PROPERLY ON
+; THE $880000/$900000 AREAS.
 ; --------------------------------------------------------
 
 System_SendDreq:
 		move.w	sr,d7
 		move.w	#$2700,sr
-		lea	($A15112).l,a5			; DREQ fifo port
-		move.w	d0,d6				; Size in bytes
-		lsr.w	#1,d6
+		lea	($A15112).l,a5			; a5 - DREQ FIFO port
+		move.w	d0,d6				; Lenght in bytes
+		lsr.w	#1,d6				; lenght/2
 ; .retry:
-; 		move.l	#$C0000000,(vdp_ctrl).l
-; 		move.w	#$00E,(vdp_data).l
-		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LEN
+		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LENght
 		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Not needed, we will check
-; 		bne.s	.wait_cmd			; for this bit instead:
-.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal to activate
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Not needed. we gonna check for this bit instead:
+; 		bne.s	.wait_cmd
+.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal from SH2 to fill the first words.
 		beq.s	.wait_bit
 		bclr	#6,(sysmars_reg+comm14).l	; Clear it afterwards.
-		move.w	d6,d5
+		move.w	d6,d5				; (lenght/2)/4
 		lsr.w	#2,d5
-		sub.w	#1,d5
+		sub.w	#1,d5				; minus 1 for the loop
 .l0:		move.w  (a0)+,(a5)			; *** CRITICAL PART ***
 		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
-.l1:		btst	#7,dreqctl(a5)			; Got Full here?
+.l1:		btst	#7,dreqctl(a5)			; Got Full?
 		bne.s	.l1
 		dbf	d5,.l0
-; 		btst	#2,dreqctl(a5)			; DMA got ok? (failsafe, supposedly)
+; 		btst	#2,dreqctl(a5)			; DMA got ok? (failsafe supposedly)
 ; 		bne	.retry
-; 		move.l	#$C0000000,(vdp_ctrl).l
-; 		move.w	#$000,(vdp_data).l
 		move.w	d7,sr
 		rts
 

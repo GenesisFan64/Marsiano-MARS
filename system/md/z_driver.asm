@@ -15,9 +15,9 @@
 ; User settings
 ; --------------------------------------------------------
 
-MAX_TRKCHN	equ 18		; Max internal tracker channels (4PSG + 6FM + 7PWM)
+MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
 ZSET_WTUNE	equ -24		; Manual frequency adjustment for DAC WAVE playback
-ZSET_TESTME	equ 0		; ***TESTING*** Set to 1 to hear-test DAC playback
+ZSET_TESTME	equ 0		; Set to 1 to "hear" test the DAC playback
 
 ; --------------------------------------------------------
 ; Structs
@@ -41,7 +41,7 @@ trk_tickTmr	equ 20	; Ticks timer
 trk_tickSet	equ 21	; Ticks set for this track
 trk_numChnls	equ 22	; Number of channels for this track slot (max: MAX_TRKCHN)
 trk_sizeIns	equ 23	; Max instruments used
-trk_rowPause	equ 24
+trk_rowPause	equ 24	; Row pause timer
 trk_HdHalfway	equ 25	; Track heads reload byte
 trk_CachNotes	equ 26	; Track pattern buffer location (100h bytes)
 trk_CmdReq	equ 28	; Track command requests
@@ -1011,15 +1011,17 @@ mars_scomm:
 		and	00110000b
 		or	a
 		jr	nz,.wait_enter
+		set	7,(iy+comm15)	; Prepare transfer loop
 		set	1,(iy+standby)	; Request Slave CMD
-.wait_cmd:	bit	1,(iy+standby)
+.wait_cmd:
+		bit	1,(iy+standby)	; Finished?
 		jr	nz,.wait_cmd
-		ld	c,14		; c - Passes
+		ld	c,14		; c - 14 longs
 .next_pass:
 		push	iy
 		pop	hl
 		rst	8
-		ld	de,comm8
+		ld	de,comm8	; hl - comm8
 		add	hl,de
 		ld	b,2
 .next_comm:
@@ -1033,16 +1035,14 @@ mars_scomm:
 		ld	(hl),e
 		inc	hl
 		djnz	.next_comm
-		ld	a,(iy+comm15)	; Send CLK to Slave CMD
-		set	7,a
-		ld	(iy+comm15),a
+		set	6,(iy+comm15)	; Send CLK to Slave CMD
 		rst	8
 .w_pass2:
-		ld	a,(iy+comm15)	; CLK cleared?
-		bit	7,a
+		bit	6,(iy+comm15)	; CLK cleared?
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass
+		res	7,(iy+comm15)	; Break transfer loop
 
 ; clear COM bits
 .blocked:

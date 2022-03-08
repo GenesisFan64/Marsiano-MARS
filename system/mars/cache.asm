@@ -653,8 +653,15 @@ drwsld_nxtline_tex:
 		cmp/pl	r12
 		bf	.tex_skip_line
 
-		mov	#Cach_SendLine,r10
+	; OLD
+		mov	#_overwrite+$200,r10
+		mov 	r9,r0			; Y position * $200
+		shll8	r0
+		shll	r0
+		add 	r0,r10			; Add Y
 		add 	r11,r10			; Add X
+; 		mov	#Cach_SendLine,r10
+; 		add 	r11,r10
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r11	; r11 - texture data
 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
@@ -680,29 +687,28 @@ drwsld_nxtline_tex:
 		dt	r12
 		bf/s	.tex_xloop
 		add	r8,r7			; Update Y
-	; ***STABLE
 
-		mov	#Cach_SendLine,r11
-		mov	#_overwrite+$200,r10
-		mov 	r9,r0			; Y position * $200
-		shll8	r0
-		shll	r0
-		add 	r0,r10			; Add Y
-		mov	#320/8,r12
-		mov	#0,r8
-.copypaste:
-		mov	@r11,r0
-		mov	r8,@r11
-		add	#4,r11
-		mov	r0,@r10
-		add	#4,r10
-		mov	@r11,r0
-		mov	r8,@r11
-		add	#4,r11
-		mov	r0,@r10
-		dt	r12
-		bf/s	.copypaste
-		add	#4,r10
+; 		mov	#Cach_SendLine,r11
+; 		mov	#_overwrite+$200,r10
+; 		mov 	r9,r0			; Y position * $200
+; 		shll8	r0
+; 		shll	r0
+; 		add 	r0,r10			; Add Y
+; 		mov	#320/8,r12
+; 		mov	#0,r8
+; .copypaste:
+; 		mov	@r11,r0
+; 		mov	r8,@r11
+; 		add	#4,r11
+; 		mov	r0,@r10
+; 		add	#4,r10
+; 		mov	@r11,r0
+; 		mov	r8,@r11
+; 		add	#4,r11
+; 		mov	r0,@r10
+; 		dt	r12
+; 		bf/s	.copypaste
+; 		add	#4,r10
 
 .tex_skip_line:
 		mov	@r15+,r13

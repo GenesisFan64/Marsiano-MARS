@@ -7,10 +7,10 @@
 ; Settings
 ; ----------------------------------------
 
-MAX_FACES	equ 700
-MAX_SVDP_PZ	equ 700+128
+MAX_FACES	equ 384
+MAX_SVDP_PZ	equ 384+96
+MAX_ZDIST	equ -$8000		; Max 3D drawing distance (-Z max)
 FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift lines
-MAX_ZDIST	equ -$10000		; Max drawing distance (-Z max)
 
 ; ----------------------------------------
 ; Variables
@@ -1569,47 +1569,47 @@ MarsVideo_SetBg:
 ; 3D Models
 ; ----------------------------------------------------------------
 
-; ------------------------------------------------
-; MarsMdl_Init
+; ; ------------------------------------------------
+; ; MarsMdl_Init
+; ;
+; ; Reset ALL objects
+; ; ------------------------------------------------
 ;
-; Reset ALL objects
-; ------------------------------------------------
-
-MarsMdl_Init:
-		mov	#RAM_Mars_Objects,r1
-		mov	#MAX_MODELS,r2
-		mov	#0,r0
-.clnup:
-		mov	r0,@(mdl_data,r1)
-		mov	r0,@(mdl_animdata,r1)
-		mov	r0,@(mdl_x_pos,r1)
-		mov	r0,@(mdl_x_rot,r1)
-		mov	r0,@(mdl_y_pos,r1)
-		mov	r0,@(mdl_y_rot,r1)
-		mov	r0,@(mdl_y_pos,r1)
-		mov	r0,@(mdl_y_rot,r1)
-		dt	r2
-		bf/s	.clnup
-		add	#sizeof_mdlobj,r1
-
-	; Clear background and it's draw
-	; requests
-		mov	#RAM_Mars_Background,r1
-		mov	#sizeof_marsbg/2,r2
-.clrbg:
-		mov	r0,@r1
-		dt	r2
-		bf/s	.clrbg
-		add	#2,r1
-		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
-		mov.w	r0,@(marsGbl_BgDrwR,gbr)
-		mov.w	r0,@(marsGbl_BgDrwL,gbr)
-		mov.w	r0,@(marsGbl_BgDrwU,gbr)
-		mov.w	r0,@(marsGbl_BgDrwD,gbr)
-		rts
-		nop
-		align 4
-		ltorg
+; MarsMdl_Init:
+; 		mov	#RAM_Mars_Objects,r1
+; 		mov	#MAX_MODELS,r2
+; 		mov	#0,r0
+; .clnup:
+; 		mov	r0,@(mdl_data,r1)
+; ; 		mov	r0,@(mdl_animdata,r1)
+; 		mov	r0,@(mdl_x_pos,r1)
+; 		mov	r0,@(mdl_x_rot,r1)
+; 		mov	r0,@(mdl_y_pos,r1)
+; 		mov	r0,@(mdl_y_rot,r1)
+; 		mov	r0,@(mdl_y_pos,r1)
+; 		mov	r0,@(mdl_y_rot,r1)
+; 		dt	r2
+; 		bf/s	.clnup
+; 		add	#sizeof_mdlobj,r1
+;
+; 	; Clear background and it's draw
+; 	; requests
+; 		mov	#RAM_Mars_Background,r1
+; 		mov	#sizeof_marsbg/2,r2
+; .clrbg:
+; 		mov	r0,@r1
+; 		dt	r2
+; 		bf/s	.clrbg
+; 		add	#2,r1
+; 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+; 		mov.w	r0,@(marsGbl_BgDrwR,gbr)
+; 		mov.w	r0,@(marsGbl_BgDrwL,gbr)
+; 		mov.w	r0,@(marsGbl_BgDrwU,gbr)
+; 		mov.w	r0,@(marsGbl_BgDrwD,gbr)
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
 
 ; ------------------------------------------------
 ; Read model
@@ -1832,38 +1832,18 @@ MarsMdl_ReadModel:
 		mov	@r15+,r8
 
 	; NOTE: if you don't like how the perspective works
-	; change this register depending how you want to ignore
+	; change this instruction depending how you want to ignore
 	; faces closer to the camera:
 	;
 	; r5 - Back Z point, keep affine limitations
 	; r6 - Front Z point, skip face but larger faces are affected
 
-		cmp/pz	r5
+		cmp/pz	r5			; *** back z
 		bt	.go_fout
-; 		cmp/pz	r6
+; 		cmp/pz	r6			; *** front z
 ; 		bt	.go_fout
 
-
-; 		mov	#RAM_Mars_ObjCamera,r0
-; 		mov	@(cam_y_pos,r0),r7
-; 		shlr2	r7
-; 		shlr2	r7
-; 		shlr2	r7
-; 		shlr	r7
-; 		exts	r7,r7
-; 		cmp/pl	r7
-; 		bf	.revrscam
-; 		neg	r7,r7
-; .revrscam:
-; 		mov	#MAX_ZDIST,r0
-; 		cmp/ge	r0,r7
-; 		bt	.camlimit
-; 		mov	r0,r7
-; .camlimit:
-; 		cmp/pl	r6
-; 		bt	.face_out
 		mov	#MAX_ZDIST,r0		; Draw distance
-; 		add 	r7,r0
 		cmp/ge	r0,r5
 		bf	.go_fout
 		mov	#-(SCREEN_WIDTH/2),r0
@@ -1895,7 +1875,7 @@ MarsMdl_ReadModel:
 		mov	r5,@r8				; Store current Z to Zlist
 		mov	r1,@(4,r8)			; And it's address
 
-; 	Sort this face, SLOW
+; 	Sort this face
 ; 	r7 - Curr Z
 ; 	r6 - Past Z
 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
@@ -1907,11 +1887,13 @@ MarsMdl_ReadModel:
 		add	#-8,r7
 ; 		mov	@(marsGbl_CurrZList,gbr),r0
 ; 		mov	r0,r6
-		mov	#RAM_Mars_PlgnList_0,r6
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bf	.page_2
-		mov	#RAM_Mars_PlgnList_1,r6
+		mov	@(marsGbl_CurrZTop,gbr),r0
+		mov	r0,r6
+; 		mov	#RAM_Mars_PlgnList_0,r6
+; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
+; 		tst     #1,r0
+; 		bf	.page_2
+; 		mov	#RAM_Mars_PlgnList_1,r6
 .page_2:
 		cmp/ge	r6,r7
 		bf	.first_face
@@ -1933,10 +1915,8 @@ MarsMdl_ReadModel:
 		bra	.page_2
 		add	#-8,r7
 .first_face:
-
-
-		add	#8,r8				; Next Zlist entry
-	rept sizeof_polygn/2				; Copy words manually
+		add	#8,r8			; Next Zlist entry
+	rept sizeof_polygn/2			; Copy words manually
 		mov.w	@r2+,r0
 		mov.w	r0,@r1
 		add	#2,r1
@@ -1951,7 +1931,6 @@ MarsMdl_ReadModel:
 .finish_this:
 		mov	r8,r0
 		mov	r0,@(marsGbl_CurrZList,gbr)
-
 .exit_model:
 		lds	@r15+,pr
 		rts

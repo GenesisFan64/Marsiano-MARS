@@ -11,7 +11,7 @@
 ; --------------------------------------------------------
 
 	; This align is for GEMS emulator only
-	; in case get stuck in a black screen
+	; in case gets stuck in a black screen
 ; 		align $80
 
 Sound_Init:

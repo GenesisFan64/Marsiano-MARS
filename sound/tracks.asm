@@ -89,16 +89,37 @@ GemaSfxIns_Boom:
 	gInsFm 0,FmIns_Ding_toy
 
 GemaTrkData_Test:
-	dc.l GemaPat_Test3
-	dc.l GemaBlk_Test3
-	dc.l GemaIns_Test3
+	dc.l GemaPat_Test
+	dc.l GemaBlk_Test
+	dc.l GemaIns_Test
 GemaBlk_Test:
 	binclude "sound/tracks/test_blk.bin"
 GemaPat_Test:
 	binclude "sound/tracks/test_patt.bin"
 GemaIns_Test:
-; 	gInsDac 0,DacIns_Test,0
 	gInsPwm 0,PwmIns_Test_st,%11
+
+; GemaTrkData_Test:
+; 	dc.l GemaPat_Test
+; 	dc.l GemaBlk_Test
+; 	dc.l GemaIns_Test
+; GemaBlk_Test:
+; 	binclude "sound/tracks/splash_hill_blk.bin"
+; GemaPat_Test:
+; 	binclude "sound/tracks/splash_hill_patt.bin"
+; GemaIns_Test:
+; 	gInsFm -12,FmIns_Trumpet_2
+; 	gInsFm -12,FmIns_Bass_1
+; 	gInsFm -12,FmIns_Brass_Eur
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsPsg 0,$40,$50,$10,$06,$08
+; 	gInsFm -12,FmIns_Trumpet_kon
+; 	gInsFm -12,FmIns_Trumpet_1
+; 	gInsNull
+
+; 	gInsPwm 0,PwmIns_Test_st,%11
 
 ; 	gInsFm -12,FmIns_Brass_Eur
 ; 	gInsFm 0,FmIns_Bass_italo

@@ -11,11 +11,15 @@
 ; 	mov	#RAM_Mars_DreqRead+DREQ_LABEL,r1
 ; ----------------------------------------------------------------
 
+; MUST be aligned by 8bytes (Size must end with 0 or 8)
+
 		struct 0
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; <-- labels from SH2 side
 Dreq_Palette	ds.w 256
 Dreq_BgXpos	ds.l 1
 Dreq_BgYpos	ds.l 1
+Dreq_TEST2	ds.l 1
+Dreq_TEST	ds.l 1
 sizeof_dreq	ds.l 0
 		finish
 

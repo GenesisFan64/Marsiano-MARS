@@ -1,5 +1,6 @@
 # Marsiano-MARS
 A GameBase/Engine/Library for making Sega 32X Games, in pure assembly for ALL CPUs
+I'm also using this to research those real-hardware bugs and limitations that current emulators ignore.
 *WORK IN PROGRESS*
 
 Graphics:
@@ -21,7 +22,7 @@ Sound, Genesis and 32X:
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
 
 Notes/Issues:
-- SOFT-Reset MIGHT freeze everything.
+- SOFT reset (Pressing RESET on Genesis) doensn't work.
 - PWM RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might break the PWM playback
 - 256-color background: the X/Y postion get corrupt on soft reset
 
@@ -41,6 +42,7 @@ Do note that current 32X emulators ignore some hardware restrictions and errors 
 - If the SH2 peforms it's DMA (Channel 0) and the DESTINATION gets poked (READ/WRITE) it will abort the DMA transfer entirely.
 - After setting _DMAOPERATION to 1 (Start DMA) you must wait 5 nops or the DMA will get cancelled.
 - Writing DREQ's FIFO only works properly on the $880000/$900000 68k areas. If doing the writes in RAM ($FF0000) will miss some words during transfer.
+- Writing pixels in to the framebuffer BYTEs cause a small delay.
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
 If it doesn't boot or it freezes: I probably broke something without testing on HW

@@ -88,8 +88,8 @@ FmIns_Bass_donna:
 		binclude "sound/instr/fm/bass_donna.gsx",$2478,$20
 FmIns_Bass_groove_2:
 		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
-; FmIns_Bass_groove_gem:
-; 		binclude "sound/instr/fm/bass_groove_gem.gsx",$2478,$20
+FmIns_Bass_groove_gem:
+		binclude "sound/instr/fm/bass_groove_gem.gsx",$2478,$20
 FmIns_Bass_italo:
 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
 ; FmIns_Bass_kon:

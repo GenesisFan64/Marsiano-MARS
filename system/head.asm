@@ -208,8 +208,8 @@ MARS_Entry:
 		btst.b	#0,adapter(a5)		; 32X enabled?
 		bne	.adapterenable		; If yes, start booting
 		move.l	#0,comm8(a5)		; If not, we can't use 32X or something went wrong
-		lea	.ramcode(pc),a0			; Copy the adapter-retry code to RAM
-		lea	($FF0000).l,a1			; and jump there.
+		lea	.ramcode(pc),a0		; Copy the adapter-retry code to RAM
+		lea	($FF0000).l,a1		; and jump there.
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
@@ -278,7 +278,6 @@ MD_Init:
 .wait_dma:	move.w	(vdp_ctrl).l,d0			; Wait a frame
 		btst	#1,d0
 		bne.s	.wait_dma
-
 		lea	(sysmars_reg).l,a5
 		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
@@ -290,9 +289,10 @@ MD_Init:
 		move.l	d0,comm4(a5)
 		move.l	d0,comm12(a5)
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
+
 MD_HotStart:
-		cmp.l	#"INIT",(RAM_initflug).l	; Did it write?
-		bne.s	MD_Init				; If not, restart everything and try again.
+		cmp.l	#"INIT",(RAM_initflug).l
+		bne.s	MD_Init
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp

@@ -68,14 +68,6 @@ thisCode_Top:
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
 
-; 		lea	test_polygon(pc),a0
-; 		lea	(RAM_MdMarsPlgn),a1
-; 		move.w	#($38/4)-1,d0
-; .copy_polygn:
-; 		move.l	(a0)+,(a1)+
-; 		dbf	d0,.copy_polygn
-; 		move.l	#1,(RAM_MdMarsPlgnNum).w
-
 		move.l	#ART_FGTEST,d0
 		move.w	#1*$20,d1
 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
@@ -117,16 +109,18 @@ thisCode_Top:
 		bsr	Video_Update
 		move.w	#320/2,(RAM_EmiPosX).w
 		move.w	#224/2,(RAM_EmiPosY).w
-		lea	MasterTrkList(pc),a0
-		move.w	$C(a0),d1
-		move.w	$E(a0),d3
-		moveq	#0,d0
-		moveq	#0,d2
-		bsr	Sound_TrkPlay
+; 		lea	MasterTrkList(pc),a0
+; 		move.w	$C(a0),d1
+; 		move.w	$E(a0),d3
+; 		moveq	#0,d0
+; 		moveq	#0,d2
+; 		bsr	Sound_TrkPlay
+		move.w	#200+12,(RAM_CurrTempo).w
 
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test,mdl_data(a0)
 		move.l	#-$80000,mdl_z_pos(a0)
+; 		move.l	#$4000,mdl_y_pos(a0)
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -151,6 +145,11 @@ thisCode_Top:
 		lea	str_InfoMouse(pc),a0
 		move.l	#locate(0,1,1),d0
 		bsr	Video_Print
+		add.l	#1,(RAM_MdDreq+Dreq_TEST).l
+		lea	(RAM_MdDreq),a0
+		move.w	#sizeof_dreq,d0
+		bsr	System_SendDreq
+
 		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -249,15 +248,14 @@ thisCode_Top:
 		tst.w	d2
 		beq.s	.no_chng
 		lea	(MDLDATA_PAL_TEST),a0
-; 		moveq	#0,d2
+		moveq	#1,d2
 		cmp.w	#3,(RAM_CurrGfx).w
 		beq.s	.thispal
 		lea	(TESTMARS_BG_PAL),a0
-
+		moveq	#1,d2
 .thispal:
 		moveq	#0,d0
 		move.w	#256,d1
-		moveq	#1,d2
 		bsr	Video_LoadPal_Mars
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 .no_chng:
@@ -527,7 +525,7 @@ thisCode_Top:
 		bne.s	.toptrk
 		add	#2,a1
 .toptrk:
-		cmp.w	#5,(RAM_CurrSelc).w
+		cmp.w	#4,(RAM_CurrSelc).w
 		bne.s	.toptrk2
 		add	#2*2,a1
 .toptrk2:
@@ -628,7 +626,7 @@ thisCode_Top:
 ; test playlist
 MasterTrkList:
 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
-	dc.w 14,%001
+	dc.w 3,%001
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
 	dc.w 3,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
@@ -855,9 +853,11 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "comm12: \\w MD Frames: \\l",0
+		dc.b "comm12: \\w MD Frames: \\l",$A,$A
+		dc.b "\\l",0
 		dc.l sysmars_reg+comm12
 		dc.l RAM_Framecount
+		dc.l sysmars_reg+comm4
 		align 2
 
 PAL_EMI:
