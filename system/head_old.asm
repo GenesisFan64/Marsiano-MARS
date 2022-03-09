@@ -279,6 +279,7 @@ MD_Init:
 		btst	#1,d0
 		bne.s	.wait_dma
 		lea	(sysmars_reg).l,a5
+; 		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 		bne.s	.wm
 .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
@@ -286,6 +287,7 @@ MD_Init:
 		moveq	#0,d0				; Reset comm values
 		move.l	d0,comm0(a5)
 		move.l	d0,comm4(a5)
+		move.l	d0,comm12(a5)
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
 		cmp.l	#"INIT",(RAM_initflug).l

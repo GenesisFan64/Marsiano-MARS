@@ -30,7 +30,7 @@ marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
-marsGbl_CurrFb		ds.w 1	; Current framebuffer number (It's a byte)
+marsGbl_CurrFb		ds.w 1
 marsGbl_BgDrwAll	ds.w 1	; Write 2 to request FULL redraw
 marsGbl_BgDrwR		ds.w 1	; Write 2 to only redraw offscreen section(s)
 marsGbl_BgDrwL		ds.w 1	;
@@ -362,13 +362,6 @@ m_irq_cmd:
 		mov	#_sysreg+cmdintclr,r1
 		mov.w	r0,@r1
 
-
-	; TODO: checar si necesito apagar el
-	; watchdog aqui
-; 		mov	#$FFFFFE80,r1
-; 		mov.w	#$A518,r0		; Disable Watchdog
-; 		mov.w	r0,@r1
-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -385,6 +378,7 @@ m_irq_cmd:
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
+
 	; *** HARDWARE NOTE ***
 	; DMA takes a little to properly start.
 	; Put 5 instructions (or 5 nops) after
@@ -395,7 +389,7 @@ m_irq_cmd:
 		nop
 		nop
 .wait_dma:
-		mov	@($C,r3),r0
+		mov	@($C,r3),r0		; Wait for DMA
 		tst	#2,r0
 		bt	.wait_dma
 		mov	#0,r0			; _DMAOPERATION = 0
@@ -418,19 +412,6 @@ m_irq_cmd:
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
-
-	; **** TESTING
-		mov	#RAM_Mars_DreqRead+(sizeof_dreq-4),r1
-		mov	#_sysreg+comm4,r2
-		mov	@r1,r0
-		mov	r0,@r2
-	; **** TESTING
-
-; 		mov	#$FFFFFE80,r1
-; 		mov.w	#$5A20,r0		; Watchdog pre-timer
-; 		mov.w	r0,@r1
-; 		mov.w	#$A518|$20,r0		; Enable Watchdog
-; 		mov.w	r0,@r1
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -498,23 +479,23 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov	#$20004000, r1
-		mov	#0,r0
-		mov.w	r0,@($14,r1)
+		mov	#_sysreg,r1
+		mov.w	r0,@(vresintclr,r1)
 		mov.b	@(6,r1), r0
 		tst	#1,r0
 		bf	.reset
-		mov	#$FFFFFE80,r1	; Stop watchdog
+		mov	#_DMACHANNEL0,r1	; Stop DMA
+		mov	@r1,r0
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:	mov	@r1,r0
+		tst	#%10,r0
+		bt	.wait_dma
+.not_yet:
+		mov	#$FFFFFE80,r1		; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
-		mov.l	#$FFFFFF80,r2
-		mov	#0,r0
-		mov.l	r0,@($30,r2)
-		mov.l	r0,@($C,r2)
-		mov.l	#$44E0,r0
-		mov.l	r0,@($C,r2)
 		mov	#SH2_M_HotStart,r0
 		jmp	@r0
 		nop
@@ -527,30 +508,17 @@ m_irq_vres:
 		bra	.vrsloop
 		nop
 		align 4
-		ltorg			; Save Slave IRQ literals
+		ltorg
 
-; 		mov.l	#_sysreg,r0
-; 		ldc	r0,gbr
-; 		mov.w	r0,@(vresintclr,gbr)	; V interrupt clear
-; 		mov.b	@(dreqctl,gbr),r0
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov	#$20004000,r1
+; 		mov	#0,r0
+; 		mov.w	r0,@($14,r1)
+; 		mov.b	@(6,r1), r0
 ; 		tst	#1,r0
-; 		bf	.mars_reset
-; .md_reset:
-; 		mov	#"68UP",r1		; wait for the 68K to show up
-; 		mov	@(comm12,gbr),r0
-; 		cmp/eq	r0,r1
-; 		bf	.md_reset
-; .sh_wait:
-; 		mov	#"S_OK",r1		; wait for the Slave CPU to show up
-; 		mov	@(comm4,gbr),r0
-; 		cmp/eq	r0,r1
-; 		bf	.sh_wait
-; 		mov	#"M_OK",r0		; let the others know master ready
-; 		mov	r0,@(comm0,gbr)
-; 		mov	#$FFFFFE80,r1		; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-; 		mov	#_DMACHANNEL0,r1	; Wait DMA and disable.
+; 		bf	.reset
+; 		mov	#_DMACHANNEL0,r1
 ; 		mov	@r1,r0
 ; 		and	#%01,r0
 ; 		tst	r0,r0
@@ -559,25 +527,25 @@ m_irq_vres:
 ; 		tst	#%10,r0
 ; 		bt	.wait_dma
 ; .not_yet:
-; 		mov	#0,r0
+; 		mov	#_sysreg+comm0,r1
+; 		mov	#"M_OK",r0
 ; 		mov	r0,@r1
-; 		mov	#CS3|$40000-8,r15	; Set reset values
+; 		mov	#$FFFFFE80,r1	; Stop watchdog
+; 		mov.w   #$A518,r0
+; 		mov.w   r0,@r1
 ; 		mov	#SH2_M_HotStart,r0
-; 		mov	r0,@r15
-; 		mov.w	#$F0,r0
-; 		mov.l	r0,@(4,r15)
-; 		rte
+; 		jmp	@r0
 ; 		nop
-; .mars_reset:
+; .reset:
 ; 		mov	#_FRT,r1
 ; 		mov.b	@(_TOCR,r1),r0
 ; 		or	#$01,r0
 ; 		mov.b	r0,@(_TOCR,r1)
-; .vresloop:
-; 		bra	.vresloop
+; .vrsloop:
+; 		bra	.vrsloop
 ; 		nop
-		align 4
-		ltorg			; Save MASTER IRQ literals here
+; 		align 4
+; 		ltorg			; Save Slave IRQ literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -649,12 +617,18 @@ s_irq_cmd:
 		sts	mach,@-r15
 		sts	pr,@-r15
 
+	; ---------------------------------
+	; *** GEMA PWM DRIVER ***
+	; ---------------------------------
+
+	; First we recieve changes from Z80
+	; using comm8
 		mov	#_sysreg+comm8,r1
 		mov	#MarsSnd_PwmControl,r2
 		mov	#_sysreg+comm15,r3	; control comm
 .wait_1:
 		mov.b	@r3,r0
-		tst	#%10000000,r0		; 68k enter/exit
+		tst	#%10000000,r0		; Z80 enter/exit
 		bt	.exit_c
 		tst	#%01000000,r0		; wait CLOCK
 		bt	.wait_1
@@ -669,29 +643,9 @@ s_irq_cmd:
 		nop
 .exit_c:
 
-
-; 	; FIXME
-; 		mov	#_sysreg+comm8,r5
-; 		mov	#_sysreg+comm15,r4	; control comm
-; 		mov	#MarsSnd_PwmControl,r2
-; 		mov	#14,r3			; number of passes (hard-coded: check Z80)
-; .wait_1:
-; 		mov.b	@r4,r0			; wait first CLOCK
-; 		and	#%01000000,r0		; from Z80
-; 		tst	r0,r0
-; 		bt	.wait_1
-; 		mov	@r5,r0
-; 		mov	r0,@r2
-; 		add	#4,r2
-; 		mov.b	@r4,r0			; tell Z80 CLK finished
-; 		and	#%10111111,r0
-; 		mov.b	r0,@r4
-; 		dt	r3
-; 		bf	.wait_1
-
-	; ---------------------------------
-	; *** GEMA PWM DRIVER ***
-	; ---------------------------------
+	; Now loop for channels that need updating
+	;
+	; TODO: clearly rushed. but it works
 		mov	#0,r1				; r1 - Current PWM slot
 		mov	#MarsSnd_PwmControl,r14
 		mov	#MAX_PWMCHNL,r10
@@ -887,11 +841,11 @@ s_irq_cmd:
 		mov	@r15+,r3
 		mov	@r15+,r2
 
-		nop
-		nop
-		nop
-		nop
-		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		rts
 		nop
 		align 4
@@ -949,23 +903,23 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov	#$20004000, r1
-		mov	#0,r0
-		mov.w	r0,@($14,r1)
+		mov	#_sysreg,r1
+		mov.w	r0,@(vresintclr,r1)
 		mov.b	@(6,r1), r0
 		tst	#1,r0
 		bf	.reset
-		mov	#$FFFFFE80,r1	; Stop watchdog
+		mov	#_DMACHANNEL0,r1	; Stop DMA
+		mov	@r1,r0
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:	mov	@r1,r0
+		tst	#%10,r0
+		bt	.wait_dma
+.not_yet:
+		mov	#$FFFFFE80,r1		; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
-		mov.l	#$FFFFFF80,r2
-		mov	#0,r0
-		mov.l	r0,@($30,r2)
-		mov.l	r0,@($C,r2)
-		mov.l	#$44E0,r0
-		mov.l	r0,@($C,r2)
 		mov	#SH2_S_HotStart,r0
 		jmp	@r0
 		nop
@@ -978,7 +932,44 @@ s_irq_vres:
 		bra	.vrsloop
 		nop
 		align 4
-		ltorg			; Save Slave IRQ literals
+		ltorg
+
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
+; 		mov	#$20004000, r1
+; 		mov	#0,r0
+; 		mov.w	r0,@($14,r1)
+; 		mov.b	@(6,r1), r0
+; 		tst	#1,r0
+; 		bf	.reset
+; 		mov	#_DMACHANNEL0,r1
+; 		mov	@r1,r0
+; 		and	#%01,r0
+; 		tst	r0,r0
+; 		bt	.not_yet
+; .wait_dma:	mov	@r1,r0
+; 		tst	#%10,r0
+; 		bt	.wait_dma
+; .not_yet:
+; 		mov	#_sysreg+comm4,r1
+; 		mov	#"S_OK",r0
+; 		mov	r0,@r1
+; 		mov	#$FFFFFE80,r1	; Stop watchdog
+; 		mov.w   #$A518,r0
+; 		mov.w   r0,@r1
+; 		mov	#SH2_S_HotStart,r0
+; 		jmp	@r0
+; 		nop
+; .reset:
+; 		mov	#_FRT,r1
+; 		mov.b	@(_TOCR,r1),r0
+; 		or	#$01,r0
+; 		mov.b	r0,@(_TOCR,r1)
+; .vrsloop:
+; 		bra	.vrsloop
+; 		nop
+; 		align 4
+; 		ltorg			; Save Slave IRQ literals
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1046,7 +1037,7 @@ SH2_M_Entry:
 ; This CPU is exclusively used for Visual tasks:
 ; Background, Sprites and Polygons.
 ;
-; The GENESIS side will control almost(?) all of this.
+; The GENESIS side will control all of this using DREQ
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
@@ -1076,7 +1067,6 @@ SH2_M_HotStart:
 		mov	#0,r0
 		mov	r0,@($30,r1)
 		mov	r0,@($C,r1)
-
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
@@ -1116,18 +1106,14 @@ SH2_M_HotStart:
 ; M - Request 3d-model processing.
 ; V - Pseudo graphics mode:
 ; 	00 - Nothing
-; 	01 - ??? free
-; 	10 - 2D Scrolling mode
-; 	11 - 3D Mode
+; 	01 - ???
+; 	02 - ??? 2D bitmap currently
+; 	03 - 3D Mode
 
 master_loop:
-		mov	#_sysreg+comm12,r1
-		mov.b	@r1,r0
-		add	#1,r0
-		mov.b	r0,@r1
 
 	; ---------------------------------------
-	; Wait for frameswap
+	; Wait frameswap
 		mov	#_vdpreg,r1			; r1 - SVDP area
 		mov.b	@(marsGbl_CurrFb,gbr),r0	; r2 - NEW Framebuffer number
 		mov	r0,r2
@@ -1143,11 +1129,13 @@ master_loop:
 	; *** THIS IS THE ONLY PLACE TO READ FROM
 	; _DreqRead SAFETLY ***
 	;
-	; Reading from _DreqRead
-	; outside requires turning off interrupts
-	; with a possible chance of failing either
+	; Reading from _DreqRead outside of this
+	; requires turning off interrupts with a
+	; possible chance of failing either
 	; by DMA or ignored reads.
 
+	; TODO: check why it happens on _DreqRead and
+	; NOT _DreqDma
 		stc	sr,@-r15			; Interrupts OFF
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -1208,12 +1196,12 @@ master_loop:
 	; ---------------------------------------
 
 		ldc	@r15+,sr			; Interrupts ON
-		mov	#_vdpreg,r1
-.no_vbl:
-		mov.b	@(vdpsts,r1),r0			; Still on VBlank?
-		and	#$80,r0
-		tst	r0,r0
-		bf	.no_vbl
+; 		mov	#_vdpreg,r1
+; .no_vbl:
+; 		mov.b	@(vdpsts,r1),r0			; Still on VBlank?
+; 		and	#$80,r0
+; 		tst	r0,r0
+; 		bf	.no_vbl
 
 ; ---------------------------------------
 ; Pick graphics mode on comm14
@@ -1264,7 +1252,7 @@ mstr_gfx_1:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
-		and	#%11011111,r0
+		and	#%11001111,r0			; Clear past Model-read requests too
 		mov.b	r0,@r1
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
@@ -1352,7 +1340,7 @@ mstr_gfx_3:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
-		and	#%11011111,r0
+		and	#%11001111,r0		; Clear model request bit too.
 		mov.b	r0,@r1
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
@@ -1446,10 +1434,6 @@ mstr_gfx_3:
 		jsr	@r0
 		nop
 .no_swap:
-		mov	#_sysreg+comm14,r1
-		mov.b	@r1,r0
-		and	#%11101111,r0
-		mov.b	r0,@r1
 
 ; ============================================================
 ; ---------------------------------------
@@ -1458,32 +1442,32 @@ mstr_gfx_3:
 
 mstr_nextframe:
 		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@(vdpsts,r1),r0			; SVDP FILL active?
+.wait_fb:	mov.w	@(vdpsts,r1),r0		; SVDP FILL active?
 		tst	#%10,r0
 		bf	.wait_fb
-		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
-		xor	#1,r0
+		mov.b	@(framectl,r1),r0	; Framebuffer swap REQUEST.
+		xor	#1,r0			; manually Wait for VBlank after this
 		mov.b	r0,@(framectl,r1)
-		mov.b	r0,@(marsGbl_CurrFb,gbr)	; copy new bit for checking
+		mov.b	r0,@(marsGbl_CurrFb,gbr)
 		bra	master_loop
 		nop
 		align 4
 
 ; ; ---------------------------------------
 ;
-mstr_waitdma:
-		mov	#_DMACHANNEL0,r1
-		mov	@r1,r0
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet
-.wait_dma:	mov	@r1,r0
-		tst	#%10,r0
-		bt	.wait_dma
-.not_yet:
-		rts
-		nop
-		align 4
+; mstr_waitdma:
+; 		mov	#_DMACHANNEL0,r1
+; 		mov	@r1,r0
+; 		and	#%01,r0
+; 		tst	r0,r0
+; 		bt	.not_yet
+; .wait_dma:	mov	@r1,r0
+; 		tst	#%10,r0
+; 		bt	.wait_dma
+; .not_yet:
+; 		rts
+; 		nop
+; 		align 4
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1625,11 +1609,11 @@ slave_loop:
 		and	#%11101111,r0
 		mov.b	r0,@r4
 		ldc	@r15+,sr			; Interrupts ON
-
-		mov	#_sysreg+comm12+1,r1
-		mov.b	@r1,r0
-		add	#1,r0
-		mov.b	r0,@r1
+;
+; 		mov	#_sysreg+comm12+1,r1
+; 		mov.b	@r1,r0
+; 		add	#1,r0
+; 		mov.b	r0,@r1
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1
@@ -1732,7 +1716,7 @@ m_ascii		binclude "system/mars/data/m_ascii.bin"
 
 		align $10
 SH2_RAM:
-		struct SH2_RAM
+		struct SH2_RAM|TH
 	if MOMPASS=1
 MarsRam_System		ds.l 0
 MarsRam_Video		ds.l 0
@@ -1760,8 +1744,8 @@ sizeof_marsram		ds.l 0
 ; MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
 ; MarsSnd_PwmCache	ds.b $100*MAX_PWMCHNL
 ; MarsSnd_PwmTrkData	ds.b $80*2
-; MarsSnd_Active		ds.l 1
-; sizeof_marssnd		ds.l 0
+; MarsSnd_Active	ds.l 1
+; sizeof_marssnd	ds.l 0
 ; 			finish
 
 ; ====================================================================
@@ -1790,7 +1774,7 @@ sizeof_marsvid		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
-RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data recieved from Genesis in DMA
+RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data recieved from Genesis in DMA ***DO NOT READ FROM HERE***
 RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy of DREQ for reading.
 RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here.
 sizeof_marssys		ds.l 0

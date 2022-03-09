@@ -39,11 +39,11 @@ _overwrite:	equ	CS2+$20000	; Overwrite, $00-byte writes are ignored
 ; ------------------------------------------------
 
 ; _sysreg
-adapter		equ	$00		; adapter control register
-intmask		equ	$01		; interrupts mask
-standby		equ	$03		; CMD interrupt request bit by MD side (slave|master)
-hcount		equ	$05		; H Counter
-dreqctl		equ	$07		; DREQ control (BYTE READ)
+adapter		equ	$00		; adapter control register (Read as WORD)
+intmask		equ	$01		; SH2 CPU ONLY: interrupts mask
+standby		equ	$03		; CMD interrupt request bit by MD side (slave|master) (BYTE)
+hcount		equ	$05		; H Counter (BYTE)
+dreqctl		equ	$07		; DREQ control (BYTE)
 dreqsource	equ	$08		; DREQ source address
 dreqdest	equ	$0C		; DREQ destination address
 dreqlen		equ	$10		; DREQ length
@@ -53,13 +53,20 @@ vintclr		equ	$16		; V interrupt clear
 hintclr		equ	$18		; H interrupt clear
 cmdintclr	equ	$1a		; CMD interrupt clear
 pwmintclr	equ	$1C		; PWM interrupt clear
-comm0		equ	$20		; Communication ports
-comm2		equ	$22		; (If 2 CPUs either SH2 or 68K writes to
-comm4		equ	$24		; the same location, it will freeze the
-comm6		equ	$26		; system)
+comm0		equ	$20		; Communication ports ***
+comm1		equ	$21		; ALL CPUs can see this ports: including Z80
+comm2		equ	$22		; only be careful with the read/write directions.
+comm3		equ	$23		; ODD addresses (1,3,5...) are BYTE-read only.
+comm4		equ	$24		; EVEN addresses (0,2,4...) can be read as WORDs
+comm5		equ	$25		; Writing LONG addreses are possible depending
+comm6		equ	$26		; of the CPU
+comm7		equ	$27		;
 comm8		equ	$28		;
+comm9		equ	$29		;
 comm10		equ	$2A		;
+comm11		equ	$2B		;
 comm12		equ	$2C		;
+comm13		equ	$2D		;
 comm14		equ	$2E		;
 comm15		equ	$2F		;
 timerctl	equ	$30		; PWM Timer Control
@@ -94,8 +101,8 @@ shift		equ	$02		; Shift Control register
 filllength	equ	$04		; Auto Fill Length register
 fillstart	equ	$06		; Auto Fill Start Address register
 filldata	equ	$08		; Auto Fill Data register
-vdpsts		equ	$0a		; VDP Status register
-framectl	equ	$0b		; Frame Buffer Control register
+vdpsts		equ	$0A		; VDP Status register
+framectl	equ	$0B		; Frame Buffer Control register
 
 ; --------------------------------------------------------
 ; SH2 Internal registers, independent for each CPU

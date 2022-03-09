@@ -983,14 +983,14 @@ Video_MarsSetGfx:
 		or.b	d7,d6
 		bset	#5,d6
 		move.b	d6,(sysmars_reg+comm14).l
-.wait2:		btst	#5,(sysmars_reg+comm14).l
-		bne.s	.wait2
+; .wait2:		btst	#5,(sysmars_reg+comm14).l
+; 		bne.s	.wait2
 		rts
 
 Video_MarsRedraw:
 		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
-.wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
-		bne.s	.wait2
+; .wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
+; 		bne.s	.wait2
 		rts
 
 ; --------------------------------------------------------

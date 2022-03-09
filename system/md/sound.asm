@@ -153,7 +153,6 @@ Sound_DMA_Pause:
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
 
-	; Make a data-backup of the current PWM's
 .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
 		bne.s	.wait_mars1

@@ -853,11 +853,8 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "comm12: \\w MD Frames: \\l",$A,$A
-		dc.b "\\l",0
-		dc.l sysmars_reg+comm12
+		dc.b "MD Framecount: \\l",0
 		dc.l RAM_Framecount
-		dc.l sysmars_reg+comm4
 		align 2
 
 PAL_EMI:

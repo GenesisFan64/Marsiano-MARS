@@ -148,11 +148,27 @@ MarsVideo_Init:
 		mov 	#_vdpreg,r1
 		mov	#0,r0			; Start at blank
 		mov.b	r0,@(bitmapmd,r1)
+		mov.b	r0,@(marsGbl_CurrFb,gbr); Clear lastfb bit
 		mov	#_framebuffer,r2	; Make null nametables
 		bsr	.def_fb
 		nop
 		bsr	.def_fb
 		nop
+		mov	#RAM_Mars_Objects,r1
+		mov	#MAX_MODELS,r2
+		mov	#0,r0
+.clnup:
+		mov	r0,@(mdl_data,r1)
+; 		mov	r0,@(mdl_animdata,r1)
+		mov	r0,@(mdl_x_pos,r1)
+		mov	r0,@(mdl_x_rot,r1)
+		mov	r0,@(mdl_y_pos,r1)
+		mov	r0,@(mdl_y_rot,r1)
+		mov	r0,@(mdl_y_pos,r1)
+		mov	r0,@(mdl_y_rot,r1)
+		dt	r2
+		bf/s	.clnup
+		add	#sizeof_mdlobj,r1
 
 	; Clear values
 	; TODO: checar bien esto porque se rompe en RESET
