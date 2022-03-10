@@ -524,26 +524,28 @@ System_SendDreq:
 		lea	($A15112).l,a5			; a5 - DREQ FIFO port
 		move.w	d0,d6				; Lenght in bytes
 		lsr.w	#1,d6				; lenght/2
-; .retry:
+.retry:
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LENght
-		bset	#2,(sysmars_reg+dreqctl).l	; Set 68S bit
+		bset	#2,(sysmars_reg+dreqctl+1).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; Not needed. we gonna check for this bit instead:
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
 ; 		bne.s	.wait_cmd
 .wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal from SH2 to fill the first words.
 		beq.s	.wait_bit
 		bclr	#6,(sysmars_reg+comm14).l	; Clear it afterwards.
-		move.w	d6,d5				; (lenght/2)/4
+
+	; *** CRITICAL PART ***
+		move.w	d6,d5			; (lenght/2)/4
 		lsr.w	#2,d5
-		sub.w	#1,d5				; minus 1 for the loop
-.l0:		move.w  (a0)+,(a5)			; *** CRITICAL PART ***
+		sub.w	#1,d5			; minus 1 for the loop
+.l0:		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
-.l1:		btst	#7,dreqctl(a5)			; Got Full?
-		bne.s	.l1
+; .l1:		btst	#7,dreqctl(a5
+; 		bne.s	.l1
 		dbf	d5,.l0
-; 		btst	#2,dreqctl(a5)			; DMA got ok? (failsafe supposedly)
+; 		btst	#2,(sysmars_reg+dreqctl).l
 ; 		bne	.retry
 		move.w	d7,sr
 		rts

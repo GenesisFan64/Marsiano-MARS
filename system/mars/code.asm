@@ -267,22 +267,22 @@ int_s_list:
 
 ; Master only
 SH2_M_Error:
-		mov	#_sysreg+comm12,r1
-		stc	sr,r0
-		mov.b	r0,@r1
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#_sysreg+comm12,r1
+; 		stc	sr,r0
+; 		mov.b	r0,@r1
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 .infin:		nop
 		bra	.infin
 		nop
 		align 4
 
 SH2_S_Error:
-		mov	#_sysreg+comm12+1,r1
-		stc	sr,r0
-		mov.b	r0,@r1
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#_sysreg+comm12+1,r1
+; 		stc	sr,r0
+; 		mov.b	r0,@r1
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 .infin:		nop
 		bra	.infin
 		nop
@@ -368,6 +368,8 @@ m_irq_cmd:
 		mov	#_sysreg,r4
 		mov	#_DMASOURCE0,r3
 		mov	#_sysreg+comm14,r2
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
 		mov	#RAM_Mars_DreqDma,r0
 		mov	r1,@r3			; Source
@@ -378,7 +380,6 @@ m_irq_cmd:
 		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
-
 	; *** HARDWARE NOTE ***
 	; DMA takes a little to properly start.
 	; Put 5 instructions (or 5 nops) after
@@ -390,7 +391,7 @@ m_irq_cmd:
 		nop
 .wait_dma:
 		mov	@($C,r3),r0		; Wait for DMA
-		tst	#2,r0
+		tst	#2,r0			; FIXME gets stuck on softreset
 		bt	.wait_dma
 		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
@@ -475,77 +476,49 @@ m_irq_v:
 
 ; =================================================================
 ; ------------------------------------------------
-; Master | VRES Interrupt (RESET on Genesis)
+; Master | VRES Interrupt (RESET button on Genesis)
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov	#_sysreg,r1
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-		mov.b	@(6,r1), r0
-		tst	#1,r0
-		bf	.reset
-		mov	#_DMACHANNEL0,r1	; Stop DMA
-		mov	@r1,r0
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet
-.wait_dma:	mov	@r1,r0
-		tst	#%10,r0
-		bt	.wait_dma
-.not_yet:
-		mov	#$FFFFFE80,r1		; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		mov	#SH2_M_HotStart,r0
-		jmp	@r0
-		nop
-.reset:
-		mov	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		or	#$01,r0
-		mov.b	r0,@(_TOCR,r1)
-.vrsloop:
-		bra	.vrsloop
-		nop
-		align 4
-		ltorg
-
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov	#$20004000,r1
-; 		mov	#0,r0
-; 		mov.w	r0,@($14,r1)
-; 		mov.b	@(6,r1), r0
+; 		mov.b	@(6,r1),r0
 ; 		tst	#1,r0
-; 		bf	.reset
-; 		mov	#_DMACHANNEL0,r1
-; 		mov	@r1,r0
+; 		bf	.vres_loop
+; 		mov	#_DMACHANNEL0,r2
+; 		mov	@r2,r0
 ; 		and	#%01,r0
 ; 		tst	r0,r0
 ; 		bt	.not_yet
-; .wait_dma:	mov	@r1,r0
+; .wait_dma:	mov	@r2,r0
 ; 		tst	#%10,r0
 ; 		bt	.wait_dma
 ; .not_yet:
-; 		mov	#_sysreg+comm0,r1
-; 		mov	#"M_OK",r0
-; 		mov	r0,@r1
-; 		mov	#$FFFFFE80,r1	; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-; 		mov	#SH2_M_HotStart,r0
-; 		jmp	@r0
-; 		nop
-; .reset:
+		mov.l	#$FFFFFF80,r2
+		mov	#0,r0
+		mov.l	r0,@($30,r2)
+		nop
+		nop
+		nop
+		nop
+		nop
+		mov.l	r0,@($C,r2)
+		mov.l	#$44E0,r0
+		mov.l	r0,@($C,r2)
+		mov	#SH2_M_HotStart,r0
+		jsr	@r0
+		nop
+; .vres_loop:
 ; 		mov	#_FRT,r1
 ; 		mov.b	@(_TOCR,r1),r0
 ; 		or	#$01,r0
 ; 		mov.b	r0,@(_TOCR,r1)
-; .vrsloop:
-; 		bra	.vrsloop
+; 		bra	*
 ; 		nop
-; 		align 4
-; 		ltorg			; Save Slave IRQ literals
+		align 4
+		ltorg			; Save MASTER IRQ literals here
 
 ; =================================================================
 ; ------------------------------------------------
@@ -899,77 +872,49 @@ s_irq_v:
 
 ; =================================================================
 ; ------------------------------------------------
-; Slave | VRES Interrupt (Pressed RESET on Genesis)
+; Slave | VRES Interrupt (RESET button on Genesis)
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov	#_sysreg,r1
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-		mov.b	@(6,r1), r0
-		tst	#1,r0
-		bf	.reset
-		mov	#_DMACHANNEL0,r1	; Stop DMA
-		mov	@r1,r0
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet
-.wait_dma:	mov	@r1,r0
-		tst	#%10,r0
-		bt	.wait_dma
-.not_yet:
-		mov	#$FFFFFE80,r1		; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		mov	#SH2_S_HotStart,r0
-		jmp	@r0
-		nop
-.reset:
-		mov	#_FRT,r1
-		mov.b	@(_TOCR,r1),r0
-		or	#$01,r0
-		mov.b	r0,@(_TOCR,r1)
-.vrsloop:
-		bra	.vrsloop
-		nop
-		align 4
-		ltorg
-
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
-; 		mov	#$20004000, r1
-; 		mov	#0,r0
-; 		mov.w	r0,@($14,r1)
-; 		mov.b	@(6,r1), r0
+; 		mov.b	@(6,r1),r0
 ; 		tst	#1,r0
-; 		bf	.reset
-; 		mov	#_DMACHANNEL0,r1
-; 		mov	@r1,r0
+; 		bf	.vres_loop
+; 		mov	#_DMACHANNEL0,r2
+; 		mov	@r2,r0
 ; 		and	#%01,r0
 ; 		tst	r0,r0
 ; 		bt	.not_yet
-; .wait_dma:	mov	@r1,r0
+; .wait_dma:	mov	@r2,r0
 ; 		tst	#%10,r0
 ; 		bt	.wait_dma
 ; .not_yet:
-; 		mov	#_sysreg+comm4,r1
-; 		mov	#"S_OK",r0
-; 		mov	r0,@r1
-; 		mov	#$FFFFFE80,r1	; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-; 		mov	#SH2_S_HotStart,r0
-; 		jmp	@r0
-; 		nop
-; .reset:
+		mov.l	#$FFFFFF80,r2
+		mov	#0,r0
+		mov.l	r0,@($30,r2)
+		nop
+		nop
+		nop
+		nop
+		nop
+		mov.l	r0,@($C,r2)
+		mov.l	#$44E0,r0
+		mov.l	r0,@($C,r2)
+		mov	#SH2_S_HotStart,r0
+		jsr	@r0
+		nop
+; .vres_loop:
 ; 		mov	#_FRT,r1
 ; 		mov.b	@(_TOCR,r1),r0
 ; 		or	#$01,r0
 ; 		mov.b	r0,@(_TOCR,r1)
-; .vrsloop:
-; 		bra	.vrsloop
+; 		bra	*
 ; 		nop
-; 		align 4
-; 		ltorg			; Save Slave IRQ literals
+		align 4
+		ltorg			; Save MASTER IRQ literals here
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -987,7 +932,6 @@ s_irq_vres:
 
 		align 4
 SH2_M_Entry:
-		mov	#CS3|$40000,r15		; Set default Stack for Master
 		mov	#_FRT,r1
 		mov     #0,r0
 		mov.b   r0,@(0,r1)
@@ -1004,31 +948,11 @@ SH2_M_Entry:
 		mov     #0,r0
 		mov.b   r0,@(3,r1)
 		mov.b   r0,@(2,r1)
-		mov.l   #$FFFFFEE2,r0		; Watchdog: Set interrupt priority bits (IPRA)
-		mov     #%0101<<4,r1
-		mov.w   r1,@r0
-		mov.l   #$FFFFFEE4,r0
-		mov     #$120/4,r1		; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
-		shll8   r1
-		mov.w   r1,@r0
-
-; ------------------------------------------------
-; Wait for Genesis and Slave CPU
-; ------------------------------------------------
-
 .wait_md:
-		mov 	#_sysreg+comm0,r2	; Wait for Genesis
-		mov.l	@r2,r0
-		cmp/eq	#0,r0
-		bf	.wait_md
-		mov.l	#"SLAV",r1
-.wait_slave:
-		mov.l	@(8,r2),r0		; Wait for Slave CPU to finish booting
-		cmp/eq	r1,r0
-		bf	.wait_slave
-		mov	#0,r0			; clear "SLAV"
-		mov	r0,@(8,r2)
-		mov	r0,@r2
+; 		mov 	#_sysreg+comm0,r2	; Wait for Genesis
+; 		mov.l	@r2,r0
+; 		cmp/eq	#0,r0
+; 		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1036,16 +960,21 @@ SH2_M_Entry:
 ;
 ; This CPU is exclusively used for Visual tasks:
 ; Background, Sprites and Polygons.
-;
-; The GENESIS side will control all of this using DREQ
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
-		mov	#CS3|$40000,r15			; Stack again if coming from RESET
+		mov.l	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
+		mov	#CS3|$40000,r15			; Set default Stack for Master
 		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
 		ldc	r14,gbr
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
+		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+		mov     #%0101<<4,r1
+		mov.w   r1,@r0
+		mov.l   #$FFFFFEE4,r0
+		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
+		shll8   r1
+		mov.w   r1,@r0
 		mov.l	#_CCR,r1
 		mov	#%00001000,r0			; Cache OFF
 		mov.w	r0,@r1
@@ -1111,10 +1040,21 @@ SH2_M_HotStart:
 ; 	03 - 3D Mode
 
 master_loop:
+		mov	#_sysreg+comm12,r1
+		mov.b	@r1,r0
+		add	#1,r0
+		mov.b	r0,@r1
 
 	; ---------------------------------------
 	; Wait frameswap
 		mov	#_vdpreg,r1			; r1 - SVDP area
+.wait_fb:	mov.w	@(vdpsts,r1),r0		; SVDP FILL active?
+		tst	#%10,r0
+		bf	.wait_fb
+		mov.b	@(framectl,r1),r0	; Framebuffer swap REQUEST.
+		xor	#1,r0			; manually Wait for VBlank after this
+		mov.b	r0,@(framectl,r1)
+		mov.b	r0,@(marsGbl_CurrFb,gbr)
 		mov.b	@(marsGbl_CurrFb,gbr),r0	; r2 - NEW Framebuffer number
 		mov	r0,r2
 .wait_frmswp:	mov.b	@(framectl,r1),r0		; Framebuffer ready?
@@ -1441,14 +1381,6 @@ mstr_gfx_3:
 ; ---------------------------------------
 
 mstr_nextframe:
-		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@(vdpsts,r1),r0		; SVDP FILL active?
-		tst	#%10,r0
-		bf	.wait_fb
-		mov.b	@(framectl,r1),r0	; Framebuffer swap REQUEST.
-		xor	#1,r0			; manually Wait for VBlank after this
-		mov.b	r0,@(framectl,r1)
-		mov.b	r0,@(marsGbl_CurrFb,gbr)
 		bra	master_loop
 		nop
 		align 4
@@ -1476,7 +1408,6 @@ mstr_nextframe:
 
 		align 4
 SH2_S_Entry:
-		mov.l	#CS3|$3F000,r15		; Reset stack
 		mov	#_FRT,r1
 		mov     #0,r0
 		mov.b   r0,@(0,r1)
@@ -1493,25 +1424,11 @@ SH2_S_Entry:
 		mov     #0,r0
 		mov.b   r0,@(3,r1)
 		mov.b   r0,@(2,r1)
-		mov.l   #$FFFFFEE2,r0		; Watchdog: Set interrupt priority bits (IPRA)
-		mov     #%0101<<4,r1
-		mov.w   r1,@r0
-		mov.l   #$FFFFFEE4,r0
-		mov     #$120/4,r1		; Watchdog: Set jump pointer (VBR + this/4) (WITV)
-		shll8   r1
-		mov.w   r1,@r0
-
-; ------------------------------------------------
-; Wait for Genesis, report to Master SH2
-; ------------------------------------------------
-
 .wait_md:
-		mov 	#_sysreg+comm0,r2
-		mov.l	@r2,r0
-		cmp/eq	#0,r0
-		bf	.wait_md
-		mov.l	#"SLAV",r0
-		mov.l	r0,@(8,r2)
+; 		mov 	#_sysreg+comm0,r2
+; 		mov.l	@r2,r0
+; 		cmp/eq	#0,r0
+; 		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1519,18 +1436,25 @@ SH2_S_Entry:
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
+		mov.l	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
 		mov.l	#CS3|$3F000,r15			; Reset stack
 		mov.l	#RAM_Mars_Global,r14		; Reset gbr
 		ldc	r14,gbr
-		mov.l	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
+		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+		mov     #%0101<<4,r1
+		mov.w   r1,@r0
+		mov.l   #$FFFFFEE4,r0
+		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
+		shll8   r1
+		mov.w   r1,@r0
 		mov.l	#_CCR,r1
 		mov	#%00001000,r0			; Cache OFF
 		mov.w	r0,@r1
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#_sysreg,r1
-		mov	#PWMIRQ_ON|CMDIRQ_ON,r0		; Enable these interrupts
+		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
 		mov 	#$C0000000,r2
@@ -1541,7 +1465,7 @@ SH2_S_HotStart:
 		dt	r3
 		bf/s	.copy
 		add 	#4,r2
-		bsr	MarsSound_Init			; Init Sound
+		bsr	MarsSound_Init			; Init PWM
 		nop
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
@@ -1555,40 +1479,44 @@ SH2_S_HotStart:
 ; --------------------------------------------------------
 
 slave_loop:
+		mov	#_sysreg+comm13,r1
+		mov.b	@r1,r0
+		add	#1,r0
+		mov.b	r0,@r1
 
-	; ---------------------------------
-	; PWM wave backup Enter/Exit bits
-	;
-	; In case Genesis side wants
-	; to do it's DMA
-	; ---------------------------------
-		mov	#_sysreg+comm15,r9	; ENTER
-		mov.b	@r9,r0
-		and	#%00100000,r0
-		cmp/eq	#%00100000,r0
-		bf	.refill_in
-		mov	#MarsSnd_Refill,r0
-		jsr	@r0
-		nop
-		mov	#MarsSnd_RvMode,r1	; Set backup-playback flag
-		mov	#1,r0
-		mov	r0,@r1
-		mov.b	@r9,r0			; Refill is ready.
-		and	#%11011111,r0
-		mov.b	r0,@r9
-.refill_in:
-		mov	#_sysreg+comm15,r9	; EXIT
-		mov.b	@r9,r0
-		and	#%00010000,r0
-		cmp/eq	#%00010000,r0
-		bf	.refill_out
-		mov	#MarsSnd_RvMode,r1	; Clear backup-playback flag
-		mov	#0,r0
-		mov	r0,@r1
-		mov.b	@r9,r0
-		and	#%11101111,r0
-		mov.b	r0,@r9
-.refill_out:
+; 	; ---------------------------------
+; 	; PWM wave backup Enter/Exit bits
+; 	;
+; 	; In case Genesis side wants
+; 	; to do it's DMA
+; 	; ---------------------------------
+; 		mov	#_sysreg+comm15,r9	; ENTER
+; 		mov.b	@r9,r0
+; 		and	#%00100000,r0
+; 		cmp/eq	#%00100000,r0
+; 		bf	.refill_in
+; 		mov	#MarsSnd_Refill,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#MarsSnd_RvMode,r1	; Set backup-playback flag
+; 		mov	#1,r0
+; 		mov	r0,@r1
+; 		mov.b	@r9,r0			; Refill is ready.
+; 		and	#%11011111,r0
+; 		mov.b	r0,@r9
+; .refill_in:
+; 		mov	#_sysreg+comm15,r9	; EXIT
+; 		mov.b	@r9,r0
+; 		and	#%00010000,r0
+; 		cmp/eq	#%00010000,r0
+; 		bf	.refill_out
+; 		mov	#MarsSnd_RvMode,r1	; Clear backup-playback flag
+; 		mov	#0,r0
+; 		mov	r0,@r1
+; 		mov.b	@r9,r0
+; 		and	#%11101111,r0
+; 		mov.b	r0,@r9
+; .refill_out:
 
 ; ---------------------------------------
 ; ***READ MODELS HERE AND UPDATE POLYGONS
@@ -1609,11 +1537,6 @@ slave_loop:
 		and	#%11101111,r0
 		mov.b	r0,@r4
 		ldc	@r15+,sr			; Interrupts ON
-;
-; 		mov	#_sysreg+comm12+1,r1
-; 		mov.b	@r1,r0
-; 		add	#1,r0
-; 		mov.b	r0,@r1
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1

@@ -100,6 +100,10 @@ thisCode_Top:
 		move.w	#3,(RAM_CurrGfx).w
 		moveq	#3,d0
 		bsr	Video_MarsSetGfx
+
+; 		move.l	#$C0000000,(vdp_ctrl).l
+; 		move.w	#$00E0,(vdp_data).l
+
 		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
 		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
 		move.w	#4,(RAM_FadeMarsSpd).w
@@ -145,11 +149,10 @@ thisCode_Top:
 		lea	str_InfoMouse(pc),a0
 		move.l	#locate(0,1,1),d0
 		bsr	Video_Print
-		add.l	#1,(RAM_MdDreq+Dreq_TEST).l
+
 		lea	(RAM_MdDreq),a0
 		move.w	#sizeof_dreq,d0
 		bsr	System_SendDreq
-
 		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -853,7 +856,8 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "MD Framecount: \\l",0
+		dc.b "comm12: \\w MD Framecount: \\l",0
+		dc.l sysmars_reg+comm12
 		dc.l RAM_Framecount
 		align 2
 

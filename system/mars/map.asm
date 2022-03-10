@@ -43,7 +43,7 @@ adapter		equ	$00		; adapter control register (Read as WORD)
 intmask		equ	$01		; SH2 CPU ONLY: interrupts mask
 standby		equ	$03		; CMD interrupt request bit by MD side (slave|master) (BYTE)
 hcount		equ	$05		; H Counter (BYTE)
-dreqctl		equ	$07		; DREQ control (BYTE)
+dreqctl		equ	$06		; DREQ control (WORD)
 dreqsource	equ	$08		; DREQ source address
 dreqdest	equ	$0C		; DREQ destination address
 dreqlen		equ	$10		; DREQ length

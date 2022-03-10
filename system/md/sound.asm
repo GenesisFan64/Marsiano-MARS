@@ -146,22 +146,20 @@ Sound_DMA_Pause:
 		moveq	#68,d7
 		dbf	d7,*
 		bra.s	.retry
-	; TODO: ver si necesito un timeout...
-		;rts
 .safe:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
 
-.wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
-		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
-		bne.s	.wait_mars1
-		move.b	(sysmars_reg+comm15),d7		; Request PWM Backup
-		bset	#5,d7
-		move.b	d7,(sysmars_reg+comm15)
-.wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
-		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
-		bne.s	.wait_mars2
+; .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
+; 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
+; 		bne.s	.wait_mars1
+; 		move.b	(sysmars_reg+comm15),d7		; Request PWM Backup
+; 		bset	#5,d7
+; 		move.b	d7,(sysmars_reg+comm15)
+; .wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
+; 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
+; 		bne.s	.wait_mars2
 		swap	d7
 		rts
 
@@ -176,16 +174,16 @@ Sound_DMA_Resume:
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
-
-.wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
-		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
-		bne.s	.wait_mars1
-		move.b	(sysmars_reg+comm15),d7		; Request PWM Restore
-		bset	#4,d7
-		move.b	d7,(sysmars_reg+comm15)
-.wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
-		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
-		bne.s	.wait_mars2
+;
+; .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
+; 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
+; 		bne.s	.wait_mars1
+; 		move.b	(sysmars_reg+comm15),d7		; Request PWM Restore
+; 		bset	#4,d7
+; 		move.b	d7,(sysmars_reg+comm15)
+; .wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
+; 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
+; 		bne.s	.wait_mars2
 		swap	d7
 		rts
 

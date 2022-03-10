@@ -1279,11 +1279,11 @@ RAMDMA_Load:
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
 		jsr	Sound_DMA_Pause
-		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
+		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
  		move.w	d5,-(sp)
 		move.w	d6,(a4)				; d6 - First word
 		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
-		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
+		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
 		move.w	#$8100,d6			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d6
 		move.w	d6,(a4)
@@ -1311,7 +1311,7 @@ RAMDMA_Blast:
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a4)
 		jsr	Sound_DMA_Pause			; Request Z80 stop and SH2 backup
-		bset	#0,(sysmars_reg+dreqctl).l	; Set RV=1
+		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
 .next:		tst.w	(RAM_VdpDmaIndx).w
 		beq.s	.end
 		move.l	(a3),(a4)			; Size
@@ -1329,7 +1329,7 @@ RAMDMA_Blast:
 		sub.w	#7*2,(RAM_VdpDmaIndx).w
 		bra.s	.next
 .end:
-		bclr	#0,(sysmars_reg+dreqctl).l	; Set RV=0
+		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
 		jsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
