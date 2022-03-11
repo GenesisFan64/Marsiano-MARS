@@ -319,6 +319,7 @@ SH2_S_Error:
 ; Master | Unused interrupt
 ; ------------------------------------------------
 
+		align 4
 m_irq_bad:
 		rts
 		nop
@@ -361,70 +362,71 @@ m_irq_cmd:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+cmdintclr,r1
 		mov.w	r0,@r1
-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
 		mov	#_sysreg,r4
 		mov	#_DMASOURCE0,r3
 		mov	#_sysreg+comm14,r2
-		mov	#%0100010011100000,r0
-		mov	r0,@($C,r3)
 		mov	#_sysreg+dreqfifo,r1
 		mov	#RAM_Mars_DreqDma,r0
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
-		mov.w	@(dreqlen,r4),r0
+		mov.w	@(dreqlen,r4),r0	; TODO: a check if it gets a zero size
+		exts.w	r0,r0
 		mov	r0,@(8,r3)		; Length (from the 68k side)
 		mov	#%0100010011100001,r0	; Transfer mode: + DMA enable
-		mov	r0,@($C,r3)		; Dest:IncFwd(01) Src:Stay(00) Size:Word(01)
+		mov	r0,@($C,r3)		; Dest:Incr(01) Src:Keep(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
+
 	; *** HARDWARE NOTE ***
-	; DMA takes a little to properly start.
+	; DMA takes a little to properly start:
 	; Put 5 instructions (or 5 nops) after
 	; writing _DMAOPERATION = 1
-		mov.b	@r2,r0
-		or	#%01000000,r0		; Tell Genesis we are few instructions away from
-		mov.b	r0,@r2			; reading the DREQ FIFO port
+	;
+	; On 32X Emulators it starts right away.
+		mov.b	@r2,r0			; Tell Genesis we are ready to
+		or	#%01000000,r0		; recieve the data from DREQ
+		mov.b	r0,@r2
 		nop
 		nop
 .wait_dma:
-		mov	@($C,r3),r0		; Wait for DMA
-		tst	#2,r0			; FIXME gets stuck on softreset
+		mov	@($C,r3),r0	; DMA is active? (fail-safe)
+; 		tst	#%01,r0
+; 		bt	.time_out
+		tst	#%10,r0		; Still transfering?
 		bt	.wait_dma
-		mov	#0,r0			; _DMAOPERATION = 0
+.time_out:
+		mov	#0,r0		; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
 
-	; *** HARDWARE BUG ***
-	; After exiting this interrupt: If the CPU reads
-	; or writes to Destination data at any location
+	; ************
+	; If the CPU reads or writes to DESTINATION data
 	; The next DMA will get cancelled.
 	; (Does nothing and return as "finished")
-	; *Needs more testing, sometimes it doesn't lock*
+	; The only workaround is to copy-paste the data
+	; we just received into another buffer after getting
+	; out of this interrupt.
 	;
 	; 32X Emulators doesn't recreate this limitation.
 		mov	#RAM_Mars_DreqDma,r1
 		mov	#RAM_Mars_DreqRead,r2
-		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS.
+		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS, watch out for the size.
 .copy_safe:
 		mov	@r1+,r0
 		mov	r0,@r2
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
+.bad_size:
+
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
-		nop
-		nop
-		nop
-		nop
-		nop
 		rts
 		nop
 		align 4
-		ltorg
 
 ; =================================================================
 ; ------------------------------------------------
@@ -448,7 +450,6 @@ m_irq_h:
 		rts
 		nop
 		align 4
-		ltorg
 
 ; =================================================================
 ; ------------------------------------------------
@@ -472,7 +473,6 @@ m_irq_v:
 		rts
 		nop
 		align 4
-		ltorg
 
 ; =================================================================
 ; ------------------------------------------------
@@ -484,31 +484,14 @@ m_irq_vres:
 		ldc	r0,sr
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-; 		mov.b	@(6,r1),r0
-; 		tst	#1,r0
-; 		bf	.vres_loop
-; 		mov	#_DMACHANNEL0,r2
-; 		mov	@r2,r0
-; 		and	#%01,r0
-; 		tst	r0,r0
-; 		bt	.not_yet
-; .wait_dma:	mov	@r2,r0
-; 		tst	#%10,r0
-; 		bt	.wait_dma
-; .not_yet:
-		mov.l	#$FFFFFF80,r2
+		mov.l	#$FFFFFF80,r1		; Not using DMA here
 		mov	#0,r0
-		mov.l	r0,@($30,r2)
-		nop
-		nop
-		nop
-		nop
-		nop
-		mov.l	r0,@($C,r2)
+		mov.l	r0,@($30,r1)
+		mov.l	r0,@($C,r1)
 		mov.l	#$44E0,r0
-		mov.l	r0,@($C,r2)
+		mov.l	r0,@($C,r1)
 		mov	#SH2_M_HotStart,r0
-		jsr	@r0
+		jmp	@r0
 		nop
 ; .vres_loop:
 ; 		mov	#_FRT,r1
@@ -518,13 +501,14 @@ m_irq_vres:
 ; 		bra	*
 ; 		nop
 		align 4
-		ltorg			; Save MASTER IRQ literals here
+		ltorg		; Save MASTER IRQ literals here
 
 ; =================================================================
 ; ------------------------------------------------
 ; Slave | Unused Interrupt
 ; ------------------------------------------------
 
+		align 4
 s_irq_bad:
 		rts
 		nop
@@ -595,7 +579,8 @@ s_irq_cmd:
 	; ---------------------------------
 
 	; First we recieve changes from Z80
-	; using comm8
+	; using comm8  for data
+	;  and  comm15 for busy/clock bits (bits 7,6)
 		mov	#_sysreg+comm8,r1
 		mov	#MarsSnd_PwmControl,r2
 		mov	#_sysreg+comm15,r3	; control comm
@@ -618,7 +603,7 @@ s_irq_cmd:
 
 	; Now loop for channels that need updating
 	;
-	; TODO: clearly rushed. but it works
+	; TODO: clearly rushed... but it works.
 		mov	#0,r1				; r1 - Current PWM slot
 		mov	#MarsSnd_PwmControl,r14
 		mov	#MAX_PWMCHNL,r10
@@ -880,31 +865,14 @@ s_irq_vres:
 		ldc	r0,sr
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-; 		mov.b	@(6,r1),r0
-; 		tst	#1,r0
-; 		bf	.vres_loop
-; 		mov	#_DMACHANNEL0,r2
-; 		mov	@r2,r0
-; 		and	#%01,r0
-; 		tst	r0,r0
-; 		bt	.not_yet
-; .wait_dma:	mov	@r2,r0
-; 		tst	#%10,r0
-; 		bt	.wait_dma
-; .not_yet:
-		mov.l	#$FFFFFF80,r2
-		mov	#0,r0
-		mov.l	r0,@($30,r2)
-		nop
-		nop
-		nop
-		nop
-		nop
-		mov.l	r0,@($C,r2)
-		mov.l	#$44E0,r0
-		mov.l	r0,@($C,r2)
+; 		mov.l	#$FFFFFF80,r2		; Not using DMA here
+; 		mov	#0,r0
+; 		mov.l	r0,@($30,r2)
+; 		mov.l	r0,@($C,r2)
+; 		mov.l	#$44E0,r0
+; 		mov.l	r0,@($C,r2)
 		mov	#SH2_S_HotStart,r0
-		jsr	@r0
+		jmp	@r0
 		nop
 ; .vres_loop:
 ; 		mov	#_FRT,r1
@@ -913,8 +881,9 @@ s_irq_vres:
 ; 		mov.b	r0,@(_TOCR,r1)
 ; 		bra	*
 ; 		nop
+
 		align 4
-		ltorg			; Save MASTER IRQ literals here
+		ltorg			; Save SLAVE IRQ literals here
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -932,27 +901,41 @@ s_irq_vres:
 
 		align 4
 SH2_M_Entry:
-		mov	#_FRT,r1
-		mov     #0,r0
-		mov.b   r0,@(0,r1)
-		mov     #$FFFFFFE2,r0
-		mov.b   r0,@(7,r1)
-		mov     #0,r0
-		mov.b   r0,@(4,r1)
-		mov     #1,r0
-		mov.b   r0,@(5,r1)
-		mov     #0,r0
-		mov.b   r0,@(6,r1)
-		mov     #1,r0
-		mov.b   r0,@(1,r1)
-		mov     #0,r0
-		mov.b   r0,@(3,r1)
-		mov.b   r0,@(2,r1)
+		mov.l	#$FFFFFE10,r14
+		mov	#0,r0
+		mov.b	r0,@(0,r14)
+		mov	#$FFFFFFE2,r0
+		mov.b	r0,@(7,r14)
+		mov	#0,r0
+		mov.b	r0,@(4,r14)
+		mov	#1,r0
+		mov.b	r0,@(5,r14)
+		mov	#0,r0
+		mov.b	r0,@(6,r14)
+		mov	#1,r0
+		mov.b	r0,@(1,r14)
+		mov	#0,r0
+		mov.b	r0,@(3,r14)
+		mov.b	r0,@(2,r14)
+		mov	#$FFFFFFF2,r0
+		mov.b	r0,@(7,r14)
+		mov	#0,r0
+		mov.b	r0,@(4,r14)
+		mov	#1,r0
+		mov.b	r0,@(5,r14)
+		mov	#$FFFFFFE2,r0
+		mov.b	r0,@(7,r14)
+		mov.l	#$20004000,r14
+		mov	#0,r0
+		mov.w	r0,@($14,r14)
+		mov.w	r0,@($16,r14)
+		mov.w	r0,@($18,r14)
+		mov.w	r0,@($1A,r14)
 .wait_md:
-; 		mov 	#_sysreg+comm0,r2	; Wait for Genesis
-; 		mov.l	@r2,r0
-; 		cmp/eq	#0,r0
-; 		bf	.wait_md
+		mov 	#_sysreg+comm12,r2
+		mov.w	@r2,r0
+		cmp/eq	#0,r0
+		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1040,7 +1023,7 @@ SH2_M_HotStart:
 ; 	03 - 3D Mode
 
 master_loop:
-		mov	#_sysreg+comm12,r1
+		mov	#_sysreg+comm0,r1
 		mov.b	@r1,r0
 		add	#1,r0
 		mov.b	r0,@r1
@@ -1048,11 +1031,11 @@ master_loop:
 	; ---------------------------------------
 	; Wait frameswap
 		mov	#_vdpreg,r1			; r1 - SVDP area
-.wait_fb:	mov.w	@(vdpsts,r1),r0		; SVDP FILL active?
+.wait_fb:	mov.w	@(vdpsts,r1),r0			; SVDP FILL active?
 		tst	#%10,r0
 		bf	.wait_fb
-		mov.b	@(framectl,r1),r0	; Framebuffer swap REQUEST.
-		xor	#1,r0			; manually Wait for VBlank after this
+		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST.
+		xor	#1,r0				; manually Wait for VBlank after this
 		mov.b	r0,@(framectl,r1)
 		mov.b	r0,@(marsGbl_CurrFb,gbr)
 		mov.b	@(marsGbl_CurrFb,gbr),r0	; r2 - NEW Framebuffer number
@@ -1066,16 +1049,6 @@ master_loop:
 	; we are still on VBlank
 	; ---------------------------------------
 
-	; *** THIS IS THE ONLY PLACE TO READ FROM
-	; _DreqRead SAFETLY ***
-	;
-	; Reading from _DreqRead outside of this
-	; requires turning off interrupts with a
-	; possible chance of failing either
-	; by DMA or ignored reads.
-
-	; TODO: check why it happens on _DreqRead and
-	; NOT _DreqDma
 		stc	sr,@-r15			; Interrupts OFF
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -1123,25 +1096,19 @@ master_loop:
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
-		mov	#_sysreg+comm14,r1
+		mov	#_sysreg+comm15,r1
 		mov.b	@r1,r0
-		or	#%00010000,r0
+		or	#%00000001,r0
 		mov.b	r0,@r1
 .wait_slv:
 		mov.b	@r1,r0
-		and	#%00010000,r0
+		and	#%00001111,r0
 		tst	r0,r0
 		bf	.wait_slv
 
 	; ---------------------------------------
 
-		ldc	@r15+,sr			; Interrupts ON
-; 		mov	#_vdpreg,r1
-; .no_vbl:
-; 		mov.b	@(vdpsts,r1),r0			; Still on VBlank?
-; 		and	#$80,r0
-; 		tst	r0,r0
-; 		bf	.no_vbl
+		ldc	@r15+,sr		; Interrupts ON
 
 ; ---------------------------------------
 ; Pick graphics mode on comm14
@@ -1408,27 +1375,33 @@ mstr_nextframe:
 
 		align 4
 SH2_S_Entry:
-		mov	#_FRT,r1
-		mov     #0,r0
-		mov.b   r0,@(0,r1)
-		mov     #$FFFFFFE2,r0
-		mov.b   r0,@(7,r1)
-		mov     #0,r0
-		mov.b   r0,@(4,r1)
-		mov     #1,r0
-		mov.b   r0,@(5,r1)
-		mov     #0,r0
-		mov.b   r0,@(6,r1)
-		mov     #1,r0
-		mov.b   r0,@(1,r1)
-		mov     #0,r0
-		mov.b   r0,@(3,r1)
-		mov.b   r0,@(2,r1)
+		mov.l	#$FFFFFE10,r14
+		mov	#0,r0
+		mov.b	r0,@(0,r14)
+		mov	#$FFFFFFE2, r0
+		mov.b	r0,@(7,r14)
+		mov	#0,r0
+		mov.b	r0,@(4,r14)
+		mov	#1,r0
+		mov.b	r0,@(5,r14)
+		mov	#0,r0
+		mov.b	r0,@(6,r14)
+		mov	#1,r0
+		mov.b	r0,@(1,r14)
+		mov	#0,r0
+		mov.b	r0,@(3,r14)
+		mov.b	r0,@(2,r14)
+		mov.l	#$20004000, r14
+		mov	#0,r0
+		mov.w	r0,@($14,r14)
+		mov.w	r0,@($16,r14)
+		mov.w	r0,@($18,r14)
+		mov.w	r0,@($1A,r14)
 .wait_md:
-; 		mov 	#_sysreg+comm0,r2
-; 		mov.l	@r2,r0
-; 		cmp/eq	#0,r0
-; 		bf	.wait_md
+		mov 	#_sysreg+comm12,r2
+		mov.w	@r2,r0
+		cmp/eq	#0,r0
+		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1479,11 +1452,12 @@ SH2_S_HotStart:
 ; --------------------------------------------------------
 
 slave_loop:
-		mov	#_sysreg+comm13,r1
+		mov	#_sysreg+comm1,r1
 		mov.b	@r1,r0
 		add	#1,r0
 		mov.b	r0,@r1
 
+	; FIXME
 ; 	; ---------------------------------
 ; 	; PWM wave backup Enter/Exit bits
 ; 	;
@@ -1522,11 +1496,11 @@ slave_loop:
 ; ***READ MODELS HERE AND UPDATE POLYGONS
 ; ---------------------------------------
 
-		mov	#_sysreg+comm14,r4
+		mov	#_sysreg+comm15,r4
 		mov.b	@r4,r0
-		and	#%00010000,r0
-		tst	r0,r0
-		bt	slave_loop
+		and	#%00001111,r0
+		cmp/eq	#1,r0
+		bf	slave_loop
 		stc	sr,@-r15			; Interrupts OFF
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -1534,7 +1508,7 @@ slave_loop:
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
 		mov.b	@r4,r0
-		and	#%11101111,r0
+		and	#%11110000,r0
 		mov.b	r0,@r4
 		ldc	@r15+,sr			; Interrupts ON
 		mov	#0,r0

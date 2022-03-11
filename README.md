@@ -29,9 +29,9 @@ Notes/Issues:
 Planned/TODO:
 - Implement NORMAL sprites on the 256-color background pseudomode
 
-Do note that current 32X emulators ignore some hardware restrictions and errors of the system:
+LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
-- The 4byte alignment is ignored.
+- The 4-byte alignment limitation is ignored.
 - SH2: The SDRAM, Framebuffer, ROM and Cache DO run at different speeds depending where the PC is currently located. Cache being the fastest BUT with the lowest space to store code.
 - After setting _DMAOPERATION to 1 you must wait 5 nops or the DMA will get cancelled.
 - Writing to the DREQ's FIFO only works properly on the $880000/$900000 68k areas. If doing the writes in the RAM area ($FF0000) some WORD writes will get lost during transfer.
@@ -42,6 +42,7 @@ Do note that current 32X emulators ignore some hardware restrictions and errors 
 - PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs
 - PWM's FIFO isn't emulated properly. on emulators it behaves like a normal register.
 - After DMA (Channel 0) finishes: If the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
+- CMD interrupt bits (at $A15103 in 68k side): If the user presses RESET on the Genesis (Soft reset) the bits will get stuck on 1 if the code was in the middle of testing before proceeding. (TODO: needs more testing)
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
 If it doesn't boot or it freezes: I probably broke something without testing on HW

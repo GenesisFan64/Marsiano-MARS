@@ -200,12 +200,10 @@
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-		bcs	.no_mars			; if Carry set, 32X is not present
+; 		bcs	.no_mars			; *** HARDWARE NOTE: this MAY trigger on soft-reset
 		move.l	#0,(RAM_initflug).l		; Reset "INIT" flag
 		btst	#15,d0				; Soft reset?
 		beq	MD_Init
-		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
-		move.w	#$0E0E,(vdp_data).l		; Write blue
 		lea	(sysmars_reg).l,a5		; a5 - MARS register
 		btst.b	#0,adapter+1(a5)		; 32X enabled?
 		bne	.adapterenable			; If yes, start booting
@@ -241,12 +239,15 @@ MARS_Entry:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; If 32X is not detected...
+; If the internal setup fails... kinda.
 ;
-; This only works in emulators, though.
+; There a bug on the security that we may get
+; in here on soft-reset.
 ; ----------------------------------------------------------------
 
 .no_mars:
+		btst	#5,d0				; Checksum passed anyway?
+		bne.s	MD_HotStart
 		move.w	#$2700,sr			; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
 		move.w	#$0E00,(vdp_data).l		; Write blue
@@ -269,7 +270,9 @@ MD_Line1010:		; Line 1010 Emulator
 MD_Line1111:		; Line 1111 Emulator
 MD_ErrorEx:		; Error exception
 MD_ErrorTrap:
-		rte
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$EE0,(vdp_data).l
+		bra.s	*
 
 ; ------------------------------------------------
 ; Init
@@ -277,10 +280,6 @@ MD_ErrorTrap:
 
 MD_Init:
 		move.w	#$2700,sr			; Disable interrupts
-.wait_dma:	move.w	(vdp_ctrl).l,d0			; Wait a frame
-		btst	#1,d0
-		bne.s	.wait_dma
-		lea	(sysmars_reg).l,a5
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
 		cmp.l	#"INIT",(RAM_initflug).l	; Did it write?
@@ -288,15 +287,9 @@ MD_HotStart:
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp
-.waitframe:	move.w	(vdp_ctrl).l,d0			; Wait a frame
-		btst	#7,d0
-		beq.s	.waitframe
-		move.l	#$80048144,(vdp_ctrl).l		; Keep display
-		lea	($FF0000),a0			; Clear RAM until $FFF000
-		move.w	#($F000/4)-1,d0
-.clrram:
-		clr.l	(a0)+
-		dbf	d0,.clrram
-		move.l	#$4000,d7			; Delay to relax the DREQ circuity
-		dbf	d7,*
-		movem.l	($FF0000),d0-a6			; Clear registers (using zeros from RAM)
+		move.w	#$2FF,d7	; TODO: a better way to delay this CPU...
+.loop:
+		move.l	#$7F,d6
+		dbf	d6,*
+		dbf	d7,.loop
+		movem.l	($FF0000),d0-a6

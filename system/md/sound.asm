@@ -12,7 +12,7 @@
 
 	; This align is for GEMS emulator only
 	; in case gets stuck in a black screen
-; 		align $80
+		align $80
 
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
@@ -151,6 +151,7 @@ Sound_DMA_Pause:
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
 
+	; FIXME
 ; .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
 ; 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
 ; 		bne.s	.wait_mars1
@@ -174,7 +175,8 @@ Sound_DMA_Resume:
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
-;
+
+	; FIXME
 ; .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
 ; 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
 ; 		bne.s	.wait_mars1

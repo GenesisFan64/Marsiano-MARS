@@ -62,12 +62,13 @@ thisCode_Top:
 		bsr	Video_init
 		bsr	System_Init
 
-		bsr	Mode_Init
-		bsr	Video_PrintInit
+		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
+		bsr	Video_Update
 		move.w	#$9200,d0
 		move.w	d0,(RAM_WindowCurr).w
 		move.w	d0,(RAM_WindowNew).w
-
+		bsr	Mode_Init
+		bsr	Video_PrintInit
 		move.l	#ART_FGTEST,d0
 		move.w	#1*$20,d1
 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
@@ -89,12 +90,12 @@ thisCode_Top:
 		lea	PAL_TESTBOARD(pc),a0
 		moveq	#0,d0
 		move.w	#$10,d1
-		bsr	Video_FadePal
+		bsr	Video_LoadPal
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#1,d2
-		bsr	Video_FadePal_Mars
+		bsr	Video_LoadPal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 
 		move.w	#3,(RAM_CurrGfx).w
@@ -180,11 +181,11 @@ thisCode_Top:
 		or.w	#$8000,(RAM_CurrMode).w
 
 .mode0_loop:
-		bsr	Video_PalFade
-		bsr	Video_MarsPalFade
-		move.w	(RAM_FadeMarsReq),d7
-		move.w	(RAM_FadeMdReq),d6
-		or.w	d6,d7
+; 		bsr	Video_PalFade
+; 		bsr	Video_MarsPalFade
+; 		move.w	(RAM_FadeMarsReq),d7
+; 		move.w	(RAM_FadeMdReq),d6
+; 		or.w	d6,d7
 ; 		bne	.loop
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -476,17 +477,6 @@ thisCode_Top:
 		move.w	#0,(RAM_CurrMode).w
 		move.w	#$9200,(RAM_WindowNew).w
 .no_mode1:
-		move.w	(Controller_1+on_press),d7
-		lsr.w	#8,d7
-		btst	#bitJoyZ,d7
-		beq.s	.noc_up
-.wait:		move.b	(sysmars_reg+comm15),d7
-		and.w	#%11110000,d7
-		bne.s	.wait
-		move.b	(sysmars_reg+comm15),d7
-		or.w	#1,d7
-		move.b	d7,(sysmars_reg+comm15)
-.noc_up:
 		move.w	(Controller_1+on_press),d7
 		lsr.w	#8,d7
 		btst	#bitJoyY,d7
@@ -856,8 +846,13 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "comm12: \\w MD Framecount: \\l",0
-		dc.l sysmars_reg+comm12
+		dc.b "comm0: \\w comm2: \\w comm14: \\w",$A
+		dc.b "comm4: \\l",$A
+		dc.b "MD Framecount: \\l",0
+		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm2
+		dc.l sysmars_reg+comm14
+		dc.l sysmars_reg+comm4
 		dc.l RAM_Framecount
 		align 2
 
