@@ -480,26 +480,29 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov	#$F0,r0
-		ldc	r0,sr
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-		mov.l	#$FFFFFF80,r1		; Not using DMA here
-		mov	#0,r0
-		mov.l	r0,@($30,r1)
-		mov.l	r0,@($C,r1)
-		mov.l	#$44E0,r0
-		mov.l	r0,@($C,r1)
+		mov.b   @(7,r1),r0
+		tst     #%001,r0
+.rv_stuck:
+		bf	.rv_stuck
+		mov	#"M_OK",r0
+		mov	r0,@(comm0,r1)
+.wait_md:
+		mov 	@(comm12,r1),r2
+		mov.w	@r2,r0
+		cmp/eq	#0,r0
+		bf	.wait_md
+		mov	#CS3|$40000,r15
+		mov	#RAM_Mars_Global,r14
+		ldc	r14,gbr
 		mov	#SH2_M_HotStart,r0
 		jmp	@r0
 		nop
-; .vres_loop:
-; 		mov	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		or	#$01,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		bra	*
-; 		nop
 		align 4
 		ltorg		; Save MASTER IRQ literals here
 
@@ -861,27 +864,29 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov	#$F0,r0
-		ldc	r0,sr
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
+		mov	#_DMASOURCE0,r2
+		mov	#0,r0
+		mov	r0,@($30,r2)
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-; 		mov.l	#$FFFFFF80,r2		; Not using DMA here
-; 		mov	#0,r0
-; 		mov.l	r0,@($30,r2)
-; 		mov.l	r0,@($C,r2)
-; 		mov.l	#$44E0,r0
-; 		mov.l	r0,@($C,r2)
+		mov.b   @(7,r1),r0
+		tst     #%001,r0
+.rv_stuck:
+		bf	.rv_stuck
+		mov	#"S_OK",r0
+		mov	r0,@(comm4,r1)
+.wait_md:
+		mov 	@(comm12,r1),r2
+		mov.w	@r2,r0
+		cmp/eq	#0,r0
+		bf	.wait_md
 		mov	#SH2_S_HotStart,r0
 		jmp	@r0
 		nop
-; .vres_loop:
-; 		mov	#_FRT,r1
-; 		mov.b	@(_TOCR,r1),r0
-; 		or	#$01,r0
-; 		mov.b	r0,@(_TOCR,r1)
-; 		bra	*
-; 		nop
-
 		align 4
 		ltorg			; Save SLAVE IRQ literals here
 

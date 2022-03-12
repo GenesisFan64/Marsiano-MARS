@@ -200,16 +200,16 @@
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-; 		bcs	.no_mars			; *** HARDWARE NOTE: this MAY trigger on soft-reset
-		move.l	#0,(RAM_initflug).l		; Reset "INIT" flag
-		btst	#15,d0				; Soft reset?
+; 		bcs	.no_mars		; *** HARDWARE BUG: This doesn't work properly. ***
+		move.l	#0,(RAM_initflug).l	; Reset "INIT" flag
+		btst	#15,d0			; Soft reset?
 		beq	MD_Init
-		lea	(sysmars_reg).l,a5		; a5 - MARS register
-		btst.b	#0,adapter+1(a5)		; 32X enabled?
-		bne	.adapterenable			; If yes, start booting
-		move.l	#0,comm8(a5)			; If not, we can't use 32X or something went wrong
-		lea	.ramcode(pc),a0			; Copy the adapter-retry code to RAM
-		lea	($FF0000).l,a1			; and jump there.
+		lea	(sysmars_reg).l,a5	; a5 - MARS register
+		btst.b	#0,1(a5)		; 32X enabled?
+		bne	.adapter_enbl		; If yes, start booting
+		move.l	#0,comm8(a5)		; If not, we can't use 32X or something went wrong
+		lea	.ram_code(pc),a0	; Copy the adapter-retry code to RAM
+		lea	($FF0000).l,a1		; and jump there.
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
 		move.l	(a0)+,(a1)+
@@ -220,8 +220,8 @@ MARS_Entry:
 		move.l	(a0)+,(a1)+
 		lea	($FF0000).l,a0
 		jmp	(a0)
-.ramcode:
-		move.b	#1,adapter+1(a5)		; Enable adapter.
+.ram_code:
+		move.b	#1,adapter(a5)		; Enable adapter.
 		lea	.restarticd(pc),a0	; JUMP to the following code in
 		adda.l	#$880000,a0		; the new 68k location
 		jmp	(a0)
@@ -231,23 +231,20 @@ MARS_Entry:
 		move.w	#3900,d7		; d7 - loop this many times
 		lea	($880000+$6E4),a1	; Jump to ?res_wait (check ICD_MARS.PRG)
 		jmp	(a1)
-.adapterenable:
+.adapter_enbl:
 		lea	(sysmars_reg),a5
-		btst.b	#1,adapter+1(a5)		; SH2 Reset request?
+		btst.b	#1,1(a5)		; SH2 Reset request?
 		bne.s	MD_HotStart		; If not, we are on hotstart
 		bra.s	.restarticd
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; If the internal setup fails... kinda.
+; If 32X is not detected...
 ;
-; There a bug on the security that we may get
-; in here on soft-reset.
+; This only works in emulators, though.
 ; ----------------------------------------------------------------
 
 .no_mars:
-		btst	#5,d0				; Checksum passed anyway?
-		bne.s	MD_HotStart
 		move.w	#$2700,sr			; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
 		move.w	#$0E00,(vdp_data).l		; Write blue
@@ -270,26 +267,42 @@ MD_Line1010:		; Line 1010 Emulator
 MD_Line1111:		; Line 1111 Emulator
 MD_ErrorEx:		; Error exception
 MD_ErrorTrap:
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$EE0,(vdp_data).l
-		bra.s	*
+		rte
 
 ; ------------------------------------------------
 ; Init
 ; ------------------------------------------------
 
 MD_Init:
-		move.w	#$2700,sr			; Disable interrupts
+		move.w	#$2700,sr
+.wait_dma:	move.w	(vdp_ctrl).l,d0
+		btst	#1,d0
+		bne.s	.wait_dma
+		lea	(sysmars_reg).l,a5
+; 		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
+.wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
+		bne.s	.wm
+.ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
+		bne.s	.ws
+		moveq	#0,d0				; Reset comm values
+		move.l	d0,comm0(a5)
+		move.l	d0,comm4(a5)
+		move.l	d0,comm12(a5)
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
-		cmp.l	#"INIT",(RAM_initflug).l	; Did it write?
-		bne.s	MD_Init				; If not, restart everything and try again.
+		cmp.l	#"INIT",(RAM_initflug).l
+		bne.s	MD_Init
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp
-		move.w	#$2FF,d7	; TODO: a better way to delay this CPU...
-.loop:
-		move.l	#$7F,d6
-		dbf	d6,*
-		dbf	d7,.loop
-		movem.l	($FF0000),d0-a6
+.waitframe:	move.w	(vdp_ctrl).l,d0			; Wait a frame
+		btst	#7,d0
+		beq.s	.waitframe
+		move.l	#$80048104,(vdp_ctrl).l		; Keep display
+		lea	($FF0000),a0			; Clear RAM until $FFF000
+		move.w	#($F000/4)-1,d0
+.clrram:
+		clr.l	(a0)+
+		dbf	d0,.clrram
+		movem.l	($FF0000),d0-a6			; Clear registers (using zeros from RAM)
+	; jump goes here...
