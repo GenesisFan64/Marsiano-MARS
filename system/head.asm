@@ -200,7 +200,7 @@
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-; 		bcs	.no_mars		; *** HARDWARE BUG: This doesn't work properly. ***
+		bcs	.no_mars		; *** HARDWARE BUG: This may trigger on too many soft-resets ("rage" resets)
 		move.l	#0,(RAM_initflug).l	; Reset "INIT" flag
 		btst	#15,d0			; Soft reset?
 		beq	MD_Init
@@ -279,13 +279,10 @@ MD_Init:
 		btst	#1,d0
 		bne.s	.wait_dma
 		lea	(sysmars_reg).l,a5
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$00E,(vdp_data).l
-		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
+		move.w	#0,dreqctl(a5)			; Clear 68S and RV
+		move.l	#"68UP",comm12(a5)
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 		bne.s	.wm
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$0E0,(vdp_data).l
 .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
 		bne.s	.ws
 		moveq	#0,d0				; Reset comm values
@@ -299,14 +296,16 @@ MD_HotStart:
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp
-.waitframe:	move.w	(vdp_ctrl).l,d0			; Wait a frame
+.waitframe:	move.w	(vdp_ctrl).l,d0			; Wait VBlank
 		btst	#7,d0
 		beq.s	.waitframe
-		move.l	#$80048104,(vdp_ctrl).l		; Keep display
-		lea	($FF0000),a0			; Clear RAM until $FFF000
-		move.w	#($F000/4)-1,d0
-.clrram:
-		clr.l	(a0)+
-		dbf	d0,.clrram
+		lea	($FFFF0000),a0			; Clear our RAM
+		move.l	#sizeof_mdram,d1		; Also using this as a delay in case
+		moveq	#0,d0				; DREQ needs to "cool down" (on soft reset)
+.loop_ram:
+		move.w	d0,(a0)+
+		cmp.l	d1,a0
+		bcs.s	.loop_ram
+		move.l	#$80048104,(vdp_ctrl).l		; Default top VDP regs
 		movem.l	($FF0000),d0-a6			; Clear registers (using zeros from RAM)
 	; jump goes here...

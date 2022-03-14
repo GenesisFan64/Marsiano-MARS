@@ -186,7 +186,7 @@ sizeof_mdvid	ds.l 0
 ; ----------------------------------------------------------------
 ; MD RAM
 ;
-; NOTE for porting this to Sega CD (With or without 32X):
+; NOTE for porting this to Sega CD (or SegaCD+32X):
 ; $FFFD00 to $FFFDFF is reserved for the MAIN-CPU's vectors
 ; ----------------------------------------------------------------
 

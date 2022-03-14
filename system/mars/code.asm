@@ -369,6 +369,15 @@ m_irq_cmd:
 		mov	#_DMASOURCE0,r3
 		mov	#_sysreg+comm14,r2
 		mov	#_sysreg+dreqfifo,r1
+		mov	@($C,r3),r0		; Check if last DMA is active
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+		mov	#0,r0			; Force DMA off
+		mov	r0,@($30,r3)
+		mov	r0,@($C,r3)
+.not_yet:
+		mov	r0,@($C,r3)
 		mov	#RAM_Mars_DreqDma,r0
 		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
@@ -412,7 +421,7 @@ m_irq_cmd:
 	; 32X Emulators doesn't recreate this limitation.
 		mov	#RAM_Mars_DreqDma,r1
 		mov	#RAM_Mars_DreqRead,r2
-		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS, watch out for the size.
+		mov	#sizeof_dreq/4,r3	; NOTE: copying as 4bytes
 .copy_safe:
 		mov	@r1+,r0
 		mov	r0,@r2
@@ -480,25 +489,31 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
+		mov.l	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-		mov	#_DMACHANNEL0,r2
-		mov	@r2,r0
+		mov	#_DMASOURCE0,r2
+		mov	@($C,r2),r0
 		and	#%01,r0
 		tst	r0,r0
 		bt	.not_yet
-.wait_dma:	mov	@r2,r0
-		tst	#%10,r0
-		bt	.wait_dma
+		mov	#0,r0		; Force DMA off
+		mov	r0,@($30,r2)
+		mov	r0,@($C,r2)
 .not_yet:
-		mov.b   @(7,r1),r0
-		tst     #%001,r0
-.rv_stuck:
-		bf	.rv_stuck
+; 		mov.b   @(7,r1),r0
+; 		tst     #%001,r0
+; .rv_stuck:
+; 		bf	.rv_stuck
+; 		mov	#"68UP",r2
+; .wait_md:	mov	@(comm12,r1),r0
+; 		cmp/eq	r2,r0
+; 		bf	.wait_md
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r1)
 		mov	#SH2_M_HotStart,r0
@@ -845,25 +860,31 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
+		mov.l	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
-		mov	#_DMACHANNEL0,r2
-		mov	@r2,r0
+		mov	#_DMASOURCE0,r2
+		mov	@($C,r2),r0
 		and	#%01,r0
 		tst	r0,r0
 		bt	.not_yet
-.wait_dma:	mov	@r2,r0
-		tst	#%10,r0
-		bt	.wait_dma
+		mov	#0,r0		; Force DMA off
+		mov	r0,@($30,r2)
+		mov	r0,@($C,r2)
 .not_yet:
-		mov.b   @(7,r1),r0
-		tst     #%001,r0
-.rv_stuck:
-		bf	.rv_stuck
+; 		mov.b   @(7,r1),r0
+; 		tst     #%001,r0
+; .rv_stuck:
+; 		bf	.rv_stuck
+; 		mov	#"68UP",r2
+; .wait_md:	mov	@(comm12,r1),r0
+; 		cmp/eq	r2,r0
+; 		bf	.wait_md
 		mov	#"S_OK",r0
 		mov	r0,@(comm4,r1)
 		mov	#SH2_S_HotStart,r0
@@ -912,12 +933,6 @@ SH2_M_Entry:
 		mov.b	r0,@(5,r14)
 		mov	#$FFFFFFE2,r0
 		mov.b	r0,@(7,r14)
-		mov.l	#$20004000,r14
-		mov	#0,r0
-		mov.w	r0,@($14,r14)
-		mov.w	r0,@($16,r14)
-		mov.w	r0,@($18,r14)
-		mov.w	r0,@($1A,r14)
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -946,10 +961,10 @@ SH2_M_Entry:
 		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
     		mov.b	r0,@(intmask,r1)
 .wait_md:
-		mov 	#_sysreg+comm12,r2
-		mov.w	@r2,r0
-		cmp/eq	#0,r0
-		bf	.wait_md
+; 		mov 	#_sysreg+comm12,r2
+; 		mov.w	@r2,r0
+; 		cmp/eq	#0,r0
+; 		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -960,20 +975,26 @@ SH2_M_Entry:
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
-		mov.l	#$F0,r0					; Interrupts OFF
+		mov.l	#$F0,r0				; Interrupts OFF
 		ldc	r0,sr
-		mov	#CS3|$40000,r15				; Set default Stack for Master
-		mov	#RAM_Mars_Global,r14			; GBR - Global values/variables go here.
+		mov	#CS3|$40000,r15			; Set default Stack for Master
+		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
 		ldc	r14,gbr
-		mov	#RAM_Mars_Objects,r1
-		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r2	; *4byte ALIGNED*
+		mov.l	#$20004000,r14
+		mov	#0,r0
+		mov.w	r0,@($14,r14)
+		mov.w	r0,@($16,r14)
+		mov.w	r0,@($18,r14)
+		mov.w	r0,@($1A,r14)
+		mov	#RAM_Mars_DreqRead,r1		; Cleanup DREQ output
+		mov	#sizeof_dreq/4,r2		; NOTE: copying as 4bytes
 		mov	#0,r0
 .clrram:
 		mov	r0,@r1
 		dt	r2
 		bf/s	.clrram
 		add	#4,r1
-		mov.l	#$20,r0					; Interrupts ON
+		mov.l	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	master_loop
 		nop
@@ -1370,12 +1391,6 @@ SH2_S_Entry:
 		mov	#0,r0
 		mov.b	r0,@(3,r14)
 		mov.b	r0,@(2,r14)
-		mov.l	#$20004000, r14
-		mov	#0,r0
-		mov.w	r0,@($14,r14)
-		mov.w	r0,@($16,r14)
-		mov.w	r0,@($18,r14)
-		mov.w	r0,@($1A,r14)
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1403,10 +1418,10 @@ SH2_S_Entry:
 		bsr	MarsSound_Init			; Init PWM
 		nop
 .wait_md:
-		mov 	#_sysreg+comm12,r2
-		mov.w	@r2,r0
-		cmp/eq	#0,r0
-		bf	.wait_md
+; 		mov 	#_sysreg+comm12,r2
+; 		mov.w	@r2,r0
+; 		cmp/eq	#0,r0
+; 		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1419,6 +1434,12 @@ SH2_S_HotStart:
 		mov.l	#CS3|$3F000,r15			; Reset stack
 		mov.l	#RAM_Mars_Global,r14		; Reset gbr
 		ldc	r14,gbr
+		mov.l	#$20004000, r14
+		mov	#0,r0
+		mov.w	r0,@($14,r14)
+		mov.w	r0,@($16,r14)
+		mov.w	r0,@($18,r14)
+		mov.w	r0,@($1A,r14)
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	slave_loop

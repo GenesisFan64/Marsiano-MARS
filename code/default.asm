@@ -87,12 +87,12 @@ thisCode_Top:
 		lea	PAL_TESTBOARD(pc),a0
 		moveq	#0,d0
 		move.w	#$10,d1
-		bsr	Video_LoadPal
+		bsr	Video_FadePal
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#1,d2
-		bsr	Video_LoadPal_Mars
+		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 
@@ -181,8 +181,8 @@ thisCode_Top:
 		or.w	#$8000,(RAM_CurrMode).w
 
 .mode0_loop:
-; 		bsr	Video_PalFade
-; 		bsr	Video_MarsPalFade
+		bsr	Video_PalFade
+		bsr	Video_MarsPalFade
 ; 		move.w	(RAM_FadeMarsReq),d7
 ; 		move.w	(RAM_FadeMdReq),d6
 ; 		or.w	d6,d7
