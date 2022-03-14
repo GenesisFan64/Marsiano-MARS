@@ -486,20 +486,21 @@ m_irq_vres:
 		mov.b	r0,@(7,r1)
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
+		mov	#_DMACHANNEL0,r2
+		mov	@r2,r0
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:	mov	@r2,r0
+		tst	#%10,r0
+		bt	.wait_dma
+.not_yet:
 		mov.b   @(7,r1),r0
 		tst     #%001,r0
 .rv_stuck:
 		bf	.rv_stuck
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r1)
-.wait_md:
-		mov 	@(comm12,r1),r2
-		mov.w	@r2,r0
-		cmp/eq	#0,r0
-		bf	.wait_md
-		mov	#CS3|$40000,r15
-		mov	#RAM_Mars_Global,r14
-		ldc	r14,gbr
 		mov	#SH2_M_HotStart,r0
 		jmp	@r0
 		nop
@@ -522,28 +523,8 @@ s_irq_bad:
 ; Slave | PWM Interrupt
 ; ------------------------------------------------
 
-s_irq_pwm:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov	#_FRT,r1
-		mov.b	@(7,r1),r0
-		xor	#2,r0
-		mov.b	r0,@(7,r1)
-		mov	#_sysreg+pwmintclr,r1
-		mov.w	r0,@r1
-
-.hold_on:	mov	#_sysreg+monowidth,r1	; PWM full?
-		mov.b	@r1,r0			; Wait until any of
- 		tst	#$80,r0			; L/R regs get free.
- 		bf	.hold_on
-		sts	pr,@-r15
-		mov	#MarsSound_ReadPwm,r0
-		jsr	@r0
-		nop
-		lds	@r15+,pr
-		rts
-		nop
-		align 4
+; check cache.asm
+; s_irq_pwm:
 
 ; =================================================================
 ; ------------------------------------------------
@@ -868,22 +849,23 @@ s_irq_vres:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_DMASOURCE0,r2
-		mov	#0,r0
-		mov	r0,@($30,r2)
 		mov.l	#_sysreg,r1
 		mov.w	r0,@(vresintclr,r1)
+		mov	#_DMACHANNEL0,r2
+		mov	@r2,r0
+		and	#%01,r0
+		tst	r0,r0
+		bt	.not_yet
+.wait_dma:	mov	@r2,r0
+		tst	#%10,r0
+		bt	.wait_dma
+.not_yet:
 		mov.b   @(7,r1),r0
 		tst     #%001,r0
 .rv_stuck:
 		bf	.rv_stuck
 		mov	#"S_OK",r0
 		mov	r0,@(comm4,r1)
-.wait_md:
-		mov 	@(comm12,r1),r2
-		mov.w	@r2,r0
-		cmp/eq	#0,r0
-		bf	.wait_md
 		mov	#SH2_S_HotStart,r0
 		jmp	@r0
 		nop
@@ -936,6 +918,33 @@ SH2_M_Entry:
 		mov.w	r0,@($16,r14)
 		mov.w	r0,@($18,r14)
 		mov.w	r0,@($1A,r14)
+		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+		mov     #%0101<<4,r1
+		mov.w   r1,@r0
+		mov.l   #$FFFFFEE4,r0
+		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
+		shll8   r1
+		mov.w   r1,@r0
+		mov.l	#_CCR,r1
+		mov	#$10,r0
+		mov.w	r0,@r1
+		mov	#$09,r0
+		mov.w	r0,@r1
+		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
+		mov 	#$C0000000,r2
+		mov 	#(CACHE_MASTER_E-CACHE_MASTER)/4,r3
+.copy:
+		mov 	@r1+,r0
+		mov 	r0,@r2
+		dt	r3
+		bf/s	.copy
+		add 	#4,r2
+		mov	#MarsVideo_Init,r0		; Init Video
+		jsr	@r0
+		nop
+		mov	#_sysreg,r1
+		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
+    		mov.b	r0,@(intmask,r1)
 .wait_md:
 		mov 	#_sysreg+comm12,r2
 		mov.w	@r2,r0
@@ -951,62 +960,21 @@ SH2_M_Entry:
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
-		mov.l	#$F0,r0				; Interrupts OFF
+		mov.l	#$F0,r0					; Interrupts OFF
 		ldc	r0,sr
-		mov	#CS3|$40000,r15			; Set default Stack for Master
-		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
+		mov	#CS3|$40000,r15				; Set default Stack for Master
+		mov	#RAM_Mars_Global,r14			; GBR - Global values/variables go here.
 		ldc	r14,gbr
-		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
-		mov     #%0101<<4,r1
-		mov.w   r1,@r0
-		mov.l   #$FFFFFEE4,r0
-		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
-		shll8   r1
-		mov.w   r1,@r0
-		mov.l	#_CCR,r1
-		mov	#%00001000,r0			; Cache OFF
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
-    		mov.b	r0,@(intmask,r1)
-		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
-		mov 	#$C0000000,r2
-		mov 	#(CACHE_MASTER_E-CACHE_MASTER)/4,r3
-.copy:
-		mov 	@r1+,r0
-		mov 	r0,@r2
-		dt	r3
-		bf/s	.copy
-		add 	#4,r2
-		mov	#_DMACHANNEL0,r1		; Force DMA channel 0 to stop
+		mov	#RAM_Mars_Objects,r1
+		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r2	; *4byte ALIGNED*
 		mov	#0,r0
-		mov	r0,@($30,r1)
-		mov	r0,@($C,r1)
-		mov	#MarsVideo_Init,r0		; Init Video
-		jsr	@r0
-		nop
-		mov.l	#$20,r0				; Interrupts ON
+.clrram:
+		mov	r0,@r1
+		dt	r2
+		bf/s	.clrram
+		add	#4,r1
+		mov.l	#$20,r0					; Interrupts ON
 		ldc	r0,sr
-
-	; TODO: luego mover esto al genesis con el DREQ
-		mov	#RAM_Mars_Background,r1
-		mov	#$200,r2
-		mov	#8,r3
-		mov	#320,r4
-		mov	#240,r5
-		bsr	MarsVideo_MkScrlField
-		mov	#0,r6
-		mov	#RAM_Mars_Background,r1
-		mov	#TESTMARS_BG,r2			; Image OR RAM section
-		mov	#320,r3
-		mov	#224,r4
-		bsr	MarsVideo_SetBg
-		nop
-		mov 	#_vdpreg,r1
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
 		bra	master_loop
 		nop
 		align 4
@@ -1028,10 +996,10 @@ SH2_M_HotStart:
 ; 	03 - 3D Mode
 
 master_loop:
-		mov	#_sysreg+comm0,r1
-		mov.b	@r1,r0
-		add	#1,r0
-		mov.b	r0,@r1
+; 		mov	#_sysreg+comm0,r1
+; 		mov.b	@r1,r0
+; 		add	#1,r0
+; 		mov.b	r0,@r1
 
 	; ---------------------------------------
 	; Wait frameswap
@@ -1105,7 +1073,13 @@ master_loop:
 		mov.b	@r1,r0
 		or	#%00000001,r0
 		mov.b	r0,@r1
+
+		mov	#_sysreg+comm0,r2
 .wait_slv:
+		mov.b	@r2,r0
+		add	#1,r0
+		mov.b	r0,@r2
+
 		mov.b	@r1,r0
 		and	#%00001111,r0
 		tst	r0,r0
@@ -1402,6 +1376,32 @@ SH2_S_Entry:
 		mov.w	r0,@($16,r14)
 		mov.w	r0,@($18,r14)
 		mov.w	r0,@($1A,r14)
+		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+		mov     #%0101<<4,r1
+		mov.w   r1,@r0
+		mov.l   #$FFFFFEE4,r0
+		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
+		shll8   r1
+		mov.w   r1,@r0
+		mov.l	#_CCR,r1
+		mov	#$10,r0
+		mov.w	r0,@r1
+		mov	#$09,r0
+		mov.w	r0,@r1
+		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
+		mov 	#$C0000000,r2
+		mov 	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r3
+.copy:
+		mov 	@r1+,r0
+		mov 	r0,@r2
+		dt	r3
+		bf/s	.copy
+		add 	#4,r2
+		mov	#_sysreg,r1
+		mov	#CMDIRQ_ON|PWMIRQ_ON,r0			; Enable these interrupts
+    		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
+		bsr	MarsSound_Init			; Init PWM
+		nop
 .wait_md:
 		mov 	#_sysreg+comm12,r2
 		mov.w	@r2,r0
@@ -1419,32 +1419,6 @@ SH2_S_HotStart:
 		mov.l	#CS3|$3F000,r15			; Reset stack
 		mov.l	#RAM_Mars_Global,r14		; Reset gbr
 		ldc	r14,gbr
-		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
-		mov     #%0101<<4,r1
-		mov.w   r1,@r0
-		mov.l   #$FFFFFEE4,r0
-		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
-		shll8   r1
-		mov.w   r1,@r0
-		mov.l	#_CCR,r1
-		mov	#%00001000,r0			; Cache OFF
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
-    		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
-		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
-		mov 	#$C0000000,r2
-		mov 	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r3
-.copy:
-		mov 	@r1+,r0
-		mov 	r0,@r2
-		dt	r3
-		bf/s	.copy
-		add 	#4,r2
-		bsr	MarsSound_Init			; Init PWM
-		nop
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	slave_loop

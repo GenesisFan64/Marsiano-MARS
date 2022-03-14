@@ -528,12 +528,8 @@ System_SendDreq:
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LENght
 		bset	#2,(sysmars_reg+dreqctl+1).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$00E,(vdp_data).l
 .wait_cmd:	btst	#0,(sysmars_reg+standby).l
 		bne.s	.wait_cmd
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$0E0,(vdp_data).l
 .wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal from SH2 to fill the first words.
 		beq.s	.wait_bit
 		bclr	#6,(sysmars_reg+comm14).l	; Clear it afterwards.
@@ -551,10 +547,6 @@ System_SendDreq:
 		dbf	d5,.l0
 ; 		btst	#2,(sysmars_reg+dreqctl).l
 ; 		bne	.retry
-
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$000,(vdp_data).l
-
 		move.w	d7,sr
 		rts
 

@@ -22,7 +22,7 @@ Sound, Genesis and 32X:
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
 
 Notes/Issues:
-- SOFT reset (Pressing RESET on Genesis) might freeze the SH2 side and get stuck on a infinite loop until the user turns off the system.
+- SOFT reset currently unstable.
 - PWM RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might break the PWM playback
 - 256-color background: the X/Y postion gets corrupt on soft-reset
 
@@ -36,13 +36,14 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - (SH2) The SDRAM, Framebuffer, ROM and Cache DO run at different speeds depending where the Program Counter (PC) is currently located. Cache being the fastest BUT with the lowest space to store code.
 - (SH2) After setting _DMAOPERATION to 1 you must wait 5 nops or the DMA will get cancelled.
 - (68K) Writing to the DREQ's FIFO only works properly on the $880000/$900000 68k areas. If doing the writes in the RAM area ($FF0000) some WORD writes will get lost during transfer.
-- Writing pixels in to the framebuffer BYTEs cause a small delay.
 - (68k, commonly) RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side, as a workaround for the DMA's ROM-to-VDP transfers. If you do any DMA-transfer without setting this bit: it will transfer trash data, Your Genesis-DMA transfer routines MUST be located on RAM (recommended method). on the SH2 side: If RV is set, any read from SH2's ROM area will return trash data. (Note: RAM-to-VDP transfers doesn't require the RV bit)
 - (both CPUs) FM bit: This bit tells which system side (Genesis or 32X) can read/write to the Super VDP (The framebuffer and 256-color palette), If a CPU with NO permission touches the Super VDP, it will freeze the entire system (32X add-on or Genesis).
 - (SH2) BUS fighting: If any of the SH2 CPUs READ/WRITE the same location at the same time it will crash the add-on. Only tested on the SDRAM area but believe the video and audio registers are affected too. only the comm's are safe for both sides (and Genesis too.)
-- PWM's sound limit for each channel (Left and Right) is $3FF, NOT $FFF mentioned in the docs
-- PWM's FIFO isn't emulated properly: on emulators it behaves like a normal register.
 - (SH2) After DMA (Channel 0) finishes: If the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
+- (SH2) If you force _DMAOPERATION to OFF while DMA is active it crashes the system.
+- Writing pixels in to the framebuffer in BYTEs cause a small delay.
+- PWM's FIFO isn't emulated properly: on emulators it behaves like a normal register.
+- PWM's sound limit for both LEFT and RIGHT channels is 1023 ($03FF), NOT 4095 ($0FFF) mentioned in the docs.
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted.
 If it doesn't boot or it freezes: I probably broke something without testing on HW

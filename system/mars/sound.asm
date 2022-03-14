@@ -38,7 +38,6 @@ sizeof_sndchn	ds.l 0
 ; --------------------------------------------------------
 
 MarsSound_Init:
-		sts	pr,@-r15
 		stc	gbr,@-r15
 		mov	#_sysreg,r0
 		ldc	r0,gbr
@@ -50,17 +49,16 @@ MarsSound_Init:
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
-		mov	#0,r0
-		mov	#MarsSnd_PwmChnls,r1
-		mov	#MAX_PWMCHNL,r2
-		mov	#sizeof_sndchn,r3
-.clr_enbl:
-		mov	r0,@(mchnsnd_enbl,r1)
-		dt	r2
-		bf/s	.clr_enbl
-		add	r3,r1
+; 		mov	#0,r0
+; 		mov	#MarsSnd_PwmChnls,r1
+; 		mov	#MAX_PWMCHNL,r2
+; 		mov	#sizeof_sndchn,r3
+; .clr_enbl:
+; 		mov	r0,@(mchnsnd_enbl,r1)
+; 		dt	r2
+; 		bf/s	.clr_enbl
+; 		add	r3,r1
 		ldc	@r15+,gbr
-		lds	@r15+,pr
 		rts
 		nop
 		align 4

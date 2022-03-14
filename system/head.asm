@@ -234,7 +234,7 @@ MARS_Entry:
 .adapter_enbl:
 		lea	(sysmars_reg),a5
 		btst.b	#1,1(a5)		; SH2 Reset request?
-		bne.s	MD_HotStart		; If not, we are on hotstart
+		bne	MD_HotStart		; If not, we are on hotstart
 		bra.s	.restarticd
 
 ; ====================================================================
@@ -279,9 +279,13 @@ MD_Init:
 		btst	#1,d0
 		bne.s	.wait_dma
 		lea	(sysmars_reg).l,a5
-; 		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$00E,(vdp_data).l
+		move.l	#"68UP",comm12(a5)		; comm12: Report to SH2 that we are active.
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 		bne.s	.wm
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$0E0,(vdp_data).l
 .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
 		bne.s	.ws
 		moveq	#0,d0				; Reset comm values
@@ -291,7 +295,7 @@ MD_Init:
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
 		cmp.l	#"INIT",(RAM_initflug).l
-		bne.s	MD_Init
+		bne	MD_Init
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp

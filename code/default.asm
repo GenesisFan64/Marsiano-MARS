@@ -846,10 +846,11 @@ str_Gema:
 ; 		align 2
 
 str_InfoMouse:
-		dc.b "comm0: \\w",$A
+		dc.b "comm0: \\w comm4: \\w",$A
 		dc.b $A
 		dc.b "MD Framecount: \\l",0
 		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm4
 		dc.l RAM_Framecount
 		align 2
 

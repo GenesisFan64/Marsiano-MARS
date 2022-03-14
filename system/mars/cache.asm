@@ -663,11 +663,11 @@ drwsld_nxtline_tex:
 ; 		mov	#Cach_SendLine,r10
 ; 		add 	r11,r10
 		mov	#$FF,r0
-		mov	@(plypz_mtrl,r14),r11	; r11 - texture data
 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
 		mov	r4,r13
 		shlr16	r4
 		mov	#$1FFF,r2
+		mov	@(plypz_mtrl,r14),r11	; r11 - texture data
 		and	r2,r4
 		and	r0,r13
 .tex_xloop:
@@ -681,10 +681,10 @@ drwsld_nxtline_tex:
 		mov.b	@(r0,r11),r0		; Read texture pixel
 		add	r13,r0			; Add index increment
 		and	#$FF,r0
-		mov.b	r0,@r10	   		; Write pixel to Framebuffer
 		add 	#1,r10
 		add	r6,r5			; Update X
 		dt	r12
+		mov.b	r0,@r10	   		; Write pixel to Framebuffer
 		bf/s	.tex_xloop
 		add	r8,r7			; Update Y
 
@@ -877,6 +877,7 @@ drwsld_nxtline:
 ; 		mov	r14,@-r0
 ; 		bra	drwtask_return
 ; 		mov	#$10,r2			; Exit and re-enter
+
 drwsld_updline:
 		add	r2,r1
 		add	r4,r3
@@ -963,7 +964,18 @@ MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
 
 ; **** CRITICAL ROUTINE, MUST BE FAST ***
 
-MarsSound_ReadPwm:
+s_irq_pwm:
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
+		mov	#_sysreg+pwmintclr,r1
+		mov.w	r0,@r1
+
+; ------------------------------------------------
+
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -974,8 +986,6 @@ MarsSound_ReadPwm:
 		mov	r9,@-r15
 		mov	r10,@-r15
 		sts	macl,@-r15
-
-; ------------------------------------------------
 
 		mov	#MarsSnd_PwmCache,r10
 		mov	#MarsSnd_PwmChnls,r9	; r9 - Channel list
@@ -1132,10 +1142,7 @@ MarsSound_ReadPwm:
 		mov	#_sysreg+rchwidth,r2
  		mov.w	r6,@r1
  		mov.w	r7,@r2
-; 		mov	#_sysreg+monowidth,r3	; Not needed here.
-; 		mov.b	@r3,r0
-; 		tst	#$80,r0
-; 		bf	.retry
+
 		lds	@r15+,macl
 		mov	@r15+,r10
 		mov	@r15+,r9
