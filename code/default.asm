@@ -61,11 +61,15 @@ thisCode_Top:
 		bsr	Sound_init
 		bsr	Video_init
 		bsr	System_Init
-
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		bsr	Video_Update
 		bsr	Mode_Init
 		bsr	Video_PrintInit
+
+		move.w	#$9200,d0
+		move.w	d0,(RAM_WindowCurr).w
+		move.w	d0,(RAM_WindowNew).w
+
 		move.l	#ART_FGTEST,d0
 		move.w	#1*$20,d1
 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
@@ -95,7 +99,6 @@ thisCode_Top:
 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
-
 		move.w	#3,(RAM_CurrGfx).w
 		moveq	#3,d0
 		bsr	Video_MarsSetGfx
@@ -122,11 +125,10 @@ thisCode_Top:
 
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test,mdl_data(a0)
-		move.l	#-$80000,mdl_z_pos(a0)
+		move.l	#-$800,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
-		move.w	#$9200,d0
-		move.w	d0,(RAM_WindowCurr).w
-		move.w	d0,(RAM_WindowNew).w
+
+
 ; ====================================================================
 ; ------------------------------------------------------
 ; Loop

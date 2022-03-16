@@ -69,12 +69,12 @@ SmpIns_PlusPiano_st:
 TESTMARS_BG:
 	binclude "data/mars/test_art.bin"
 	align 4
-Textr_smoke:
-	binclude "data/mars/objects/mtrl/test_art.bin"
+Textr_pecsi:
+	binclude "data/mars/objects/mtrl/pecsi_art.bin"
 	align 4
 
-; --------------------------------------------------------
-; Models
-; --------------------------------------------------------
-
-	include "data/mars/objects/mdl/test/head.asm"
+; ; --------------------------------------------------------
+; ; Models
+; ; --------------------------------------------------------
+;
+; 	include "data/mars/objects/mdl/test/head.asm"

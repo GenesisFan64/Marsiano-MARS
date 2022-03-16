@@ -1013,14 +1013,14 @@ SH2_M_HotStart:
 ; V - Pseudo graphics mode:
 ; 	00 - Nothing
 ; 	01 - ???
-; 	02 - ??? 2D bitmap currently
+; 	02 - 2D bitmap currently
 ; 	03 - 3D Mode
 
 master_loop:
-; 		mov	#_sysreg+comm0,r1
-; 		mov.b	@r1,r0
-; 		add	#1,r0
-; 		mov.b	r0,@r1
+		mov	#_sysreg+comm0,r1
+		mov.b	@r1,r0
+		add	#1,r0
+		mov.b	r0,@r1
 
 	; ---------------------------------------
 	; Wait frameswap
@@ -1037,15 +1037,15 @@ master_loop:
 .wait_frmswp:	mov.b	@(framectl,r1),r0		; Framebuffer ready?
 		cmp/eq	r0,r2
 		bf	.wait_frmswp
+		stc	sr,@-r15			; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
 
 	; ---------------------------------------
 	; New frame is now shown on screen but
 	; we are still on VBlank
 	; ---------------------------------------
 
-		stc	sr,@-r15			; Interrupts OFF
-		mov	#$F0,r0
-		ldc	r0,sr
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
 		mov	#_vdpreg+shift,r1		; For the indexed-scrolling
 		and	#1,r0
@@ -1068,19 +1068,18 @@ master_loop:
 		bf	.copy_pal
 
 	; ---------------------------------------
-	; Control background position
-	; ---------------------------------------
-		mov	#RAM_Mars_Background,r14
-		mov	#RAM_Mars_DreqRead+Dreq_BgXpos,r13
-		mov	@r13+,r1
-		mov	@r13+,r2
-		mov	r1,@(mbg_xpos,r14)
-		mov	r2,@(mbg_ypos,r14)
-		bsr	MarsVideo_MoveBg
-		nop
-
-	; ---------------------------------------
-	; Request model rendering
+	; Request Slave CPU to build
+	; 3d models
+		mov	#_sysreg+comm14,r1
+		mov.b	@r1,r0
+		and	#%11,r0
+		cmp/eq	#3,r0
+		bf	.wait_slv
+		mov	#_sysreg+comm15,r4
+		mov.b	@r4,r0
+		and	#%00001111,r0
+		tst	r0,r0
+		bf	.wait_slv
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models from here.
 		mov	#RAM_Mars_Objects,r2
 		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
@@ -1090,21 +1089,26 @@ master_loop:
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
-		mov	#_sysreg+comm15,r1
-		mov.b	@r1,r0
+		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
+		xor	#1,r0
+		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
+		mov.b	@r4,r0
 		or	#%00000001,r0
-		mov.b	r0,@r1
-
-		mov	#_sysreg+comm0,r2
+		mov.b	r0,@r4
 .wait_slv:
-		mov.b	@r2,r0
-		add	#1,r0
-		mov.b	r0,@r2
 
-		mov.b	@r1,r0
-		and	#%00001111,r0
-		tst	r0,r0
-		bf	.wait_slv
+	; ---------------------------------------
+	; Control background position
+	; ---------------------------------------
+
+		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_DreqRead+Dreq_BgXpos,r13
+		mov	@r13+,r1
+		mov	@r13+,r2
+		mov	r1,@(mbg_xpos,r14)
+		mov	r2,@(mbg_ypos,r14)
+		bsr	MarsVideo_MoveBg
+		nop
 
 	; ---------------------------------------
 
@@ -1152,10 +1156,31 @@ mstr_gfx_0:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 1: Bitmap with scrolling
+; Mode 1: Generic single screen
+; in any mode (index,direct,RLE)
 ; ---------------------------------------
 
+; *** PLANNED, NOT YET ***
+
 mstr_gfx_1:
+		tst	r2,r2
+		bt	.lel
+		mov.b	@r1,r0
+		and	#%11011111,r0
+		mov.b	r0,@r1
+		mov 	#_vdpreg,r1
+		mov	#0,r0
+		mov.b	r0,@(bitmapmd,r1)
+.lel:
+		bra	mstr_nextframe
+		nop
+
+; ============================================================
+; ---------------------------------------
+; Mode 2: 256-color scrolling image
+; ---------------------------------------
+
+mstr_gfx_2:
 		tst	r2,r2
 		bt	.lel
 		mov.b	@r1,r0
@@ -1176,24 +1201,39 @@ mstr_gfx_1:
 		mov	#224,r4
 		bsr	MarsVideo_SetBg
 		nop
-		mov 	#_vdpreg,r1
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
+
+; 		mov	#_vdpreg,r1
+; .wait_fb2:	mov.w	@(vdpsts,r1),r0
+; 		and	#%10,r0
+; 		tst	r0,r0
+; 		bf	.wait_fb2
+; 		mov	#_sysreg+comm15,r1
+; .wait_slv:	mov.b	@r1,r0
+; 		and	#%00001111,r0
+; 		tst	r0,r0
+; 		bf	.wait_slv
 .lel:
 	; ---------------------------------------
+
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
 		dt	r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
-		mov	#_vdpreg,r1
-.wait_fb2:	mov.w	@(vdpsts,r1),r0
-		and	#%10,r0
-		tst	r0,r0
-		bf	.wait_fb2
-		bsr	MarsVideo_DrawAllBg
+		cmp/pl	r0
+		bf	.no_btmp
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
+.no_btmp:
+		bsr	MarsVideo_DrawAllBg		; Process FULL image (only two times)
 		nop
-		bra	.from_drwall			; Don't need to draw off-screen
+		xor	r0,r0
+		mov.w	r0,@(marsGbl_BgDrwR,gbr)	; Cancel
+		mov.w	r0,@(marsGbl_BgDrwL,gbr)	; all
+		mov.w	r0,@(marsGbl_BgDrwU,gbr)	; these
+		mov.w	r0,@(marsGbl_BgDrwD,gbr)	; draw requests
+		bra	.from_drwall
 		nop
 .no_redraw:
 		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
@@ -1220,26 +1260,6 @@ mstr_gfx_1:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 2: 2D Tile-based layout scrolling
-; ---------------------------------------
-
-; *** PLANNED, NOT YET ***
-
-mstr_gfx_2:
-		tst	r2,r2
-		bt	.lel
-		mov.b	@r1,r0
-		and	#%11011111,r0
-		mov.b	r0,@r1
-		mov 	#_vdpreg,r1
-		mov	#0,r0
-		mov.b	r0,@(bitmapmd,r1)
-.lel:
-		bra	mstr_nextframe
-		nop
-
-; ============================================================
-; ---------------------------------------
 ; Mode 3: 3D MODE Polygons-only
 ; ---------------------------------------
 
@@ -1251,15 +1271,18 @@ mstr_gfx_3:
 		mov.b	r0,@r1
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
-		mov 	#_vdpreg,r1
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
 .lel:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
 		dt	r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		cmp/pl	r0
+		bf	.no_btmp
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
+.no_btmp:
 		mov	#_framebuffer,r3
 		mov	#$200/2,r0
 		mov	r0,r1
@@ -1331,12 +1354,12 @@ mstr_gfx_3:
 
 	; ---------------------------------------
 
-.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
-		tst	r0,r0
-		bt	.wait_wd
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		tst	r0,r0
 		bt	.no_swap
+.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
+		tst	r0,r0
+		bt	.wait_wd
 		mov	#VideoMars_DrwPlgnPz,r0
 		jsr	@r0
 		nop
@@ -1444,7 +1467,6 @@ SH2_S_HotStart:
 		ldc	r0,sr
 		bra	slave_loop
 		nop
-		ltorg
 		align 4
 
 ; --------------------------------------------------------
@@ -1501,16 +1523,6 @@ slave_loop:
 		and	#%00001111,r0
 		cmp/eq	#1,r0
 		bf	slave_loop
-		stc	sr,@-r15			; Interrupts OFF
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov.w	@(marsGbl_PolyBuffNum,gbr),r0
-		xor	#1,r0
-		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
-		mov.b	@r4,r0
-		and	#%11110000,r0
-		mov.b	r0,@r4
-		ldc	@r15+,sr			; Interrupts ON
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1
@@ -1526,33 +1538,13 @@ slave_loop:
 		mov	r2,r0
 		mov	r0,@(marsGbl_CurrZList,gbr)
 		mov	r0,@(marsGbl_CurrZTop,gbr)
-		mov	#RAM_Mars_Objects,r14
-		mov	#MAX_MODELS,r13
-.loop:
-		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
-		cmp/pl	r0
-		bf	.invlid
-		mov	#MarsMdl_ReadModel,r0
+		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
-		mov	r13,@-r15
-		mov	@r15+,r13
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
-		mov	#MAX_FACES,r1
-		cmp/ge	r1,r0
-		bt	.skip
-.invlid:
-		dt	r13
-		bf/s	.loop
-		add	#sizeof_mdlobj,r14
-.skip:
-		mov 	#RAM_Mars_PlgnNum_0,r1
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bf	.page_2
-		mov 	#RAM_Mars_PlgnNum_1,r1
-.page_2:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
-		mov	r0,@r1
+		nop
+		mov	#_sysreg+comm15,r4
+		mov.b	@r4,r0
+		and	#%11110000,r0
+		mov.b	r0,@r4
 		bra	slave_loop
 		nop
 		align 4
@@ -1617,10 +1609,12 @@ SH2_RAM:
 	if MOMPASS=1
 MarsRam_System		ds.l 0
 MarsRam_Video		ds.l 0
+MarsRam_Sound		ds.l 0
 sizeof_marsram		ds.l 0
 	else
 MarsRam_System		ds.b (sizeof_marssys-MarsRam_System)
 MarsRam_Video		ds.b (sizeof_marsvid-MarsRam_Video)
+MarsRam_Sound		ds.b (sizeof_marssnd-MarsRam_Sound)
 sizeof_marsram		ds.l 0
 	endif
 
@@ -1635,15 +1629,10 @@ sizeof_marsram		ds.l 0
 ; MARS Sound RAM
 ; ----------------------------------------------------------------
 
-; MOVED TO CACHE
-; 			struct MarsRam_Sound
-; MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-; MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
-; MarsSnd_PwmCache	ds.b $100*MAX_PWMCHNL
-; MarsSnd_PwmTrkData	ds.b $80*2
-; MarsSnd_Active	ds.l 1
-; sizeof_marssnd	ds.l 0
-; 			finish
+			struct MarsRam_Sound
+MarsSnd_PwmCache	ds.b $80*MAX_PWMCHNL
+sizeof_marssnd		ds.l 0
+			finish
 
 ; ====================================================================
 ; ----------------------------------------------------------------
