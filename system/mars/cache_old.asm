@@ -648,36 +648,22 @@ drwsld_nxtline_tex:
 		xor	r11,r11				; And reset XL to 0
 .tl_fix:
 
-	; *** WORD WRITES ***
 	; r11 - X left
 	; r12 - X right
 	; r9 - Current Y line
-		mov	#-2,r0
-		and	r0,r11
-		and	r0,r12
+; 		mov	#-2,r0
+; 		and	r0,r11
+; 		and	r0,r12
 		sub 	r11,r12
-		shar	r12
 		cmp/pl	r12
 		bf	.tex_skip_line
-
-; 		mov	#_overwrite+$200,r10
-; 		mov 	r9,r0			; Y position * $200
-; 		shll8	r0
-; 		shll	r0
-; 		add 	r0,r10			; Add Y
-; 		add 	r11,r10			; Add X
-		mov	#_vdpreg,r10
-.wait:		mov.w	@(10,r10),r0
-		tst	#2,r0
-		bf	.wait
-		mov 	r9,r0		; Y position
-		add	#1,r0		; move it to $200
+; 		shlr	r12
+		mov	#_overwrite+$200,r10
+		mov 	r9,r0			; Y position * $200
 		shll8	r0
-		mov	r11,r2
-		shlr	r2
-		add	r2,r0
-		mov.w	r0,@(6,r10)	; address
-
+		shll	r0
+		add 	r0,r10			; Add Y
+		add 	r11,r10			; Add X
 		mov	#$FF,r0
 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
 		mov	r4,r13
@@ -697,74 +683,12 @@ drwsld_nxtline_tex:
 		mov.b	@(r0,r11),r0		; Read texture pixel
 		add	r13,r0			; Add index increment
 		and	#$FF,r0
-		shll8	r0
-		lds	r0,mach			; Save left pixel
+		add 	#1,r10
 		add	r6,r5			; Update X
-		add	r8,r7			; Update Y
-		mov	r7,r2
-		shlr16	r2
-		mulu	r2,r4
-		mov	r5,r2	   		; Build column index
-		sts	macl,r0
-		shlr16	r2
-		add	r2,r0
-		mov.b	@(r0,r11),r0		; Read texture pixel
-		add	r13,r0			; Add index increment
-		and	#$FF,r0
 		dt	r12
-		sts	mach,r2
-		or	r2,r0
-		mov	r0,r2
-		mov	#0,r0
-		mov.w	r0,@(4,r10)		; length
-		mov	r2,r0
-		mov.w	r0,@(8,r10)		; Set data
-; 		mov.w	r0,@r10
-; 		add	#2,r10
-		add	r6,r5			; Update X
+		mov.b	r0,@r10	   		; Write pixel to Framebuffer
 		bf/s	.tex_xloop
 		add	r8,r7			; Update Y
-	; ***END***
-
-; 	; *** BYTE WRITES
-; 	; r11 - X left
-; 	; r12 - X right
-; 	; r9 - Current Y line
-; 		sub 	r11,r12
-; 		cmp/pl	r12
-; 		bf	.tex_skip_line
-; 		mov	#_overwrite+$200,r10
-; 		mov 	r9,r0			; Y position * $200
-; 		shll8	r0
-; 		shll	r0
-; 		add 	r0,r10			; Add Y
-; 		add 	r11,r10			; Add X
-; 		mov	#$FF,r0
-; 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
-; 		mov	r4,r13
-; 		shlr16	r4
-; 		mov	#$1FFF,r2
-; 		mov	@(plypz_mtrl,r14),r11	; r11 - texture data
-; 		and	r2,r4
-; 		and	r0,r13
-; .tex_xloop:
-; 		mov	r7,r2
-; 		shlr16	r2
-; 		mulu	r2,r4
-; 		mov	r5,r2	   		; Build column index
-; 		sts	macl,r0
-; 		shlr16	r2
-; 		add	r2,r0
-; 		mov.b	@(r0,r11),r0		; Read texture pixel
-; 		add	r13,r0			; Add index increment
-; 		and	#$FF,r0
-; 		add 	#1,r10
-; 		add	r6,r5			; Update X
-; 		dt	r12
-; 		mov.b	r0,@r10	   		; Write pixel to Framebuffer
-; 		bf/s	.tex_xloop
-; 		add	r8,r7			; Update Y
-; ; 	; ***END***
 
 .tex_skip_line:
 		mov	@r15+,r13
@@ -786,9 +710,9 @@ drwsld_updline_tex:
 		mov	@(plypz_src_yr_dx,r14),r0
 		add	r0,r8
 		add	r2,r1				; Update X postions
-		dt	r10
-		bt/s	drwtex_gonxtpz
 		add	r4,r3
+		dt	r10
+		bt	drwtex_gonxtpz
 		bra	drwsld_nxtline_tex
 		add	#1,r9
 
@@ -815,6 +739,7 @@ drwtex_gonxtpz:
 		align 4
 tag_width:	dc.l SCREEN_WIDTH
 tag_yhght:	dc.l SCREEN_HEIGHT
+
 
 ; ------------------------------------
 ; Solid Color
@@ -969,6 +894,7 @@ drwtask_exit:
 ; ------------------------------------------------
 
 		align 4
+Cach_SendLine	ds.b 320
 Cach_Bkup_L	ds.l 16		;
 Cach_Bkup_S	ds.l 0		; <-- Reads backwards
 Cach_DDA_Top	ds.l 2*2	; First 2 points

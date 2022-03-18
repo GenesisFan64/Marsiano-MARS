@@ -132,11 +132,12 @@ sndReq_sbyte:
 ; Call this BEFORE making any DMA task
 ;
 ; Uses:
-; d7
+; d6,d7
 ; --------------------------------------------------------
 
 Sound_DMA_Pause:
 		swap	d7
+		swap	d6
 .retry:
 		bsr	sndLockZ80
 		move.b	(z80_cpu+commZRomRd),d7		; Get mid-read bit
@@ -151,16 +152,20 @@ Sound_DMA_Pause:
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
 
-	; FIXME
-; .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
-; 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
-; 		bne.s	.wait_mars1
-; 		move.b	(sysmars_reg+comm15),d7		; Request PWM Backup
-; 		bset	#5,d7
-; 		move.b	d7,(sysmars_reg+comm15)
-; .wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
-; 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
-; 		bne.s	.wait_mars2
+		move.w	#2,d6
+.wait_in:	move.w	(sysmars_reg+comm14),d7
+		bmi.s	.wait_in
+		bset	#7,(sysmars_reg+comm14).l
+		move.b	d6,(sysmars_reg+comm7).l
+		move.b	(sysmars_reg+comm7).l,d7
+		cmp.b	d6,d7
+		bne.s	.wait_in
+		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
+; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; 		bne.s	.wait_cmd
+.wait_out:	move.w	(sysmars_reg+comm14),d7
+		bmi.s	.wait_out
+		swap	d6
 		swap	d7
 		rts
 
@@ -172,20 +177,25 @@ Sound_DMA_Pause:
 
 Sound_DMA_Resume:
 		swap	d7
+		swap	d6
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
 
-	; FIXME
-; .wait_mars1:	move.b	(sysmars_reg+comm15),d7		; Wait for
-; 		and.w	#%11100000,d7			; BUSY/CLOCK/BACKUP
-; 		bne.s	.wait_mars1
-; 		move.b	(sysmars_reg+comm15),d7		; Request PWM Restore
-; 		bset	#4,d7
-; 		move.b	d7,(sysmars_reg+comm15)
-; .wait_mars2:	move.b	(sysmars_reg+comm15),d7		; Wait for
-; 		and.w	#%11010000,d7			; BUSY/CLOCK/0/RESTORE
-; 		bne.s	.wait_mars2
+		move.w	#3,d6
+.wait_in:	move.w	(sysmars_reg+comm14),d7
+		bmi.s	.wait_in
+		bset	#7,(sysmars_reg+comm14).l
+		move.b	d6,(sysmars_reg+comm7).l
+		move.b	(sysmars_reg+comm7).l,d7
+		cmp.b	d6,d7
+		bne.s	.wait_in
+		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
+; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; 		bne.s	.wait_cmd
+.wait_out:	move.w	(sysmars_reg+comm14),d7
+		bmi.s	.wait_out
+		swap	d6
 		swap	d7
 		rts
 

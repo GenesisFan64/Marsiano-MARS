@@ -31,7 +31,7 @@ trk_romBlk	equ 0	; 24-bit base block data
 trk_romPatt	equ 3	; 24-bit base patt data
 trk_romIns	equ 6	; 24-bit ROM instrument pointers
 trk_romPattRd	equ 9	; same but for reading
-trk_Read	equ 12	; Current track position (in cache)
+trk_Read	equ 12	; Current track position (in our storage)
 trk_Rows	equ 14	; Current track length
 trk_Halfway	equ 16	; Only 00h or 80h
 trk_currBlk	equ 17	; Current block
@@ -39,15 +39,13 @@ trk_setBlk	equ 18	; Start on this block
 trk_status	equ 19	; %ERPB Sxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats / S-silence
 trk_tickTmr	equ 20	; Ticks timer
 trk_tickSet	equ 21	; Ticks set for this track
-trk_numChnls	equ 22	; Number of channels for this track slot (max: MAX_TRKCHN)
-trk_sizeIns	equ 23	; Max instruments used
-trk_rowPause	equ 24	; Row pause timer
-trk_HdHalfway	equ 25	; Track heads reload byte
-trk_CachNotes	equ 26	; Track pattern buffer location (100h bytes)
+trk_sizeIns	equ 22	; Max instrument storage
+trk_rowPause	equ 23	; Row pause timer
+trk_CachNotes	equ 26	; Pointer to track storage (100h bytes long and aligned)
 trk_CmdReq	equ 28	; Track command requests
 
-; Track data: 8 bytes only
-chnl_Chip	equ 0		; MUST BE at 0
+; Tracker channel data, 8 bytes each.
+chnl_Chip	equ 0		; *** MUST BE AT 0 ***
 chnl_Note	equ 1
 chnl_Ins	equ 2
 chnl_Vol	equ 3
@@ -91,9 +89,9 @@ FMFRQH		equ	24
 FMFRQL		equ	30
 
 PWCOM		equ	0
-PWPTH_V		equ	8	; Volume | Pitch MSB
+PWPTH_V		equ	8	; Volume | Pitch MSB (%VVVVVVPP)
 PWPHL		equ	16	; Pitch LSB
-PWOUTF		equ	24	; Output mode/bits | SH2 section (ROM $02 or SDRAM $06)
+PWOUTF		equ	24	; Output mode/bits + SH2 section (ROM $02 or SDRAM $06)
 PWINSH		equ	32	; 24-bit sample address
 PWINSM		equ	40
 PWINSL		equ	48
@@ -110,11 +108,12 @@ PWINSL		equ	48
 
 ; --------------------------------------------------------
 ; RST 8 (dac_me)
+; *** self-modifiable code ***
 ;
 ; Writes wave data to DAC using the data stored
-; on the wave buffer.
-; call this routine every 6 or more lines of code to
-; keep playing the sample while processing code
+; on the wave buffer. call this routine every 6
+; or more lines of code to keep playing the sample
+; at the desired sample rate while processing code
 ;
 ; Input (EXX):
 ;  c - WAVE buffer MSB
@@ -124,20 +123,22 @@ PWINSL		equ	48
 ; Uses (EXX):
 ; b
 ;
-; *** self-modifiable code ***
-;
+; Notes:
 ; call dac_on to enable WAVE playback
 ; or
-; call dac_off to disable it
-; (check for FM6 manually)
+; call dac_off to disable it (check for FM6 manually)
 ; --------------------------------------------------------
 
-; NOTE: This plays at 18000hz
+; NOTE: This plays at 18000hz but we are using
+; 16000hz as the "center" note (C-5)
+; check ZSET_WTUNE if you want change the
+; "center" frequency.
+
 		org 8
 dac_me:		exx			; <-- this changes between EXX(play) and RET(stop)
 		ex	af,af'		; Swap af
 		ld	b,l		; Save pitch's .00 to b
-		ld	a,2Ah		; Prepare YM register 2Ah
+		ld	a,2Ah		; YM register command 2Ah
 		ld	(Zym_ctrl_1),a
 		ld	l,h		; L - xx.00 to 00xx
 		ld	h,c		; H - Wave buffer MSB | 00xx
@@ -159,11 +160,11 @@ commZWrite	db 0			; cmd fifo wptr (from 68k)
 
 ; --------------------------------------------------------
 ; RST 20h (dac_me)
-;
-; Checks if the WAVE cache needs refilling, this
-; breaks ALL registers if refill is requested.
-;
 ; *** self-modifiable code ***
+;
+; Checks if the WAVE cache needs refilling to keep
+; it playing, THIS BREAKS ALL REGISTERS IF
+; REFILL IS NEEDED.
 ; --------------------------------------------------------
 
 		org 20h
@@ -172,8 +173,8 @@ dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
 		exx
 		xor	h		; 00xx.00
 		exx
-		and	80h		; Compare bit
-		jp	nz,dac_refill	; If not, refill and update LSB to check
+		and	80h		; Check if bit changed
+		jp	nz,dac_refill	; If it did, refill and update LSB to check
 		pop	af
 		ret
 
@@ -213,53 +214,53 @@ z80_init:
 
 drv_loop:
 		rst	8
-		call	get_tick	; Check for Tick on VBlank
-		rst	20h		; first dacfill
+		call	get_tick		; Check for Tick on VBlank
+		rst	20h			; first dacfill
 		rst	8
-		ld	b,0		; b - Reset current flags (beat|tick)
+		ld	b,0			; b - Reset current flags (beat|tick)
 		ld	a,(tickCnt)
 		sub	1
 		jr	c,.noticks
 		ld	(tickCnt),a
 		rst	8
-		call	chip_env	; Process PSG volume and freqs manually
-		call	get_tick	; Check for another tick
-		ld 	b,01b		; Set TICK (01b) flag, and clear BEAT
+		call	chip_env		; Process PSG volume and freqs manually
+		call	get_tick		; Check for another tick
+		ld 	b,01b			; Set TICK (01b) flag, and clear BEAT
 .noticks:
-		ld	a,(sbeatAcc+1)	; check beat counter (scaled by tempo)
+		ld	a,(sbeatAcc+1)		; check beat counter (scaled by tempo)
 		sub	1
 		jr	c,.nobeats
-		ld	(sbeatAcc+1),a	; 1/24 beat passed.
-		set	1,b		; Set BEAT (10b) flag
+		ld	(sbeatAcc+1),a		; 1/24 beat passed.
+		set	1,b			; Set BEAT (10b) flag
 		rst	8
 .nobeats:
 		rst	8
-		ld	a,b
+		ld	a,b			; Any beat/tick change?
 		or	a
 		jr	z,.neither
-		ld	(currTickBits),a; Save BEAT/TICK bits
+		ld	(currTickBits),a	; Save BEAT/TICK bits
 		call	get_tick
-		call	setupchip	; Send changes to sound chips
+		call	setupchip		; Send changes to sound chips
 		call	get_tick
-		call	updtrack	; Update track data
+		call	updtrack		; Update track data
 		call	get_tick
 		rst	8
 .neither:
-		call	mars_scomm	; 32X communication for PWM playback
+		call	mars_scomm		; 32X communication for PWM playback
 		call	get_tick
 		rst	8
 .next_cmd:
-		ld	a,(commZWrite)	; Check command READ and WRITE indexes
+		ld	a,(commZWrite)		; Check command READ and WRITE indexes
 		ld	b,a
 		ld	a,(commZRead)
 		cp	b
-		jr	z,drv_loop	; If both are equal: no commands
+		jr	z,drv_loop		; If both are equal: no requests
 		call	get_cmdbyte
-		cp	-1		; Get -1 (Start of command)
+		cp	-1			; Got -1? (Start of command)
 		jr	nz,drv_loop
-		call	get_cmdbyte	; Read cmd number
-		add	a,a		; * 2
-		ld	hl,.list
+		call	get_cmdbyte		; Read command number
+		add	a,a			; * 2
+		ld	hl,.list		; Then jump to one of these...
 		ld	d,0
 		ld	e,a
 		add	hl,de
@@ -269,35 +270,35 @@ drv_loop:
 		ld	l,a
 		jp	(hl)
 .list:
-		dw .cmnd_trkplay	; $00 - Play
-		dw .cmnd_trkstop	; $01 - Stop/Pause
-		dw .cmnd_trkresume	; $02 - Resume
-		dw .cmnd_0		; $03 -
-		dw .cmnd_0		; $04 -
-		dw .cmnd_0		; $05 -
-		dw .cmnd_0		; $06 -
-		dw .cmnd_0		; $07 -
-		dw .cmnd_trkticks	; $08 - Set ticks
-		dw .cmnd_0		; $09 -
-		dw .cmnd_0		; $0A -
-		dw .cmnd_0		; $0B -
-		dw .cmnd_0		; $0C -
-		dw .cmnd_0		; $0D -
-		dw .cmnd_0		; $0E -
-		dw .cmnd_0		; $0F -
-		dw .cmnd_trktempo	; $10 - Set global subbeats
+		dw .cmnd_trkplay		; $00 - Play
+		dw .cmnd_trkstop		; $01 - Stop/Pause
+		dw .cmnd_trkresume		; $02 - Resume
+		dw .cmnd_0			; $03 -
+		dw .cmnd_0			; $04 -
+		dw .cmnd_0			; $05 -
+		dw .cmnd_0			; $06 -
+		dw .cmnd_0			; $07 -
+		dw .cmnd_trkticks		; $08 - Set ticks
+		dw .cmnd_0			; $09 -
+		dw .cmnd_0			; $0A -
+		dw .cmnd_0			; $0B -
+		dw .cmnd_0			; $0C -
+		dw .cmnd_0			; $0D -
+		dw .cmnd_0			; $0E -
+		dw .cmnd_0			; $0F -
+		dw .cmnd_trktempo		; $10 - Set global subbeats
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
-		dw .cmnd_0		; $14
+		dw .cmnd_0			; $14
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
-		dw .cmnd_0		; $18
+		dw .cmnd_0			; $18
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
-		dw .cmnd_0		; $1C
+		dw .cmnd_0			; $1C
 		dw .cmnd_0
 		dw .cmnd_0
 		dw .cmnd_0
@@ -307,7 +308,7 @@ drv_loop:
 ; --------------------------------------------------------
 
 .cmnd_0:
-		jr	$
+		jr	$			; BAD COMMAND
 		jr	.next_cmd
 
 ; --------------------------------------------------------
@@ -353,20 +354,10 @@ drv_loop:
 		jp	.next_cmd
 
 ; --------------------------------------------------------
-; $02 - STOP track
+; $02 - Stop/Pause track
 ; --------------------------------------------------------
 
 .cmnd_trkstop:
-; 		call	get_cmdbyte			; Get track slot
-; 		call	get_trkindx			; and read index iy
-; 		call	track_out
-; 		jp	.next_cmd
-
-; --------------------------------------------------------
-; $03 - Pause track
-; --------------------------------------------------------
-
-.cmnd_trkpause:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iy
 		call	track_out
@@ -383,7 +374,7 @@ drv_loop:
 		jp	.next_cmd
 
 ; --------------------------------------------------------
-; $08 - Set tricks
+; $08 - Set track's ticks
 ; --------------------------------------------------------
 
 .cmnd_trkticks:
@@ -408,7 +399,10 @@ drv_loop:
 		jp	.next_cmd
 
 ; --------------------------------------------------------
+; Pick track buffer
+;
 ; a - track index
+; --------------------------------------------------------
 
 get_trkindx:
 		ld	hl,trkPointers
@@ -437,11 +431,11 @@ get_cmdbyte:
 		push	de
 		push	hl
 .getcbytel:
-		ld	a,(commZWrite)
-		ld	b,a
+; 		ld	a,(commZWrite)
+; 		ld	b,a
 		ld	a,(commZRead)
-		cp	b
-		jr	z,.getcbytel	; wait for a command from 68k
+; 		cp	b
+; 		jr	z,.getcbytel	; wait for a command from 68k
 		rst	8
 		ld	b,0
 		ld	c,a
@@ -565,28 +559,27 @@ updtrack:
 ; --------------------------------
 
 .has_note:
-		push	bc		; Save rowcount
-		ld	c,a		; c - Copy of control+channel
+		push	bc			; Save rowcount
+		ld	c,a			; c - Copy of control+channel
 		call	.inc_cpatt
 		ld	a,c
 		push	iy
 		pop	ix
-		ld	de,20h		; Point to track-data
+		ld	de,20h			; Point to track-data
 		add	ix,de
 		rst	8
-		ld 	d,0
 		and	00111111b
-		ld	b,(iy+trk_numChnls)
-		cp	b
-		jp	nc,.rnout_chnls
-		add	a,a		; * 8
+; 		cp	(iy+trk_numChnls)	; TODO: mala idea.
+; 		jp	nc,.rnout_chnls
+		add	a,a			; * 8
 		add	a,a
 		add	a,a
+		ld 	d,0
 		ld	e,a
 		add	ix,de
 		rst	8
-		ld	b,(ix+chnl_Type); b - our current Note type
-		bit	6,c		; Next byte is new type?
+		ld	b,(ix+chnl_Type)	; b - last Note type
+		bit	6,c			; Next byte is new type?
 		jr	z,.old_type
 		ld	a,(hl)
 		ld	(ix+chnl_Type),a
@@ -1007,14 +1000,17 @@ mars_scomm:
 		ld	(marsUpd),a
 
 	; FIXME
-; .wait_enter:
-; 		nop
-; 		ld	a,(iy+comm15)	; check if 68k got first.
-; 		and	00110000b
-; 		or	a
-; 		jr	nz,.wait_enter
-
-		set	7,(iy+comm15)	; Enter transfer loop
+.wait_enter:
+		nop
+		ld	a,(iy+comm14)	; check if 68k got first.
+		and	10000000b
+		or	a
+		jr	nz,.wait_enter
+		ld	(iy+comm7),1	; Set CMD mode 1
+		ld	a,(iy+comm7)	; Value got safe?
+		cp	1
+		jr	nz,.wait_enter
+		set	7,(iy+comm14)	; Enter transfer loop
 		set	1,(iy+standby)	; Request Slave CMD
 .wait_cmd:
 		bit	1,(iy+standby)	; Got in?
@@ -1038,14 +1034,14 @@ mars_scomm:
 		ld	(hl),e
 		inc	hl
 		djnz	.next_comm
-		set	6,(iy+comm15)	; Send CLK to Slave CMD
+		set	6,(iy+comm14)	; Send CLK to Slave CMD
 		rst	8
 .w_pass2:
-		bit	6,(iy+comm15)	; CLK cleared?
+		bit	6,(iy+comm14)	; CLK cleared?
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass
-		res	7,(iy+comm15)	; Break transfer loop
+		res	7,(iy+comm14)	; Break transfer loop
 
 	; clear COM bytes here.
 .blocked:
@@ -2684,7 +2680,7 @@ gema_init:
 .set_it:
 		ld	(iy+trk_CachNotes),l
 		ld	(iy+(trk_CachNotes+1)),h
-		ld	(iy+trk_numChnls),e
+; 		ld	(iy+trk_numChnls),e
 		ld	(iy+trk_sizeIns),d
 		ret
 

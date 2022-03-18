@@ -56,10 +56,12 @@ Video_Init:
 		add.w	#$100,d6
 		dbf	d7,.loop
 .exit:
+		moveq	#0,d0
+		bsr	Video_MarsSetGfx
 
-; 	DMA RV bit safe code
-;	TODO: solo copiarme el write final en vez
-;	de todo el codigo.
+	; DMA RV bit safe code
+	; TODO: solo copiarme el write final en
+	; vez de todo el codigo.
 		lea	(dmacode_start),a1
 		lea	(RAM_DmaCode).l,a0
 		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
@@ -70,7 +72,7 @@ Video_Init:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Video subroutines
+; Video subroutinesf
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -129,7 +131,6 @@ Video_Update:
 		
 ; --------------------------------------------------------
 ; Video_LoadPal
-; Load palette to VDP directly
 ; 
 ; Input:
 ; a0 - Palette data
@@ -138,10 +139,6 @@ Video_Update:
 ; 
 ; Uses:
 ; d5-d7,a6
-; 
-; Note:
-; It waits for VBlank so the CRAM dots doesn't get
-; in the middle of the screen.
 ; --------------------------------------------------------
 
 Video_FadePal:
@@ -177,7 +174,7 @@ vidMd_Pal:
 ; $01 - Fade in
 ; $02 - Fade out to black
 ;
-; CALL THIS OUTSIDE OF VBLANK
+; CALL THIS ONLY OUTSIDE OF VBLANK
 ; --------------------------------------------------------
 
 Video_PalFade:
@@ -284,15 +281,15 @@ Video_PalFade:
 		swap	d6
 		sub.w	#1,d0
 .nxt_pal_o:
-		clr.w	d2		; Reset finished colorbits
-		move.w	(a6),d7		; d7 - Input
+		clr.w	d2			; Reset finished colorbits
+		move.w	(a6),d7			; d7 - Input
 		move.w	d7,d6
 		and.w	#%0000111011100000,d7
 		and.w	#%0000000000001110,d6
 		sub.w	d1,d6
 		bpl.s	.no_red_o
 		clr.w	d6
-		or.w	#%001,d2	; RED is ready
+		or.w	#%001,d2		; RED is ready
 .no_red_o:
 		or.w	d6,d7
 		lsl.w	#4,d1
@@ -302,7 +299,7 @@ Video_PalFade:
 		sub.w	d1,d6
 		bpl.s	.no_grn_o
 		clr.w	d6
-		or.w	#%010,d2	; GREEN is ready
+		or.w	#%010,d2		; GREEN is ready
 .no_grn_o:
 		or.w	d6,d7
 		lsl.w	#4,d1
@@ -312,7 +309,7 @@ Video_PalFade:
 		sub.w	d1,d6
 		bpl.s	.no_blu_o
 		clr.w	d6
-		or.w	#%100,d2	; BLUE is ready
+		or.w	#%100,d2		; BLUE is ready
 .no_blu_o:
 		or.w	d6,d7
 		lsr.w	#8,d1
@@ -875,6 +872,8 @@ Video_Copy:
 ; --------------------------------------------------------
 
 ; --------------------------------------------------------
+; Video_DmaMkEntry
+;
 ; Sets a new DMA transfer task to the Blast list
 ;
 ; *** ONLY CALL THIS OUTSIDE OF VBLANK ***
@@ -887,7 +886,7 @@ Video_Copy:
 ; d6-d7,a6
 ; --------------------------------------------------------
 
-Video_DmaSet:
+Video_DmaMkEntry:
 		move.w	#1,(RAM_VdpDmaMod).w
 		lea	(RAM_VdpDmaList).w,a6
 		move.w	(RAM_VdpDmaIndx).w,d7
@@ -973,24 +972,40 @@ Video_LoadArt:
 
 ; --------------------------------------------------------
 ; Video_MarsSetGfx
+; Sets graphics mode on the 32X side
+;
+; Input:
+; d0 - Graphics mode
 ; --------------------------------------------------------
 
 Video_MarsSetGfx:
-		move.w	d0,d7
-		and.w	#%11,d7
-		move.b	(sysmars_reg+comm14).l,d6
-		and.b	#%00001100,d6
-		or.b	d7,d6
-		bset	#5,d6
-		move.b	d6,(sysmars_reg+comm14).l
-; .wait2:		btst	#5,(sysmars_reg+comm14).l
-; 		bne.s	.wait2
-		rts
+		move.w	d0,d6
+		and.w	#%00000011,d6			; Current limit: 4 modes
+		or.w	#$80,d6
+		move.w	(sysmars_reg+comm12).l,d7	; Grab current comm12
+		and.w	#$FF00,d7			; Clear our byte
+		or.w	d6,d7				; merge changes
+		move.w	d7,(sysmars_reg+comm12).l	; Write into it.
+		bra	Video_MarsWait
+
+; --------------------------------------------------------
+; Video_MarsRedraw
+;
+; Call this to redraw the entire screen
+; on the 32X side.
+; --------------------------------------------------------
 
 Video_MarsRedraw:
-		bset	#5,(sysmars_reg+comm14).l	; Request REDRAW on Master
-; .wait2:		btst	#5,(sysmars_reg+comm14).l	; and wait until it finishes
-; 		bne.s	.wait2
+		move.w	(sysmars_reg+comm12).l,d7
+		bset	#7,d7
+		move.w	d7,(sysmars_reg+comm12).l
+
+; --------------------------------------------------------
+
+Video_MarsWait:
+		move.w	(sysmars_reg+comm12).l,d7
+		btst	#7,d7
+		bne.s	Video_MarsWait
 		rts
 
 ; --------------------------------------------------------

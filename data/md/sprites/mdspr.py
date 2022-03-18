@@ -119,8 +119,8 @@ def cell_list_filter(in_x,in_y):
 # Init
 # -------------------------------------------------
 
-max_width      = 64
-max_height     = 64
+max_width      = 32
+max_height     = 48
 cell_used      = 0
 vram_entry     = 0
 frame_size     = 0

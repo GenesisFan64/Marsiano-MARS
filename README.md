@@ -21,8 +21,8 @@ Sound, Genesis and 32X:
 - Can autodetect each soundchips' special features (PSG, DAC and FM3 special) and swap those features mid-playback in the same slot. (ex. FM6 to DAC or DAC to FM6)
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
 
-Notes/Issues:
-- SOFT reset might freeze.
+Notes/Current issues:
+- SOFT reset takes a LOT to go back, and may freeze.
 - (256-color bg) If the X/Y positions are moving in the middle of switching modes the image might fail to fully redraw again.
 - (256-color bg) After switching from 3D mode to 2D: If the X/Y positions are negative, some lines will be cleared.
 - (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might break the PWM playback.
@@ -57,7 +57,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - The output limit for both LEFT and RIGHT channels is 1023 ($03FF), NOT 4095 ($0FFF) mentioned in the docs.
 
 --- Both sides ---
-- FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The framebuffer and 256-color palette), If a CPU with NO permission touches the SuperVDP it will freeze the entire system (either Genesis 68K or 32X SH2).
+- FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP's Framebuffer or palette it will freeze the entire system (either Genesis 68K or 32X SH2).
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted. ROM is for NTSC systems, can be played on PAL but with slowdown.
 If it doesn't boot or it freezes: I probably broke something without testing on HW

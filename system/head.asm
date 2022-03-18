@@ -207,7 +207,6 @@ MARS_Entry:
 		lea	(sysmars_reg).l,a5	; a5 - MARS register
 		btst.b	#0,1(a5)		; 32X enabled?
 		bne	.adapter_enbl		; If yes, start booting
-		move.l	#0,comm8(a5)		; If not, we can't use 32X or something went wrong
 		lea	.ram_code(pc),a0	; Copy the adapter-retry code to RAM
 		lea	($FF0000).l,a1		; and jump there.
 		move.l	(a0)+,(a1)+
@@ -280,7 +279,6 @@ MD_Init:
 		bne.s	.wait_dma
 		lea	(sysmars_reg).l,a5
 		move.w	#0,dreqctl(a5)			; Clear 68S and RV
-		move.l	#"68UP",comm12(a5)
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 		bne.s	.wm
 .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
@@ -288,7 +286,7 @@ MD_Init:
 		moveq	#0,d0				; Reset comm values
 		move.l	d0,comm0(a5)
 		move.l	d0,comm4(a5)
-		move.l	d0,comm12(a5)
+; 		move.l	d0,comm12(a5)
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
 		cmp.l	#"INIT",(RAM_initflug).l

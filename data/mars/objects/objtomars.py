@@ -33,7 +33,7 @@ import os
 # me.transform(EXPORT_GLOBAL_MATRIX @ ob_mat)
 # to
 # me.transform(EXPORT_GLOBAL_MATRIX)
-SCALE_SIZE	  = 0x10#0x100
+SCALE_SIZE	  = 0x40#0x100
 img_width         = 1			# failsafe.
 img_height        = 1
 
@@ -237,9 +237,9 @@ while reading:
                   
               # filename
               if b.find("map_Kd") == False:
-                  tex_fname = b[7:].rstrip('\r\n')
+                  tex_fname = b[7:].rstrip('\r\n')[1:]
+                  print(TAG_OBJECTSDIR+"/"+tex_fname)
                   tex_file = open(TAG_OBJECTSDIR+"/"+tex_fname,"rb")
-                  # COPYPASTED
                   tex_file.seek(1)
                   color_type = ord(tex_file.read(1))
                   image_type = ord(tex_file.read(1))

@@ -69,9 +69,6 @@ SmpIns_PlusPiano_st:
 TESTMARS_BG:
 	binclude "data/mars/test_art.bin"
 	align 4
-Textr_pecsi:
-	binclude "data/mars/objects/mtrl/pecsi_art.bin"
-	align 4
 
 ; ; --------------------------------------------------------
 ; ; Models

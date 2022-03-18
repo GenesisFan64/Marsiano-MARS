@@ -8,8 +8,8 @@
 ; ----------------------------------------
 
 MAX_FACES	equ 256
-MAX_SVDP_PZ	equ 256+24
-MAX_ZDIST	equ -$10000		; Max 3D drawing distance (-Z)
+MAX_SVDP_PZ	equ 256+32
+MAX_ZDIST	equ -$2000		; Max 3D drawing distance (-Z)
 FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift lines
 
 ; ----------------------------------------

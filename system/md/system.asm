@@ -531,9 +531,9 @@ System_SendDreq:
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
 ; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
 ; 		bne.s	.wait_cmd
-.wait_bit:	btst	#6,(sysmars_reg+comm14).l	; Wait comm bit signal from SH2 to fill the first words.
+.wait_bit:	btst	#6,(sysmars_reg+comm12).l	; Wait comm bit signal from SH2 to fill the first words.
 		beq.s	.wait_bit
-		bclr	#6,(sysmars_reg+comm14).l	; Clear it afterwards.
+		bclr	#6,(sysmars_reg+comm12).l	; Clear it afterwards.
 
 	; *** CRITICAL PART ***
 		move.w	d6,d5			; (lenght/2)/4
