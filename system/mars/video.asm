@@ -482,20 +482,20 @@ MarsVideo_DrawAllBg:
 		mov	r0,r13				; r13 - pixel data
 		mov	#_framebuffer,r12
 		mov	@(mbg_fbdata,r14),r0
-		add	r0,r12
+		add	r0,r12				; r12 - framebuffer output
 		mov.w	@(mbg_width,r14),r0		; r11 - pixel-data WIDTH
 		mov	r0,r11
 		mov.w	@(mbg_intrl_w,r14),r0		; r10 - internal WIDTH
 		mov	r0,r10
-		mov.w	@(mbg_height,r14),r0
+		mov.w	@(mbg_height,r14),r0		;  r9 - image WIDTH
 		mov	r0,r9
-		mov.w	@(mbg_intrl_h,r14),r0
+		mov.w	@(mbg_intrl_h,r14),r0		;  r8 - internal HEIGHT
 		mov	r0,r8
-		mov.w	@(mbg_intrl_blk,r14),r0
+		mov.w	@(mbg_intrl_blk,r14),r0		;  r7 - block size
 		mov	r0,r7
-		neg	r7,r6
-		mov	@(mbg_intrl_size,r14),r5
-		mov	#320,r4
+		neg	r7,r6				;  r6 - block limit bits
+		mov	@(mbg_intrl_size,r14),r5	;  r5 - internal WIDTH*HEIGHT
+		mov	#320,r4				;  r4 - max
 		mov.b	@(mbg_flags,r14),r0
 		and	#1,r0
 		tst	r0,r0
@@ -564,6 +564,10 @@ MarsVideo_DrawAllBg:
 		and	r6,r1
 		mov	#0,r6
 .nxt_y:
+		cmp/ge	r8,r4
+		bf	.nxt_y_l
+		sub	r8,r4
+.nxt_y_l:
 		cmp/ge	r9,r2		; Y limiters
 		bf	.ybg_l
 		sub	r9,r2
@@ -577,110 +581,130 @@ MarsVideo_DrawAllBg:
 		bf	.xbg_l
 		sub	r11,r1
 .xbg_l:
+		cmp/ge	r5,r3
+		bf	.nxt_x_l
+		sub	r5,r3
+.nxt_x_l:
 		bsr	.mk_piece
 		nop
-		add	r7,r1
+		add	r7,r3
 		add	r7,r6
 		cmp/ge	r10,r6
 		bf/s	.nxt_x
-		add	r7,r3		; No MAP WIDTH check needed here (TODO: maybe yes?)
+		add	r7,r1
+
 		mov	@r15+,r1
 		mov	@r15+,r3
 		mov	@r15+,r6
 
 		add	r7,r4
-		cmp/ge	r8,r4
-		bf	.nxt_y_l
-		sub	r8,r4
-.nxt_y_l:
 		add	r7,r2
 		add 	r7,r6
 		cmp/ge	r8,r6
 		bf	.nxt_y
+
+
 .no_data:
 		lds	@r15+,pr
 		rts
 		nop
 		align 4
 
-; r1 - X pos
-; r2 - Y pos
+	; r1 - X bg pos
+	; r2 - Y bg pos
+	; r3 - Framebuffer BASE
+	; r4 - Y FB pos &BLKSIZE
+	; Set X/Y framebuffer blocks
 .mk_piece:
+		mov	r1,@-r15
+		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
-		mov	r5,@-r15
 		mov	r6,@-r15
-		mov	r7,@-r15
+		mov	r5,@-r15
 		mov	r8,@-r15
 		mov	r9,@-r15
 
-		mulu	r4,r10
-		sts	macl,r6
-		add	r3,r6
-		cmp/ge	r5,r6
-		bf	.lrgrfb
-		sub	r5,r6
-.lrgrfb:
-	; Framebuffer X/Y add
 		mov	r13,r8		; BG X/Y add
 		mulu	r11,r2
 		sts	macl,r0
 		add	r0,r8
 		add	r1,r8
-		mov	r12,r7		; FB X add
-		add	r6,r7
+		mulu	r4,r10		; Framebuffer X/Y add
+		sts	macl,r9
+		add	r3,r9
 
-	; Hidden line
-		mov	#320,r9
-		mov.b	@(mbg_flags,r14),r0
-		and	#1,r0
-		tst	r0,r0
-		bt	.indxmoden
-		shll	r9
-.indxmoden:
-		cmp/ge	r9,r6
-		bt	.y_nohdnln
-		mov	r9,r3
-		shlr2	r3
-		mov	@(mbg_intrl_size,r14),r0
-		add	r0,r6
-		add	r12,r6
-		mov	r8,r5
-		mov.w	@(mbg_intrl_blk,r14),r0
-.nxtlnghdn:
-		mov	@r5+,r0
-		mov	r0,@r6
-		dt	r3
-		bf/s	.nxtlnghdn
-		add	#4,r6
-.y_nohdnln:
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r9
+; 	; Hidden line
+; 		mov	#320,r2
+; 		mov.b	@(mbg_flags,r14),r0
+; 		tst	#1,r0
+; 		bt	.indxmoden
+; 		shll	r2
+; .indxmoden:
+; 		cmp/gt	r2,r9
+; 		bt	.y_nohdnln
+;
+;
+; 		mov	r7,r2
+; 		shlr2	r2
+;
+; 		mov	r9,r6
+; 		add	r5,r6
+; 		add	r12,r6
+; 		mov	r8,r4
+; .nxtlnghdn:
+; 		mov	@r4+,r0
+; 		mov	r0,@r6
+; 		dt	r2
+; 		bf/s	.nxtlnghdn
+; 		add	#4,r6
+; .y_nohdnln:
+
+
+	; Normal full block
+		mov	r7,r2
 .yblk_loopn:
-		mov	r8,r5
-		mov	r7,r6
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r3
+		cmp/ge	r5,r9
+		bf	.ymax
+		sub	r5,r9
+.ymax:
+		mov	r7,r3
 		shlr2	r3
+		mov	r8,r4
+		mov	r9,r6
+
 .nxtlng:
-		mov	@r5+,r0
-		mov	r0,@r6
+		mov	@r4,r0
+		mov	r6,r1
+		add	r12,r1
+		mov	r0,@r1
+		mov	#320,r1
+		cmp/gt	r1,r6
+		bt	.hdnpos
+		mov	r6,r1
+		add	r5,r1
+		add	r12,r1
+		mov	r0,@r1
+.hdnpos:
+		add	#4,r6
 		dt	r3
 		bf/s	.nxtlng
-		add	#4,r6
+		add	#4,r4
 
-		add	r11,r8
-		dt	r9
+		add	r11,r8	; TODO
+		dt	r2
 		bf/s	.yblk_loopn
-		add	r10,r7
+		add	r10,r9
+
 .yblk_ex:
 		mov	@r15+,r9
 		mov	@r15+,r8
-		mov	@r15+,r7
-		mov	@r15+,r6
 		mov	@r15+,r5
+		mov	@r15+,r6
 		mov	@r15+,r4
 		mov	@r15+,r3
+		mov	@r15+,r2
+		mov	@r15+,r1
 		rts
 		nop
 		align 4
@@ -948,7 +972,6 @@ MarsVideo_BgDrawUD:
 		mov	r1,r0
 		mov	r0,@r2
 .hdnx:
-
 		dt	r5
 		bf/s	.x_loop
 		add	#4,r10
@@ -1022,9 +1045,9 @@ MarsVideo_MoveBg:
 ; 		mov	#0,r0
 ; 		mov.w	r0,@(marsGbl_XPatch,gbr)
 .no_chng:
-		mov.w	@(marsGbl_XShift,gbr),r0	; Also update the XShift
-		add	r1,r0				; bit for 256-color mode
-		mov.w	r0,@(marsGbl_XShift,gbr)
+; 		mov.w	@(marsGbl_XShift,gbr),r0	; Also update the XShift
+; 		add	r1,r0				; bit for 256-color mode
+; 		mov.w	r0,@(marsGbl_XShift,gbr)
 
 	; ---------------------------------------
 	; Y Framebuffer position

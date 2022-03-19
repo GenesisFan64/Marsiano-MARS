@@ -999,15 +999,13 @@ mars_scomm:
 		xor	a
 		ld	(marsUpd),a
 
-	; FIXME
 .wait_enter:
-		nop
 		ld	a,(iy+comm14)	; check if 68k got first.
-		and	10000000b
-		or	a
+		bit	7,a
 		jr	nz,.wait_enter
-		ld	(iy+comm7),1	; Set CMD mode 1
-		ld	a,(iy+comm7)	; Value got safe?
+		or	1		; Set CMD mode 1
+		ld	(iy+comm14),a
+		and	00001111b	; did it write?
 		cp	1
 		jr	nz,.wait_enter
 		set	7,(iy+comm14)	; Enter transfer loop
@@ -1042,6 +1040,7 @@ mars_scomm:
 		dec	c
 		jr	nz,.next_pass
 		res	7,(iy+comm14)	; Break transfer loop
+		res	6,(iy+comm14)
 
 	; clear COM bytes here.
 .blocked:

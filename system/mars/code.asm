@@ -554,8 +554,9 @@ s_irq_cmd:
 	; *** GEMA PWM DRIVER ***
 	; ---------------------------------
 
-		mov	#_sysreg+comm7,r1
+		mov	#_sysreg+comm14,r1	; LSB only
 		mov.b	@r1,r0
+		and	#%00001111,r0
 		cmp/eq	#0,r0
 		bt	.get_out
 		mov	r2,@-r15
@@ -574,7 +575,6 @@ s_irq_cmd:
 		sts	macl,@-r15
 		sts	mach,@-r15
 		sts	pr,@-r15
-		mov.b	@r1,r0
 		cmp/eq	#1,r0
 		bt	.mode_1
 		cmp/eq	#2,r0
@@ -599,8 +599,7 @@ s_irq_cmd:
 		mov	#1,r0
 		mov	r0,@r1
 		mov	#_sysreg+comm14,r1
-		mov.b	@r1,r0
-		and	#%01111111,r0
+		mov	#0,r0
 		bra	.no_trnsfrex
 		mov.b	r0,@r1
 
@@ -613,8 +612,7 @@ s_irq_cmd:
 		mov	#0,r0
 		mov	r0,@r1
 		mov	#_sysreg+comm14,r1
-		mov.b	@r1,r0
-		and	#%01111111,r0
+		mov	#0,r0
 		bra	.no_trnsfrex
 		mov.b	r0,@r1
 
@@ -1111,7 +1109,7 @@ master_loop:
 		add	#4,r3			; Grab the INIT jumps
 .no_init:
 		mov	r1,r0
-		and	#%11,r0
+		and	#%111,r0
 		shll2	r0
 		shll2	r0
 		mov	@(r3,r0),r3
@@ -1124,6 +1122,13 @@ master_loop:
 	dc.l mstr_gfx1,mstr_gfx1_init,mstr_gfx1_vblk,mstr_gfx1_hblk
 	dc.l mstr_gfx2,mstr_gfx2_init,mstr_gfx2_vblk,mstr_gfx2_hblk
 	dc.l mstr_gfx3,mstr_gfx3_init,mstr_gfx3_vblk,mstr_gfx3_hblk
+
+	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
+	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
+	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
+	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
+
+		ltorg
 
 ; ============================================================
 ; ---------------------------------------
@@ -1146,33 +1151,36 @@ mstr_gfx0:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 1: Generic single screen
-; in any bitmap mode (index,direct,RLE)
-; ---------------------------------------
-
-mstr_gfx1_hblk:
-		rts
-		nop
-mstr_gfx1_vblk:
-		rts
-		nop
-mstr_gfx1_init:
-		mov 	#_vdpreg,r1
-		mov	#0,r0
-		mov.b	r0,@(bitmapmd,r1)
-mstr_gfx1:
-		bra	mstr_nextframe
-		nop
-
-; ============================================================
-; ---------------------------------------
-; Mode 2: 256-color scrolling image
+; Mode 2:
+; Scaled 256-color or Direct color image
 ; ---------------------------------------
 
 mstr_gfx2_hblk:
 		rts
 		nop
 mstr_gfx2_vblk:
+		rts
+		nop
+mstr_gfx2_init:
+		mov 	#_vdpreg,r1
+		mov	#0,r0
+		mov.b	r0,@(bitmapmd,r1)
+mstr_gfx2:
+		bra	mstr_nextframe
+		nop
+
+; ============================================================
+; ---------------------------------------
+; Mode 1: 256-color scrolling image
+;
+; *** WAIT 2 FRAMES TO PROPERLY START
+; THIS MODE WHEN SWITCHING ***
+; ---------------------------------------
+
+mstr_gfx1_hblk:
+		rts
+		nop
+mstr_gfx1_vblk:
 		sts	pr,@-r15
 		mov	#RAM_Mars_Background,r14
 		mov	#RAM_Mars_DreqRead+Dreq_BgXpos,r13
@@ -1180,12 +1188,15 @@ mstr_gfx2_vblk:
 		mov	@r13+,r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
+		mov	r1,r0
+		shlr16	r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
 		bsr	MarsVideo_MoveBg
 		nop
 		lds	@r15+,pr
 		rts
 		nop
-mstr_gfx2_init:
+mstr_gfx1_init:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov	#RAM_Mars_Background,r1
@@ -1201,7 +1212,7 @@ mstr_gfx2_init:
 		mov	#224,r4
 		bsr	MarsVideo_SetBg
 		nop
-mstr_gfx2:
+mstr_gfx1:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
@@ -1230,6 +1241,7 @@ mstr_gfx2:
 		jsr	@r0
 		nop
 .from_drwall:
+
 	; ---------------------------------------
 	; Build linetable
 	; ---------------------------------------
@@ -1283,9 +1295,12 @@ mstr_gfx3_vblk:
 .wait_slv:
 		rts
 		nop
+
 mstr_gfx3_init:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
 mstr_gfx3:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0

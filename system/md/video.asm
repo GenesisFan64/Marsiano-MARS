@@ -130,6 +130,25 @@ Video_Update:
 		rts
 		
 ; --------------------------------------------------------
+; Video_WaitFade
+;
+; Wait until fade request turn 0
+;
+; Returns:
+; bne - Still active
+; beq - Finished
+; --------------------------------------------------------
+
+Video_RunFade:
+		bsr	Video_PalFade
+		bsr	Video_MarsPalFade
+Video_WaitFade:
+		move.w	(RAM_FadeMarsReq),d7
+		move.w	(RAM_FadeMdReq),d6
+		or.w	d6,d7
+		rts
+
+; --------------------------------------------------------
 ; Video_LoadPal
 ; 
 ; Input:
@@ -143,6 +162,7 @@ Video_Update:
 
 Video_FadePal:
 		lea	(RAM_PaletteFd),a6
+		clr.w	(RAM_FadeMdTmr).w
 		bra.s	vidMd_Pal
 Video_LoadPal:
 		lea	(RAM_Palette),a6
@@ -178,10 +198,15 @@ vidMd_Pal:
 ; --------------------------------------------------------
 
 Video_PalFade:
+		sub.w	#1,(RAM_FadeMdTmr).w
+		bpl.s	.active
+		move.w	(RAM_FadeMdDelay).w,(RAM_FadeMdTmr).w
 		move.w	(RAM_FadeMdReq).w,d7
 		add.w	d7,d7
 		move.w	.fade_list(pc,d7.w),d7
 		jmp	.fade_list(pc,d7.w)
+.active:
+		rts
 
 ; --------------------------------------------
 
@@ -205,7 +230,7 @@ Video_PalFade:
 		lea	(RAM_PaletteFd),a6
 		lea	(RAM_Palette),a5
 		move.w	#64,d0				; Num of colors
-		move.w	(RAM_FadeMdSpd).w,d1		; Speed
+		move.w	(RAM_FadeMdIncr).w,d1		; Speed
 		add.w	d1,d1
 		move.w	d0,d6
 		swap	d6
@@ -276,7 +301,7 @@ Video_PalFade:
 .fade_out:
 		lea	(RAM_Palette),a6
 		move.w	#64,d0				; Num of colors
-		move.w	(RAM_FadeMdSpd).w,d1		; Speed
+		move.w	(RAM_FadeMdIncr).w,d1		; Speed
 		move.w	d0,d6
 		swap	d6
 		sub.w	#1,d0
@@ -980,7 +1005,7 @@ Video_LoadArt:
 
 Video_MarsSetGfx:
 		move.w	d0,d6
-		and.w	#%00000011,d6			; Current limit: 4 modes
+		and.w	#%00000111,d6			; Current limit: 8 modes
 		or.w	#$80,d6
 		move.w	(sysmars_reg+comm12).l,d7	; Grab current comm12
 		and.w	#$FF00,d7			; Clear our byte
@@ -1020,6 +1045,7 @@ Video_MarsWait:
 
 Video_FadePal_Mars:
 		lea	(RAM_MdMarsPalFd),a6
+		clr.w	(RAM_FadeMarsTmr).w
 		bra.s	vidMars_Pal
 Video_LoadPal_Mars:
 		lea	(RAM_MdDreq+Dreq_Palette).w,a6
@@ -1059,10 +1085,15 @@ vidMars_Pal:
 ; TODO: luego ver que hago con el priority bit
 
 Video_MarsPalFade:
+		sub.w	#1,(RAM_FadeMarsTmr).w
+		bpl.s	.active
+		move.w	(RAM_FadeMarsDelay).w,(RAM_FadeMarsTmr).w
 		move.w	(RAM_FadeMarsReq).w,d7
 		add.w	d7,d7
 		move.w	.fade_list(pc,d7.w),d7
 		jmp	.fade_list(pc,d7.w)
+.active:
+		rts
 
 ; --------------------------------------------
 
@@ -1086,7 +1117,7 @@ Video_MarsPalFade:
 		lea	(RAM_MdMarsPalFd),a6
 		lea	(RAM_MdDreq+Dreq_Palette).w,a5
 		move.w	#256,d0				; Num of colors
-		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
+		move.w	(RAM_FadeMarsIncr).w,d1		; Speed
 		move.w	d0,d6
 		swap	d6
 		sub.w	#1,d0
@@ -1159,7 +1190,7 @@ Video_MarsPalFade:
 .fade_out:
 		lea	(RAM_MdDreq+Dreq_Palette).w,a6
 		move.w	#256,d0				; Num of colors
-		move.w	(RAM_FadeMarsSpd).w,d1		; Speed
+		move.w	(RAM_FadeMarsIncr).w,d1		; Speed
 		move.w	d0,d6
 		swap	d6
 		sub.w	#1,d0

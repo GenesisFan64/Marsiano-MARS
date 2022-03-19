@@ -93,24 +93,18 @@ thisCode_Top:
 		moveq	#0,d0
 		move.w	#$20,d1
 		bsr	Video_FadePal
-		lea	(MDLDATA_PAL_TEST),a0
-		moveq	#0,d0
-		move.w	#256,d1
-		moveq	#0,d2
-		bsr	Video_FadePal_Mars
+; 		lea	(TESTMARS_BG_PAL),a0
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		moveq	#0,d2
+; 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
-		move.w	#3,(RAM_CurrGfx).w
-		moveq	#3,d0
-		bsr	Video_MarsSetGfx
+		move.w	#1,(RAM_CurrGfx).w
 
 ; 		move.l	#$C0000000,(vdp_ctrl).l
 ; 		move.w	#$00E0,(vdp_data).l
 
-		move.w	#1,(RAM_FadeMdSpd).w		; Fade-in speed(s)
-		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
-		move.w	#4,(RAM_FadeMarsSpd).w
-		move.w	#1,(RAM_FadeMarsReq).w
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		move.b	#%111,(RAM_VdpRegs+$B).l	; Horizontall linescroll
 		bsr	Video_Update
@@ -154,11 +148,9 @@ thisCode_Top:
 		lea	str_InfoMouse(pc),a0
 		move.l	#locate(0,1,1),d0
 		bsr	Video_Print
-
 		lea	(RAM_MdDreq),a0
 		move.w	#sizeof_dreq,d0
 		bsr	System_SendDreq
-
 		move.w	(RAM_CurrMode).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -183,21 +175,33 @@ thisCode_Top:
 		tst.w	(RAM_CurrMode).w
 		bmi	.mode0_loop
 		or.w	#$8000,(RAM_CurrMode).w
+		lea	(MDLDATA_PAL_TEST),a0
+		cmp.w	#3,(RAM_CurrGfx).w
+		beq.s	.thispal
+		lea	(TESTMARS_BG_PAL),a0
+.thispal:
+		moveq	#0,d0
+		move.w	#256,d1
+		moveq	#0,d2
+		bsr	Video_FadePal_Mars
+		move.w	#1,(RAM_FadeMdReq).w		; FadeIn request on both sides
+		move.w	#1,(RAM_FadeMarsReq).w
+		move.w	#1,(RAM_FadeMdIncr).w
+		move.w	#4,(RAM_FadeMarsIncr).w
+		move.w	#2,(RAM_FadeMdDelay).w
+		move.w	#2,(RAM_FadeMarsDelay).w
+		move.w	(RAM_CurrGfx).w,d0
+		bsr	Video_MarsSetGfx
 .mode0_loop:
-		bsr	Video_PalFade
-		bsr	Video_MarsPalFade
-		move.w	(RAM_FadeMarsReq),d7
-		move.w	(RAM_FadeMdReq),d6
-; 		or.w	d6,d7
-; 		bne	.loop
+		bsr	Emilie_MkSprite
+		bsr	Video_RunFade
+		bne	.loop
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.no_mode0
 		move.w	#1,(RAM_CurrMode).w
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
-
-
 		move.w	(Controller_1+on_press),d7
 		lsr.w	#8,d7
 		btst	#bitJoyZ,d7
@@ -241,30 +245,39 @@ thisCode_Top:
 		btst	#bitJoyB,d7
 		beq.s	.nor_m2
 		add.w	#1,(RAM_CurrGfx).w
-		move.w	(RAM_CurrGfx).w,d0
-		bsr	Video_MarsSetGfx
 		moveq	#1,d2
 .nor_m2:
 		btst	#bitJoyA,d7
 		beq.s	.nol_m2
 		sub.w	#1,(RAM_CurrGfx).w
-		move.w	(RAM_CurrGfx).w,d0
-		bsr	Video_MarsSetGfx
 		moveq	#1,d2
 .nol_m2:
+
 		tst.w	d2
 		beq.s	.no_chng
-		lea	(MDLDATA_PAL_TEST),a0
-		cmp.w	#3,(RAM_CurrGfx).w
-		beq.s	.thispal
-		lea	(TESTMARS_BG_PAL),a0
 
-.thispal:
-		moveq	#0,d2
-		moveq	#0,d0
-		move.w	#256,d1
-		bsr	Video_LoadPal_Mars
-		clr.w	(RAM_MdDreq+Dreq_Palette).w
+		move.w	#2,(RAM_FadeMdReq).w		; FadeIn request on both sides
+		move.w	#2,(RAM_FadeMarsReq).w
+		move.w	#1,(RAM_FadeMdIncr).w
+		move.w	#4,(RAM_FadeMarsIncr).w
+		move.w	#2,(RAM_FadeMdDelay).w
+		move.w	#2,(RAM_FadeMarsDelay).w
+.fadeout:
+		bsr	Video_RunFade
+		beq.s	.exit
+		bsr	System_VBlank
+		lea	(RAM_MdDreq),a0
+		move.w	#sizeof_dreq,d0
+		bsr	System_SendDreq
+		bra.s	.fadeout
+.exit
+		move.w	#0,(RAM_CurrMode).w
+; .thispal:
+; 		moveq	#0,d2
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		bsr	Video_LoadPal_Mars
+; 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 .no_chng:
 		bsr	.move_model
 
@@ -302,8 +315,6 @@ thisCode_Top:
 .noz_l:
 
 ; 		bsr	Emilie_Move
-		bsr	Emilie_MkSprite
-
 ; 		bsr	.wave_backgrnd
 		rts
 

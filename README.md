@@ -4,7 +4,7 @@ I'm also using this to research those real-hardware bugs and limitations that cu
 *WORK IN PROGRESS*
 
 Graphics:
-- 2 Pseudo graphics modes: Scrolling 256-color background and 3D polygons mode.
+- Various pseudo-screens modes: Ex. 3D polygons, A scrolling 256-color background...
 - 256-color background: Drawing is done using dirty-section method, moves smoothly and saves CPU processing.
 - 256-color BG: Source data can be either a static image in ROM (NOTE: not RV protected) or a buffer section in RAM in any WIDTH and HEIGHT, BUT aligned in "blocks" (Usable: 4x4, 8x8, 16x16, 32x32)
 - 3D polygons: Uses both SH2s, Reads 3D models in a custom format: Python3 .obj importer is included.
@@ -23,9 +23,8 @@ Sound, Genesis and 32X:
 
 Notes/Current issues:
 - SOFT reset takes a LOT to go back, and may freeze.
-- (256-color bg) If the X/Y positions are moving in the middle of switching modes the image might fail to fully redraw again.
-- (256-color bg) After switching from 3D mode to 2D: If the X/Y positions are negative, some lines will be cleared.
-- (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might break the PWM playback.
+- (256-color bg) If the X/Y positions are moving in the middle of switching modes the image might fail draw
+- (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play corrupt wave data.
 
 Planned/TODO:
 - Implement NORMAL sprites on the 256-color background pseudomode
@@ -34,7 +33,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 
 -- General --
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
-- ALL Emulators doesn't SOFT reset like in hardware: 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's
+- MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's
 - The 4-byte LONG alignment limitation is ignored.
 
 -- 68000 --
@@ -57,7 +56,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - The output limit for both LEFT and RIGHT channels is 1023 ($03FF), NOT 4095 ($0FFF) mentioned in the docs.
 
 --- Both sides ---
-- FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP's Framebuffer or palette it will freeze the entire system (either Genesis 68K or 32X SH2).
+- FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP's Framebuffer or it's Palette it will freeze the entire system (either Genesis 68K or 32X SH2).
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted. ROM is for NTSC systems, can be played on PAL but with slowdown.
 If it doesn't boot or it freezes: I probably broke something without testing on HW

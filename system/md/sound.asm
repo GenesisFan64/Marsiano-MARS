@@ -153,18 +153,22 @@ Sound_DMA_Pause:
 		bsr	sndUnlockZ80
 
 		move.w	#2,d6
-.wait_in:	move.w	(sysmars_reg+comm14),d7
-		bmi.s	.wait_in
-		bset	#7,(sysmars_reg+comm14).l
-		move.b	d6,(sysmars_reg+comm7).l
-		move.b	(sysmars_reg+comm7).l,d7
+.wait_in:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_in
+		or.b	d6,d7
+		move.b	d7,(sysmars_reg+comm14).l
+		move.b	(sysmars_reg+comm14).l,d7
+		and.w	#%00001111,d7
 		cmp.b	d6,d7
 		bne.s	.wait_in
+		bset	#7,(sysmars_reg+comm14).l
 		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
-; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
-; 		bne.s	.wait_cmd
-.wait_out:	move.w	(sysmars_reg+comm14),d7
-		bmi.s	.wait_out
+; ; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; ; 		bne.s	.wait_cmd
+.wait_out:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_out
 		swap	d6
 		swap	d7
 		rts
@@ -183,18 +187,22 @@ Sound_DMA_Resume:
 		bsr	sndUnlockZ80
 
 		move.w	#3,d6
-.wait_in:	move.w	(sysmars_reg+comm14),d7
-		bmi.s	.wait_in
-		bset	#7,(sysmars_reg+comm14).l
-		move.b	d6,(sysmars_reg+comm7).l
-		move.b	(sysmars_reg+comm7).l,d7
+.wait_in:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_in
+		or.b	d6,d7
+		move.b	d7,(sysmars_reg+comm14).l
+		move.b	(sysmars_reg+comm14).l,d7
+		and.w	#%00001111,d7
 		cmp.b	d6,d7
 		bne.s	.wait_in
+		bset	#7,(sysmars_reg+comm14).l
 		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
-; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
-; 		bne.s	.wait_cmd
-.wait_out:	move.w	(sysmars_reg+comm14),d7
-		bmi.s	.wait_out
+; ; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; ; 		bne.s	.wait_cmd
+.wait_out:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_out
 		swap	d6
 		swap	d7
 		rts

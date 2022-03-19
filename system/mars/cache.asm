@@ -660,23 +660,23 @@ drwsld_nxtline_tex:
 		cmp/pl	r12
 		bf	.tex_skip_line
 
-; 		mov	#_overwrite+$200,r10
-; 		mov 	r9,r0			; Y position * $200
-; 		shll8	r0
-; 		shll	r0
-; 		add 	r0,r10			; Add Y
-; 		add 	r11,r10			; Add X
-		mov	#_vdpreg,r10
-.wait:		mov.w	@(10,r10),r0
-		tst	#2,r0
-		bf	.wait
-		mov 	r9,r0		; Y position
-		add	#1,r0		; move it to $200
+		mov	#_overwrite+$200,r10
+		mov 	r9,r0			; Y position * $200
 		shll8	r0
-		mov	r11,r2
-		shlr	r2
-		add	r2,r0
-		mov.w	r0,@(6,r10)	; address
+		shll	r0
+		add 	r0,r10			; Add Y
+		add 	r11,r10			; Add X
+; 		mov	#_vdpreg,r10
+; .wait:	mov.w	@(10,r10),r0
+; 		tst	#2,r0
+; 		bf	.wait
+; 		mov 	r9,r0		; Y position
+; 		add	#1,r0		; move it to $200
+; 		shll8	r0
+; 		mov	r11,r2
+; 		shlr	r2
+; 		add	r2,r0
+; 		mov.w	r0,@(6,r10)	; address
 
 		mov	#$FF,r0
 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
@@ -714,13 +714,13 @@ drwsld_nxtline_tex:
 		dt	r12
 		sts	mach,r2
 		or	r2,r0
-		mov	r0,r2
-		mov	#0,r0
-		mov.w	r0,@(4,r10)		; length
-		mov	r2,r0
-		mov.w	r0,@(8,r10)		; Set data
-; 		mov.w	r0,@r10
-; 		add	#2,r10
+; 		mov	r0,r2
+; 		mov	#0,r0
+; 		mov.w	r0,@(4,r10)		; length
+; 		mov	r2,r0
+; 		mov.w	r0,@(8,r10)		; Set data
+		mov.w	r0,@r10
+		add	#2,r10
 		add	r6,r5			; Update X
 		bf/s	.tex_xloop
 		add	r8,r7			; Update Y
@@ -1334,9 +1334,9 @@ MarsMdl_ReadModel:
 		add 	#polygn_srcpnts,r5
 		mov	r7,r3			; r3 - copy of current face points (3 or 4)
 
-	; New method
+	; Faster read
 	rept 3
-		mov.w	@r11+,r0			; Read UV index
+		mov.w	@r11+,r0		; Read UV index
 		extu	r0,r0
 		shll2	r0
 		mov	@(r6,r0),r0
@@ -1409,11 +1409,13 @@ MarsMdl_ReadModel:
 		mov	r7,r0
 		shll	r0
 		add	r0,r11
-		mov 	r8,@-r15
-		mov 	r9,@-r15
-		mov 	r11,@-r15
-		mov 	r12,@-r15
-		mov 	r13,@-r15
+
+		mov	#Cach_BkupS_S,r0
+		mov 	r8,@-r0
+		mov 	r9,@-r0
+		mov 	r11,@-r0
+		mov 	r12,@-r0
+		mov 	r13,@-r0
 		mov	.tag_xl,r8
 		neg	r8,r9
 		mov	#-112,r11
@@ -1462,11 +1464,13 @@ MarsMdl_ReadModel:
 		mov	r11,r3
 		mov	r12,r4
 		mov	r13,r6
-		mov	@r15+,r13
-		mov	@r15+,r12
-		mov	@r15+,r11
-		mov	@r15+,r9
-		mov	@r15+,r8
+
+		mov	#Cach_BkupS_L,r0
+		mov	@r0+,r13
+		mov	@r0+,r12
+		mov	@r0+,r11
+		mov	@r0+,r9
+		mov	@r0+,r8
 
 	; NOTE: if you don't like how the perspective works
 	; change this instruction depending how you want to ignore
@@ -1582,14 +1586,15 @@ MarsMdl_ReadModel:
 
 		align 4
 mdlrd_setpoint:
-		sts	pr,@-r15
-		mov 	r5,@-r15
-		mov 	r6,@-r15
-		mov 	r7,@-r15
-		mov 	r8,@-r15
-		mov 	r9,@-r15
-		mov 	r10,@-r15
-		mov 	r11,@-r15
+		mov	#Cach_BkupPnt_S,r0
+		sts	pr,@-r0
+		mov 	r5,@-r0
+		mov 	r6,@-r0
+		mov 	r7,@-r0
+		mov 	r8,@-r0
+		mov 	r9,@-r0
+		mov 	r10,@-r0
+		mov 	r11,@-r0
 
 	; Object rotation
 		mov	r2,r5			; r5 - X
@@ -1719,14 +1724,15 @@ mdlrd_setpoint:
 		sts	macl,r3
 		xtrct	r0,r3
 .zmulti:
-
-		mov	@r15+,r11
-		mov	@r15+,r10
-		mov	@r15+,r9
-		mov	@r15+,r8
-		mov	@r15+,r7
-		mov	@r15+,r6
-		mov	@r15+,r5
+		mov	#Cach_BkupPnt_L,r0
+		mov	@r0+,r11
+		mov	@r0+,r10
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r6
+		mov	@r0+,r5
+		lds	@r0+,pr
 
 	; Set the most far points
 	; for each direction (X,Y,Z)
@@ -1755,7 +1761,6 @@ mdlrd_setpoint:
 		mov	r3,r12
 .y_rw:
 
-		lds	@r15+,pr
 		rts
 		nop
 		align 4
@@ -1813,6 +1818,10 @@ mdlrd_rotate:
 MarsSnd_RvMode	ds.l 1
 MarsSnd_Active	ds.l 1
 Cach_CurrPlygn	ds.b sizeof_polygn	; Current polygon in modelread
+Cach_BkupPnt_L	ds.l 8		;
+Cach_BkupPnt_S	ds.l 0		; <-- Reads backwards
+Cach_BkupS_L	ds.l 5		;
+Cach_BkupS_S	ds.l 0
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF
