@@ -59,7 +59,7 @@ comm2		equ	$22		; only be careful with the read/write directions.
 comm3		equ	$23		; ODD addresses (1,3,5...) are BYTE-read only.
 comm4		equ	$24		; EVEN addresses (0,2,4...) can be read as WORDs
 comm5		equ	$25		; Writing LONG addreses are possible depending
-comm6		equ	$26		; of the CPU
+comm6		equ	$26		; of the CPU's aligment limitations.
 comm7		equ	$27		;
 comm8		equ	$28		;
 comm9		equ	$29		;

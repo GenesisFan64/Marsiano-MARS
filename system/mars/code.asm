@@ -60,6 +60,9 @@ marsGbl_BgDrwR		ds.w 1	; Write 2 to only redraw offscreen section(s)
 marsGbl_BgDrwL		ds.w 1	;
 marsGbl_BgDrwU		ds.w 1	;
 marsGbl_BgDrwD		ds.w 1	;
+
+marsGbl_BgScl_DX	ds.w 1
+marsGbl_BgScl_DY	ds.w 1
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -1083,7 +1086,7 @@ master_loop:
 		mov	#.list+8,r1		; Point to VBLANK jumps
 		mov	#_sysreg+comm12,r2
 		mov.w	@r2,r0			; r0 - INIT bit
-		and	#%11,r0
+		and	#%111,r0
 		shll2	r0
 		shll2	r0
 		mov	@(r1,r0),r1
@@ -1123,12 +1126,12 @@ master_loop:
 	dc.l mstr_gfx2,mstr_gfx2_init,mstr_gfx2_vblk,mstr_gfx2_hblk
 	dc.l mstr_gfx3,mstr_gfx3_init,mstr_gfx3_vblk,mstr_gfx3_hblk
 
-	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
+	dc.l mstr_gfx4,mstr_gfx4_init,mstr_gfx4_vblk,mstr_gfx4_hblk
 	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
 	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
 	dc.l mstr_gfx0,mstr_gfx0_init,mstr_gfx0_vblk,mstr_gfx0_hblk
 
-		ltorg
+	ltorg
 
 ; ============================================================
 ; ---------------------------------------
@@ -1146,43 +1149,47 @@ mstr_gfx0_init:
 		mov	#0,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx0:
-		bra	mstr_nextframe
+		bra	master_loop
 		nop
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 2:
-; Scaled 256-color or Direct color image
-; ---------------------------------------
-
-mstr_gfx2_hblk:
-		rts
-		nop
-mstr_gfx2_vblk:
-		rts
-		nop
-mstr_gfx2_init:
-		mov 	#_vdpreg,r1
-		mov	#0,r0
-		mov.b	r0,@(bitmapmd,r1)
-mstr_gfx2:
-		bra	mstr_nextframe
-		nop
-
-; ============================================================
-; ---------------------------------------
-; Mode 1: 256-color scrolling image
+; Mode 1:
+; Generic static screen in any
+; bitmap mode: Indexed, Direct or RLE
 ;
-; *** WAIT 2 FRAMES TO PROPERLY START
-; THIS MODE WHEN SWITCHING ***
+; Direct's HEIGHT will be limited
+; to 200 lines.
 ; ---------------------------------------
 
 mstr_gfx1_hblk:
 		rts
 		nop
 mstr_gfx1_vblk:
+		rts
+		nop
+mstr_gfx1_init:
+		mov 	#_vdpreg,r1
+		mov	#0,r0
+		mov.b	r0,@(bitmapmd,r1)
+mstr_gfx1:
+		bra	master_loop
+		nop
+
+; ============================================================
+; ---------------------------------------
+; Mode 2: 256-color scrolling image
+;
+; *** WAIT 2 FRAMES TO PROPERLY START
+; THIS MODE WHEN SWITCHING ***
+; ---------------------------------------
+
+mstr_gfx2_hblk:
+		rts
+		nop
+mstr_gfx2_vblk:
 		sts	pr,@-r15
-		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	#RAM_Mars_DreqRead+Dreq_BgXpos,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
@@ -1196,23 +1203,23 @@ mstr_gfx1_vblk:
 		lds	@r15+,pr
 		rts
 		nop
-mstr_gfx1_init:
+mstr_gfx2_init:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
-		mov	#RAM_Mars_Background,r1
+		mov	#RAM_Mars_BgBuffScrl,r1
 		mov	#$200,r2
 		mov	#16,r3
 		mov	#320,r4
 		mov	#256,r5
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
-		mov	#RAM_Mars_Background,r1
+		mov	#RAM_Mars_BgBuffScrl,r1
 		mov	#TESTMARS_BG,r2			; Image / RAM section
 		mov	#320,r3
 		mov	#224,r4
 		bsr	MarsVideo_SetBg
 		nop
-mstr_gfx1:
+mstr_gfx2:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
@@ -1245,33 +1252,149 @@ mstr_gfx1:
 	; ---------------------------------------
 	; Build linetable
 	; ---------------------------------------
-		mov	#RAM_Mars_Background,r1		; Make visible background
+		mov	#RAM_Mars_BgBuffScrl,r1		; Make visible background
 		mov	#0,r2				; section on screen
 		mov	#224,r3
 		bsr	MarsVideo_MakeTbl
 		nop
 		bsr	MarsVideo_FixTblShift		; Fix those broken lines that
 		nop					; the Xshift register can't move
-		bra	mstr_nextframe
+		bra	master_loop
 		nop
 		align 4
 		ltorg
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 3: 3D MODE Polygons-only
+; Mode 3:
+; Scalable 256-color screen, low FPS
 ; ---------------------------------------
 
 mstr_gfx3_hblk:
 		rts
 		nop
-
 mstr_gfx3_vblk:
-		mov	#_sysreg+comm12,r1	; Check if we are on loop mode $03
-		mov.w	@r1,r0
-		and	#$7F,r0
-		cmp/eq	#3,r0
-		bf	.wait_slv
+		rts
+		nop
+mstr_gfx3_init:
+		mov	#2,r0
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
+
+		mov	#$40,r0
+		mov.w	r0,@(marsGbl_BgScl_DX,gbr)
+		mov.w	r0,@(marsGbl_BgScl_DY,gbr)
+
+mstr_gfx3:
+		mov.w	@(marsGbl_BgDrwAll,gbr),r0
+		cmp/eq	#0,r0
+		bt	.no_redraw
+		dt	r0
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		cmp/pl	r0
+		bf	.no_btmp
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
+.no_btmp:
+		mov	#_framebuffer,r3
+		mov	#$200/2,r0
+		mov	r0,r1
+		mov	#240,r4
+.nxt_lne:
+		mov.w	r0,@r3
+		add	r1,r0
+		dt	r4
+		bf/s	.nxt_lne
+		add	#2,r3
+.no_redraw:
+
+	; MAIN scaler
+	; r1 - X pos xx.00
+	; r2 - Y pos yy.00
+	; r3 - X dx  xx.00
+	; r4 - Y dx  yy.00
+	; r5 - Source WIDTH
+	; r6 - Source HEIGHT
+	; r7 - Source DATA
+	; r8 - Output
+	; r9 - line size / 2
+	; r10 - Number of lines
+		mov	#0,r1				; r1 - X pos (4 pixels wide)
+		mov	#0,r2				; r2 - Y pos
+		mov.w	@(marsGbl_BgScl_DX,gbr),r0
+		mov	r0,r3				; r3 - X add
+		mov.w	@(marsGbl_BgScl_DY,gbr),r0
+		mov	r0,r4				; r4 - Y add
+
+		mov	#320,r5				; r5 - X width
+		mov	#240,r6				; r6 - Y height
+		mov	#TESTMARS_BG2,r7		; r7 - Input
+		mov	#_framebuffer+$200,r8		; r8 - Output
+
+		mov	#320/2,r9			; r9  - X loop
+		mov	#224,r10			; r10 - Y loop
+.y_loop:
+		mov	r6,r0
+		shll8	r0
+		cmp/ge	r0,r2
+		bf	.y_high
+		sub	r0,r2
+.y_high:
+
+		mov	r1,r11
+		mov	r7,r12
+		mov	r8,r13
+		mov	r9,r14
+		mov	r2,r0
+		shlr8	r0
+		muls	r5,r0
+		sts	macl,r0
+		add	r0,r12
+.x_loop:
+		mov	r5,r0
+		shll8	r0
+		cmp/ge	r0,r11
+		bf	.x_high
+		sub	r0,r11
+.x_high:
+		mov	r11,r0
+		shlr8	r0
+		shll	r0
+		mov.w	@(r12,r0),r0
+		add	r3,r11
+		mov.w	r0,@r13
+		add	#2,r13
+		dt	r14
+		bf	.x_loop
+		add	r4,r2
+		mov	#$200,r0
+		dt	r10
+		bf/s	.y_loop
+		add	r0,r8
+
+		mov.w	@(marsGbl_BgScl_DX,gbr),r0
+		add	#1,r0
+		mov.w	r0,@(marsGbl_BgScl_DX,gbr)
+
+		mov.w	@(marsGbl_BgScl_DY,gbr),r0
+		add	#1,r0
+		mov.w	r0,@(marsGbl_BgScl_DY,gbr)
+
+		bra	master_loop
+		nop
+
+; ============================================================
+; ---------------------------------------
+; Mode 4: 3D MODE Polygons-only
+; ---------------------------------------
+
+mstr_gfx4_hblk:
+		rts
+		nop
+
+mstr_gfx4_vblk:
 		mov	#_sysreg+comm14,r4
 		mov.w	@r4,r0
 		and	#%01111111,r0
@@ -1296,12 +1419,12 @@ mstr_gfx3_vblk:
 		rts
 		nop
 
-mstr_gfx3_init:
+mstr_gfx4_init:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_XShift,gbr)
-mstr_gfx3:
+mstr_gfx4:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
 		bt	.no_redraw
@@ -1394,18 +1517,12 @@ mstr_gfx3:
 		jsr	@r0
 		nop
 .no_swap:
-
-; ============================================================
-; ---------------------------------------
-; *** Frameswap exit, JUMP only
-; ---------------------------------------
-
-mstr_nextframe:
 		bra	master_loop
 		nop
 		align 4
+		ltorg
 
-; ; ---------------------------------------
+; ============================================================
 ;
 ; mstr_waitdma:
 ; 		mov	#_DMACHANNEL0,r1
@@ -1658,7 +1775,7 @@ RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
-RAM_Mars_Background	ds.w sizeof_marsbg
+RAM_Mars_BgBuffScrl	ds.w sizeof_marsbg
 sizeof_marsvid		ds.l 0
 			finish
 

@@ -10,9 +10,13 @@
 ; ----------------------------------------------------------------
 
 		align 2
-TESTMARS_BG_PAL:
+PalData_Mars_Test:
 		binclude "data/mars/test_pal.bin"
 		align 2
+PalData_Mars_Test2:
+		binclude "data/mars/test2_pal.bin"
+		align 2
+
 MDLDATA_PAL_TEST:
 		binclude "data/mars/objects/mtrl/pecsi_pal.bin"
 		align 2

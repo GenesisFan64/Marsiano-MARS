@@ -100,7 +100,7 @@ thisCode_Top:
 ; 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
-		move.w	#1,(RAM_CurrGfx).w
+		move.w	#2,(RAM_CurrGfx).w
 
 ; 		move.l	#$C0000000,(vdp_ctrl).l
 ; 		move.w	#$00E0,(vdp_data).l
@@ -175,10 +175,14 @@ thisCode_Top:
 		tst.w	(RAM_CurrMode).w
 		bmi	.mode0_loop
 		or.w	#$8000,(RAM_CurrMode).w
+
 		lea	(MDLDATA_PAL_TEST),a0
+		cmp.w	#4,(RAM_CurrGfx).w
+		beq.s	.thispal
+		lea	(PalData_Mars_Test2),a0
 		cmp.w	#3,(RAM_CurrGfx).w
 		beq.s	.thispal
-		lea	(TESTMARS_BG_PAL),a0
+		lea	(PalData_Mars_Test),a0
 .thispal:
 		moveq	#0,d0
 		move.w	#256,d1

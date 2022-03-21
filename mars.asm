@@ -4,11 +4,11 @@
 ; +-----------------------------------------------------------------+
 
 		include	"system/macros.asm"	; Assembler macros
-		include	"system/md/const.asm"	; MD variables and shared vars
 		include	"system/md/map.asm"	; Genesis hardware map
-		include	"system/mars/map.asm"	; MARS map
-		include	"system/mars/dreq.asm"	; MARS map
-		include "code/global.asm"	; Global user variables for the Genesis
+		include	"system/md/const.asm"	; Genesis variables (and some shared with SH2)
+		include	"system/mars/map.asm"	; 32X hardware map
+		include	"system/mars/dreq.asm"	; DREQ map for both sides
+		include "code/global.asm"	; Global user variables on the Genesis
 		include	"system/head.asm"	; 32X header
 
 ; ====================================================================
@@ -18,28 +18,32 @@
 
 		jmp	(thisCode_Top).l
 
+; ====================================================================
 ; --------------------------------------------------------
-; Top-common code stored on RAM
+; Section stored at the $880000 area
 ; --------------------------------------------------------
 
 MdRamCode:
 		phase $880000+*
-minfo_ram_s:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
 		include "code/default.asm"
-RAMCODE_USER:
 		dephase
 MdRamCode_end:
 		align 2
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 68k DATA BANKs at $900000 1MB max
+; 68K DATA BANKs at $900000 1MB max
 ; ----------------------------------------------------------------
 
-	; First one is smaller than the others...
+; ---------------------------------------------
+; BANK 0
+;
+; First one is smaller than the others...
+; ---------------------------------------------
+
 		phase $900000+*				; Only one currently
 		include "sound/tracks.asm"
 		include "sound/instr.asm"
@@ -49,19 +53,31 @@ MdRamCode_end:
 ; 		org $100000-4				; Fill this bank and
 ; 		dc.b "BNK0"				; add a tag at the end
 
-; 		phase $900000;+*
+; ---------------------------------------------
+; BANK 1
+; ---------------------------------------------
+
+; 		phase $900000
 ; 		include "data/md_bank1.asm"
 ; 		dephase
 ; 		org $200000-4
 ; 		dc.b "BNK1"
 
-; 		phase $900000;+*
+; ---------------------------------------------
+; BANK 2
+; ---------------------------------------------
+
+; 		phase $900000
 ; 		include "data/md_bank2.asm"
 ; 		dephase
 ; 		org $300000-4
 ; 		dc.b "BNK2"
 
-; 		phase $900000;+*
+; ---------------------------------------------
+; BANK 3
+; ---------------------------------------------
+
+; 		phase $900000
 ; 		include "data/md_bank3.asm"
 ; 		dephase
 ; 		org $400000-4
@@ -69,7 +85,7 @@ MdRamCode_end:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD DMA data, BANK-free but requres RV=1
+; MD DMA data: BANK-free but requres RV=1
 ; ----------------------------------------------------------------
 
 		align 4
@@ -77,7 +93,7 @@ MdRamCode_end:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; SH2 CODE
+; SH2 RAM CODE
 ; ----------------------------------------------------------------
 
 		align 4
@@ -89,8 +105,9 @@ MARS_RAMDATA:
 MARS_RAMDATA_E:
 		align 4
 
+; ====================================================================
 ; --------------------------------------------------------
-; MARS data for SH2's ROM view
+; MARS exclusive data for SH2's ROM view
 ; This section will be gone if RV=1
 ; --------------------------------------------------------
 

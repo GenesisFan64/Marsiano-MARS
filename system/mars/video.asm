@@ -172,7 +172,7 @@ MarsVideo_Init:
 
 	; Clear values
 	; TODO: checar bien esto porque se rompe en RESET
-		mov	#RAM_Mars_Background,r1
+		mov	#RAM_Mars_BgBuffScrl,r1
 		mov	#0,r0
 		mov	r0,@(mbg_data,r1)
 		mov	r0,@(mbg_xpos,r1)
@@ -185,7 +185,6 @@ MarsVideo_Init:
 		rts
 		nop
 		align 4
-
 ; Default linetable
 .def_fb:
 		mov	r2,r3
@@ -266,188 +265,188 @@ MarsVideo_Init:
 ; 		align 4
 ; 		ltorg
 
-; ------------------------------------
-; MarsVdp_Print
+; ; ------------------------------------
+; ; MarsVdp_Print
+; ;
+; ; Prints text on screen
+; ;
+; ; Input:
+; ; r1 - String data
+; ; r2 - X pos
+; ; r3 - Y pos
+; ; ------------------------------------
 ;
-; Prints text on screen
+; ; TODO: a ver si puedo copy-pastear
+; ; el de Genesis, para los valores
+; ; llamar _PrintVal
 ;
-; Input:
-; r1 - String data
-; r2 - X pos
-; r3 - Y pos
-; ------------------------------------
-
-; TODO: a ver si puedo copy-pastear
-; el de Genesis, para los valores
-; llamar _PrintVal
-
-MarsVdp_Print:
-		sts	pr,@-r15
-		mov	#RAM_Mars_Background,r14
-		mov	#_framebuffer,r13
-		mov	#m_ascii,r9
-		mov.w	@(mbg_intrl_w,r14),r0
-		mov	r0,r10
-
-		mov.w	@(mbg_yfb,r14),r0
-		add	r3,r0
-		mulu	r10,r0
-		mov	@(mbg_fbdata,r14),r0
-		mov	r0,r11
-		mov	@(mbg_fbpos,r14),r0
-		add	r0,r11
-		mov	r2,r0
-		shll2	r0
-		shll	r0
-		add	r0,r11
-		sts	macl,r0
-		add	r0,r11
-		mov	r11,r12
-.nxt_chr:
-		mov.b	@r1,r0
-		and	#$FF,r0
-		cmp/eq	#$00,r0
-		bt	.chr_exit
-		cmp/eq	#$0A,r0
-		bt	.chr_enter
-		bsr	.put_chr
-		nop
-		add	#8,r11
-		bra	.nxt_chr
-		add	#1,r1
-
-.chr_enter:
-		mov	#8,r0
-		mulu	r0,r10
-		sts	macl,r0
-		add	r0,r12
-		mov	r12,r11
-		bra	.nxt_chr
-		add	#1,r1
-
-.chr_exit:
-		lds	@r15+,pr
-		rts
-		nop
-		align 4
-
-.put_chr:
-		mov	#$20,r8
-		sub	r8,r0
-		shll2	r0		; *$40
-		shll2	r0
-		shll2	r0
-		mov	r9,r8
-		add	r0,r8
-		mov	r13,r7
-		add	r11,r7
-		mov	#8,r6
-.nxt_lns:
-		mov	@r8+,r0
-		mov	r0,@r7
-		mov	@r8+,r0
-		mov	r0,@(4,r7)
-		dt	r6
-		bf/s	.nxt_lns
-		add	r10,r7
-		rts
-		nop
-		align 4
-
-; ------------------------------------
-; MarsVdp_PrintVal
+; MarsVdp_Print:
+; 		sts	pr,@-r15
+; 		mov	#RAM_Mars_BgBuffScrl,r14
+; 		mov	#_framebuffer,r13
+; 		mov	#m_ascii,r9
+; 		mov.w	@(mbg_intrl_w,r14),r0
+; 		mov	r0,r10
 ;
-; Prints a value from ROM/RAM on
-; screen
+; 		mov.w	@(mbg_yfb,r14),r0
+; 		add	r3,r0
+; 		mulu	r10,r0
+; 		mov	@(mbg_fbdata,r14),r0
+; 		mov	r0,r11
+; 		mov	@(mbg_fbpos,r14),r0
+; 		add	r0,r11
+; 		mov	r2,r0
+; 		shll2	r0
+; 		shll	r0
+; 		add	r0,r11
+; 		sts	macl,r0
+; 		add	r0,r11
+; 		mov	r11,r12
+; .nxt_chr:
+; 		mov.b	@r1,r0
+; 		and	#$FF,r0
+; 		cmp/eq	#$00,r0
+; 		bt	.chr_exit
+; 		cmp/eq	#$0A,r0
+; 		bt	.chr_enter
+; 		bsr	.put_chr
+; 		nop
+; 		add	#8,r11
+; 		bra	.nxt_chr
+; 		add	#1,r1
 ;
-; Input:
-; r1 - Value
-; r2 - X pos
-; r3 - Y pos
-; r4 - Type
-; ------------------------------------
-
-; *** CURRENTLY 4BYTE LONGS ONLY ***
-
-MarsVdp_PrintVal:
-		sts	pr,@-r15
-		mov	#RAM_Mars_Background,r14
-		mov	#_framebuffer,r13
-		mov	#m_ascii,r12
-		mov.w	@(mbg_intrl_w,r14),r0
-		mov	r0,r10
-		mov.w	@(mbg_yfb,r14),r0
-		add	r3,r0
-		mulu	r10,r0
-		mov	@(mbg_fbdata,r14),r0
-		mov	r0,r11
-		mov	@(mbg_fbpos,r14),r0
-		add	r0,r11
-		mov	r2,r0
-		shll2	r0
-		shll	r0
-		add	r0,r11
-		sts	macl,r0
-		add	r0,r11
-
-		mov	r1,r4
-		bsr	.put_value
-		nop
-.chr_exit:
-		lds	@r15+,pr
-		rts
-		nop
-		align 4
-
-; r4 - Value
-; r5 - Type (1-byte 2-word 4-long)
+; .chr_enter:
+; 		mov	#8,r0
+; 		mulu	r0,r10
+; 		sts	macl,r0
+; 		add	r0,r12
+; 		mov	r12,r11
+; 		bra	.nxt_chr
+; 		add	#1,r1
 ;
-; Uses:
-; r7-r9
+; .chr_exit:
+; 		lds	@r15+,pr
+; 		rts
+; 		nop
+; 		align 4
+;
+; .put_chr:
+; 		mov	#$20,r8
+; 		sub	r8,r0
+; 		shll2	r0		; *$40
+; 		shll2	r0
+; 		shll2	r0
+; 		mov	r9,r8
+; 		add	r0,r8
+; 		mov	r13,r7
+; 		add	r11,r7
+; 		mov	#8,r6
+; .nxt_lns:
+; 		mov	@r8+,r0
+; 		mov	r0,@r7
+; 		mov	@r8+,r0
+; 		mov	r0,@(4,r7)
+; 		dt	r6
+; 		bf/s	.nxt_lns
+; 		add	r10,r7
+; 		rts
+; 		nop
+; 		align 4
+;
+; ; ------------------------------------
+; ; MarsVdp_PrintVal
+; ;
+; ; Prints a value from ROM/RAM on
+; ; screen
+; ;
+; ; Input:
+; ; r1 - Value
+; ; r2 - X pos
+; ; r3 - Y pos
+; ; r4 - Type
+; ; ------------------------------------
+;
+; ; *** CURRENTLY 4BYTE LONGS ONLY ***
+;
+; MarsVdp_PrintVal:
+; 		sts	pr,@-r15
+; 		mov	#RAM_Mars_BgBuffScrl,r14
+; 		mov	#_framebuffer,r13
+; 		mov	#m_ascii,r12
+; 		mov.w	@(mbg_intrl_w,r14),r0
+; 		mov	r0,r10
+; 		mov.w	@(mbg_yfb,r14),r0
+; 		add	r3,r0
+; 		mulu	r10,r0
+; 		mov	@(mbg_fbdata,r14),r0
+; 		mov	r0,r11
+; 		mov	@(mbg_fbpos,r14),r0
+; 		add	r0,r11
+; 		mov	r2,r0
+; 		shll2	r0
+; 		shll	r0
+; 		add	r0,r11
+; 		sts	macl,r0
+; 		add	r0,r11
+;
+; 		mov	r1,r4
+; 		bsr	.put_value
+; 		nop
+; .chr_exit:
+; 		lds	@r15+,pr
+; 		rts
+; 		nop
+; 		align 4
+;
+; ; r4 - Value
+; ; r5 - Type (1-byte 2-word 4-long)
+; ;
+; ; Uses:
+; ; r7-r9
+;
+; .put_value:
+; 		mov	#4,r5		; LONG temporal
+; 		shll	r5
+; .wrt_nibl:
+; 		rotl	r4
+; 		rotl	r4
+; 		rotl	r4
+; 		rotl	r4
+; 		mov	r4,r0
+; 		and	#%1111,r0
+; 		mov	#$A,r7
+; 		cmp/ge	r7,r0
+; 		bf	.a_plus
+; 		add	#7,r0
+; .a_plus:
+; 		add	#$10,r0
+; 		shll2	r0		; *$40
+; 		shll2	r0
+; 		shll2	r0
+; 		mov	r12,r7
+; 		add	r0,r7
+; 		mov	r13,r8
+; 		add	r11,r8
+; 		mov	#-4,r0
+; 		and	r0,r8
+; 		mov	#8,r9
+; .nxt_lns:
+; 		mov	@r7+,r0
+; 		mov	r0,@r8
+; 		mov	@r7+,r0
+; 		mov	r0,@(4,r8)
+; 		dt	r9
+; 		bf/s	.nxt_lns
+; 		add	r10,r8
+; 		add	#8,r11
+; 		dt	r5
+; 		bf	.wrt_nibl
+; 		rts
+; 		nop
+; 		align 4
 
-.put_value:
-		mov	#4,r5		; LONG temporal
-		shll	r5
-.wrt_nibl:
-		rotl	r4
-		rotl	r4
-		rotl	r4
-		rotl	r4
-		mov	r4,r0
-		and	#%1111,r0
-		mov	#$A,r7
-		cmp/ge	r7,r0
-		bf	.a_plus
-		add	#7,r0
-.a_plus:
-		add	#$10,r0
-		shll2	r0		; *$40
-		shll2	r0
-		shll2	r0
-		mov	r12,r7
-		add	r0,r7
-		mov	r13,r8
-		add	r11,r8
-		mov	#-4,r0
-		and	r0,r8
-		mov	#8,r9
-.nxt_lns:
-		mov	@r7+,r0
-		mov	r0,@r8
-		mov	@r7+,r0
-		mov	r0,@(4,r8)
-		dt	r9
-		bf/s	.nxt_lns
-		add	r10,r8
-		add	#8,r11
-		dt	r5
-		bf	.wrt_nibl
-		rts
-		nop
-		align 4
 
-	; write literals
-		ltorg
+		ltorg		; save literals
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -469,7 +468,7 @@ MarsVdp_PrintVal:
 
 MarsVideo_DrawAllBg:
 		sts	pr,@-r15
-		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_data,r14),r0
 		cmp/eq	#0,r0
 		bt	.no_data
@@ -716,7 +715,7 @@ MarsVideo_DrawAllBg:
 ; ---------------------------------------
 
 MarsVideo_BgDrawLR:
-		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_data,r14),r0
 		cmp/pl	r0
 		bf	.nxt_drawud
@@ -995,7 +994,7 @@ drw_ud_exit:
 ; ---------------------------------------
 
 MarsVideo_MoveBg:
-		mov	#RAM_Mars_Background,r14
+		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_data,r14),r0
 		cmp/eq	#0,r0
 		bf	.has_scrldata
@@ -1461,7 +1460,7 @@ MarsVideo_MkScrlField:
 ; ------------------------------------------------
 
 MarsVideo_SetBg:
-		mov	#RAM_Mars_Background,r1
+		mov	#RAM_Mars_BgBuffScrl,r1
 		mov	r2,@(mbg_data,r1)
 		mov.b	@(mbg_flags,r1),r0
 		and	#1,r0
@@ -1497,7 +1496,7 @@ MarsVideo_SetBg:
 ; 		cmp/pl	r6
 ; 		bf	.same_x
 ; 		shlr	r6
-; 		mov	#RAM_Mars_Background,r14
+; 		mov	#RAM_Mars_BgBuffScrl,r14
 ; 		mov	#_vdpreg,r13
 ;
 ; 		mov.w	@(mbg_intrl_h,r14),r0
@@ -1633,7 +1632,7 @@ MarsVideo_SetBg:
 ;
 ; 	; Clear background and it's draw
 ; 	; requests
-; 		mov	#RAM_Mars_Background,r1
+; 		mov	#RAM_Mars_BgBuffScrl,r1
 ; 		mov	#sizeof_marsbg/2,r2
 ; .clrbg:
 ; 		mov	r0,@r1

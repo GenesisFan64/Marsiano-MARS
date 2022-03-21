@@ -168,13 +168,13 @@
 		dc.l MARS_RAMDATA_e-MARS_RAMDATA	; Set to 4 if SH2 code points to ROM
 		dc.l SH2_M_Entry			; Master SH2 PC (SH2 map area)
 		dc.l SH2_S_Entry			; Slave SH2 PC (SH2 map area)
-		dc.l SH2_Master				; Master SH2 default vector table (vbr)
-		dc.l SH2_Slave				; Slave SH2 default vector table (vbr)
+		dc.l SH2_Master				; Master SH2 default VBR
+		dc.l SH2_Slave				; Slave SH2 default VBR
 		binclude "system/mars/data/security.bin"
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Entry point, this must be located at $3F0
+; Entry point, this must be located at $800
 ;
 ; At this point, the initialization
 ; returns the following bits:
@@ -196,11 +196,15 @@
 ;
 ; Carry flag: "MARS ID" and Self Check result
 ; 	cc: Test passed
-; 	cs: Test failed
+; 	cs: Test failed**
+;
+; ** HARDWARE BUG: It may still trigger if using
+; DREQ, DMA or Watchdog, and/or pressing RESET
+; so many times.
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-		bcs	.no_mars		; *** HARDWARE BUG: This may trigger on too many soft-resets ("rage" resets)
+		bcs	.no_mars
 		move.l	#0,(RAM_initflug).l	; Reset "INIT" flag
 		btst	#15,d0			; Soft reset?
 		beq	MD_Init
@@ -244,6 +248,10 @@ MARS_Entry:
 ; ----------------------------------------------------------------
 
 .no_mars:
+		btst	#5,d0		; If for some reason we got here...
+		bne.s	MD_Init		;
+
+	; And if 32X is not present...
 		move.w	#$2700,sr			; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
 		move.w	#$0E00,(vdp_data).l		; Write blue
@@ -251,7 +259,7 @@ MARS_Entry:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Error traps
+; 68k's Error handlers
 ; ----------------------------------------------------------------
 
 MD_ErrBus:		; Bus error
@@ -266,7 +274,10 @@ MD_Line1010:		; Line 1010 Emulator
 MD_Line1111:		; Line 1111 Emulator
 MD_ErrorEx:		; Error exception
 MD_ErrorTrap:
-		rte
+		move.w	#$2700,sr			; Disable interrupts
+		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
+		move.w	#$000E,(vdp_data).l		; Write blue
+		bra.s	*
 
 ; ------------------------------------------------
 ; Init
@@ -286,7 +297,6 @@ MD_Init:
 		moveq	#0,d0				; Reset comm values
 		move.l	d0,comm0(a5)
 		move.l	d0,comm4(a5)
-; 		move.l	d0,comm12(a5)
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
 		cmp.l	#"INIT",(RAM_initflug).l
