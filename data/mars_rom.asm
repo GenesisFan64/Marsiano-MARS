@@ -79,3 +79,8 @@ TESTMARS_BG2:
 ; ; --------------------------------------------------------
 ;
 ; 	include "data/mars/objects/mdl/test/head.asm"
+
+Textr_pecsi:
+	binclude "data/mars/objects/mtrl/pecsi_art.bin"
+	align 4
+

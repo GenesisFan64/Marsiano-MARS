@@ -124,6 +124,14 @@ thisCode_Top:
 		move.l	#-$800,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
 
+		lea	(RAM_MdDreq+Dreq_SclX),a0
+		move.l	#$00000000,(a0)+	; X pos
+		move.l	#$00000000,(a0)+	; Y pos
+		move.l	#$00010000,(a0)+	; DX
+		move.l	#$00010000,(a0)+	; DY
+		move.w	#320,(a0)+
+		move.w	#240,(a0)+
+		move.l	#TESTMARS_BG2,(a0)+
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -197,7 +205,7 @@ thisCode_Top:
 		move.w	(RAM_CurrGfx).w,d0
 		bsr	Video_MarsSetGfx
 .mode0_loop:
-		bsr	Emilie_MkSprite
+; 		bsr	Emilie_MkSprite
 		bsr	Video_RunFade
 		bne	.loop
 		move.w	(Controller_1+on_press),d7
@@ -207,7 +215,6 @@ thisCode_Top:
 		move.w	#$920D,(RAM_WindowNew).w
 .no_mode0:
 		move.w	(Controller_1+on_press),d7
-		lsr.w	#8,d7
 		btst	#bitJoyZ,d7
 		beq.s	.noah
 		moveq	#0,d2
@@ -318,6 +325,35 @@ thisCode_Top:
 		add.w	#-1,(RAM_EmiPosX).w
 .noz_l:
 
+
+		lea	(RAM_MdDreq),a0
+		move.w	d7,d6
+		btst	#bitJoyX,d6
+		beq.s	.nox_x
+		moveq	#0,d0
+		move.l	d0,Dreq_SclX(a0)
+		move.l	d0,Dreq_SclY(a0)
+		move.l	d0,Dreq_SclDX(a0)
+		move.l	d0,Dreq_SclDY(a0)
+.nox_x:
+
+
+
+		move.l	Dreq_SclX(a0),d0
+		move.l	Dreq_SclY(a0),d1
+		move.l	#$10000,d2
+		add.l	d2,d0
+		add.l	d2,d1
+		move.l	d0,Dreq_SclX(a0)
+		move.l	d1,Dreq_SclY(a0)
+		move.l	Dreq_SclDX(a0),d0
+		move.l	Dreq_SclDY(a0),d1
+		move.l	#$100,d2
+		add.l	d2,d0
+		add.l	d2,d1
+		move.l	d0,Dreq_SclDX(a0)
+		move.l	d1,Dreq_SclDY(a0)
+
 ; 		bsr	Emilie_Move
 ; 		bsr	.wave_backgrnd
 		rts
@@ -355,8 +391,8 @@ thisCode_Top:
 		dbf	d7,.next2
 		add.w	#1,(RAM_WaveTmr2).w
 
-		bsr	Emilie_Move
-		bsr	Emilie_MkSprite
+; 		bsr	Emilie_Move
+; 		bsr	Emilie_MkSprite
 		rts
 
 ; --------------------------------------------------
@@ -379,7 +415,6 @@ thisCode_Top:
 		move.w	#$9200,(RAM_WindowNew).w
 .no_mode1:
 		move.w	(Controller_1+on_press),d7
-		lsr.w	#8,d7
 		btst	#bitJoyY,d7
 		beq.s	.noy2
 		cmp.w	#1,(RAM_CurrIndx).w
@@ -388,7 +423,6 @@ thisCode_Top:
 		bsr	.print_cursor
 .noy2:
 		move.w	(Controller_1+on_hold),d7
-		lsr.w	#8,d7
 		btst	#bitJoyX,d7
 		beq.s	.nox2
 		tst.w	(RAM_CurrIndx).w

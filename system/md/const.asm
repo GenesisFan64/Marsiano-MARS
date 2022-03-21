@@ -80,7 +80,7 @@ JoyZ		equ $0100
 JoyY		equ $0200
 JoyX		equ $0400
 JoyMode		equ $0800
-bitJoyUp	equ 0		; right byte $00xx
+bitJoyUp	equ 0		; READ THESE AS A WORD
 bitJoyDown	equ 1
 bitJoyLeft	equ 2
 bitJoyRight	equ 3
@@ -88,10 +88,10 @@ bitJoyB		equ 4
 bitJoyC		equ 5
 bitJoyA		equ 6
 bitJoyStart	equ 7
-bitJoyZ		equ 0		; left byte $xx00 (Read Full WORD and shift 8 bits to the right)
-bitJoyY		equ 1
-bitJoyX		equ 2
-bitJoyMode	equ 3
+bitJoyZ		equ 8
+bitJoyY		equ 9
+bitJoyX		equ 10
+bitJoyMode	equ 11
 
 ; Mega Mouse
 ; Read WORD in +on_hold or +on_press

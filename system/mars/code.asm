@@ -60,9 +60,6 @@ marsGbl_BgDrwR		ds.w 1	; Write 2 to only redraw offscreen section(s)
 marsGbl_BgDrwL		ds.w 1	;
 marsGbl_BgDrwU		ds.w 1	;
 marsGbl_BgDrwD		ds.w 1	;
-
-marsGbl_BgScl_DX	ds.w 1
-marsGbl_BgScl_DY	ds.w 1
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -1281,11 +1278,6 @@ mstr_gfx3_init:
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_XShift,gbr)
-
-		mov	#$40,r0
-		mov.w	r0,@(marsGbl_BgScl_DX,gbr)
-		mov.w	r0,@(marsGbl_BgScl_DY,gbr)
-
 mstr_gfx3:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
@@ -1311,76 +1303,79 @@ mstr_gfx3:
 .no_redraw:
 
 	; MAIN scaler
-	; r1 - X pos xx.00
-	; r2 - Y pos yy.00
-	; r3 - X dx  xx.00
-	; r4 - Y dx  yy.00
+	; r1 - X pos xxxx.0000
+	; r2 - Y pos yyyy.0000
+	; r3 - X dx  xxxx.0000
+	; r4 - Y dx  yyyy.0000
 	; r5 - Source WIDTH
 	; r6 - Source HEIGHT
 	; r7 - Source DATA
 	; r8 - Output
 	; r9 - line size / 2
 	; r10 - Number of lines
-		mov	#0,r1				; r1 - X pos (4 pixels wide)
-		mov	#0,r2				; r2 - Y pos
-		mov.w	@(marsGbl_BgScl_DX,gbr),r0
-		mov	r0,r3				; r3 - X add
-		mov.w	@(marsGbl_BgScl_DY,gbr),r0
-		mov	r0,r4				; r4 - Y add
-
-		mov	#320,r5				; r5 - X width
-		mov	#240,r6				; r6 - Y height
-		mov	#TESTMARS_BG2,r7		; r7 - Input
+		mov	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
+		mov	#RAM_Mars_DreqRead+Dreq_SclX,r14
+		mov	@r14+,r1			; r1 - X pos (4 pixels wide)
+		mov	@r14+,r2			; r2 - Y pos
+		mov	@r14+,r3			; r3 - DX
+		mov	@r14+,r4			; r4 - DY
+		mov	#$FFFF,r7
+		mov	@r14+,r5			; r5 - X width
+		mov	r5,r6				; r6 - Y height
+		shlr16	r5
+		and	r7,r6
+		mov	@r14+,r7			; r7 - Input
+		mov	#$20,r0				; Interrupts ON
+		ldc	r0,sr
 		mov	#_framebuffer+$200,r8		; r8 - Output
-
 		mov	#320/2,r9			; r9  - X loop
 		mov	#224,r10			; r10 - Y loop
 .y_loop:
 		mov	r6,r0
-		shll8	r0
-		cmp/ge	r0,r2
+		shll16	r0
+.y_loop2:	cmp/gt	r0,r2
 		bf	.y_high
+		bra	.y_loop2
 		sub	r0,r2
 .y_high:
-
 		mov	r1,r11
+		shlr	r11
 		mov	r7,r12
 		mov	r8,r13
 		mov	r9,r14
 		mov	r2,r0
-		shlr8	r0
+		shlr16	r0
 		muls	r5,r0
 		sts	macl,r0
 		add	r0,r12
 .x_loop:
-		mov	r5,r0
-		shll8	r0
-		cmp/ge	r0,r11
-		bf	.x_high
-		sub	r0,r11
-.x_high:
 		mov	r11,r0
-		shlr8	r0
+		shlr16	r0
+		exts	r0,r0
 		shll	r0
 		mov.w	@(r12,r0),r0
 		add	r3,r11
+		lds	r0,macl
+		mov	r5,r0
+		shll16	r0
+		shlr	r0
+.x_loop2:
+		cmp/gt	r0,r11
+		bf	.x_high
+		bra	.x_loop2
+		sub	r0,r11
+.x_high:
+		sts	macl,r0
 		mov.w	r0,@r13
-		add	#2,r13
 		dt	r14
-		bf	.x_loop
+		bf/s	.x_loop
+		add	#2,r13
 		add	r4,r2
 		mov	#$200,r0
 		dt	r10
 		bf/s	.y_loop
 		add	r0,r8
-
-		mov.w	@(marsGbl_BgScl_DX,gbr),r0
-		add	#1,r0
-		mov.w	r0,@(marsGbl_BgScl_DX,gbr)
-
-		mov.w	@(marsGbl_BgScl_DY,gbr),r0
-		add	#1,r0
-		mov.w	r0,@(marsGbl_BgScl_DY,gbr)
 
 		bra	master_loop
 		nop
@@ -1776,6 +1771,7 @@ RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
 RAM_Mars_BgBuffScrl	ds.w sizeof_marsbg
+RAM_Mars_BgBuffScale	ds.w sizeof_marsscbg
 sizeof_marsvid		ds.l 0
 			finish
 

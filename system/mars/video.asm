@@ -60,6 +60,16 @@ mbg_ypos	ds.l 1		; 0000.0000
 sizeof_marsbg	ds.l 0
 		finish
 
+
+		struct 0
+mbgsc_x_pos	ds.w 1		; 00.00
+mbgsc_y_pos	ds.w 1		; 00.00
+mbgsc_x_dx	ds.w 1		; 00.00
+mbgsc_y_dy	ds.w 1		; 00.00
+mbgsc_data	ds.l 1		; source data location
+sizeof_marsscbg	ds.l 0
+		finish
+
 ; ----------------------------------------
 
 ; ; model objects
