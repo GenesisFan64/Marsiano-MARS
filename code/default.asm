@@ -100,7 +100,7 @@ thisCode_Top:
 ; 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
-		move.w	#2,(RAM_CurrGfx).w
+		move.w	#3,(RAM_CurrGfx).w
 
 ; 		move.l	#$C0000000,(vdp_ctrl).l
 ; 		move.w	#$00E0,(vdp_data).l
@@ -124,14 +124,19 @@ thisCode_Top:
 		move.l	#-$800,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
 
-		lea	(RAM_MdDreq+Dreq_SclX),a0
+		lea	(RAM_MdDreq+Dreq_SclData),a0
+		move.l	#TESTMARS_BG2,(a0)+
 		move.l	#$00000000,(a0)+	; X pos
 		move.l	#$00000000,(a0)+	; Y pos
 		move.l	#$00010000,(a0)+	; DX
 		move.l	#$00010000,(a0)+	; DY
-		move.w	#320,(a0)+
-		move.w	#240,(a0)+
-		move.l	#TESTMARS_BG2,(a0)+
+		move.l	#320,(a0)+
+		move.l	#240,(a0)+
+
+		lea	(RAM_MdDreq+Dreq_BgEx_Data),a0
+		move.l	#TESTMARS_BG,(a0)+
+		move.l	#320,(a0)+
+		move.l	#224,(a0)+
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -221,8 +226,8 @@ thisCode_Top:
 		bsr	PlayThisSfx
 .noah:
 
-		move.l	(RAM_MdDreq+Dreq_BgXpos).w,d0
-		move.l	(RAM_MdDreq+Dreq_BgYpos).w,d1
+		move.l	(RAM_MdDreq+Dreq_BgEx_X).w,d0
+		move.l	(RAM_MdDreq+Dreq_BgEx_Y).w,d1
 		move.l	#$10000,d5
 		move.l	#1,d6
 		move.w	(Controller_1+on_hold),d7
@@ -246,8 +251,8 @@ thisCode_Top:
 		sub.l	d5,d1
 		sub.w	d6,d3
 .nou_m:
-		move.l	d0,(RAM_MdDreq+Dreq_BgXpos).w
-		move.l	d1,(RAM_MdDreq+Dreq_BgYpos).w
+		move.l	d0,(RAM_MdDreq+Dreq_BgEx_X).w
+		move.l	d1,(RAM_MdDreq+Dreq_BgEx_Y).w
 
 		move.l	#0,d0
 		move.l	#0,d1
@@ -292,67 +297,98 @@ thisCode_Top:
 .no_chng:
 		bsr	.move_model
 
-	; Move Emily Fujiwara
+; 	; Move Emily Fujiwara
+; 	; UDLR
+; 		move.w	(Controller_1+on_hold),d7
+; 		move.w	d7,d6
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.noz_down
+; 		move.w	#0,(RAM_EmiFrame).w
+; 		add.w	#1,(RAM_EmiAnim).w
+; 		add.w	#1,(RAM_EmiPosY).w
+; .noz_down:
+; 		move.w	d7,d6
+; 		btst	#bitJoyUp,d6
+; 		beq.s	.noz_up
+; 		move.w	#4,(RAM_EmiFrame).w
+; 		add.w	#1,(RAM_EmiAnim).w
+; 		add.w	#-1,(RAM_EmiPosY).w
+; .noz_up:
+; 		move.w	d7,d6
+; 		btst	#bitJoyRight,d6
+; 		beq.s	.noz_r
+; 		move.w	#8,(RAM_EmiFrame).w
+; 		add.w	#1,(RAM_EmiAnim).w
+; 		add.w	#1,(RAM_EmiPosX).w
+; .noz_r:
+; 		move.w	d7,d6
+; 		btst	#bitJoyLeft,d6
+; 		beq.s	.noz_l
+; 		move.w	#$C,(RAM_EmiFrame).w
+; 		add.w	#1,(RAM_EmiAnim).w
+; 		add.w	#-1,(RAM_EmiPosX).w
+; .noz_l:
 
-	; UDLR
+		lea	(RAM_MdDreq),a0
+		move.l	Dreq_SclX(a0),d0
+		move.l	Dreq_SclY(a0),d1
+		move.l	Dreq_SclDX(a0),d2
+		move.l	Dreq_SclDY(a0),d3
+		move.l	#$100,d4
+		move.l	#$200,d5
+
 		move.w	(Controller_1+on_hold),d7
 		move.w	d7,d6
 		btst	#bitJoyDown,d7
 		beq.s	.noz_down
-		move.w	#0,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		add.w	#1,(RAM_EmiPosY).w
+		add.l	d4,d1
+		sub.l	d5,d3
 .noz_down:
 		move.w	d7,d6
 		btst	#bitJoyUp,d6
 		beq.s	.noz_up
-		move.w	#4,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		add.w	#-1,(RAM_EmiPosY).w
+		sub.l	d4,d1
+		add.l	d5,d3
 .noz_up:
 		move.w	d7,d6
 		btst	#bitJoyRight,d6
 		beq.s	.noz_r
-		move.w	#8,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		add.w	#1,(RAM_EmiPosX).w
+		add.l	d4,d0
+		sub.l	d5,d2
 .noz_r:
 		move.w	d7,d6
 		btst	#bitJoyLeft,d6
 		beq.s	.noz_l
-		move.w	#$C,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		add.w	#-1,(RAM_EmiPosX).w
+		sub.l	d4,d0
+		add.l	d5,d2
 .noz_l:
+		move.l	d0,Dreq_SclX(a0)
+		move.l	d1,Dreq_SclY(a0)
+		move.l	d2,Dreq_SclDX(a0)
+		move.l	d3,Dreq_SclDY(a0)
 
-
-		lea	(RAM_MdDreq),a0
 		move.w	d7,d6
 		btst	#bitJoyX,d6
 		beq.s	.nox_x
-		moveq	#0,d0
-		move.l	d0,Dreq_SclX(a0)
-		move.l	d0,Dreq_SclY(a0)
-		move.l	d0,Dreq_SclDX(a0)
-		move.l	d0,Dreq_SclDY(a0)
+		lea	(RAM_MdDreq+Dreq_SclX),a0
+		move.l	#$00000000,(a0)+	; X pos
+		move.l	#$00000000,(a0)+	; Y pos
+		move.l	#$00010000,(a0)+	; DX
+		move.l	#$00010000,(a0)+	; DY
 .nox_x:
 
 
-
-		move.l	Dreq_SclX(a0),d0
-		move.l	Dreq_SclY(a0),d1
-		move.l	#$10000,d2
-		add.l	d2,d0
-		add.l	d2,d1
-		move.l	d0,Dreq_SclX(a0)
-		move.l	d1,Dreq_SclY(a0)
-		move.l	Dreq_SclDX(a0),d0
-		move.l	Dreq_SclDY(a0),d1
-		move.l	#$100,d2
-		add.l	d2,d0
-		add.l	d2,d1
-		move.l	d0,Dreq_SclDX(a0)
-		move.l	d1,Dreq_SclDY(a0)
+; 		move.w	d7,d6
+; 		btst	#bitJoyY,d6
+; 		beq.s	.noy
+; 		move.l	Dreq_SclDX(a0),d0
+; 		move.l	Dreq_SclDY(a0),d1
+; 		move.l	#$100,d2
+; 		add.l	d2,d0
+; 		add.l	d2,d1
+; 		move.l	d0,Dreq_SclDX(a0)
+; 		move.l	d1,Dreq_SclDY(a0)
+; .noy:
 
 ; 		bsr	Emilie_Move
 ; 		bsr	.wave_backgrnd
@@ -779,11 +815,18 @@ str_Gema:
 str_InfoMouse:
 		dc.b "comm0: \\w",$A
 		dc.b "comm12: \\w comm14: \\w",$A,$A
-		dc.b "MD Framecount: \\l",0
+; 		dc.b "MD Framecount: \\l",$A
+		dc.b "\\l \\l",$A
+		dc.b "\\l \\l",0
 		dc.l sysmars_reg+comm0
 		dc.l sysmars_reg+comm12
 		dc.l sysmars_reg+comm14
-		dc.l RAM_Framecount
+; 		dc.l RAM_Framecount
+		dc.l RAM_MdDreq+Dreq_SclX
+		dc.l RAM_MdDreq+Dreq_SclY
+		dc.l RAM_MdDreq+Dreq_SclDX
+		dc.l RAM_MdDreq+Dreq_SclDY
+
 ; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_x_pos
 ; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_y_pos
 ; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_z_pos

@@ -140,20 +140,20 @@ SH2_Slave:
 		dc.l SH2_S_Entry,CS3|$3F000	; Cold PC,SP
 		dc.l SH2_S_Entry,CS3|$3F000	; Manual PC,SP
 
-		dc.l SH2_S_Error			; Illegal instruction
+		dc.l SH2_S_Error		; Illegal instruction
 		dc.l 0				; reserved
-		dc.l SH2_S_Error			; Invalid slot instruction
+		dc.l SH2_S_Error		; Invalid slot instruction
 		dc.l $20100400			; reserved
 		dc.l $20100420			; reserved
-		dc.l SH2_S_Error			; CPU address error
-		dc.l SH2_S_Error			; DMA address error
-		dc.l SH2_S_Error			; NMI vector
-		dc.l SH2_S_Error			; User break vector
+		dc.l SH2_S_Error		; CPU address error
+		dc.l SH2_S_Error		; DMA address error
+		dc.l SH2_S_Error		; NMI vector
+		dc.l SH2_S_Error		; User break vector
 
 		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
 
-		dc.l SH2_S_Error			; Trap user vectors
+		dc.l SH2_S_Error		; Trap user vectors
 		dc.l SH2_S_Error
 		dc.l SH2_S_Error
 		dc.l SH2_S_Error
@@ -391,8 +391,6 @@ m_irq_cmd:
 		nop
 .wait_dma:
 		mov	@($C,r3),r0	; Read DMA's mode for the active/enabled bits
-; 		tst	#%01,r0		; DMA is enabled first? (fail-safe)
-; 		bt	.time_out	; TODO: ver si todavia necesito esto
 		tst	#%10,r0		; Active?
 		bt	.wait_dma
 .time_out:
@@ -495,19 +493,12 @@ m_irq_vres:
 		bt	.not_yet
 		mov	#0,r0		; Force DMA off
 		mov	r0,@($30,r2)
-		nop
-		nop
-		nop
 		mov	r0,@($C,r2)
 .not_yet:
 ; 		mov.b   @(7,r1),r0
 ; 		tst     #%001,r0
 ; .rv_stuck:
 ; 		bf	.rv_stuck
-; 		mov	#"68UP",r2
-; .wait_md:	mov	@(comm12,r1),r0
-; 		cmp/eq	r2,r0
-; 		bf	.wait_md
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r1)
 		mov	#SH2_M_HotStart,r0
@@ -554,8 +545,8 @@ s_irq_cmd:
 	; *** GEMA PWM DRIVER ***
 	; ---------------------------------
 
-		mov	#_sysreg+comm14,r1	; LSB only
-		mov.b	@r1,r0
+		mov	#_sysreg+comm14,r1
+		mov.b	@r1,r0			; MSB only
 		and	#%00001111,r0
 		cmp/eq	#0,r0
 		bt	.get_out
@@ -886,9 +877,6 @@ s_irq_vres:
 		bt	.not_yet
 		mov	#0,r0		; Force DMA off
 		mov	r0,@($30,r2)
-		nop
-		nop
-		nop
 		mov	r0,@($C,r2)
 .not_yet:
 ; 		mov	#$FFFFFE80,r1
@@ -899,10 +887,10 @@ s_irq_vres:
 ; 		tst     #%001,r0
 ; .rv_stuck:
 ; 		bf	.rv_stuck
-; 		mov	#"68UP",r2
-; .wait_md:	mov	@(comm12,r1),r0
-; 		cmp/eq	r2,r0
-; 		bf	.wait_md
+		mov	#"M_OK",r2
+.wait_m:	mov	@(comm0,r1),r0
+		cmp/eq	r2,r0
+		bf	.wait_m
 		mov	#"S_OK",r0
 		mov	r0,@(comm4,r1)
 		mov	#SH2_S_HotStart,r0
@@ -1027,7 +1015,7 @@ SH2_M_HotStart:
 ; ----------------------------------------------------------------
 
 master_loop:
-		mov	#_sysreg+comm0,r1
+		mov	#_sysreg+comm0,r1		; DEBUG counter
 		mov.b	@r1,r0
 		add	#1,r0
 		mov.b	r0,@r1
@@ -1041,8 +1029,6 @@ master_loop:
 		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST.
 		xor	#1,r0				; manually Wait for VBlank after this
 		mov.b	r0,@(framectl,r1)
-; 		mov.b	r0,@(marsGbl_CurrFb,gbr)
-; 		mov.b	@(marsGbl_CurrFb,gbr),r0	; r2 - NEW Framebuffer number
 		mov	r0,r2
 .wait_frmswp:	mov.b	@(framectl,r1),r0		; Framebuffer ready?
 		cmp/eq	r0,r2
@@ -1187,7 +1173,7 @@ mstr_gfx2_hblk:
 mstr_gfx2_vblk:
 		sts	pr,@-r15
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_BgXpos,r13
+		mov	#RAM_Mars_DreqRead+Dreq_BgEx_X,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
 		mov	r1,@(mbg_xpos,r14)
@@ -1210,12 +1196,14 @@ mstr_gfx2_init:
 		mov	#256,r5
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
+		mov	#RAM_Mars_DreqRead+Dreq_BgEx_Data,r5
 		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	#TESTMARS_BG,r2			; Image / RAM section
-		mov	#320,r3
-		mov	#224,r4
+		mov	@r5+,r2
+		mov	@r5+,r3
+		mov	@r5+,r4
 		bsr	MarsVideo_SetBg
 		nop
+
 mstr_gfx2:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
@@ -1235,8 +1223,8 @@ mstr_gfx2:
 		mov.w	r0,@(marsGbl_BgDrwL,gbr)	; all
 		mov.w	r0,@(marsGbl_BgDrwU,gbr)	; these
 		mov.w	r0,@(marsGbl_BgDrwD,gbr)	; draw requests
-		bra	.from_drwall
-		nop
+; 		bra	.from_drwall
+; 		nop
 .no_redraw:
 		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
 		jsr	@r0
@@ -1271,6 +1259,21 @@ mstr_gfx3_hblk:
 		rts
 		nop
 mstr_gfx3_vblk:
+		mov	#RAM_Mars_DreqRead+Dreq_SclData,r1	; Copy-paste scale buffer
+		mov	#RAM_Mars_BgBuffScale_M,r2
+		mov	#RAM_Mars_BgBuffScale_S,r3
+		mov	#7,r4
+.copy_me:
+		mov	@r1+,r0
+		mov	r0,@r2
+		mov	r0,@r3
+		add	#4,r2
+		dt	r4
+		bf/s	.copy_me
+		add	#4,r3
+; 		mov.w	@r5,r0
+; 		or	#$01,r0		; Slave task $01
+; 		mov.w	r0,@r5
 		rts
 		nop
 mstr_gfx3_init:
@@ -1296,6 +1299,8 @@ mstr_gfx3:
 		mov	#240,r4
 .nxt_lne:
 		mov.w	r0,@r3
+; 		add	#2,r3
+; 		mov.w	r0,@r3
 		add	r1,r0
 		dt	r4
 		bf/s	.nxt_lne
@@ -1311,71 +1316,90 @@ mstr_gfx3:
 	; r6 - Source HEIGHT
 	; r7 - Source DATA
 	; r8 - Output
-	; r9 - line size / 2
-	; r10 - Number of lines
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
-		mov	#RAM_Mars_DreqRead+Dreq_SclX,r14
-		mov	@r14+,r1			; r1 - X pos (4 pixels wide)
-		mov	@r14+,r2			; r2 - Y pos
-		mov	@r14+,r3			; r3 - DX
-		mov	@r14+,r4			; r4 - DY
-		mov	#$FFFF,r7
-		mov	@r14+,r5			; r5 - X width
-		mov	r5,r6				; r6 - Y height
-		shlr16	r5
-		and	r7,r6
-		mov	@r14+,r7			; r7 - Input
-		mov	#$20,r0				; Interrupts ON
-		ldc	r0,sr
-		mov	#_framebuffer+$200,r8		; r8 - Output
-		mov	#320/2,r9			; r9  - X loop
-		mov	#224,r10			; r10 - Y loop
+	; r9 - Loop: Line width / 2
+	; r10 - Loop: Number of lines
+
+		mov	#RAM_Mars_BgBuffScale_M,r14
+		mov	@r14+,r7		; r7 - Input
+		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
+		mov	@r14+,r2		; r2 - Y pos
+		mov	@r14+,r3		; r3 - DX
+		mov	@r14+,r4		; r4 - DY
+		mov	@r14+,r5		; r5 - X width
+		mov	@r14+,r6		; r6 - Y height
+		shll16	r5
+		shll16	r6
+		dmuls	r1,r5			; Topleft calc
+		sts	mach,r0
+		sts	macl,r1
+		xtrct	r0,r1
+		dmuls	r2,r6
+		sts	mach,r0
+		sts	macl,r2
+		xtrct	r0,r2
+		mov	#_framebuffer+$200,r8	; r8 - Output
+		mov	#320/2,r9		; r9  - X loop
+		mov	#224,r10		; r10 - Y loop
 .y_loop:
-		mov	r6,r0
-		shll16	r0
-.y_loop2:	cmp/gt	r0,r2
+		cmp/pz	r1
+		bt	.y_add
+		bra	.y_loop
+		add	r5,r1
+.y_add:
+		cmp/pz	r2
+		bt	.xy_set
+		bra	.y_add
+		add	r6,r2
+.xy_set:
+		cmp/ge	r6,r2
 		bf	.y_high
-		bra	.y_loop2
-		sub	r0,r2
+		bra	.y_loop
+		sub	r6,r2
 .y_high:
 		mov	r1,r11
-		shlr	r11
-		mov	r7,r12
-		mov	r8,r13
-		mov	r9,r14
+		shlr	r11			; /2
 		mov	r2,r0
 		shlr16	r0
-		muls	r5,r0
-		sts	macl,r0
-		add	r0,r12
+		mov	r5,r13
+		shlr16	r13
+		muls	r13,r0
+		sts	macl,r12
+		add	r7,r12
+		mov	r8,r13
+		mov	r9,r14
 .x_loop:
+		mov	r5,r0
+		shlr	r0		; /2
+.x_loop2:
+		cmp/ge	r0,r11
+		bf	.x_high
+		bra	.x_loop2
+		sub	r0,r11
+.x_high:
 		mov	r11,r0
 		shlr16	r0
 		exts	r0,r0
 		shll	r0
 		mov.w	@(r12,r0),r0
 		add	r3,r11
-		lds	r0,macl
-		mov	r5,r0
-		shll16	r0
-		shlr	r0
-.x_loop2:
-		cmp/gt	r0,r11
-		bf	.x_high
-		bra	.x_loop2
-		sub	r0,r11
-.x_high:
-		sts	macl,r0
 		mov.w	r0,@r13
 		dt	r14
 		bf/s	.x_loop
 		add	#2,r13
 		add	r4,r2
+; 		add	r4,r2
 		mov	#$200,r0
 		dt	r10
 		bf/s	.y_loop
 		add	r0,r8
+
+; 		mov	#_sysreg+comm14,r5
+; .wait_slv:	mov.w	@r5,r0
+; 		and	#%01111111,r0
+; 		tst	r0,r0
+; 		bf	.wait_slv
+
+	; sprites will go here
 
 		bra	master_loop
 		nop
@@ -1408,7 +1432,7 @@ mstr_gfx4_vblk:
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
 		mov.w	@r4,r0
-		or	#%00000001,r0
+		or	#$02,r0		; Slave task $02
 		mov.w	r0,@r4
 .wait_slv:
 		rts
@@ -1623,25 +1647,140 @@ SH2_S_HotStart:
 		nop
 		align 4
 
-; --------------------------------------------------------
-; Loop
-; --------------------------------------------------------
+; ----------------------------------------------------------------
+; SLAVE Loop
+; ----------------------------------------------------------------
 
 slave_loop:
-		mov	#_sysreg+comm1,r1
+		mov	#_sysreg+comm1,r1	; DEBUG counter
 		mov.b	@r1,r0
 		add	#1,r0
 		mov.b	r0,@r1
+		mov	#.list,r3		; Default LOOP points
+		mov	#_sysreg+comm14,r2
+		mov.w	@r2,r0			; r0 - INIT bit
+		and	#%1111,r0
+		shll2	r0
+		mov	@(r3,r0),r3
+		jmp	@r3
+		nop
+		align 4
+.list:
+		dc.l slave_loop		; $00 - go back
+		dc.l .slv_task_1	; $01 - Draw BOTTOM half of Scaled BG (TODO: later...)
+		dc.l .slv_task_2	; $02 - Build 3D models
+		dc.l .slv_task_1
 
+; ============================================================
 ; ---------------------------------------
-; ***READ MODELS HERE AND UPDATE POLYGONS
+; Task mode 1:
+; Helps MASTER to draw the bottom half
+; of the scaled background
 ; ---------------------------------------
 
-		mov	#_sysreg+comm14,r4
-		mov.w	@r4,r0
-		and	#%01111111,r0
-		cmp/eq	#1,r0
-		bf	slave_loop
+.slv_task_1:
+
+	; TODO: worked, but DY is wrong here
+	; i'll check later
+
+	; MAIN scaler
+	; r1 - X pos xxxx.0000
+	; r2 - Y pos yyyy.0000
+	; r3 - X dx  xxxx.0000
+	; r4 - Y dx  yyyy.0000
+	; r5 - Source WIDTH
+	; r6 - Source HEIGHT
+	; r7 - Source DATA
+	; r8 - Output
+	; r9 - line size / 2
+	; r10 - Number of lines
+
+; 		mov	#RAM_Mars_BgBuffScale_S,r14
+; 		mov	@r14+,r7		; r7 - Input
+; 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
+; 		mov	@r14+,r2		; r2 - Y pos
+; 		mov	@r14+,r3		; r3 - DX
+; 		mov	@r14+,r4		; r4 - DY
+; 		mov	@r14+,r5		; r5 - X width
+; 		mov	@r14+,r6		; r6 - Y height
+; 		shll16	r5
+; 		shll16	r6
+; 		mov	#$7800,r0
+; 		add	r0,r2
+; 		dmuls	r1,r5			; Topleft calc
+; 		sts	mach,r0
+; 		sts	macl,r1
+; 		xtrct	r0,r1
+; 		dmuls	r2,r6
+; 		sts	mach,r0
+; 		sts	macl,r2
+; 		xtrct	r0,r2
+; ; 		mov	#_framebuffer+$200,r8	; r8 - Output
+; 		mov	#(_framebuffer+$200)+($200*112),r8	; r8 - Output
+; 		mov	#320/2,r9		; r9  - X loop
+; 		mov	#224/2,r10		; r10 - Y loop
+; .y_loop:
+; 		cmp/pz	r1
+; 		bt	.y_add
+; 		bra	.y_loop
+; 		add	r5,r1
+; .y_add:
+; 		cmp/pz	r2
+; 		bt	.xy_set
+; 		bra	.y_add
+; 		add	r6,r2
+; .xy_set:
+; 		cmp/ge	r6,r2
+; 		bf	.y_high
+; 		bra	.y_loop
+; 		sub	r6,r2
+; .y_high:
+; 		mov	r1,r11
+; 		shlr	r11			; /2
+; 		mov	r2,r0
+; 		shlr16	r0
+; 		mov	r5,r13
+; 		shlr16	r13
+; 		muls	r13,r0
+; 		sts	macl,r12
+; 		add	r7,r12
+; 		mov	r8,r13
+; 		mov	r9,r14
+; .x_loop:
+; 		mov	r5,r0
+; 		shlr	r0		; /2
+; .x_loop2:
+; 		cmp/ge	r0,r11
+; 		bf	.x_high
+; 		bra	.x_loop2
+; 		sub	r0,r11
+; .x_high:
+; 		mov	r11,r0
+; 		shlr16	r0
+; 		exts	r0,r0
+; 		shll	r0
+; 		mov.w	@(r12,r0),r0
+; 		add	r3,r11
+; 		mov.w	r0,@r13
+; 		dt	r14
+; 		bf/s	.x_loop
+; 		add	#2,r13
+; 		add	r4,r2
+; 		mov	#$200,r0
+; 		dt	r10
+; 		bf/s	.y_loop
+; 		add	r0,r8
+
+		bra	.slv_exit
+		nop
+
+; ============================================================
+; ---------------------------------------
+; Task mode 2: Build 3D Models
+; FOR THE NEXT FRAME (not current)
+; ---------------------------------------
+
+.slv_task_2:
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1
@@ -1660,7 +1799,12 @@ slave_loop:
 		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
 		nop
-		mov	#_sysreg+comm14,r4
+
+; ============================================================
+
+; JMP only
+.slv_exit:
+		mov	#_sysreg+comm14,r4	; Finish task
 		mov	#$FF00,r1
 		mov.w	@r4,r0
 		and	r1,r0
@@ -1771,7 +1915,8 @@ RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
 RAM_Mars_BgBuffScrl	ds.w sizeof_marsbg
-RAM_Mars_BgBuffScale	ds.w sizeof_marsscbg
+RAM_Mars_BgBuffScale_M	ds.l 7
+RAM_Mars_BgBuffScale_S	ds.l 7
 sizeof_marsvid		ds.l 0
 			finish
 

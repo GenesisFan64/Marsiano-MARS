@@ -14,20 +14,25 @@
 ; MUST be aligned by 8bytes (Size must end with 0 or 8)
 
 		struct 0
-Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; <-- labels from SH2 side
-Dreq_Palette	ds.w 256
-Dreq_SclX	ds.l 1
-Dreq_SclY	ds.l 1
-Dreq_SclDX	ds.l 1
-Dreq_SclDY	ds.l 1
-Dreq_SclWidth	ds.w 1		; WORDs
-Dreq_SclHeight	ds.w 1
-Dreq_SclData	ds.l 1
+				; Screen Mode 02:
+Dreq_BgEx_X	ds.l 1		; X pos 0000.0000
+Dreq_BgEx_Y	ds.l 1		; Y pos 0000.0000
+Dreq_BgEx_Data	ds.l 1		; Source data (ON SH2's MAP)
+Dreq_BgEx_W	ds.l 1		; Width
+Dreq_BgEx_H	ds.l 1		; Height
 
-Dreq_BgXpos	ds.l 1
-Dreq_BgYpos	ds.l 1
-Dreq_TEST2	ds.l 1
-Dreq_TEST	ds.l 1
+				; Screen mode 03:
+Dreq_SclData	ds.l 1		; Source data (ON SH2's MAP)
+Dreq_SclX	ds.l 1		; X pos 0000.0000
+Dreq_SclY	ds.l 1		; Y pos 0000.0000
+Dreq_SclDX	ds.l 1		; DX 0000.0000
+Dreq_SclDY	ds.l 1		; DY 0000.0000
+Dreq_SclWidth	ds.l 1		; Width
+Dreq_SclHeight	ds.l 1		; Height
+
+Dreq_Palette	ds.w 256
+Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; <-- labels from SH2 side
+
 sizeof_dreq	ds.l 0
 		finish
 
