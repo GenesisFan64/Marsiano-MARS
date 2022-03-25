@@ -448,6 +448,10 @@ System_VBlank:
 
 		bsr	Video_DmaBlast		; DMA tasks
 		add.l	#1,(RAM_Framecount).l
+
+		lea	(RAM_MdDreq),a0
+		move.w	#sizeof_dreq,d0
+		bsr	System_SendDreq
 		rts
 
 ; ; --------------------------------------------------------

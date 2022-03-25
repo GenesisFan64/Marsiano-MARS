@@ -72,7 +72,7 @@ Video_Init:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Video subroutinesf
+; Video subroutines
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -87,6 +87,7 @@ Video_Clear:
 		move.w	#$57F*$20,d2
 		bsr	Video_Fill
 
+Video_ClearScreen:
 		move.w	#$FFF,d2		; FG/BG size
 		move.b	(RAM_VdpRegs+2).l,d1	; FG
 		andi.w	#%111000,d1
@@ -98,14 +99,27 @@ Video_Clear:
 		lsl.w	#8,d1
 		lsl.w	#5,d1
 		bsr	Video_Fill
-
 		move.w	#$FFF,d2		; WD Size
 		move.b	(RAM_VdpRegs+4).l,d1	; Window
 		andi.w	#%111110,d1
 		lsl.w	#8,d1
 		lsl.w	#2,d1
-		bra	Video_Fill
-		
+		bsr	Video_Fill
+
+		lea	(RAM_HorScroll),a0
+		move.w	#240-1,d7
+		moveq	#0,d0
+.xnext:
+		move.l	d0,(a0)+
+		dbf	d7,.xnext
+		lea	(RAM_VerScroll),a0
+		move.w	#(320/16)-1,d7
+		moveq	#0,d0
+.ynext:
+		move.l	d0,(a0)+
+		dbf	d7,.ynext
+		rts
+
 ; --------------------------------------------------------
 ; Video_Update
 ; 

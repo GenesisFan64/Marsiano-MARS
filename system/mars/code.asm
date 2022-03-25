@@ -1171,19 +1171,16 @@ mstr_gfx2_hblk:
 		rts
 		nop
 mstr_gfx2_vblk:
-		sts	pr,@-r15
+		mov.w	@(marsGbl_BgDrwAll,gbr),r0
+		tst	r0,r0
+		bf	.mid_draw
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	#RAM_Mars_DreqRead+Dreq_BgEx_X,r13
 		mov	@r13+,r1
 		mov	@r13+,r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
-		mov	r1,r0
-		shlr16	r0
-		mov.w	r0,@(marsGbl_XShift,gbr)
-		bsr	MarsVideo_MoveBg
-		nop
-		lds	@r15+,pr
+.mid_draw:
 		rts
 		nop
 mstr_gfx2_init:
@@ -1203,6 +1200,15 @@ mstr_gfx2_init:
 		mov	@r5+,r4
 		bsr	MarsVideo_SetBg
 		nop
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	#RAM_Mars_DreqRead+Dreq_BgEx_X,r13
+		mov	@r13+,r1
+		mov	@r13+,r2
+		mov	r1,@(mbg_xpos,r14)
+		mov	r2,@(mbg_ypos,r14)
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
 
 mstr_gfx2:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
@@ -1210,12 +1216,6 @@ mstr_gfx2:
 		bt	.no_redraw
 		dt	r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
-		cmp/pl	r0
-		bf	.no_btmp
-		mov 	#_vdpreg,r1
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
-.no_btmp:
 		bsr	MarsVideo_DrawAllBg		; Process FULL image (only two times)
 		nop
 		xor	r0,r0
@@ -1223,9 +1223,18 @@ mstr_gfx2:
 		mov.w	r0,@(marsGbl_BgDrwL,gbr)	; all
 		mov.w	r0,@(marsGbl_BgDrwU,gbr)	; these
 		mov.w	r0,@(marsGbl_BgDrwD,gbr)	; draw requests
-; 		bra	.from_drwall
-; 		nop
+		bra	.from_drwall
+		nop
 .no_redraw:
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	@(mbg_xpos,r14),r1
+		mov	@(mbg_ypos,r14),r2
+		mov	r1,r0
+		shlr16	r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
+		bsr	MarsVideo_MoveBg
+		nop
+
 		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
 		jsr	@r0
 		nop
@@ -1329,7 +1338,7 @@ mstr_gfx3:
 		mov	@r14+,r6		; r6 - Y height
 		shll16	r5
 		shll16	r6
-		dmuls	r1,r5			; Topleft calc
+		dmuls	r1,r5			; Topleft X/Y calc
 		sts	mach,r0
 		sts	macl,r1
 		xtrct	r0,r1
@@ -1340,15 +1349,19 @@ mstr_gfx3:
 		mov	#_framebuffer+$200,r8	; r8 - Output
 		mov	#320/2,r9		; r9  - X loop
 		mov	#224,r10		; r10 - Y loop
-.y_loop:
+
+.y_loop2:
 		cmp/pz	r1
 		bt	.y_add
-		bra	.y_loop
+		bra	.y_loop2
 		add	r5,r1
 .y_add:
+
+; *** LOOP
+.y_loop:
 		cmp/pz	r2
 		bt	.xy_set
-		bra	.y_add
+		bra	.y_loop
 		add	r6,r2
 .xy_set:
 		cmp/ge	r6,r2
@@ -1369,11 +1382,10 @@ mstr_gfx3:
 		mov	r9,r14
 .x_loop:
 		mov	r5,r0
-		shlr	r0		; /2
-.x_loop2:
+		shar	r0		; /2
 		cmp/ge	r0,r11
 		bf	.x_high
-		bra	.x_loop2
+		bra	.x_loop
 		sub	r0,r11
 .x_high:
 		mov	r11,r0
@@ -1386,6 +1398,7 @@ mstr_gfx3:
 		dt	r14
 		bf/s	.x_loop
 		add	#2,r13
+
 		add	r4,r2
 ; 		add	r4,r2
 		mov	#$200,r0
@@ -1490,16 +1503,20 @@ mstr_gfx4:
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-; 		mov	#_CCR,r1			; <-- Required for Watchdog
-; 		mov	#%00001000,r0			; Two-way mode
-; 		mov.w	r0,@r1
-; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-; 		mov.w	r0,@r1
+		stc	sr,r2
+		mov	#$F0,r0
+		ldc 	r0,sr
+		mov	#_CCR,r1			; <-- Required for Watchdog
+		mov	#%00001000,r0			; Two-way mode
+		mov.w	r0,@r1
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r1
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A10,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
 		mov.w	#$A538,r0			; Enable Watchdog
 		mov.w	r0,@r1
+		ldc	r2,sr
 
 	; ---------------------------------------
 	; Clear screen

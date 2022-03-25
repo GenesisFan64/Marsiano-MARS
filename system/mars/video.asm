@@ -182,15 +182,15 @@ MarsVideo_Init:
 
 	; Clear values
 	; TODO: checar bien esto porque se rompe en RESET
-		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	#0,r0
-		mov	r0,@(mbg_data,r1)
-		mov	r0,@(mbg_xpos,r1)
-		mov	r0,@(mbg_ypos,r1)
-		mov.w	r0,@(mbg_xpos_old,r1)
-		mov.w	r0,@(mbg_ypos_old,r1)
-		mov.b	r0,@(mbg_xset,r1)
-		mov.b	r0,@(mbg_yset,r1)
+; 		mov	#RAM_Mars_BgBuffScrl,r1
+; 		mov	#0,r0
+; 		mov	r0,@(mbg_data,r1)
+; 		mov	r0,@(mbg_xpos,r1)
+; 		mov	r0,@(mbg_ypos,r1)
+; 		mov.w	r0,@(mbg_xpos_old,r1)
+; 		mov.w	r0,@(mbg_ypos_old,r1)
+; 		mov.b	r0,@(mbg_xset,r1)
+; 		mov.b	r0,@(mbg_yset,r1)
 		lds	@r15+,pr
 		rts
 		nop
@@ -489,6 +489,11 @@ MarsVideo_DrawAllBg:
 		exts.w	r1,r1
 		exts.w	r2,r2
 		mov	r0,r13				; r13 - pixel data
+
+		mov	r1,r0
+		mov.w	r0,@(mbg_xpos_old,r14)
+		mov	r2,r0
+		mov.w	r0,@(mbg_ypos_old,r14)
 		mov	#_framebuffer,r12
 		mov	@(mbg_fbdata,r14),r0
 		add	r0,r12				; r12 - framebuffer output
