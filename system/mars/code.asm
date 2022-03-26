@@ -1,33 +1,19 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS SH2 Section
+; MARS SH2 CODE section, stored on SDRAM
 ;
 ; CODE for both CPUs
-; RAM and some DATA go here
+; RAM and some DATA also goes here
 ; ----------------------------------------------------------------
 
 ; *************************************************
-; communication setup will be like this:
+; communication setup:
 ;
 ; comm0-comm7  - ** FREE to use ***
 ; comm8-comm11 - Used to transfer data manually
-;                from Z80 to SH2 side, 68K
-;                uses DREQ.
+;                from Z80 to SH2 side, 68K uses DREQ.
 ; comm12       - Master CPU control
 ; comm14       - Slave CPU control
-;
-; CPU control bits:
-;
-; %BsssCCCC Immmmmmm
-;
-; B - BUSY bit, Manually set by 68K or Z80
-;     and cleared here on finish.
-; s - STATUS bits for the CMD interrupt
-; C - CMD Interrupt task mode
-;
-; I - Initialitation bit
-; m - Current mode for main loop, depending of
-;     the CPU
 ; *************************************************
 
 		phase CS3	; Now we are at SDRAM
@@ -52,7 +38,7 @@ marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
-marsGbl_CurrFb		ds.w 1
+; marsGbl_CurrFb		ds.w 1
 marsGbl_RomBlkM		ds.w 1	; Flag to report that MASTER is reading from ROM area
 marsGbl_RomBlkS		ds.w 1	; Flag to report that SLAVE is reading from ROM area
 marsGbl_BgDrwAll	ds.w 1	; Write 2 to request FULL redraw
@@ -72,7 +58,6 @@ sizeof_MarsGbl		ds.l 0
 SH2_Master:
 		dc.l SH2_M_Entry,CS3|$40000	; Power PC, Stack
 		dc.l SH2_M_Entry,CS3|$40000	; Reset PC, Stack
-
 		dc.l SH2_M_Error		; Illegal instruction
 		dc.l 0				; reserved
 		dc.l SH2_M_Error		; Invalid slot instruction
@@ -82,11 +67,10 @@ SH2_Master:
 		dc.l SH2_M_Error		; DMA address error
 		dc.l SH2_M_Error		; NMI vector
 		dc.l SH2_M_Error		; User break vector
-
-		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
+		dc.l 0,0,0,0,0,0,0,0,0		; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
-
-		dc.l SH2_M_Error	; Trap user vectors
+		dc.l 0
+		dc.l SH2_M_Error		; Trap user vectors
 		dc.l SH2_M_Error
 		dc.l SH2_M_Error
 		dc.l SH2_M_Error
@@ -126,7 +110,6 @@ SH2_Master:
 		dc.l master_irq		; Level 10 & 11 IRQ: H Blank interupt
 		dc.l master_irq		; Level 12 & 13 IRQ: V Blank interupt
 		dc.l master_irq		; Level 14 & 15 IRQ: Reset Button
-
 	; ON-chip interrupts go here (vbr+$120)
 		dc.l master_irq		; Watchdog (custom)
 
@@ -139,7 +122,6 @@ SH2_Master:
 SH2_Slave:
 		dc.l SH2_S_Entry,CS3|$3F000	; Cold PC,SP
 		dc.l SH2_S_Entry,CS3|$3F000	; Manual PC,SP
-
 		dc.l SH2_S_Error		; Illegal instruction
 		dc.l 0				; reserved
 		dc.l SH2_S_Error		; Invalid slot instruction
@@ -149,10 +131,9 @@ SH2_Slave:
 		dc.l SH2_S_Error		; DMA address error
 		dc.l SH2_S_Error		; NMI vector
 		dc.l SH2_S_Error		; User break vector
-
-		dc.l 0,0,0,0,0,0,0,0,0,0	; reserved
+		dc.l 0,0,0,0,0,0,0,0,0		; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
-
+		dc.l 0
 		dc.l SH2_S_Error		; Trap user vectors
 		dc.l SH2_S_Error
 		dc.l SH2_S_Error
@@ -193,7 +174,6 @@ SH2_Slave:
 		dc.l slave_irq			; Level 10 & 11 IRQ: H Blank interupt
 		dc.l slave_irq			; Level 12 & 13 IRQ: V Blank interupt
 		dc.l slave_irq			; Level 14 & 15 IRQ: Reset Button
-
 	; ON-chip interrupts go here (vbr+$120)
 		dc.l slave_irq			; Watchdog (custom)
 
@@ -233,7 +213,7 @@ master_irq:
 int_m_list:
 		dc.l m_irq_bad,m_irq_bad
 		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_custom,m_irq_custom
+		dc.l m_irq_wdg,m_irq_wdg
 		dc.l m_irq_pwm,m_irq_pwm
 		dc.l m_irq_cmd,m_irq_cmd
 		dc.l m_irq_h,m_irq_h
@@ -275,7 +255,7 @@ slave_irq:
 int_s_list:
 		dc.l s_irq_bad,s_irq_bad
 		dc.l s_irq_bad,s_irq_bad
-		dc.l s_irq_bad,s_irq_custom
+		dc.l s_irq_wdg,s_irq_wdg
 		dc.l s_irq_pwm,s_irq_pwm
 		dc.l s_irq_cmd,s_irq_cmd
 		dc.l s_irq_h,s_irq_h
@@ -383,18 +363,18 @@ m_irq_cmd:
 	; Put 5 instructions (or 5 nops) after
 	; writing _DMAOPERATION = 1
 	;
-	; On 32X Emulators it starts right away.
+	; On Emulators it starts right away...
 		mov.b	@r2,r0			; Tell Genesis we are ready to
 		or	#%01000000,r0		; recieve the data from DREQ
 		mov.b	r0,@r2
 		nop
 		nop
 .wait_dma:
-		mov	@($C,r3),r0	; Read DMA's mode for the active/enabled bits
-		tst	#%10,r0		; Active?
+		mov	@($C,r3),r0		; Read DMA's mode for the active/enabled bits
+		tst	#%10,r0			; Active?
 		bt	.wait_dma
 .time_out:
-		mov	#0,r0		; _DMAOPERATION = 0
+		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
 
 	; *** HARDWARE NOTE ***
@@ -410,7 +390,7 @@ m_irq_cmd:
 	; 32X Emulators doesn't recreate this limitation.
 		mov	#RAM_Mars_DreqDma,r1
 		mov	#RAM_Mars_DreqRead,r2
-		mov	#sizeof_dreq/4,r3	; NOTE: copying as 4bytes
+		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS
 .copy_safe:
 		mov	@r1+,r0
 		mov	r0,@r2
@@ -976,8 +956,8 @@ SH2_M_Entry:
 ; ----------------------------------------------------------------
 ; Master main code
 ;
-; This CPU is exclusively used for Visual tasks:
-; Background, Sprites and Polygons.
+; This CPU is exclusively used for the visuals:
+; software-rendered backgrounds, sprites and polygons.
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
@@ -985,6 +965,11 @@ SH2_M_HotStart:
 		ldc	r0,sr
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0			; Disable Watchdog
+		mov.w	r0,@r1
+		mov	#_CCR,r1
+		mov	#$10,r0
+		mov.w	r0,@r1
+		mov	#$09,r0
 		mov.w	r0,@r1
 		mov	#CS3|$40000,r15			; Set default Stack for Master
 		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
@@ -1008,10 +993,20 @@ SH2_M_HotStart:
 		bra	master_loop
 		nop
 		align 4
-		ltorg
+		ltorg		; some literals needed here...
 
 ; ----------------------------------------------------------------
-; MASTER Loop
+; MASTER CPU loop
+;
+; comm12:
+; bs000000 i0000lll
+;
+; b - busy bit on the CMD interrupt
+;     (so 68k knows that the interrupt is active)
+; s - status bits for some CMD interrupt tasks
+; c - command number for CMD interrupt
+; i - Initialitation bit
+; l - MAIN LOOP command/task
 ; ----------------------------------------------------------------
 
 master_loop:
@@ -1022,6 +1017,9 @@ master_loop:
 
 	; ---------------------------------------
 	; Wait frameswap
+	;
+	; TODO: maybe use the VBlank interrupt now?
+
 		mov	#_vdpreg,r1			; r1 - SVDP area
 .wait_fb:	mov.w	@(vdpsts,r1),r0			; SVDP FILL active?
 		tst	#%10,r0
@@ -1069,7 +1067,7 @@ master_loop:
 		mov	#.list+8,r1		; Point to VBLANK jumps
 		mov	#_sysreg+comm12,r2
 		mov.w	@r2,r0			; r0 - INIT bit
-		and	#%111,r0
+		and	#%0111,r0
 		shll2	r0
 		shll2	r0
 		mov	@(r1,r0),r1
@@ -1175,9 +1173,10 @@ mstr_gfx2_vblk:
 		tst	r0,r0
 		bf	.mid_draw
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_BgEx_X,r13
-		mov	@r13+,r1
-		mov	@r13+,r2
+
+		mov	#RAM_Mars_DreqRead,r0
+		mov	@(Dreq_BgEx_X,r0),r1
+		mov	@(Dreq_BgEx_Y,r0),r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
 .mid_draw:
@@ -1193,19 +1192,13 @@ mstr_gfx2_init:
 		mov	#256,r5
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
-		mov	#RAM_Mars_DreqRead+Dreq_BgEx_Data,r5
+		mov	#RAM_Mars_DreqRead,r0
 		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	@r5+,r2
-		mov	@r5+,r3
-		mov	@r5+,r4
-		bsr	MarsVideo_SetBg
+		mov	@(Dreq_BgEx_Data,r0),r2
+		mov	@(Dreq_BgEx_W,r0),r3
+		mov	@(Dreq_BgEx_H,r0),r4
+		bsr	MarsVideo_SetScrlBg
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_BgEx_X,r13
-		mov	@r13+,r1
-		mov	@r13+,r2
-		mov	r1,@(mbg_xpos,r14)
-		mov	r2,@(mbg_ypos,r14)
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
@@ -1249,7 +1242,7 @@ mstr_gfx2:
 		mov	#RAM_Mars_BgBuffScrl,r1		; Make visible background
 		mov	#0,r2				; section on screen
 		mov	#224,r3
-		bsr	MarsVideo_MakeTbl
+		bsr	MarsVideo_ShowScrlBg
 		nop
 		bsr	MarsVideo_FixTblShift		; Fix those broken lines that
 		nop					; the Xshift register can't move
@@ -1260,8 +1253,9 @@ mstr_gfx2:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 3:
-; Scalable 256-color screen, low FPS
+; Mode 3: Scalable 256-color screen
+;
+; Frame drops
 ; ---------------------------------------
 
 mstr_gfx3_hblk:
@@ -1280,9 +1274,9 @@ mstr_gfx3_vblk:
 		dt	r4
 		bf/s	.copy_me
 		add	#4,r3
-; 		mov.w	@r5,r0
-; 		or	#$01,r0		; Slave task $01
-; 		mov.w	r0,@r5
+		mov.w	@r5,r0
+		or	#$01,r0		; Slave task $01
+		mov.w	r0,@r5
 		rts
 		nop
 mstr_gfx3_init:
@@ -1327,8 +1321,12 @@ mstr_gfx3:
 	; r8 - Output
 	; r9 - Loop: Line width / 2
 	; r10 - Loop: Number of lines
-
+	;
+	; TODO: a small word is missing
+	; if X/Y are in reverse
 		mov	#RAM_Mars_BgBuffScale_M,r14
+		mov	#_framebuffer+$200,r8	; r8 - Output
+
 		mov	@r14+,r7		; r7 - Input
 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
 		mov	@r14+,r2		; r2 - Y pos
@@ -1346,16 +1344,15 @@ mstr_gfx3:
 		sts	mach,r0
 		sts	macl,r2
 		xtrct	r0,r2
-		mov	#_framebuffer+$200,r8	; r8 - Output
 		mov	#320/2,r9		; r9  - X loop
-		mov	#224,r10		; r10 - Y loop
-
+		mov	#224/2,r10		; r10 - Y loop
 .y_loop2:
 		cmp/pz	r1
 		bt	.y_add
 		bra	.y_loop2
 		add	r5,r1
 .y_add:
+
 
 ; *** LOOP
 .y_loop:
@@ -1366,7 +1363,7 @@ mstr_gfx3:
 .xy_set:
 		cmp/ge	r6,r2
 		bf	.y_high
-		bra	.y_loop
+		bra	.xy_set
 		sub	r6,r2
 .y_high:
 		mov	r1,r11
@@ -1383,9 +1380,18 @@ mstr_gfx3:
 .x_loop:
 		mov	r5,r0
 		shar	r0		; /2
+
+	; checks both negative and positive
+		cmp/pl	r11
+		bt	.xwpos
+.x_loopm:	cmp/ge	r0,r11
+		bt	.x_high
+		bra	.x_loopm
+		add	r0,r11
+.xwpos:
 		cmp/ge	r0,r11
 		bf	.x_high
-		bra	.x_loop
+		bra	.xwpos
 		sub	r0,r11
 .x_high:
 		mov	r11,r0
@@ -1406,11 +1412,11 @@ mstr_gfx3:
 		bf/s	.y_loop
 		add	r0,r8
 
-; 		mov	#_sysreg+comm14,r5
-; .wait_slv:	mov.w	@r5,r0
-; 		and	#%01111111,r0
-; 		tst	r0,r0
-; 		bf	.wait_slv
+		mov	#_sysreg+comm14,r5
+.wait_slv:	mov.w	@r5,r0
+		and	#%01111111,r0
+		tst	r0,r0
+		bf	.wait_slv
 
 	; sprites will go here
 
@@ -1506,11 +1512,11 @@ mstr_gfx4:
 		stc	sr,r2
 		mov	#$F0,r0
 		ldc 	r0,sr
-		mov	#_CCR,r1			; <-- Required for Watchdog
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
+; 		mov	#_CCR,r1			; <-- Required for Watchdog
+; 		mov	#%00001000,r0			; Two-way mode
+; 		mov.w	r0,@r1
+; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+; 		mov.w	r0,@r1
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A10,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
@@ -1604,11 +1610,6 @@ SH2_S_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-		mov.l	#_CCR,r1
-		mov	#$10,r0
-		mov.w	r0,@r1
-		mov	#$09,r0
-		mov.w	r0,@r1
 		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
 		mov 	#$C0000000,r2
 		mov 	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r3
@@ -1632,6 +1633,9 @@ SH2_S_Entry:
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Slave main code
+;
+; This CPU is used to help MASTER do some intensive tasks, this
+; also does the PWM playback
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
@@ -1639,6 +1643,11 @@ SH2_S_HotStart:
 		ldc	r0,sr
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0			; Disable Watchdog
+		mov.w	r0,@r1
+		mov	#_CCR,r1
+		mov	#$10,r0
+		mov.w	r0,@r1
+		mov	#$09,r0
 		mov.w	r0,@r1
 		mov	#CS3|$3F000,r15			; Reset stack
 		mov	#RAM_Mars_Global,r14		; Reset gbr
@@ -1660,12 +1669,21 @@ SH2_S_HotStart:
 		add	r3,r1
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
-		bra	slave_loop
-		nop
-		align 4
+; 		bra	slave_loop
+; 		nop
+; 		align 4
 
 ; ----------------------------------------------------------------
-; SLAVE Loop
+; SLAVE CPU loop
+;
+; comm14:
+; bssscccc llllllll
+;
+; b - busy bit on the CMD interrupt
+;     (so 68k knows that the interrupt is active)
+; s - status bits for some CMD interrupt tasks
+; c - command number for CMD interrupt
+; l - MAIN LOOP command/task, clears on finish
 ; ----------------------------------------------------------------
 
 slave_loop:
@@ -1690,15 +1708,12 @@ slave_loop:
 
 ; ============================================================
 ; ---------------------------------------
-; Task mode 1:
+; Slave Task $01:
 ; Helps MASTER to draw the bottom half
 ; of the scaled background
 ; ---------------------------------------
 
 .slv_task_1:
-
-	; TODO: worked, but DY is wrong here
-	; i'll check later
 
 	; MAIN scaler
 	; r1 - X pos xxxx.0000
@@ -1712,88 +1727,118 @@ slave_loop:
 	; r9 - line size / 2
 	; r10 - Number of lines
 
-; 		mov	#RAM_Mars_BgBuffScale_S,r14
-; 		mov	@r14+,r7		; r7 - Input
-; 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
-; 		mov	@r14+,r2		; r2 - Y pos
-; 		mov	@r14+,r3		; r3 - DX
-; 		mov	@r14+,r4		; r4 - DY
-; 		mov	@r14+,r5		; r5 - X width
-; 		mov	@r14+,r6		; r6 - Y height
-; 		shll16	r5
-; 		shll16	r6
-; 		mov	#$7800,r0
-; 		add	r0,r2
-; 		dmuls	r1,r5			; Topleft calc
-; 		sts	mach,r0
-; 		sts	macl,r1
-; 		xtrct	r0,r1
-; 		dmuls	r2,r6
-; 		sts	mach,r0
-; 		sts	macl,r2
-; 		xtrct	r0,r2
-; ; 		mov	#_framebuffer+$200,r8	; r8 - Output
-; 		mov	#(_framebuffer+$200)+($200*112),r8	; r8 - Output
-; 		mov	#320/2,r9		; r9  - X loop
-; 		mov	#224/2,r10		; r10 - Y loop
-; .y_loop:
-; 		cmp/pz	r1
-; 		bt	.y_add
-; 		bra	.y_loop
-; 		add	r5,r1
-; .y_add:
-; 		cmp/pz	r2
-; 		bt	.xy_set
-; 		bra	.y_add
-; 		add	r6,r2
-; .xy_set:
+		mov	#RAM_Mars_BgBuffScale_S,r14
+		mov	#(_framebuffer+$200)+($200*112),r8	; r8 - Output
+
+		mov	@r14+,r7		; r7 - Input
+		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
+		mov	@r14+,r2		; r2 - Y pos
+		mov	@r14+,r3		; r3 - DX
+		mov	@r14+,r4		; r4 - DY
+		mov	@r14+,r5		; r5 - X width
+		mov	@r14+,r6		; r6 - Y height
+		shll16	r5
+		shll16	r6
+		dmuls	r1,r5			; Topleft X/Y calc
+		sts	mach,r0
+		sts	macl,r1
+		xtrct	r0,r1
+		dmuls	r2,r6
+		sts	mach,r0
+		sts	macl,r2
+		xtrct	r0,r2
+.y_loop2:
+		cmp/pz	r1
+		bt	.y_add
+		bra	.y_loop2
+		add	r5,r1
+.y_add:
+
+	; SLAVE ONLY: Manually get to the middle...
+		mov	#224/2,r10		; r10 - Y loop
+.ymiddle:
+		cmp/pz	r2
+		bt	.xy_set2
+		bra	.ymiddle
+		add	r6,r2
+.xy_set2:
 ; 		cmp/ge	r6,r2
-; 		bf	.y_high
-; 		bra	.y_loop
+; 		bf	.y_high2
+; 		bra	.xy_set2
 ; 		sub	r6,r2
-; .y_high:
-; 		mov	r1,r11
-; 		shlr	r11			; /2
-; 		mov	r2,r0
-; 		shlr16	r0
-; 		mov	r5,r13
-; 		shlr16	r13
-; 		muls	r13,r0
-; 		sts	macl,r12
-; 		add	r7,r12
-; 		mov	r8,r13
-; 		mov	r9,r14
-; .x_loop:
-; 		mov	r5,r0
-; 		shlr	r0		; /2
-; .x_loop2:
-; 		cmp/ge	r0,r11
-; 		bf	.x_high
-; 		bra	.x_loop2
-; 		sub	r0,r11
-; .x_high:
-; 		mov	r11,r0
-; 		shlr16	r0
-; 		exts	r0,r0
-; 		shll	r0
-; 		mov.w	@(r12,r0),r0
-; 		add	r3,r11
-; 		mov.w	r0,@r13
-; 		dt	r14
-; 		bf/s	.x_loop
-; 		add	#2,r13
+; .y_high2:
+		dt	r10
+		bf/s	.ymiddle
+		add	r4,r2
+
+; *** LOOP
+		mov	#320/2,r9		; r9  - X loop
+		mov	#224/2,r10		; r10 - Y loop
+.y_loop:
+		cmp/pz	r2
+		bt	.xy_set
+		bra	.y_loop
+		add	r6,r2
+.xy_set:
+		cmp/ge	r6,r2
+		bf	.y_high
+		bra	.xy_set
+		sub	r6,r2
+.y_high:
+		mov	r1,r11
+		shlr	r11			; /2
+		mov	r2,r0
+		shlr16	r0
+		mov	r5,r13
+		shlr16	r13
+		muls	r13,r0
+		sts	macl,r12
+		add	r7,r12
+		mov	r8,r13
+		mov	r9,r14
+.x_loop:
+		mov	r5,r0
+		shar	r0		; /2
+
+	; checks both negative and positive
+		cmp/pl	r11
+		bt	.xwpos
+.x_loopm:	cmp/ge	r0,r11
+		bt	.x_high
+		bra	.x_loopm
+		add	r0,r11
+.xwpos:
+		cmp/ge	r0,r11
+		bf	.x_high
+		bra	.xwpos
+		sub	r0,r11
+.x_high:
+		mov	r11,r0
+		shlr16	r0
+		exts	r0,r0
+		shll	r0
+		mov.w	@(r12,r0),r0
+		add	r3,r11
+		mov.w	r0,@r13
+		dt	r14
+		bf/s	.x_loop
+		add	#2,r13
+
+		add	r4,r2
 ; 		add	r4,r2
-; 		mov	#$200,r0
-; 		dt	r10
-; 		bf/s	.y_loop
-; 		add	r0,r8
+		mov	#$200,r0
+		dt	r10
+		bf/s	.y_loop
+		add	r0,r8
 
 		bra	.slv_exit
 		nop
 
 ; ============================================================
 ; ---------------------------------------
-; Task mode 2: Build 3D Models
+; Slave task $02:
+;
+; Build 3D Models
 ; FOR THE NEXT FRAME (not current)
 ; ---------------------------------------
 
@@ -1836,7 +1881,7 @@ slave_loop:
 ; Slave | Watchdog interrupt
 ; ------------------------------------------------
 
-s_irq_custom:
+s_irq_wdg:
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	r2,@-r15

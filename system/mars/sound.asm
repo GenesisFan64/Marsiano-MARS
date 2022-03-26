@@ -1,9 +1,19 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS Sound
+; 32X Sound
+;
+; The main PWM playback code (PWM interrupt) and it's channel list
+; is located on the cache.asm file.
 ; ----------------------------------------------------------------
 
+; --------------------------------------------------------
+; Settings
+; --------------------------------------------------------
+
+; MAXIMUM usable PWM channels
+; TODO: keep it like this, might break the Z80 side...
 MAX_PWMCHNL	equ	7
+
 
 ; 32X sound channel
 		struct 0
@@ -23,65 +33,57 @@ sizeof_sndchn	ds.l 0
 ; *** PWM INTERRUPT MOVED TO CACHE (see cache.asm)
 
 ; ====================================================================
-; ----------------------------------------------------------------
-; Subroutines
-; ----------------------------------------------------------------
-
 ; --------------------------------------------------------
 ; Init Sound PWM
 ;
-; Frequency values:
-; 23011361 NTSC
-; 22801467 PAL
+; Cycle register formula for
+; NTSC: ((((23011361<<1)/SAMPLE_RATE+1)>>1)+1)
+; PAL:  ((((22801467<<1)/SAMPLE_RATE+1)>>1)+1)
 ;
-; NOTE: The CLICK sound is normal.
+; NOTE: The CLICK sound after calling this is normal.
 ; --------------------------------------------------------
 
 MarsSound_Init:
 		stc	gbr,@-r15
 		mov	#_sysreg,r0
 		ldc	r0,gbr
-		mov	#$0105,r0
+		mov	#$0105,r0				; Timing interval $01, output L/R
 		mov.w	r0,@(timerctl,gbr)
-		mov	#((((23011361<<1)/22050+1)>>1)+1),r0	; Sample rate
+		mov	#((((23011361<<1)/22050+1)>>1)+1),r0	; Samplerate
 		mov.w	r0,@(cycle,gbr)
 		mov	#1,r0
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
-; 		mov	#0,r0
-; 		mov	#MarsSnd_PwmChnls,r1
-; 		mov	#MAX_PWMCHNL,r2
-; 		mov	#sizeof_sndchn,r3
-; .clr_enbl:
-; 		mov	r0,@(mchnsnd_enbl,r1)
-; 		dt	r2
-; 		bf/s	.clr_enbl
-; 		add	r3,r1
 		ldc	@r15+,gbr
 		rts
 		nop
 		align 4
 
+; ====================================================================
+; ----------------------------------------------------------------
+; Subroutines
+; ----------------------------------------------------------------
+
 ; --------------------------------------------------------
 ; MarsSound_SetPwm
 ;
-; Set new sound data to a single channel
+; Sets new sound data to a channel slot
 ;
 ; Input:
 ; r1 | Channel
-; r2 | Start address
-; r3 | End address
-; r4 | Loop address (ignored if loop flag isn't set)
+; r2 | Start address (SH2 AREA)
+; r3 | End address (SH2 AREA)
+; r4 | Loop address (SH2 AREA, ignored if loop bit isn't set)
 ; r5 | Pitch ($xxxxxx.xx, $100 default speed)
-; r6 | Volume
-; r7 | Flags (Currently: %xxxxslLR)
-;      LR - output
-;      l - LOOP flag
-;      s - Sample is in stereo
+; r6 | Volume (Reverse: higher value is lower)
+; r7 | Flags: %xxxxslLR
+;      LR - Output to these speakers
+;       l - LOOP flag
+;       s - Sample data is in Stereo (16-bit)
 ;
-; Uses:
-; r0,r8-r9
+; Breaks:
+; r0,r8-r9,macl
 ; --------------------------------------------------------
 
 MarsSound_SetPwm:
@@ -121,17 +123,16 @@ MarsSound_SetPwm:
 		align 4
 
 ; --------------------------------------------------------
-; MarsSound_MulPwmPitch
+; MarsSound_SetPwmPitch
 ;
-; Set pitch data to 8 consecutive sound channels
-; starting from specific slot
+; Sets pitch data of a channel slot
 ;
 ; Input:
-; r1 | Channel slot
-; r2 | Pitch data
+; r1 | Channel
+; r2 | Pitch ($xxxxxx.xx, $100 default)
 ;
-; Uses:
-; r8
+; Breaks:
+; r8,macl
 ; --------------------------------------------------------
 
 MarsSound_SetPwmPitch:
@@ -153,12 +154,14 @@ MarsSound_SetPwmPitch:
 ; --------------------------------------------------------
 ; MarsSound_SetVolume
 ;
-; Input:
-; r1 | Channel slot
-; r2 | Volume data
+; Changes the volume of a channel slot
 ;
-; Uses:
-; r8
+; Input:
+; r1 | Channel
+; r2 | Volume (Reverse: higher value is lower)
+;
+; Breaks:
+; r8,macl
 ; --------------------------------------------------------
 
 MarsSound_SetVolume:
@@ -183,11 +186,11 @@ MarsSound_SetVolume:
 ; Turns ON or OFF Current PWM slot
 ;
 ; Input:
-; r1 | Slot
+; r1 | Channel
 ; r2 | Enable/Disable
 ;
-; Uses:
-; r8
+; Breaks:
+; r8,macl
 ; --------------------------------------------------------
 
 MarsSound_PwmEnable:
@@ -207,12 +210,16 @@ MarsSound_PwmEnable:
 ; --------------------------------------------------------
 ; MarsSound_Refill
 ;
-; Uses:
+; Call this before the 68K side closes ROM access
+; (by setting bit RV)
+;
+; Breaks:
 ; r1-r8
+;
+; NOTE:
+; The trick here is to keep PWM interrupt enabled
+; while filling the backup data
 ; --------------------------------------------------------
-
-; The trick here is to keep PWM interrupt enabled while
-; filling the backup data
 
 MarsSnd_Refill:
 		mov	#MarsSnd_PwmChnls,r8
@@ -230,13 +237,13 @@ MarsSnd_Refill:
 		mov	#0,r1
 		mov	r1,@(mchnsnd_cchread,r8)
 		mov	r5,r1
-		mov	#$80/4,r2
+		mov	#$80/4,r2		; Max bytes / 4
 		mov	@(mchnsnd_read,r8),r4	; r4 - OLD READ pos
 		mov	r4,r3
 		shlr8	r3
 		add	r0,r3
 .copy_now:
-		mov.b	@r3+,r0
+		mov.b	@r3+,r0		; byte by byte...
 		mov.b	r0,@r1
 		add	#1,r1
 		mov.b	@r3+,r0
@@ -259,7 +266,6 @@ MarsSnd_Refill:
 		rts
 		nop
 		align 4
-		ltorg
 
 ; ====================================================================
 

@@ -1,42 +1,23 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD/MARS shared constants
+; Genesis side constants
 ; ----------------------------------------------------------------
 
-MAX_MDDMATSK	equ 16		; MAX DMA transfer requests for VBlank
-MAX_MODELS	equ 16
+MAX_MDDMATSK	equ 16			; MAX DMA BLAST entries
 
 ; ====================================================================
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
 
-MDRAM_START	equ $FFFF9000	; Start of working MD RAM
-MAX_MDERAM	equ $800	; MAX RAM for current screen mode
-varNullVram	equ $7FF	; Default Blank tile for some video routines
+MDRAM_START	equ $FFFF9000		; Start of Genesis working RAM
+MAX_MDERAM	equ $800		; Maximum RAM for current Screen mode
+varNullVram	equ $7FF		; Default Blank cell for some video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Shared structs for both Genesis and 32X
+; Input
 ; ----------------------------------------------------------------
-
-; model objects
-;
-		struct 0
-mdl_data	ds.l 1			; Model data pointer, if zero: no model
-mdl_option	ds.l 1			; Model options: pixelvalue add
-mdl_x_pos	ds.l 1			; X position $000000.00
-mdl_y_pos	ds.l 1			; Y position $000000.00
-mdl_z_pos	ds.l 1			; Z position $000000.00
-mdl_x_rot	ds.l 1			; X rotation $000000.00
-mdl_y_rot	ds.l 1			; Y rotation $000000.00
-mdl_z_rot	ds.l 1			; Z rotation $000000.00
-; mdl_animdata	ds.l 1			; Model animation data pointer, zero: no animation
-; mdl_animframe	ds.l 1			; Current frame in animation
-; mdl_animtimer	ds.l 1			; Animation timer
-; mdl_animspd	ds.l 1			; Animation USER speed setting
-sizeof_mdlobj	ds.l 0
-		finish
 
 ; --------------------------------------------------------
 ; Controller
@@ -161,26 +142,6 @@ RAM_FrameCount		ds.l 1			; Frames counter
 RAM_VdpRegs		ds.b 24			; VDP Register cache
 sizeof_mdvid		ds.l 0
 			finish
-
-; ; ====================================================================
-; ; ----------------------------------------------------------------
-; ; 32X control using DREQ
-; ;
-; ; *** CALL System_MdMarsDreq AFTER DOING ANY CHANGE
-; ; IN THIS AREA, OUTSIDE VBLANK ***
-; ;
-; ; Size for this buffer is set externally on
-; ; the MAX_MDDREQ setting.
-; ; ----------------------------------------------------------------
-;
-; 		struct RAM_MdDreq
-; RAM_MdMarsPal	ds.w 256
-; RAM_MdMarsBg	ds.l $10
-; sizeof_dreqmd	ds.l 0
-; 		finish
-; 	if MOMPASS=7
-; 		message "DREQ RAM: \{(sizeof_dreqmd-RAM_MdDreq)&$FFFFFF} of \{(MAX_MDDREQ)&$FFFFFF}"
-; 	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------

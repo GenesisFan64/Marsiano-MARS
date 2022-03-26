@@ -4,20 +4,15 @@
 ;
 ; If your data is too much for SDRAM, place it here.
 ; BUT keep in mind that this entire section will be gone
-; if the Genesis performs DMA-to-VDP Transfers
-; which requires RV=1 (Revert ROM to original position)
+; if the Genesis performs DMA-to-VDP Transfers that require
+; ROM access, which set RV bit to 1
+; (Reverts ROM to it original location temporally)
 ; ***EMULATORS IGNORE THIS LIMITATION***
 ;
-; Only access here on these conditions:
-; - Stop all tracks that use PWM samples
-; - If you wanna keep any tracks active: set 1 to marsBlock
-;   in the Z80 driver, all tracks will continue playing
-;   only with PSG and FM instruments
-;   (TODO: check how it peforms)
-;
-; The PWM samples are safe to use with the implementation
-; of a sample-backup routine that the 68K requests before
-; doing DMA
+; BUT If you store your PWM samples here:
+; these will get protected manually by requesting slave
+; into copying a small amount of wave data to continue
+; playing before setting the RV bit
 ; ----------------------------------------------------------------
 
 	align 4
@@ -26,6 +21,7 @@
 ; PWM samples
 ; --------------------------------------------------------
 
+; gSmpl filename,loopstart_point
 SmpIns_PlusPiano_st:
 	gSmpl "sound/instr/smpl/plus_piano_st.wav",0
 ; SmpIns_Vctr04:
@@ -74,13 +70,12 @@ TESTMARS_BG2:
 	binclude "data/mars/test2_art.bin"
 	align 4
 
-; ; --------------------------------------------------------
-; ; Models
-; ; --------------------------------------------------------
+; --------------------------------------------------------
+; Models
+; --------------------------------------------------------
 ;
 ; 	include "data/mars/objects/mdl/test/head.asm"
 
 Textr_pecsi:
 	binclude "data/mars/objects/mtrl/pecsi_art.bin"
 	align 4
-

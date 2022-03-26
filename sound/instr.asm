@@ -1,23 +1,18 @@
 ; ====================================================================
-; FM instrument patches
+; ----------------------------------------------------------------
+; GEMA SOUND DRIVER: FM instrument patches
 ;
-; This must be located at the 900000 area.
-; ====================================================================
-
-; Sizes
-; Normal FM ins: $20
-; Special FM ins: $28
-;
-
-; --------------------------------------------------------
-; FM instruments/patches
-; --------------------------------------------------------
+; This must be located at the $900000 area.
+; ----------------------------------------------------------------
 
 ; Sizes
 ; Normal FM ins: $20
 ; Special FM ins: $28
 
-; FM3 Special
+; --------------------------------------------------------
+; Special FM3
+; --------------------------------------------------------
+
 FmIns_Fm3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Fm3_ClosedHat:
@@ -25,14 +20,16 @@ FmIns_Fm3_ClosedHat:
 FmIns_Fm3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
 
+; --------------------------------------------------------
+; Normal
+; --------------------------------------------------------
+
 ; Bass
 FmIns_Bass_Oil:
 		binclude "sound/instr/fm/bass_oil.gsx",$2478,$20
-
 ; Organ
 FmIns_Organ_Ito:
 		binclude "sound/instr/fm/organ_ito.gsx",$2478,$20
-
 ; Bell-ish
 FmIns_Ding_Baseball:
 		binclude "sound/instr/fm/ding_baseball.gsx",$2478,$20

@@ -1,41 +1,39 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; CACHE code for Master CPU
+; CACHE code for MASTER CPU
 ;
-; LIMIT: $800 bytes for each CPU
+; LIMIT: $800 bytes
 ; ----------------------------------------------------------------
 
 		align 4
 CACHE_MASTER:
 		phase $C0000000
 
-; ------------------------------------------------
-; POLYGON SLICER as Watchdog interrupt
-; ------------------------------------------------
+; ====================================================================
+; --------------------------------------------------------
+; Watchdog interrupt for MASTER CPU
+; --------------------------------------------------------
 
-; *** THIS USES DIVISION ***
+; *** THIS USES HARDWARE DIVISION ***
 
-m_irq_custom:
+m_irq_wdg:
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-
 		mov.w	@(marsGbl_PlgnCntr,gbr),r0
 		cmp/eq	#0,r0
 		bf	wdg_task_0
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-
-		mov.l   #$FFFFFE80,r1			; Stop watchdog
+		mov	#$FFFFFE80,r1			; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
 		bra	wdm_exit
 		nop
 		align 4
-
 wdg_task_0:
 		dt	r0
 		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
@@ -77,9 +75,9 @@ wdg_task_0:
 		mov	#Cach_DDA_Src,r3
 		add	#polygn_points,r1
 
-; ----------------------------------------
-; Polygon points
-; ----------------------------------------
+	; ----------------------------------------
+	; Polygon points
+	; ----------------------------------------
 
 	; Copy polygon points Cache's DDA
 		mov	#4,r8
@@ -96,8 +94,7 @@ wdg_task_0:
 		bf/s	.setpnts
 		add	#8,r2
 
-	; Copy texture source points
-	; to Cache
+	; Copy texture source points to Cache
 		mov	#4,r8
 .src_pnts:
 		mov.w	@r1+,r4
@@ -249,7 +246,7 @@ wdm_exit:
 		align 4
 		ltorg
 
-; --------------------------------
+; --------------------------------------------------------
 
 set_left:
 		mov	r2,r8			; Get a copy of Xleft pointer
@@ -320,7 +317,7 @@ set_left:
 		nop
 		align 4
 
-; --------------------------------
+; --------------------------------------------------------
 
 set_right:
 		mov	r3,r9
@@ -391,9 +388,7 @@ set_right:
 		nop
 		align 4
 
-; --------------------------------
-; Mark piece
-; --------------------------------
+; --------------------------------------------------------
 
 put_piece:
 		mov	@(4,r2),r8
@@ -487,17 +482,20 @@ put_piece:
 		align 4
 		ltorg
 
-; ---------------------------------------
-; Draw polygon pieces
-; ---------------------------------------
+; ====================================================================
+; --------------------------------------------------------
+; VideoMars_DrwPlgnPz
+;
+; Draws polygons on framebuffer using the pieces list
+;
+; NOTE:
+; Line width must be set as 512 pixels long
+; --------------------------------------------------------
 
-go_drwtask_exit:
-		bra	drwtask_exit
-		nop
 VideoMars_DrwPlgnPz:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		cmp/pl	r0
-		bf	go_drwtask_exit
+		bf	.no_pz
 		mov	@(marsGbl_PlyPzList_R,gbr),r0	; r14 - Current pieces pointer to READ
 		mov	r0,r14
 		mov	@(plypz_ypos,r14),r9		; Start grabbing StartY/EndY positions
@@ -521,13 +519,15 @@ VideoMars_DrwPlgnPz:
 .invld_y:
 		bra	drwsld_nextpz		; if LEN < 0 then check next one instead.
 		nop
+.no_pz:
+		bra	drwtask_exit
+		nop
 		align 4
 		ltorg
 
-; ------------------------------------
-; If Y top / Y len are valid:
-; ------------------------------------
-
+	; ------------------------------------
+	; If Y top / Y len are valid:
+	; ------------------------------------
 drwtsk1_vld_y:
 		mov	@(plypz_xl,r14),r1		; r1 - X left
 		mov	@(plypz_xl_dx,r14),r2		; r2 - DX left
@@ -567,7 +567,6 @@ drwtsk_texmode:
 		mov	@(plypz_src_xr,r14),r6		; Texture X right
 		mov	@(plypz_src_yl,r14),r7		; Texture Y up
 		mov	@(plypz_src_yr,r14),r8		; Texture Y down
-
 drwsld_nxtline_tex:
 		cmp/pz	r9			; Y Start below 0?
 		bf	go_drwsld_updline_tex
@@ -648,7 +647,7 @@ drwsld_nxtline_tex:
 		xor	r11,r11				; And reset XL to 0
 .tl_fix:
 
-	; *** WORD WRITES ***
+	; *** WORD WRITE ***
 	; r11 - X left
 	; r12 - X right
 	; r9 - Current Y line
@@ -726,7 +725,7 @@ drwsld_nxtline_tex:
 		add	r8,r7			; Update Y
 	; ***END***
 
-; 	; *** BYTE WRITES
+; 	; *** BYTE WRITE
 ; 	; r11 - X left
 ; 	; r12 - X right
 ; 	; r9 - Current Y line
@@ -791,7 +790,6 @@ drwsld_updline_tex:
 		add	r4,r3
 		bra	drwsld_nxtline_tex
 		add	#1,r9
-
 drwtex_gonxtpz:
 		add	#sizeof_plypz,r14		; And set new point
 		mov	r14,r0
@@ -801,7 +799,6 @@ drwtex_gonxtpz:
 		mov	#RAM_Mars_VdpDrwList,r0
 .reset_rd:
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
@@ -903,7 +900,9 @@ drwsld_nxtline:
 		shll8	r0
 		or	r6,r0
 		mov.w	r0,@(8,r13)	; Set data
-; .wait:		mov.w	@(10,r13),r0
+
+	; *** OLD ***
+; .wait:	mov.w	@(10,r13),r0
 ; 		tst	#2,r0
 ; 		bf	.wait
 
@@ -955,11 +954,9 @@ drwsld_nextpz:
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		cmp/pl	r0
-		bf	.finish_it
+		bf	drwtask_exit
 		bra	VideoMars_DrwPlgnPz
 		nop
-.finish_it:
-
 drwtask_exit:
 		rts
 		nop
@@ -994,7 +991,7 @@ CACHE_MASTER_E:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; CACHE code for Slave CPU
+; CACHE code for SLAVE CPU
 ;
 ; LIMIT: $800 bytes
 ; ----------------------------------------------------------------
@@ -1003,16 +1000,10 @@ CACHE_MASTER_E:
 CACHE_SLAVE:
 		phase $C0000000
 
-; ------------------------------------------------
-; PWM channels and a copy of Z80's PWM list
-; ------------------------------------------------
-
-MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
-
-; ------------------------------------------------
-; PWM Interrupt
-; ------------------------------------------------
+; ====================================================================
+; --------------------------------------------------------
+; PWM Interrupt for playback
+; --------------------------------------------------------
 
 ; **** MUST BE FAST ***
 
@@ -1153,6 +1144,8 @@ s_irq_pwm:
 		bf	.no_r
 		mov	#$7F,r2		; Force RIGHT off
 .no_r:
+
+	; Clearly rushed...
 		mov	@(mchnsnd_vol,r9),r0
 		cmp/pl	r0
 		bf	.skip
@@ -1209,7 +1202,12 @@ s_irq_pwm:
 		align 4
 		ltorg
 
-; ------------------------------------------------
+; ====================================================================
+; --------------------------------------------------------
+; MarsMdl_MdlLoop
+;
+; Call this to start building the 3D objects
+; --------------------------------------------------------
 
 MarsMdl_MdlLoop:
 		sts	pr,@-r15
@@ -1291,6 +1289,7 @@ MarsMdl_ReadModel:
 ; .wait_camanim:
 ; 		mov	r0,@(mdl_animtimer,r14)
 ; .no_anim:
+
 	; Now start reading
 		mov	#$3FFFFFFF,r0
 		mov	#Cach_CurrPlygn,r13		; r13 - temporal face output
@@ -1706,8 +1705,6 @@ mdlrd_setpoint:
 		sts	mach,r0
 		sts	macl,r3
 		xtrct	r0,r3
-
-
 		bra	.zmulti
 		nop
 .inside:
@@ -1760,7 +1757,6 @@ mdlrd_setpoint:
 		bt	.y_rw
 		mov	r3,r12
 .y_rw:
-
 		rts
 		nop
 		align 4
@@ -1815,13 +1811,15 @@ mdlrd_rotate:
 
 ; ------------------------------------------------
 		align 4
-MarsSnd_RvMode	ds.l 1
-MarsSnd_Active	ds.l 1
-Cach_CurrPlygn	ds.b sizeof_polygn	; Current polygon in modelread
-Cach_BkupPnt_L	ds.l 8		;
-Cach_BkupPnt_S	ds.l 0		; <-- Reads backwards
-Cach_BkupS_L	ds.l 5		;
-Cach_BkupS_S	ds.l 0
+MarsSnd_RvMode		ds.l 1
+MarsSnd_Active		ds.l 1
+Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
+Cach_BkupPnt_L		ds.l 8		;
+Cach_BkupPnt_S		ds.l 0		; <-- Reads backwards
+Cach_BkupS_L		ds.l 5		;
+Cach_BkupS_S		ds.l 0
+MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

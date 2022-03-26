@@ -11,24 +11,15 @@ CS0		equ	$00000000	; Boot rom & system registers
 CS1		equ	$02000000	; ROM data (all 4MB), Locked if RV=1
 CS2		equ	$04000000	; Framebuffer section
 CS3		equ	$06000000	; SDRAM
-TH		equ	$20000000	; Cache-thru OR|value
+TH		equ	$20000000	; Cache-thru OR value
 _sysreg		equ	$00004000|TH	; MARS System registers (MD: sysmars_reg)
 _vdpreg		equ	$00004100|TH	; SuperVDP registers
 _palette	equ	$00004200|TH	; Palette RAM for Pixel-Packed or RLE mode
-_framebuffer:	equ	CS2		; Framebuffer, first 240 are the linetable
-_overwrite:	equ	CS2+$20000	; Overwrite, $00-byte writes are ignored
+; _framebuffer:	equ	CS2		; Framebuffer, first 240 are the linetable
+; _overwrite:	equ	CS2+$20000	; Overwrite, $00-byte writes are ignored
 
-; OLD, stable:
-; CS0		equ	$00000000	; Boot rom & system registers
-; CS1		equ	$02000000	; ROM data (all 4MB), Locked if RV=1
-; CS2		equ	$04000000	; Framebuffer section
-; CS3		equ	$06000000	; SDRAM
-; TH		equ	$20000000	; Cache-thru OR|value
-; _sysreg		equ	$00004000|TH	; MARS System registers (MD: sysmars_reg)
-; _vdpreg		equ	$00004100|TH	; SuperVDP registers
-; _palette	equ	$00004200|TH	; Palette RAM for Pixel-Packed or RLE mode
-; _framebuffer:	equ	CS2|TH		; Framebuffer, first 240 are the linetable
-; _overwrite:	equ	CS2|TH+$20000	; Overwrite, $00-byte writes are ignored
+_framebuffer:	equ	CS2|TH		; Framebuffer, first 240 are the linetable
+_overwrite:	equ	CS2|TH+$20000	; Overwrite, $00-byte writes are ignored
 
 ; --------------------------------------------------------
 ; Variables

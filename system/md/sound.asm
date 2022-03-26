@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; GEMA Sound driver
+; Genesis sound using the GEMA Sound driver
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -126,6 +126,32 @@ sndReq_sbyte:
 		move.b	d6,(a5)				; update commZWrite
 		rts
 
+; ------------------------------------------------
+; Make CMD request
+;
+; d6 - command
+; ------------------------------------------------
+
+sndReqCmd:
+.wait_in:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_in
+		and.w	#%00001111,d6
+		or.b	d6,d7
+		move.b	d7,(sysmars_reg+comm14).l
+		move.b	(sysmars_reg+comm14).l,d7
+		and.w	#%00001111,d7
+		cmp.b	d6,d7
+		bne.s	.wait_in
+		bset	#7,(sysmars_reg+comm14).l
+		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
+; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; 		bne.s	.wait_cmd
+.wait_out:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_out
+		rts
+
 ; --------------------------------------------------------
 ; Sound_DMA_Pause
 ;
@@ -151,24 +177,8 @@ Sound_DMA_Pause:
 		bsr	sndLockZ80
 		move.b	#1,(z80_cpu+commZRomBlk)	; Block flag for Z80
 		bsr	sndUnlockZ80
-
 		move.w	#2,d6
-.wait_in:	move.b	(sysmars_reg+comm14),d7
-		and.w	#%11110000,d7
-		bne.s	.wait_in
-		or.b	d6,d7
-		move.b	d7,(sysmars_reg+comm14).l
-		move.b	(sysmars_reg+comm14).l,d7
-		and.w	#%00001111,d7
-		cmp.b	d6,d7
-		bne.s	.wait_in
-		bset	#7,(sysmars_reg+comm14).l
-		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
-; ; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
-; ; 		bne.s	.wait_cmd
-.wait_out:	move.b	(sysmars_reg+comm14),d7
-		and.w	#%11110000,d7
-		bne.s	.wait_out
+		bsr	sndReqCmd
 		swap	d6
 		swap	d7
 		rts
@@ -185,24 +195,8 @@ Sound_DMA_Resume:
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+commZRomBlk)
 		bsr	sndUnlockZ80
-
 		move.w	#3,d6
-.wait_in:	move.b	(sysmars_reg+comm14),d7
-		and.w	#%11110000,d7
-		bne.s	.wait_in
-		or.b	d6,d7
-		move.b	d7,(sysmars_reg+comm14).l
-		move.b	(sysmars_reg+comm14).l,d7
-		and.w	#%00001111,d7
-		cmp.b	d6,d7
-		bne.s	.wait_in
-		bset	#7,(sysmars_reg+comm14).l
-		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
-; ; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
-; ; 		bne.s	.wait_cmd
-.wait_out:	move.b	(sysmars_reg+comm14),d7
-		and.w	#%11110000,d7
-		bne.s	.wait_out
+		bsr	sndReqCmd
 		swap	d6
 		swap	d7
 		rts
@@ -210,19 +204,21 @@ Sound_DMA_Resume:
 ; --------------------------------------------------------
 ; SoundReq_SetTrack
 ;
-; a0 - Pointer to Pattern, Blocks and Instruments list
+; a0 | Pointer to Pattern, Blocks and Instruments list
 ;      in this order:
 ;  	dc.l pattern_data
 ;  	dc.l block_data
 ;  	dc.l instrument_data
+;  	(Pointers should be in the
+;  	$880000/$900000 areas)
 ;
-; d0 - Slot
-; d1 - Ticks
-; d2 - From block
-; d3 - Flags: %00004321
-; 	1234 - Use global tempos 1,2,3 or 4
+; d0 | BYTE - Track slot
+; d1 | BYTE - Ticks
+; d2 | BYTE - Start from this block position
+; d3 | BYTE - Flags: %00004321
+; 	      4321 - Use global tempos: 1,2,3 or 4
 ;
-; Uses:
+; Breaks:
 ; d6-d7,a5-a6
 ; --------------------------------------------------------
 
@@ -250,7 +246,13 @@ Sound_TrkPlay:
 ; --------------------------------------------------------
 ; SoundReq_StopTrack (Pause too.)
 ;
-; d0 - Slot
+; Stops OR Pauses current track
+;
+; Input:
+; d0 | BYTE - Track slot
+;
+; Breaks:
+; d6-d7,a5-a6
 ; --------------------------------------------------------
 
 Sound_TrkStop:
@@ -264,7 +266,13 @@ Sound_TrkStop:
 ; --------------------------------------------------------
 ; Sound_TrkResume
 ;
-; d0 - Slot
+; Resumes Paused track
+;
+; Input:
+; d0 | BYTE - Track slot
+;
+; Breaks:
+; d6-d7,a5-a6
 ; --------------------------------------------------------
 
 Sound_TrkResume:
@@ -278,8 +286,15 @@ Sound_TrkResume:
 ; --------------------------------------------------------
 ; Sound_TrkTicks
 ;
-; d0 - Slot
-; d1 - Ticks
+; Set ticks for the current track
+; (NTSC: 150/tick, PAL: 120/tick)
+;
+; Input:
+; d0 | BYTE - Track slot
+; d1 | BYTE - Ticks
+;
+; Breaks:
+; d6-d7,a5-a6
 ; --------------------------------------------------------
 
 Sound_TrkTicks:
@@ -293,13 +308,19 @@ Sound_TrkTicks:
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------
-; Sound_GlbTempo
+; Sound_GlbBeats
 ;
-; d0 - Slot
-; d1 - Tempo (WORD)
+; Set GLOBAL Sub-beats (not tempo...)
+;
+; Input:
+; d0 | BYTE - Track slot
+; d1 | WORD - Ticks
+;
+; Breaks:
+; d6-d7,a5-a6
 ; --------------------------------------------------------
 
-Sound_GlbTempo:
+Sound_GlbBeats:
 		bsr	sndReq_Enter
 		move.w	#$10,d7		; Command $10
 		bsr	sndReq_scmd
@@ -321,5 +342,3 @@ Z80_CODE:
 		phase Z80_CODE+*
 Z80_CODE_END:
 		align 2
-
-

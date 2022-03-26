@@ -1,20 +1,23 @@
 ; ====================================================================
-; PWM samples
+; ----------------------------------------------------------------
+; GEMA SOUND DRIVER: PWM Samples
 ;
 ; For SH2's visible areas: ROM ($02000000) or SDRAM ($06000000)
 ;
-; SDRAM is safest but it has very low storage
+; Notes:
+; - SDRAM is the safest but it has very low storage
 ;
-; ROM area can use all the 4 Megabytes of storage, BUT when the
-; RV bit is set, the sample data will be lost... but luckily
-; a "Wave-backup" feature is implemented to copy a small
-; amount of bytes of the sample data to a safe place for playback
-; while RV bit is active.
-; Do note that if the RV bit stays active too long it will cause
-; the sample to click.
-; ====================================================================
+; - ROM area can use all the 4 Megabytes of storage, BUT when the
+;   RV bit is set, the sample data will be lost...
+;   but a "Wave-backup" feature is implemented so a small
+;   amount of bytes of the sample data get copied into the
+;   SH2 side to a safe place for playback while RV bit is active.
+;
+;   Do note that if the RV bit stays active for too long it
+;   will cause the sample to get corrupted.
+; ----------------------------------------------------------------
 
-; Special sample data macro
+; gPwm filename,loopstart
 gPwm macro locate,loop
 .start
 	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
@@ -24,7 +27,7 @@ gPwm macro locate,loop
 	align 4			; align 4 for pwm's
 	endm
 
-; --------------------------------------------------------
+; ----------------------------------------------------------------
 	align 4			; FIRST ALIGN FOR PWMs
 
 PwmIns_Test_st:

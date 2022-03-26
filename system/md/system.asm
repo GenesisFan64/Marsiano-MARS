@@ -1,8 +1,9 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; System
+; Genesis system routines
 ; ----------------------------------------------------------------
 
+; ====================================================================
 ; --------------------------------------------------------
 ; Init System
 ; 
@@ -41,23 +42,138 @@ System_Init:
 		move.w	(sp)+,sr
 		rts
 
+; --------------------------------------------------------
+; Call this to wait for the next frame.
+;
+; This will update the controllers, process DMA tasks
+; from the BLAST list, also transfer stored
+; Genesis palette, sprites and the scrolling lines/2cells
+; from RAM (Doesn't require RV bit)
+; --------------------------------------------------------
+
+System_WaitFrame:
+		move.w	(vdp_ctrl),d4
+		btst	#bitVint,d4
+		beq.s	System_WaitFrame	; Wait until we reach VBlank
+		bsr	System_Input		; Read inputs FIRST
+
+	; DMA'd Scroll and Palette
+	; RV bit not needed here
+		lea	(vdp_ctrl),a6
+		move.w	#$8100,d7			; DMA ON
+		move.b	(RAM_VdpRegs+1),d7
+		bset	#bitDmaEnbl,d7
+		move.w	d7,(a6)
+		move.l	#$94009328,(a6)
+		move.l	#$96009500|(RAM_VerScroll<<7&$FF0000)|(RAM_VerScroll>>1&$FF),(a6)
+		move.w	#$9700|(RAM_VerScroll>>17&$7F),(a6)
+		move.w	#$4000,d7
+		move.w	#$0010|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
+		move.l	#$940193E0,(a6)
+		move.l	#$96009500|(RAM_HorScroll<<7&$FF0000)|(RAM_HorScroll>>1&$FF),(a6)
+		move.w	#$9700|(RAM_HorScroll>>17&$7F),(a6)
+		move.w	#$7C00,d7
+		move.w	#$0003|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
+		move.l	#$94019318,(a6)
+		move.l	#$96009500|(RAM_Sprites<<7&$FF0000)|(RAM_Sprites>>1&$FF),(a6)
+		move.w	#$9700|(RAM_Sprites>>17&$7F),(a6)
+		move.w	#$7800,d7
+		move.w	#$0003|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
+
+	; Palette dots will be hidden if we transfer
+	; the colors from here...
+		move.l	#$94009340,(a6)
+		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
+		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
+		move.w	#$C000,d7
+		move.w	#$0000|$80,-(sp)
+		move.w	d7,(a6)
+		move.w	(sp)+,(a6)
+		move.w	#$8100,d7
+		move.b	(RAM_VdpRegs+1).w,d7
+		move.w	d7,(a6)
+		bsr	Video_DmaBlast		; Process DMA Blast list
+		lea	(RAM_MdDreq),a0		; Send DREQ
+		move.w	#sizeof_dreq,d0
+		bsr	System_SendDreq
+		add.l	#1,(RAM_Framecount).l
+		rts
+
+; --------------------------------------------------------
+; System_SendDreq
+;
+; Send data to the 32X using DREQ and CMD interrupt
+;
+; Input:
+; a0 - LONG | Source data
+; d0 - WORD | Size (8byte aligned)
+;
+; NOTE:
+; THIS CODE ONLY WORKS PROPERLY ON THE
+; $880000/$900000 AREAS.
+; --------------------------------------------------------
+
+System_SendDreq:
+		move.w	sr,d7
+		move.w	#$2700,sr
+		lea	($A15112).l,a5			; a5 - DREQ FIFO port
+		move.w	d0,d6				; Length in bytes
+		lsr.w	#1,d6				; d6 - (length/2)
+.retry:
+		move.w	#0,(sysmars_reg+dreqctl).l	; Reset 68S (Force cancel first)
+		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LENgth
+		bset	#2,(sysmars_reg+dreqctl+1).l	; Set 68S bit
+		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
+; 		bne.s	.wait_cmd
+.wait_bit:	btst	#6,(sysmars_reg+comm12).l	; Wait comm bit signal from SH2 to fill the first words.
+		beq.s	.wait_bit
+		bclr	#6,(sysmars_reg+comm12).l	; Clear it afterwards.
+
+	; *** CRITICAL PART, MUST BE SYNCRONIZED ***
+		move.w	d6,d5				; (length/2)/4
+		lsr.w	#2,d5
+		sub.w	#1,d5				; minus 1 for the loop
+.l0:		move.w  (a0)+,(a5)
+		move.w  (a0)+,(a5)
+		move.w  (a0)+,(a5)
+		move.w  (a0)+,(a5)
+; .l1:		btst	#7,(sysmars_reg+dreqctl+1).l	; <-- Not needed
+; 		bne.s	.l1
+		dbf	d5,.l0
+; 		btst	#2,(sysmars_reg+dreqctl).l
+; 		bne	.retry
+		move.w	d7,sr
+		rts
+
 ; ====================================================================
+; ----------------------------------------------------------------
+; Subroutines
+; ----------------------------------------------------------------
+
 ; --------------------------------------------------------
 ; System_Input
 ;
-; CALL THIS ON VBLANK ONLY
+; Reads data from the Controller ports
+; *** CALL THIS ON VBLANK ONLY ***
 ; 
 ; Uses:
 ; d4-d6,a4-a6
 ; --------------------------------------------------------
 
 System_Input:
-; 		move.w	#$0100,(z80_bus).l
+; 		move.w	#$0100,(z80_bus).l	; TODO: check if need this...
 ; .wait:
 ; 		btst	#0,(z80_bus).l
 ; 		bne.s	.wait
-		lea	(sys_data_1),a5		; BASE Genesis Input regs area
-		lea	(RAM_InputData),a6
+		lea	(sys_data_1),a5		; a5 - BASE Genesis Input regs area
+		lea	(RAM_InputData),a6	; a6 - Output
 		bsr.s	.this_one
 		adda	#2,a5
 		adda	#sizeof_input,a6
@@ -105,13 +221,15 @@ System_Input:
 		dc.w .exit-.list	; $0C
 		dc.w .id_0D-.list	; $0D - Genesis controller (3 or 6 button)
 		dc.w .exit-.list
-		dc.w .exit-.list
+		dc.w .exit-.list	; $0F - No controller OR Master System controller (Buttons 1 and 2)
 
 ; --------------------------------------------------------
 ; ID $03
 ;
 ; Mega Mouse
 ; --------------------------------------------------------
+
+; *** NOT TESTED ON HARDWARE ***
 
 .id_03:
 		move.b	#$20,(a5)
@@ -181,7 +299,7 @@ System_Input:
 ; --------------------------------------------------------
 ; ID $0D
 ; 
-; Normal controller, Old or New
+; Normal controller, 3 button or 6 button.
 ; --------------------------------------------------------
 
 .id_0D:
@@ -263,7 +381,7 @@ System_Input:
 ; --------------------------------------------------------
 ; System_Random
 ; 
-; Set random value
+; Picks a random value
 ; 
 ; Output:
 ; d0 | LONG
@@ -284,11 +402,11 @@ System_Random:
 ; --------------------------------------------------------
 ; System_SineWave_Cos / System_SineWave
 ;
-; Read sinewave value
+; Get sinewave value
 ;
 ; Input:
 ; d0 | WORD - Tan
-; d1 | WORD - Multiply by
+; d1 | WORD - Multiply
 ;
 ; Output:
 ; d2 | LONG - Result (as 0000.0000)
@@ -391,67 +509,17 @@ System_SramInit:
 		rts
 
 ; --------------------------------------------------------
-; System_VBlnk_Enter, System_VBlnk_Exit
-;
-; Call System_VBlank to wait for the next frame.
-; This will also update the control input and
-; do DMA transfers
+; Initialize current screen mode
 ; --------------------------------------------------------
 
-System_VBlank:
-
-.wait_vblnk:
-		move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
-		beq.s	.wait_vblnk
-		bsr	System_Input			; Read inputs FIRST
-
-	; DMA'd Scroll and Palette
-		lea	(vdp_ctrl),a6
-		move.w	#$8100,d7			; DMA ON
-		move.b	(RAM_VdpRegs+1),d7
-		bset	#bitDmaEnbl,d7
-		move.w	d7,(a6)
-; 		bsr	Sound_DMA_Pause			; Don't need this.
-		move.l	#$94009328,(a6)
-		move.l	#$96009500|(RAM_VerScroll<<7&$FF0000)|(RAM_VerScroll>>1&$FF),(a6)
-		move.w	#$9700|(RAM_VerScroll>>17&$7F),(a6)
-		move.w	#$4000,d7
-		move.w	#$0010|$80,-(sp)
-		move.w	d7,(a6)
-		move.w	(sp)+,(a6)
-		move.l	#$940193E0,(a6)
-		move.l	#$96009500|(RAM_HorScroll<<7&$FF0000)|(RAM_HorScroll>>1&$FF),(a6)
-		move.w	#$9700|(RAM_HorScroll>>17&$7F),(a6)
-		move.w	#$7C00,d7
-		move.w	#$0003|$80,-(sp)
-		move.w	d7,(a6)
-		move.w	(sp)+,(a6)
-		move.l	#$94019318,(a6)
-		move.l	#$96009500|(RAM_Sprites<<7&$FF0000)|(RAM_Sprites>>1&$FF),(a6)
-		move.w	#$9700|(RAM_Sprites>>17&$7F),(a6)
-		move.w	#$7800,d7
-		move.w	#$0003|$80,-(sp)
-		move.w	d7,(a6)
-		move.w	(sp)+,(a6)
-		move.l	#$94009340,(a6)
-		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
-		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
-		move.w	#$C000,d7
-		move.w	#$0000|$80,-(sp)		; Palette is transfered here so
-		move.w	d7,(a6)				; those dots will not get shown
-		move.w	(sp)+,(a6)			; on non-CRT displays
-; 		bsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
-		move.w	#$8100,d7			; DMA OFF
-		move.b	(RAM_VdpRegs+1).w,d7
-		move.w	d7,(a6)
-
-		bsr	Video_DmaBlast		; DMA tasks
-		add.l	#1,(RAM_Framecount).l
-
-		lea	(RAM_MdDreq),a0
-		move.w	#sizeof_dreq,d0
-		bsr	System_SendDreq
+Mode_Init:
+		bsr	Video_Clear
+		lea	(RAM_ModeBuff),a4
+		move.w	#(MAX_MDERAM/2)-1,d5
+		moveq	#0,d4
+.clr:
+		move.w	d4,(a4)+
+		dbf	d5,.clr
 		rts
 
 ; ; --------------------------------------------------------
@@ -472,20 +540,6 @@ System_VBlank:
 ; 		move.b	(a0)+,(a1)+
 ; 		dbf	d7,.copyme2
 ; 		jmp	(RAMCODE_USER).l
-
-; --------------------------------------------------------
-; Initialize current screen mode
-; --------------------------------------------------------
-
-Mode_Init:
-		bsr	Video_Clear
-		lea	(RAM_ModeBuff),a4
-		move.w	#(MAX_MDERAM/2)-1,d5
-		moveq	#0,d4
-.clr:
-		move.w	d4,(a4)+
-		dbf	d5,.clr
-		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -509,51 +563,6 @@ VInt_Default:
 
 HInt_Default:
 		rte
-
-; ====================================================================
-; --------------------------------------------------------
-; Send data to the 32X using DREQ
-;
-; Input:
-; a0 - Data to send
-; d0 - Size (8byte aligned)
-;
-; NOTE: THIS CODE ONLY WORKS PROPERLY ON
-; THE $880000/$900000 AREAS.
-; --------------------------------------------------------
-
-System_SendDreq:
-		move.w	sr,d7
-		move.w	#$2700,sr
-		lea	($A15112).l,a5			; a5 - DREQ FIFO port
-		move.w	d0,d6				; Lenght in bytes
-		lsr.w	#1,d6				; lenght/2
-.retry:
-		move.w	#0,(sysmars_reg+dreqctl).l	; Reset 68S
-		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LENght
-		bset	#2,(sysmars_reg+dreqctl+1).l	; Set 68S bit
-		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
-; 		bne.s	.wait_cmd
-.wait_bit:	btst	#6,(sysmars_reg+comm12).l	; Wait comm bit signal from SH2 to fill the first words.
-		beq.s	.wait_bit
-		bclr	#6,(sysmars_reg+comm12).l	; Clear it afterwards.
-
-	; *** CRITICAL PART ***
-		move.w	d6,d5			; (lenght/2)/4
-		lsr.w	#2,d5
-		sub.w	#1,d5			; minus 1 for the loop
-.l0:		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)
-; .l1:		btst	#7,(sysmars_reg+dreqctl+1).l
-; 		bne.s	.l1
-		dbf	d5,.l0
-; 		btst	#2,(sysmars_reg+dreqctl).l
-; 		bne	.retry
-		move.w	d7,sr
-		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------

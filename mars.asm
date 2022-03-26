@@ -4,10 +4,10 @@
 ; +-----------------------------------------------------------------+
 
 		include	"system/macros.asm"	; Assembler macros
+		include	"system/shared.asm"	; Shared Genesis/32X variables
 		include	"system/md/map.asm"	; Genesis hardware map
-		include	"system/md/const.asm"	; Genesis variables (and some shared with SH2)
+		include	"system/md/const.asm"	; Genesis variables
 		include	"system/mars/map.asm"	; 32X hardware map
-		include	"system/mars/dreq.asm"	; DREQ map for both sides
 		include "code/global.asm"	; Global user variables on the Genesis
 		include	"system/head.asm"	; 32X header
 
@@ -16,22 +16,27 @@
 ; Main 68k code
 ; ----------------------------------------------------------------
 
-		jmp	(thisCode_Top).l
+		jmp	(MD_Mode0).l
 
 ; ====================================================================
 ; --------------------------------------------------------
 ; Section stored at the $880000 area
 ; --------------------------------------------------------
 
-MdRamCode:
 		phase $880000+*
+Md_TopCode:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
 		include "code/default.asm"
+Md_TopCode_end:
 		dephase
-MdRamCode_end:
 		align 2
+
+	if MOMPASS=6
+.end:
+		message "Fixed 68K code ends at: \{Md_TopCode_end}"
+	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -44,14 +49,21 @@ MdRamCode_end:
 ; First one is smaller than the others...
 ; ---------------------------------------------
 
-		phase $900000+*				; Only one currently
+		phase $900000+*			; Only one currently
+MDBNK0_START:
 		include "sound/tracks.asm"
 		include "sound/instr.asm"
 		include "sound/smpl_dac.asm"
 		include "data/md_bank0.asm"
+MDBNK0_END:
 		dephase
-; 		org $100000-4				; Fill this bank and
-; 		dc.b "BNK0"				; add a tag at the end
+; 		org $100000-4			; Fill this bank and
+; 		dc.b "BNK0"			; add a tag at the end
+
+	if MOMPASS=6
+.end:
+		message "68k BANK 0: \{MDBNK0_START}-\{MDBNK0_END}"
+	endif
 
 ; ---------------------------------------------
 ; BANK 1
@@ -107,7 +119,7 @@ MARS_RAMDATA_E:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; MARS exclusive data for SH2's ROM view
+; 32X data for SH2's ROM view
 ; This section will be gone if RV=1
 ; --------------------------------------------------------
 

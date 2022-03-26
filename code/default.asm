@@ -62,7 +62,7 @@ RAM_CurrSelc	ds.w 1
 ; Code start
 ; ------------------------------------------------------
 
-thisCode_Top:
+MD_Mode0:
 		move.w	#$2700,sr
 		bsr	Sound_init
 		bsr	Video_init
@@ -88,7 +88,7 @@ thisCode_Top:
 		move.b	#%111,(RAM_VdpRegs+$B).l	; Horizontall linescroll
 		bsr	Video_Update
 
-		lea	MasterTrkList+$10(pc),a0
+		lea	MasterTrkList(pc),a0
 		move.w	$C(a0),d1
 		move.w	$E(a0),d3
 		moveq	#0,d0
@@ -120,7 +120,7 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		bsr	System_VBlank
+		bsr	System_WaitFrame
 		move.w	(RAM_CurrPage).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -180,9 +180,6 @@ thisCode_Top:
 		bsr	Video_Print
 		bsr	.page0_cursor
 .page0:
-		bsr	Video_RunFade
-		bne	.page0_ret
-
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		bne.s	.page0_jump
@@ -214,7 +211,7 @@ thisCode_Top:
 		move.l	#1152,Dreq_BgEx_W(a0)
 		move.l	#368,Dreq_BgEx_H(a0)
 		move.l	#$00900000,Dreq_BgEx_Y(a0)	; Y add
-		bsr	System_VBlank
+		bsr	System_WaitFrame
 
 		move.l	#ART_FGTEST,d0
 		move.w	#$280*$20,d1
@@ -398,7 +395,7 @@ thisCode_Top:
 
 		bsr	.fade_in
 .page3:
-; 		bsr	System_VBlank
+; 		bsr	System_WaitFrame
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.l	#$4000,mdl_x_rot(a0)
 ; 		add.l	#$1000,mdl_z_rot(a0)
@@ -423,7 +420,7 @@ thisCode_Top:
 		move.w	#2,(RAM_FadeMdDelay).w
 		move.w	#2,(RAM_FadeMarsDelay).w
 .inw:
-		bsr	System_VBlank
+		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.inw
 		rts
@@ -436,7 +433,7 @@ thisCode_Top:
 		move.w	#2,(RAM_FadeMdDelay).w
 		move.w	#2,(RAM_FadeMarsDelay).w
 .ind:
-		bsr	System_VBlank
+		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.ind
 		rts
@@ -562,7 +559,7 @@ thisCode_Top:
 ; .fadeout:
 ; 		bsr	Video_RunFade
 ; 		beq.s	.exit
-; 		bsr	System_VBlank
+; 		bsr	System_WaitFrame
 ; 		lea	(RAM_MdDreq),a0
 ; 		move.w	#sizeof_dreq,d0
 ; 		bsr	System_SendDreq
@@ -1150,10 +1147,3 @@ Dplc_Nicole:
 		include "data/md/sprites/emi_plc.asm"
 		align 2
 
-
-; ====================================================================
-; Report size
-	if MOMPASS=6
-.end:
-		message "This 68K RAM-CODE uses: \{.end-thisCode_Top}"
-	endif
