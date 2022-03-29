@@ -53,7 +53,7 @@ System_Init:
 
 System_WaitFrame:
 		move.w	(vdp_ctrl),d4
-		btst	#bitVint,d4
+		btst	#bitVBlk,d4
 		beq.s	System_WaitFrame	; Wait until we reach VBlank
 		bsr	System_Input		; Read inputs FIRST
 
@@ -99,9 +99,11 @@ System_WaitFrame:
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
 		bsr	Video_DmaBlast		; Process DMA Blast list
+
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
 		bsr	System_SendDreq
+
 		add.l	#1,(RAM_Framecount).l
 		rts
 
@@ -513,7 +515,7 @@ System_SramInit:
 ; --------------------------------------------------------
 
 Mode_Init:
-		bsr	Video_Clear
+; 		bsr	Video_Clear
 		lea	(RAM_ModeBuff),a4
 		move.w	#(MAX_MDERAM/2)-1,d5
 		moveq	#0,d4

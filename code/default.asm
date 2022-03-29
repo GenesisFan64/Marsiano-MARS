@@ -8,8 +8,9 @@
 ; Variables
 ; ------------------------------------------------------
 
-var_MoveSpd	equ	$4000
-MAX_TSTTRKS	equ	3
+set_StartPage	equ	0
+
+; MAX_TSTTRKS	equ	3
 MAX_TSTENTRY	equ	4
 
 ; ====================================================================
@@ -45,10 +46,10 @@ RAM_CurrSelc	ds.w 1
 ; RAM_EmiHide	ds.w 1
 ; RAM_CurrPage	ds.w 1
 ; RAM_CurrSelc	ds.w 1
-; RAM_CurrIndx	ds.w 1
-; RAM_CurrTrack	ds.w 1
-; RAM_CurrTicks	ds.w 1
-; RAM_CurrTempo	ds.w 1
+RAM_CurrIndx	ds.w 1
+RAM_CurrTrack	ds.w 1
+RAM_CurrTicks	ds.w 1
+RAM_CurrTempo	ds.w 1
 ; RAM_WindowCurr	ds.w 1
 ; RAM_WindowNew	ds.w 1
 ;
@@ -67,44 +68,27 @@ MD_Mode0:
 		bsr	Sound_init
 		bsr	Video_init
 		bsr	System_Init
-		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
-		bsr	Video_Update
-		bsr	Mode_Init
-		bsr	Video_PrintInit
 
-; 		move.w	#$9200,d0
-; 		move.w	d0,(RAM_WindowCurr).w
-; 		move.w	d0,(RAM_WindowNew).w
-
-	; Load palettes for fade-in
-		lea	PAL_TESTBOARD(pc),a0
-		moveq	#0,d0
-		move.w	#$20,d1
-		bsr	Video_FadePal
-		clr.w	(RAM_MdMarsPalFd).w
-		clr.w	(RAM_MdDreq+Dreq_Palette).w
+; 		bsr	Mode_Init
 
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
 		move.b	#%111,(RAM_VdpRegs+$B).l	; Horizontall linescroll
 		bsr	Video_Update
 
-		lea	MasterTrkList(pc),a0
-		move.w	$C(a0),d1
-		move.w	$E(a0),d3
-		moveq	#0,d0
-		moveq	#0,d2
-		bsr	Sound_TrkPlay
+; 		lea	MasterTrkList(pc),a0
+; 		move.w	$C(a0),d1
+; 		move.w	$E(a0),d3
+; 		moveq	#0,d0
+; 		moveq	#0,d2
+; 		bsr	Sound_TrkPlay
 ; 		move.w	#200+12,(RAM_CurrTempo).w
 
 	; QUICKJUMP
-		move.w	#0,(RAM_CurrPage).w
-
-
+		move.w	#set_StartPage,(RAM_CurrPage).w
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test,mdl_data(a0)
 		move.l	#-$800,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
-
 		lea	(RAM_MdDreq+Dreq_SclData),a0
 		move.l	#TESTMARS_BG2,(a0)+
 		move.l	#$00000000,(a0)+	; X pos
@@ -151,8 +135,8 @@ MD_Mode0:
 		bra.w	.page3
 		bra.w	.page3_init
 
-		bra.w	.page0
-		bra.w	.page0_init
+		bra.w	.page4
+		bra.w	.page4_init
 
 		bra.w	.page0
 		bra.w	.page0_init
@@ -173,19 +157,34 @@ MD_Mode0:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
+		lea	PAL_TESTBOARD(pc),a0
+		moveq	#0,d0
+		move.w	#$20,d1
+		bsr	Video_FadePal
+		clr.w	(RAM_MdMarsPalFd).w
+		clr.w	(RAM_MdDreq+Dreq_Palette).w
+
 		move.w	#0,d0
 		bsr	Video_MarsSetGfx
 		lea	str_Title(pc),a0	; Print menu
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		bsr	.page0_cursor
+
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$E00,(vdp_data).l
+
 .page0:
+		lea	str_StatsPage0(pc),a0
+		move.l	#locate(0,2,9),d0
+		bsr	Video_Print
+
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		bne.s	.page0_jump
 		moveq	#3,d0			; Numof entries
 		bsr	.move_cursor_ud		; Move U/D
-		beq.s	.page0_ret
+		beq	.page0_ret
 .page0_cursor:
 		move.l	#locate(0,2,3),d1
 		bra	.print_cursor
@@ -239,6 +238,7 @@ MD_Mode0:
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
+		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.this_bg
 		bsr	.fade_in
 .page1:
@@ -314,6 +314,8 @@ MD_Mode0:
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
+		clr.w	(RAM_MdMarsPalFd).w
+		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.fade_in
 .page2:
 		lea	(RAM_MdDreq),a0
@@ -406,6 +408,179 @@ MD_Mode0:
 		bsr	.fade_out
 .page3_ret:
 		rts
+
+; ====================================================================
+; --------------------------------------------------
+; Page 4
+; --------------------------------------------------
+
+.page4_init:
+		bsr	Video_ClearScreen
+		or.w	#$8000,(RAM_CurrPage).w
+		clr.w	(RAM_CurrSelc).w
+
+; 		move.l	#ART_FGTEST,d0
+; 		move.w	#$280*$20,d1
+; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
+; 		bsr	Video_LoadArt
+; 		move.l	#ART_BGTEST,d0
+; 		move.w	#1*$20,d1
+; 		move.w	#ART_BGTEST_e-ART_BGTEST,d2
+; 		bsr	Video_LoadArt
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(0,0,0),d0
+; 		move.l	#mapsize(512,256),d1
+; 		move.w	#$2000+$0280,d2
+; 		bsr	Video_LoadMap
+		lea	(MAP_BGTEST),a0
+		move.l	#locate(1,0,0),d0
+		move.l	#mapsize(512,256),d1
+		move.w	#$0001,d2
+		bsr	Video_LoadMap
+
+		lea	str_Gema(pc),a0
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
+		move.w	#0,d0
+		bsr	Video_MarsSetGfx
+		bsr	.page4_update
+		bsr	.fade_in
+.page4:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyY,d7
+		beq.s	.noy2
+		cmp.w	#1,(RAM_CurrIndx).w
+		beq.	.noy2
+		add.w	#1,(RAM_CurrIndx).w
+		bsr	.page4_update
+.noy2:
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyX,d7
+		beq.s	.nox2
+		tst.w	(RAM_CurrIndx).w
+		beq.s	.nox2
+		sub.w	#1,(RAM_CurrIndx).w
+		bsr	.page4_update
+.nox2:
+
+	; UP/DOWN
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyUp,d7
+		beq.s	.nou2
+		tst.w	(RAM_CurrSelc).w
+		beq.s	.nou2
+		sub.w	#1,(RAM_CurrSelc).w
+		bsr	.page4_update
+.nou2:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyDown,d7
+		beq.s	.nod2
+		cmp.w	#MAX_TSTENTRY,(RAM_CurrSelc).w
+		bge.s	.nod2
+		add.w	#1,(RAM_CurrSelc).w
+		bsr	.page4_update
+.nod2:
+
+; 	; LEFT/RIGHT
+		lea	(RAM_CurrTrack),a1
+		cmp.w	#3,(RAM_CurrSelc).w
+		bne.s	.toptrk
+		add	#2,a1
+.toptrk:
+		cmp.w	#4,(RAM_CurrSelc).w
+		bne.s	.toptrk2
+		add	#2*2,a1
+.toptrk2:
+		move.w	(Controller_1+on_hold),d7
+		and.w	#JoyB,d7
+		beq.s	.noba
+		add.w	#1,(a1)
+		bsr	.page4_update
+.noba:
+		move.w	(Controller_1+on_hold),d7
+		and.w	#JoyA,d7
+		beq.s	.noaa
+		sub.w	#1,(a1)
+		bsr	.page4_update
+.noaa:
+
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyLeft,d7
+		beq.s	.nol
+; 		tst.w	(a1)
+; 		beq.s	.nol
+		sub.w	#1,(a1)
+		bsr	.page4_update
+.nol:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyRight,d7
+		beq.s	.nor
+; 		cmp.w	#MAX_TSTTRKS,(a1)
+; 		bge.s	.nor
+		add.w	#1,(a1)
+		bsr	.page4_update
+.nor:
+
+		move.w	(Controller_1+on_press),d7
+		and.w	#JoyC,d7
+		beq.s	.noc_c
+		move.w	(RAM_CurrIndx).w,d0
+		bsr	.procs_task
+.noc_c:
+
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyStart,d7
+		beq.s	.page4_ret
+		move.w	#0,(RAM_CurrPage).w
+		bsr	.fade_out
+.page4_ret:
+		rts
+
+.page4_update:
+		lea	str_Status(pc),a0
+		move.l	#locate(0,20,4),d0
+		bsr	Video_Print
+		lea	str_Cursor(pc),a0
+		moveq	#0,d0
+		move.w	(RAM_CurrSelc).w,d0
+		add.l	#locate(0,2,5),d0
+		bsr	Video_Print
+		rts
+
+; d1 - Track slot
+.procs_task:
+		move.w	(RAM_CurrSelc).w,d7
+		add.w	d7,d7
+		move.w	.tasklist(pc,d7.w),d7
+		jmp	.tasklist(pc,d7.w)
+.tasklist:
+		dc.w .task_00-.tasklist
+		dc.w .task_01-.tasklist
+		dc.w .task_02-.tasklist
+		dc.w .task_03-.tasklist
+		dc.w .task_04-.tasklist
+; 		dc.w .task_05-.tasklist
+
+; d0 - Track slot
+.task_00:
+		lea	MasterTrkList(pc),a0
+		move.w	(RAM_CurrTrack).w,d7
+		lsl.w	#4,d7
+		lea	(a0,d7.w),a0
+		move.w	$C(a0),d1
+		moveq	#0,d2
+		move.w	$E(a0),d3
+		bra	Sound_TrkPlay
+.task_01:
+		bra	Sound_TrkStop
+.task_02:
+		bra	Sound_TrkResume
+.task_03:
+		move.w	(RAM_CurrTicks).w,d1
+		bra	Sound_TrkTicks
+.task_04:
+		move.w	(RAM_CurrTempo).w,d1
+		bra	Sound_GlbBeats
 
 ; ====================================================================
 ; ----------------------------------------------
@@ -873,8 +1048,8 @@ MD_Mode0:
 ;
 ; ; test playlist
 MasterTrkList:
-	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
-	dc.w 3,%001
+; 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
+; 	dc.w 3,%001
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
 	dc.w 3,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
@@ -1060,57 +1235,59 @@ str_Title:
 		dc.b "  Graphics mode 01",$A
 		dc.b "  Graphics mode 02",$A
 		dc.b "  Graphics mode 03",$A
-		dc.b "  GEMA sound player",0
+		dc.b "  GEMA sound tester",0
 		align 2
 
-str_Page1:
-		dc.b "Testing GfxMode 01",0
-		align 2
-str_Page1_l:
-		dc.b "\\l \\l",0
-		dc.l RAM_MdDreq+Dreq_BgEx_X
-		dc.l RAM_MdDreq+Dreq_BgEx_Y
-		align 2
+; str_Page1:
+; 		dc.b "Testing GfxMode 01",0
+; 		align 2
+; str_Page1_l:
+; 		dc.b "\\l \\l",0
+; 		dc.l RAM_MdDreq+Dreq_BgEx_X
+; 		dc.l RAM_MdDreq+Dreq_BgEx_Y
+; 		align 2
 str_Page2:
 		dc.b "Testing GfxMode 02",0
 		align 2
 str_Page3:
 		dc.b "Testing 3D Objects",0
 		align 2
+str_Page4:	dc.b "GEMA",0
+		align 2
 
 ;
-; str_Status:
-; 		dc.b "\\w",$A,$A
-; 		dc.b "\\w",$A,$A,$A
-; 		dc.b "\\w",$A
-; 		dc.b "\\w",0
-; 		dc.l RAM_CurrIndx
-; 		dc.l RAM_CurrTrack
-; 		dc.l RAM_CurrTicks
-; 		dc.l RAM_CurrTempo
-; 		align 2
-; str_Gema:
-; 		dc.b "GEMA SOUND DRIVER TESTER",$A
-; 		dc.b $A
-; 		dc.b "Track index -----",$A,$A
-; 		dc.b "  Sound_TrkPlay",$A
-; 		dc.b "  Sound_TrkStop",$A
-; 		dc.b "  Sound_TrkResume",$A
-; 		dc.b "  Sound_TrkTicks",$A
-; 		dc.b "  Sound_GlbTempo",0
-; 		align 2
-; ; str_COMM:
-; ; 		dc.b "\\w \\w \\w \\w",$A
-; ; 		dc.b "\\w \\w \\w \\w",0
-; ; 		dc.l sysmars_reg+comm0
-; ; 		dc.l sysmars_reg+comm2
-; ; 		dc.l sysmars_reg+comm4
-; ; 		dc.l sysmars_reg+comm6
-; ; 		dc.l sysmars_reg+comm8
-; ; 		dc.l sysmars_reg+comm10
-; ; 		dc.l sysmars_reg+comm12
-; ; 		dc.l sysmars_reg+comm14
-; ; 		align 2
+str_Status:
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A,$A
+		dc.b "\\w",$A
+		dc.b "\\w",0
+		dc.l RAM_CurrIndx
+		dc.l RAM_CurrTrack
+		dc.l RAM_CurrTicks
+		dc.l RAM_CurrTempo
+		align 2
+str_Gema:
+		dc.b "GEMA SOUND DRIVER TESTER",$A
+		dc.b $A
+		dc.b "Track index -----",$A,$A
+		dc.b "  Sound_TrkPlay",$A
+		dc.b "  Sound_TrkStop",$A
+		dc.b "  Sound_TrkResume",$A
+		dc.b "  Sound_TrkTicks",$A
+		dc.b "  Sound_GlbTempo",0
+		align 2
+str_StatsPage0:
+		dc.b "\\w \\w \\w \\w",$A
+		dc.b "\\w \\w \\w \\w",0
+		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm2
+		dc.l sysmars_reg+comm4
+		dc.l sysmars_reg+comm6
+		dc.l sysmars_reg+comm8
+		dc.l sysmars_reg+comm10
+		dc.l sysmars_reg+comm12
+		dc.l sysmars_reg+comm14
+		align 2
 ;
 ; str_InfoMouse:
 ; 		dc.b "comm0: \\w",$A

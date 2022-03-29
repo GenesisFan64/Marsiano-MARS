@@ -1,11 +1,12 @@
 ; ====================================================================
-; ----------------------------------------------------------------
-; GEMA SOUND DRIVER: DAC Samples
+; DAC samples
 ;
-; This must be located at the $900000 area.
-; ----------------------------------------------------------------
+; This must be located at the 900000 area.
+; ====================================================================
 
-; gSmpl filename,loopstart
+; Special sample data macro
+;
+; aligns by 4 at the end so the sample can recycled on 32X
 gSmpl macro locate,loop
 .start
 	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
@@ -14,7 +15,8 @@ gSmpl macro locate,loop
 .end
 	endm
 
-; ----------------------------------------------------------------
+; DacIns_Test:
+; 	gSmpl "sound/instr/smpl/baila.wav",0
 
 DacIns_wegot_kick:
 	gSmpl "sound/instr/smpl/wegot_kick.wav",0

@@ -12,7 +12,6 @@ MAX_MDDMATSK	equ 16			; MAX DMA BLAST entries
 
 MDRAM_START	equ $FFFF9000		; Start of Genesis working RAM
 MAX_MDERAM	equ $800		; Maximum RAM for current Screen mode
-varNullVram	equ $7FF		; Default Blank cell for some video routines
 
 ; ====================================================================
 ; ----------------------------------------------------------------

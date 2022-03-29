@@ -557,7 +557,6 @@ s_irq_cmd:
 .get_out:
 		bra	.no_ztrnsfr
 		nop
-		align 4
 
 ; ---------------------------------
 ; CMD Mode 2: PWM Backup enter
@@ -574,7 +573,6 @@ s_irq_cmd:
 		mov	#0,r0
 		bra	.no_trnsfrex
 		mov.b	r0,@r1
-		align 4
 
 ; ---------------------------------
 ; CMD Mode 3: PWM Backup exit
@@ -588,7 +586,6 @@ s_irq_cmd:
 		mov	#0,r0
 		bra	.no_trnsfrex
 		mov.b	r0,@r1
-		align 4
 
 ; ---------------------------------
 ; CMD Mode 1: Z80 transfer
@@ -783,11 +780,11 @@ s_irq_cmd:
 
 .no_ztrnsfr:
 
-		nop
-		nop
-		nop
-		nop
-		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
 		rts
 		nop
 		align 4
@@ -1232,6 +1229,7 @@ mstr_gfx2:
 		mov.w	r0,@(marsGbl_XShift,gbr)
 		bsr	MarsVideo_MoveBg
 		nop
+
 		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
 		jsr	@r0
 		nop
@@ -1260,7 +1258,7 @@ mstr_gfx2:
 ; Mode 3:
 ; Scalable 256-color screen
 ;
-; Drops frames.
+; Frame drops
 ; ---------------------------------------
 
 mstr_gfx3_hblk:
@@ -1279,9 +1277,9 @@ mstr_gfx3_vblk:
 		dt	r4
 		bf/s	.copy_me
 		add	#4,r3
-		mov.w	@r4,r0
+		mov.w	@r5,r0
 		or	#$01,r0		; Slave task $01
-		mov.w	r0,@r4
+		mov.w	r0,@r5
 		rts
 		nop
 mstr_gfx3_init:
@@ -1438,11 +1436,11 @@ mstr_gfx4_hblk:
 		nop
 
 mstr_gfx4_vblk:
-; 		mov	#_sysreg+comm14,r4
-; 		mov.w	@r4,r0
-; 		and	#%01111111,r0
-; 		tst	r0,r0
-; 		bf	.slv_busy
+		mov	#_sysreg+comm14,r4
+		mov.w	@r4,r0
+		and	#%01111111,r0
+		tst	r0,r0
+		bf	.wait_slv
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models from here.
 		mov	#RAM_Mars_Objects,r2
 		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
@@ -1458,7 +1456,7 @@ mstr_gfx4_vblk:
 		mov.w	@r4,r0
 		or	#$02,r0		; Slave task $02
 		mov.w	r0,@r4
-.slv_busy:
+.wait_slv:
 		rts
 		nop
 
@@ -1674,9 +1672,9 @@ SH2_S_HotStart:
 		add	r3,r1
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
-		bra	slave_loop
-		nop
-		align 4
+; 		bra	slave_loop
+; 		nop
+; 		align 4
 
 ; ----------------------------------------------------------------
 ; SLAVE CPU loop
@@ -1700,39 +1698,23 @@ slave_loop:
 		mov	#_sysreg+comm14,r2
 		mov.w	@r2,r0			; r0 - INIT bit
 		and	#%1111,r0
-		tst	r0,r0
-		bt	slave_loop
 		shll2	r0
-		mov	@(r3,r0),r4
-		jmp	@r4
+		mov	@(r3,r0),r3
+		jmp	@r3
 		nop
 		align 4
 .list:
 		dc.l slave_loop		; $00 - go back
 		dc.l .slv_task_1	; $01 - Draw BOTTOM half of Scaled BG (TODO: later...)
 		dc.l .slv_task_2	; $02 - Build 3D models
-		dc.l slave_loop		; $03
-		dc.l slave_loop		; $04
-		dc.l slave_loop		; $05
-		dc.l slave_loop		; $06
-		dc.l slave_loop		; $07
-		dc.l slave_loop		; $08
-		dc.l slave_loop		; $09
-		dc.l slave_loop		; $0A
-		dc.l slave_loop		; $0B
-		dc.l slave_loop		; $0C
-		dc.l slave_loop		; $0D
-		dc.l slave_loop		; $0E
-		dc.l slave_loop		; $0F
+		dc.l .slv_task_1
 
 ; ============================================================
 ; ---------------------------------------
-; Task mode 1:
+; Slave Task $01:
 ; Helps MASTER to draw the bottom half
 ; of the scaled background
 ; ---------------------------------------
-
- ; FIXME
 
 .slv_task_1:
 
@@ -1748,8 +1730,114 @@ slave_loop:
 	; r9 - line size / 2
 	; r10 - Number of lines
 
+		mov	#RAM_Mars_BgBuffScale_S,r14
+		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
+
+		mov	@r14+,r7		; r7 - Input
+		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
+		mov	@r14+,r2		; r2 - Y pos
+		mov	@r14+,r3		; r3 - DX
+		mov	@r14+,r4		; r4 - DY
+		mov	@r14+,r5		; r5 - X width
+		mov	@r14+,r6		; r6 - Y height
+		shll16	r5
+		shll16	r6
+		dmuls	r1,r5			; Topleft X/Y calc
+		sts	mach,r0
+		sts	macl,r1
+		xtrct	r0,r1
+		dmuls	r2,r6
+		sts	mach,r0
+		sts	macl,r2
+		xtrct	r0,r2
+	; SLAVE ONLY: Manually get to the middle...
+		mov	#240/2,r10		; r10 - Y loop
+.ymiddle:
+		cmp/pz	r2
+		bt	.xy_set2
+		bra	.ymiddle
+		add	r6,r2
+.xy_set2:
+; 		cmp/ge	r6,r2
+; 		bf	.y_high2
+; 		bra	.xy_set2
+; 		sub	r6,r2
+; .y_high2:
+		dt	r10
+		bf/s	.ymiddle
+		add	r4,r2
+
+; *** LOOP
+		mov	#320/2,r9		; r9  - X loop
+		mov	#240/2,r10		; r10 - Y loop
+.y_loop2:
+		cmp/pz	r1
+		bt	.y_add
+		bra	.y_loop2
+		add	r5,r1
+.y_add:
+
+
+; *** LOOP
+.y_loop:
+		cmp/pz	r2
+		bt	.xy_set
+		bra	.y_loop
+		add	r6,r2
+.xy_set:
+		cmp/ge	r6,r2
+		bf	.y_high
+		bra	.xy_set
+		sub	r6,r2
+.y_high:
+		mov	r1,r11
+		shlr	r11			; /2
+		mov	r2,r0
+		shlr16	r0
+		mov	r5,r8
+		shlr16	r8
+		muls	r8,r0
+		sts	macl,r12
+		add	r7,r12
+		mov	r13,r8
+		mov	r9,r14
+.x_loop:
+		mov	r5,r0
+		shar	r0		; /2
+
+	; checks both negative and positive
+		cmp/pl	r11
+		bt	.xwpos
+.x_loopm:	cmp/ge	r0,r11
+		bt	.x_high
+		bra	.x_loopm
+		add	r0,r11
+.xwpos:
+		cmp/ge	r0,r11
+		bf	.x_high
+		bra	.xwpos
+		sub	r0,r11
+.x_high:
+		mov	r11,r0
+		shlr16	r0
+		exts	r0,r0
+		shll	r0
+		mov.w	@(r12,r0),r0
+		add	r3,r11
+		mov.w	r0,@r8
+		dt	r14
+		bf/s	.x_loop
+		add	#2,r8
+
+		add	r4,r2
+; 		add	r4,r2
+		mov	#320,r0
+		dt	r10
+		bf/s	.y_loop
+		add	r0,r13
+
 ; 		mov	#RAM_Mars_BgBuffScale_S,r14
-; 		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
+; 		mov	#(_framebuffer+$200)+($200*112),r8	; r8 - Output
 ;
 ; 		mov	@r14+,r7		; r7 - Input
 ; 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
@@ -1768,8 +1856,15 @@ slave_loop:
 ; 		sts	mach,r0
 ; 		sts	macl,r2
 ; 		xtrct	r0,r2
+; .y_loop2:
+; 		cmp/pz	r1
+; 		bt	.y_add
+; 		bra	.y_loop2
+; 		add	r5,r1
+; .y_add:
+;
 ; 	; SLAVE ONLY: Manually get to the middle...
-; 		mov	#240/2,r10		; r10 - Y loop
+; 		mov	#224/2,r10		; r10 - Y loop
 ; .ymiddle:
 ; 		cmp/pz	r2
 ; 		bt	.xy_set2
@@ -1787,16 +1882,7 @@ slave_loop:
 ;
 ; ; *** LOOP
 ; 		mov	#320/2,r9		; r9  - X loop
-; 		mov	#240/2,r10		; r10 - Y loop
-; .y_loop2:
-; 		cmp/pz	r1
-; 		bt	.y_add
-; 		bra	.y_loop2
-; 		add	r5,r1
-; .y_add:
-;
-;
-; ; *** LOOP
+; 		mov	#224/2,r10		; r10 - Y loop
 ; .y_loop:
 ; 		cmp/pz	r2
 ; 		bt	.xy_set
@@ -1812,12 +1898,12 @@ slave_loop:
 ; 		shlr	r11			; /2
 ; 		mov	r2,r0
 ; 		shlr16	r0
-; 		mov	r5,r8
-; 		shlr16	r8
-; 		muls	r8,r0
+; 		mov	r5,r13
+; 		shlr16	r13
+; 		muls	r13,r0
 ; 		sts	macl,r12
 ; 		add	r7,r12
-; 		mov	r13,r8
+; 		mov	r8,r13
 ; 		mov	r9,r14
 ; .x_loop:
 ; 		mov	r5,r0
@@ -1842,25 +1928,26 @@ slave_loop:
 ; 		shll	r0
 ; 		mov.w	@(r12,r0),r0
 ; 		add	r3,r11
-; 		mov.w	r0,@r8
+; 		mov.w	r0,@r13
 ; 		dt	r14
 ; 		bf/s	.x_loop
-; 		add	#2,r8
+; 		add	#2,r13
 ;
 ; 		add	r4,r2
 ; ; 		add	r4,r2
-; 		mov	#320,r0
+; 		mov	#$200,r0
 ; 		dt	r10
 ; 		bf/s	.y_loop
-; 		add	r0,r13
+; 		add	r0,r8
 
 		bra	.slv_exit
 		nop
-		align 4
 
 ; ============================================================
 ; ---------------------------------------
-; Task mode 2: Build 3D Models
+; Slave task $02:
+;
+; Build 3D Models
 ; FOR THE NEXT FRAME (not current)
 ; ---------------------------------------
 
@@ -1883,9 +1970,6 @@ slave_loop:
 		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
 		nop
-		bra	.slv_exit
-		nop
-		align 4
 
 ; ============================================================
 

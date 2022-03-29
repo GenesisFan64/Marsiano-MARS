@@ -12,7 +12,7 @@
 
 	; This align is for GEMS emulator only
 	; in case gets stuck in a black screen
-		align $80
+; 		align $80
 
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop

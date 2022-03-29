@@ -169,8 +169,9 @@ MarsVideo_Init:
 ; Subroutines
 ; ----------------------------------------------------------------
 
-; Palette routines were here, but now the 68k side
-; controls them...
+; 256-color Palette routines were here...
+; but the 68k controls the pallete now.
+; (Don't forget to transfer your changes using DREQ)
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -264,13 +265,15 @@ MarsVideo_SetScrlBg:
 ; --------------------------------------------------------
 ; MarsVideo_ShowScrlBg
 ;
-; Show the background on the framebuffer, after finishing
-; all screens call MarsVideo_FixTblShift before swap
+; Show the background on the screen.
 ;
 ; Input:
 ; r1 | Background buffer
 ; r2 | Top Y
 ; r3 | Bottom Y
+;
+; NOTE: after finishing all your screens
+; call MarsVideo_FixTblShift before doing frameswap
 ; --------------------------------------------------------
 
 MarsVideo_ShowScrlBg:
@@ -330,21 +333,21 @@ MarsVideo_ShowScrlBg:
 ; --------------------------------------------------------
 
 MarsVideo_FixTblShift:
-		mov.w	@(marsGbl_XShift,gbr),r0
+		mov.w	@(marsGbl_XShift,gbr),r0	; XShift is set?
 		and	#1,r0
 		cmp/eq	#1,r0
 		bf	.ptchset
-		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
-; 		mov.b	@(mbg_flags,r1),r0		; Background is Indexed?
+; 		mov.b	@(mbg_flags,r1),r0
 ; 		and	#%00000001,r0
 ; 		tst	r0,r0
 ; 		bf	.ptchset
-		mov	r14,r13
-		mov	#_framebuffer+FBVRAM_PATCH,r12	; r13 - Output for patched pixel lines
-		mov	#240,r11
-		mov	#$FF,r10
-		mov	#$FFFF,r9
-; 		mov	#-2,r8
+
+		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
+		mov	r14,r13				; r13 - Framebuffer lines to check
+		mov	#_framebuffer+FBVRAM_PATCH,r12	; r12 - Framebuffer output for the patched pixel lines
+		mov	#240,r11			; r11 - Lines to check
+		mov	#$FF,r10			; r10 - AND byte to check ($FF)
+		mov	#$FFFF,r9			;  r9 - AND word limit
 .loop:
 		mov.w	@r13,r0
 		and	r9,r0

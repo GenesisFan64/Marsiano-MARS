@@ -1,11 +1,10 @@
 # Marsiano-MARS
-A GameBase/Engine/Library for making Sega 32X Games in pure assembly for ALL CPUs
+A GameBase/Engine/Library for making Sega 32X Games in pure assembly on ALL CPUs *WORK IN PROGRESS*
 
 I'm also using this to research those real-hardware bugs and limitations that current emulators ignore.
-*WORK IN PROGRESS*
 
 Graphics:
-- Uses custom pseudo-screens modes, currently working modes: 256-color with smooth scrolling, 256-color scaling image and 3D objects mode.
+- Uses custom pseudo-screens modes, currently working: 256-color with smooth scrolling, 256-color scaling image and 3D objects mode.
 
 -- 256-color scrolling background --
 - Drawing is done using dirty-section method, moves smoothly and saves CPU processing.
@@ -16,7 +15,6 @@ Graphics:
 
 -- 3D objects --
 Uses both SH2s, Reads 3D models in a custom format: Python3 .obj importer is included.
-
 
 
 Sound, Genesis and 32X:
@@ -37,8 +35,10 @@ Notes/Current issues:
 - (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play corrupt wave data.
 
 Planned/TODO:
-- Scaleable 256-color background (but with low fps)
 - Implement NORMAL sprites, depending of the screen mode.
+- Add map layout support on normal-scrolling background
+- A generic-screen mode that supports all bitmap modes (Indexed,Direct,RLE) for things like title screens or cutscenes...
+
 
 LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 

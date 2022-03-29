@@ -1005,11 +1005,13 @@ mars_scomm:
 		jr	nz,.wait_enter
 		or	1		; Set CMD mode 1
 		ld	(iy+comm14),a
+		rst	8
 		and	00001111b	; did it write?
 		cp	1
 		jr	nz,.wait_enter
 		set	7,(iy+comm14)	; Enter transfer loop
 		set	1,(iy+standby)	; Request Slave CMD
+		rst	8
 .wait_cmd:
 		bit	1,(iy+standby)	; Got in?
 		jr	nz,.wait_cmd
