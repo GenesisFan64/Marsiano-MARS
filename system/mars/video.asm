@@ -220,6 +220,15 @@ MarsVideo_MkScrlField:
 		mov	r0,@(mbg_intrl_size,r1)
 		mov	r6,r0
 		mov.b	r0,@(mbg_flags,r1)
+
+		xor	r0,r0
+		mov.b	r0,@(mbg_xset,r1)
+		mov.b	r0,@(mbg_yset,r1)
+		mov.w	r0,@(mbg_xpos_old,r1)
+		mov.w	r0,@(mbg_ypos_old,r1)
+; 		mov	r0,@(mbg_fbdata,r1)
+		mov	r0,@(mbg_fbpos,r1)
+		mov.w	r0,@(mbg_yfb,r1)
 		rts
 		nop
 		align 4

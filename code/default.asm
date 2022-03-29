@@ -209,7 +209,8 @@ MD_Mode0:
 		move.l	#TESTMARS_BG,Dreq_BgEx_Data(a0)
 		move.l	#1152,Dreq_BgEx_W(a0)
 		move.l	#368,Dreq_BgEx_H(a0)
-		move.l	#$00900000,Dreq_BgEx_Y(a0)	; Y add
+		move.l	#$00000000,Dreq_BgEx_X(a0)
+		move.l	#$00900000,Dreq_BgEx_Y(a0)
 		bsr	System_WaitFrame
 
 		move.l	#ART_FGTEST,d0

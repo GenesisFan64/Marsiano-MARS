@@ -970,9 +970,9 @@ SH2_M_HotStart:
 		mov.w	#$A518,r0			; Disable Watchdog
 		mov.w	r0,@r1
 		mov	#_CCR,r1
-		mov	#$10,r0
+		mov	#%00001000,r0			; Two-way mode
 		mov.w	r0,@r1
-		mov	#$09,r0
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#CS3|$40000,r15			; Set default Stack for Master
 		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
@@ -1279,6 +1279,7 @@ mstr_gfx3_vblk:
 		dt	r4
 		bf/s	.copy_me
 		add	#4,r3
+		mov	#_sysreg+comm14,r4
 		mov.w	@r4,r0
 		or	#$01,r0		; Slave task $01
 		mov.w	r0,@r4
@@ -1438,11 +1439,11 @@ mstr_gfx4_hblk:
 		nop
 
 mstr_gfx4_vblk:
-; 		mov	#_sysreg+comm14,r4
-; 		mov.w	@r4,r0
-; 		and	#%01111111,r0
-; 		tst	r0,r0
-; 		bf	.slv_busy
+		mov	#_sysreg+comm14,r4
+		mov.w	@r4,r0
+		and	#%01111111,r0
+		tst	r0,r0
+		bf	.slv_busy
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models from here.
 		mov	#RAM_Mars_Objects,r2
 		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
@@ -1517,7 +1518,7 @@ mstr_gfx4:
 		stc	sr,r2
 		mov	#$F0,r0
 		ldc 	r0,sr
-; 		mov	#_CCR,r1			; <-- Required for Watchdog
+; 		mov	#_CCR,r1
 ; 		mov	#%00001000,r0			; Two-way mode
 ; 		mov.w	r0,@r1
 ; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
@@ -1650,9 +1651,9 @@ SH2_S_HotStart:
 		mov.w	#$A518,r0			; Disable Watchdog
 		mov.w	r0,@r1
 		mov	#_CCR,r1
-		mov	#$10,r0
+		mov	#%00001000,r0			; Two-way mode
 		mov.w	r0,@r1
-		mov	#$09,r0
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r1
 		mov	#CS3|$3F000,r15			; Reset stack
 		mov	#RAM_Mars_Global,r14		; Reset gbr
@@ -1677,6 +1678,7 @@ SH2_S_HotStart:
 		bra	slave_loop
 		nop
 		align 4
+		ltorg
 
 ; ----------------------------------------------------------------
 ; SLAVE CPU loop
@@ -1708,7 +1710,7 @@ slave_loop:
 		nop
 		align 4
 .list:
-		dc.l slave_loop		; $00 - go back
+		dc.l slave_loop		; $00
 		dc.l .slv_task_1	; $01 - Draw BOTTOM half of Scaled BG (TODO: later...)
 		dc.l .slv_task_2	; $02 - Build 3D models
 		dc.l slave_loop		; $03
@@ -1732,8 +1734,6 @@ slave_loop:
 ; of the scaled background
 ; ---------------------------------------
 
- ; FIXME
-
 .slv_task_1:
 
 	; MAIN scaler
@@ -1748,111 +1748,111 @@ slave_loop:
 	; r9 - line size / 2
 	; r10 - Number of lines
 
-; 		mov	#RAM_Mars_BgBuffScale_S,r14
-; 		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
-;
-; 		mov	@r14+,r7		; r7 - Input
-; 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
-; 		mov	@r14+,r2		; r2 - Y pos
-; 		mov	@r14+,r3		; r3 - DX
-; 		mov	@r14+,r4		; r4 - DY
-; 		mov	@r14+,r5		; r5 - X width
-; 		mov	@r14+,r6		; r6 - Y height
-; 		shll16	r5
-; 		shll16	r6
-; 		dmuls	r1,r5			; Topleft X/Y calc
-; 		sts	mach,r0
-; 		sts	macl,r1
-; 		xtrct	r0,r1
-; 		dmuls	r2,r6
-; 		sts	mach,r0
-; 		sts	macl,r2
-; 		xtrct	r0,r2
-; 	; SLAVE ONLY: Manually get to the middle...
-; 		mov	#240/2,r10		; r10 - Y loop
-; .ymiddle:
-; 		cmp/pz	r2
-; 		bt	.xy_set2
-; 		bra	.ymiddle
-; 		add	r6,r2
-; .xy_set2:
-; ; 		cmp/ge	r6,r2
-; ; 		bf	.y_high2
-; ; 		bra	.xy_set2
-; ; 		sub	r6,r2
-; ; .y_high2:
-; 		dt	r10
-; 		bf/s	.ymiddle
-; 		add	r4,r2
-;
-; ; *** LOOP
-; 		mov	#320/2,r9		; r9  - X loop
-; 		mov	#240/2,r10		; r10 - Y loop
-; .y_loop2:
-; 		cmp/pz	r1
-; 		bt	.y_add
-; 		bra	.y_loop2
-; 		add	r5,r1
-; .y_add:
-;
-;
-; ; *** LOOP
-; .y_loop:
-; 		cmp/pz	r2
-; 		bt	.xy_set
-; 		bra	.y_loop
-; 		add	r6,r2
-; .xy_set:
+		mov	#RAM_Mars_BgBuffScale_S,r14
+		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
+
+		mov	@r14+,r7		; r7 - Input
+		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
+		mov	@r14+,r2		; r2 - Y pos
+		mov	@r14+,r3		; r3 - DX
+		mov	@r14+,r4		; r4 - DY
+		mov	@r14+,r5		; r5 - X width
+		mov	@r14+,r6		; r6 - Y height
+		shll16	r5
+		shll16	r6
+		dmuls	r1,r5			; Topleft X/Y calc
+		sts	mach,r0
+		sts	macl,r1
+		xtrct	r0,r1
+		dmuls	r2,r6
+		sts	mach,r0
+		sts	macl,r2
+		xtrct	r0,r2
+	; SLAVE ONLY: Manually get to the middle...
+		mov	#240/2,r10		; r10 - Y loop
+.ymiddle:
+		cmp/pz	r2
+		bt	.xy_set2
+		bra	.ymiddle
+		add	r6,r2
+.xy_set2:
 ; 		cmp/ge	r6,r2
-; 		bf	.y_high
-; 		bra	.xy_set
+; 		bf	.y_high2
+; 		bra	.xy_set2
 ; 		sub	r6,r2
-; .y_high:
-; 		mov	r1,r11
-; 		shlr	r11			; /2
-; 		mov	r2,r0
-; 		shlr16	r0
-; 		mov	r5,r8
-; 		shlr16	r8
-; 		muls	r8,r0
-; 		sts	macl,r12
-; 		add	r7,r12
-; 		mov	r13,r8
-; 		mov	r9,r14
-; .x_loop:
-; 		mov	r5,r0
-; 		shar	r0		; /2
-;
-; 	; checks both negative and positive
-; 		cmp/pl	r11
-; 		bt	.xwpos
-; .x_loopm:	cmp/ge	r0,r11
-; 		bt	.x_high
-; 		bra	.x_loopm
-; 		add	r0,r11
-; .xwpos:
-; 		cmp/ge	r0,r11
-; 		bf	.x_high
-; 		bra	.xwpos
-; 		sub	r0,r11
-; .x_high:
-; 		mov	r11,r0
-; 		shlr16	r0
-; 		exts	r0,r0
-; 		shll	r0
-; 		mov.w	@(r12,r0),r0
-; 		add	r3,r11
-; 		mov.w	r0,@r8
-; 		dt	r14
-; 		bf/s	.x_loop
-; 		add	#2,r8
-;
+; .y_high2:
+		dt	r10
+		bf/s	.ymiddle
+		add	r4,r2
+
+; *** LOOP
+		mov	#320/2,r9		; r9  - X loop
+		mov	#240/2,r10		; r10 - Y loop
+.y_loop2:
+		cmp/pz	r1
+		bt	.y_add
+		bra	.y_loop2
+		add	r5,r1
+.y_add:
+
+
+; *** LOOP
+.y_loop:
+		cmp/pz	r2
+		bt	.xy_set
+		bra	.y_loop
+		add	r6,r2
+.xy_set:
+		cmp/ge	r6,r2
+		bf	.y_high
+		bra	.xy_set
+		sub	r6,r2
+.y_high:
+		mov	r1,r11
+		shlr	r11			; /2
+		mov	r2,r0
+		shlr16	r0
+		mov	r5,r8
+		shlr16	r8
+		muls	r8,r0
+		sts	macl,r12
+		add	r7,r12
+		mov	r13,r8
+		mov	r9,r14
+.x_loop:
+		mov	r5,r0
+		shar	r0		; /2
+
+	; checks both negative and positive
+		cmp/pl	r11
+		bt	.xwpos
+.x_loopm:	cmp/ge	r0,r11
+		bt	.x_high
+		bra	.x_loopm
+		add	r0,r11
+.xwpos:
+		cmp/ge	r0,r11
+		bf	.x_high
+		bra	.xwpos
+		sub	r0,r11
+.x_high:
+		mov	r11,r0
+		shlr16	r0
+		exts	r0,r0
+		shll	r0
+		mov.w	@(r12,r0),r0
+		add	r3,r11
+		mov.w	r0,@r8
+		dt	r14
+		bf/s	.x_loop
+		add	#2,r8
+
+		add	r4,r2
 ; 		add	r4,r2
-; ; 		add	r4,r2
-; 		mov	#320,r0
-; 		dt	r10
-; 		bf/s	.y_loop
-; 		add	r0,r13
+		mov	#320,r0
+		dt	r10
+		bf/s	.y_loop
+		add	r0,r13
 
 		bra	.slv_exit
 		nop
@@ -1946,6 +1946,7 @@ s_irq_wdg:
 		align 4
 sin_table	binclude "system/mars/data/sinedata.bin"
 m_ascii		binclude "system/mars/data/m_ascii.bin"
+
 		align 4
 		include "data/mars_sdram.asm"
 
