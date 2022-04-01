@@ -15,8 +15,8 @@ gSmpl macro locate,loop
 .end
 	endm
 
-; DacIns_Test:
-; 	gSmpl "sound/instr/smpl/baila.wav",0
+DacIns_Test:
+	gSmpl "sound/instr/smpl/baila.wav",0
 
 DacIns_wegot_kick:
 	gSmpl "sound/instr/smpl/wegot_kick.wav",0

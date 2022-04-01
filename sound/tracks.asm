@@ -97,7 +97,7 @@ GemaBlk_Test:
 GemaPat_Test:
 	binclude "sound/tracks/test_patt.bin"
 GemaIns_Test:
-	gInsPwm 0,PwmIns_Test_st,%11
+	gInsDac 0,DacIns_Test,1
 
 ; GemaTrkData_Test:
 ; 	dc.l GemaPat_Test
@@ -160,9 +160,9 @@ GemaIns_Test2:
 	gInsNull
 
 GemaTrkData_Test3:
-	dc.l GemaPat_Test
-	dc.l GemaBlk_Test
-	dc.l GemaIns_Test
+	dc.l GemaPat_Test3
+	dc.l GemaBlk_Test3
+	dc.l GemaIns_Test3
 GemaBlk_Test3:
 	binclude "sound/tracks/vuela_blk.bin"
 GemaPat_Test3:

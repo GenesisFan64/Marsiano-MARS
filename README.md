@@ -11,10 +11,10 @@ Graphics:
 - Source data can be either a static image in ROM (NOTE: not RV protected) or a buffer section in RAM in any WIDTH and HEIGHT, BUT aligned in "blocks" (Usable: 4x4, 8x8, 16x16, 32x32)
 
 -- 256-color scalable background --
-- Infinite scaling, can repeat lines
+- Infinite scaling. uses Slave CPU for speed up the drawing process (a little...)
 
 -- 3D objects --
-Uses both SH2s, Reads 3D models in a custom format: Python3 .obj importer is included.
+- Uses both SH2s, Reads 3D models in a custom format: Python3 .obj importer is included.
 
 
 Sound, Genesis and 32X:
@@ -45,11 +45,12 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 -- General --
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
 - MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
+- The actual purpose of Cache isn't emulated at all. so emulators just treat everything as "Cache-thru"
 - The 4-byte LONG alignment limitation is ignored.
 
 -- 68000 --
 - RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers. (from $88xxxx/$9xxxxx to $0xxxxx, all 4MB view area) If you do any DMA-transfer without setting this bit it will read trash data. Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the and last VDP write on the RAM area. (Note: Transferring RAM data to VDP doesn't require the RV bit) Also for the SH2 side: If RV is set, any read from the ROM area will return trash data.
-- Writing to the DREQ's FIFO only works properly on the $880000/$900000 68k areas. If doing the writes in the RAM area ($FF0000) some WORD writes will get lost during transfer.
+- Writing to the DREQ's FIFO only works properly on the $880000/$900000 areas. Doing the writes in the RAM area ($FF0000) will cause to miss some WORD writes during transfer.
 
 -- SH2---
 - The SDRAM, Framebuffer, ROM area and Cache run at different speeds for Reading/Writing and depending where the Program Counter (PC) is currently located. Cache being the fastest BUT with the lowest space to store code or data.

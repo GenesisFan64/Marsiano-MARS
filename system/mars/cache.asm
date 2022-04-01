@@ -1250,6 +1250,7 @@ MarsMdl_MdlLoop:
 ; Read model
 ; ------------------------------------------------
 
+		align 4
 MarsMdl_ReadModel:
 		sts	pr,@-r15
 ; 		mov	@(mdl_animdata,r14),r13
@@ -1775,6 +1776,7 @@ mdlrd_setpoint:
 ; r8: (x -sin @) + (y cos @)
 ; ------------------------------
 
+		align 4
 mdlrd_rotate:
     		mov	#$7FF,r7
     		and	r7,r0
@@ -1810,7 +1812,7 @@ mdlrd_rotate:
 		ltorg
 
 ; ------------------------------------------------
-		align 4
+			align 4
 MarsSnd_RvMode		ds.l 1
 MarsSnd_Active		ds.l 1
 Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread

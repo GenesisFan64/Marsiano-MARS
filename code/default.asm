@@ -9,8 +9,6 @@
 ; ------------------------------------------------------
 
 set_StartPage	equ	0
-
-; MAX_TSTTRKS	equ	3
 MAX_TSTENTRY	equ	4
 
 ; ====================================================================
@@ -87,10 +85,10 @@ MD_Mode0:
 		move.w	#set_StartPage,(RAM_CurrPage).w
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test,mdl_data(a0)
-		move.l	#-$800,mdl_z_pos(a0)
+		move.l	#-$600,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
 		lea	(RAM_MdDreq+Dreq_SclData),a0
-		move.l	#TESTMARS_BG2,(a0)+
+		move.l	#TESTMARS_BG2|TH,(a0)+
 		move.l	#$00000000,(a0)+	; X pos
 		move.l	#$00000000,(a0)+	; Y pos
 		move.l	#$00010000,(a0)+	; DX
@@ -105,6 +103,9 @@ MD_Mode0:
 
 .loop:
 		bsr	System_WaitFrame
+		bsr	Video_RunFade
+		bne.s	.loop
+
 		move.w	(RAM_CurrPage).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -157,22 +158,13 @@ MD_Mode0:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
-		lea	PAL_TESTBOARD(pc),a0
-		moveq	#0,d0
-		move.w	#$20,d1
-		bsr	Video_FadePal
-		clr.w	(RAM_MdMarsPalFd).w
-		clr.w	(RAM_MdDreq+Dreq_Palette).w
-
 		move.w	#0,d0
 		bsr	Video_MarsSetGfx
 		lea	str_Title(pc),a0	; Print menu
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		bsr	.page0_cursor
-
-		move.l	#$C0000000,(vdp_ctrl).l
-		move.w	#$E00,(vdp_data).l
+		bsr	.fade_in
 
 .page0:
 		lea	str_StatsPage0(pc),a0
@@ -238,6 +230,11 @@ MD_Mode0:
 		move.w	#256,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
+
+		lea	PAL_TESTBOARD(pc),a0
+		moveq	#0,d0
+		move.w	#$20,d1
+		bsr	Video_FadePal
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.this_bg
@@ -267,6 +264,8 @@ MD_Mode0:
 .nou_m:
 		move.l	d0,(RAM_MdDreq+Dreq_BgEx_X).w
 		move.l	d1,(RAM_MdDreq+Dreq_BgEx_Y).w
+
+; 		add.l	#$10000,(RAM_MdDreq+Dreq_BgEx_X).w
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -398,6 +397,10 @@ MD_Mode0:
 
 		bsr	.fade_in
 .page3:
+		lea	str_StatsPage0(pc),a0
+		move.l	#locate(0,2,4),d0
+		bsr	Video_Print
+
 ; 		bsr	System_WaitFrame
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.l	#$4000,mdl_x_rot(a0)
@@ -593,12 +596,8 @@ MD_Mode0:
 		move.w	#1,(RAM_FadeMarsReq).w
 		move.w	#1,(RAM_FadeMdIncr).w
 		move.w	#4,(RAM_FadeMarsIncr).w
-		move.w	#2,(RAM_FadeMdDelay).w
-		move.w	#2,(RAM_FadeMarsDelay).w
-.inw:
-		bsr	System_WaitFrame
-		bsr	Video_RunFade
-		bne.s	.inw
+		move.w	#0,(RAM_FadeMdDelay).w
+		move.w	#0,(RAM_FadeMarsDelay).w
 		rts
 
 .fade_out:
@@ -606,12 +605,8 @@ MD_Mode0:
 		move.w	#2,(RAM_FadeMarsReq).w
 		move.w	#1,(RAM_FadeMdIncr).w
 		move.w	#4,(RAM_FadeMarsIncr).w
-		move.w	#2,(RAM_FadeMdDelay).w
-		move.w	#2,(RAM_FadeMarsDelay).w
-.ind:
-		bsr	System_WaitFrame
-		bsr	Video_RunFade
-		bne.s	.ind
+		move.w	#0,(RAM_FadeMdDelay).w
+		move.w	#0,(RAM_FadeMarsDelay).w
 		rts
 
 .print_cursor:
@@ -1049,8 +1044,8 @@ MD_Mode0:
 ;
 ; ; test playlist
 MasterTrkList:
-; 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
-; 	dc.w 3,%001
+	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
+	dc.w 7,%001
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
 	dc.w 3,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
@@ -1251,10 +1246,10 @@ str_Page2:
 		dc.b "Testing GfxMode 02",0
 		align 2
 str_Page3:
-		dc.b "Testing 3D Objects",0
+		dc.b "Testing model objects",0
 		align 2
-str_Page4:	dc.b "GEMA",0
-		align 2
+; str_Page4:	dc.b "GEMA",0
+; 		align 2
 
 ;
 str_Status:
@@ -1279,7 +1274,8 @@ str_Gema:
 		align 2
 str_StatsPage0:
 		dc.b "\\w \\w \\w \\w",$A
-		dc.b "\\w \\w \\w \\w",0
+		dc.b "\\w \\w \\w \\w",$A,$A
+		dc.b "\\l",0
 		dc.l sysmars_reg+comm0
 		dc.l sysmars_reg+comm2
 		dc.l sysmars_reg+comm4
@@ -1288,6 +1284,7 @@ str_StatsPage0:
 		dc.l sysmars_reg+comm10
 		dc.l sysmars_reg+comm12
 		dc.l sysmars_reg+comm14
+		dc.l RAM_Framecount
 		align 2
 ;
 ; str_InfoMouse:

@@ -97,18 +97,19 @@ framectl	equ	$0B		; Frame Buffer Control register
 ; --------------------------------------------------------
 
 ; DMA Channel 0: General data transfer
-; DMA Channel 1: PWM exclusive
+; DMA Channel 1: PWM only
+
 _SERIAL		equ	$FFFFFE00	; Serial Control
 _FRT		equ	$FFFFFE10	; Free run timer
 _TIER		equ	$00		; Timer interrupt enable register
 _TCSR		equ	$01		; Timer control & status register
-_FRC_H		equ	$02		; free running counter High
-_FRC_L		equ	$03		; free running counter Low
+_FRC_H		equ	$02		; Free running counter High
+_FRC_L		equ	$03		; Free running counter Low
 _OCR_H		equ	$04		; Output compare register High
 _OCR_L		equ	$05		; Output compare register Low
 _TCR		equ	$06		; Timer control register
-_TOCR		equ	$07		; timer output compare control register
-_CCR:		equ	$FFFFFE92
+_TOCR		equ	$07		; Timer output compare control register
+_CCR:		equ	$FFFFFE92	; Cache register (BYTE)
 _JR		equ	$FFFFFF00	; DIVU (--- / val)
 _HRL32		equ	$FFFFFF04	; DIVU (val / ---) or LOW Result if read
 _HRH		equ	$FFFFFF10	; DIVU Result, HIGH

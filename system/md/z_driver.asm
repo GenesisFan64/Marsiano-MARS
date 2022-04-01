@@ -2918,8 +2918,7 @@ transferRom:
 		res	0,(ix+1)	; Tell 68k we are done reading
 		ret
 
-; If Genesis wants to do DMA, loop indef here until it finishes.
-; if on mid-loop
+; If Genesis wants to do DMA, wait here until it finishes.
 .x68klpwt:
 		res	0,(ix+1)	; Tell 68k we are out, waiting.
 .x68kpwtlp:
@@ -4074,16 +4073,20 @@ pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 
-		org 1C00h
-dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
-trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
-trkData_1	ds 100h
-commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
+
 dDacPntr	db 0,0,0		; WAVE play current ROM position
 dDacCntr	db 0,0,0		; WAVE play length counter
 dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
 psgHatMode	db 0
 fmSpcMode	db 0
 trkHdOut	ds 6			; temporal Header for reading Track position/row count
+commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
+
+		org 1C00h
+dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
+trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
+trkData_1	ds 100h
+
+
 
 ; Stack area

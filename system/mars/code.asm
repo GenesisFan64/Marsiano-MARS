@@ -38,7 +38,6 @@ marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
-; marsGbl_CurrFb		ds.w 1
 marsGbl_RomBlkM		ds.w 1	; Flag to report that MASTER is reading from ROM area
 marsGbl_RomBlkS		ds.w 1	; Flag to report that SLAVE is reading from ROM area
 marsGbl_BgDrwAll	ds.w 1	; Write 2 to request FULL redraw
@@ -929,11 +928,6 @@ SH2_M_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-		mov.l	#_CCR,r1
-		mov	#$10,r0
-		mov.w	r0,@r1
-		mov	#$09,r0
-		mov.w	r0,@r1
 		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
 		mov 	#$C0000000,r2
 		mov 	#(CACHE_MASTER_E-CACHE_MASTER)/4,r3
@@ -966,17 +960,20 @@ SH2_M_Entry:
 SH2_M_HotStart:
 		mov	#$F0,r0				; Interrupts OFF
 		ldc	r0,sr
+		mov	#CS3|$40000,r15			; Set default Stack for Master
+		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
+		ldc	r14,gbr
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0			; Disable Watchdog
 		mov.w	r0,@r1
 		mov	#_CCR,r1
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#CS3|$40000,r15			; Set default Stack for Master
-		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
-		ldc	r14,gbr
+		mov.b	@r1,r0
+		and	#%11111110,r0
+		mov.b	r0,@r1				; Cache disable
+		or	#%00010000,r0
+		mov.b	r0,@r1				; Purge bit
+		or	#%00001001,r0
+		mov.b	r0,@r1				; Two-way mode + Cache Enable
 		mov	#$20004000,r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -1076,9 +1073,6 @@ master_loop:
 		mov	@(r1,r0),r1
 		jsr	@r1
 		nop
-
-	; ---------------------------------------
-
 		ldc	@r15+,sr		; Interrupts ON
 
 ; ---------------------------------------
@@ -1139,13 +1133,15 @@ mstr_gfx0:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 1:
+; Psdo-mode 1:
 ; Generic static screen in any
 ; bitmap mode: Indexed, Direct or RLE
 ;
-; Direct's HEIGHT will be limited
-; to 200 lines.
+; Note that Direct's HEIGHT
+; will be limited to 200 lines.
 ; ---------------------------------------
+
+; TODO: for later...
 
 mstr_gfx1_hblk:
 		rts
@@ -1163,11 +1159,11 @@ mstr_gfx1:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 2:
+; Psdo-mode 2:
 ; 256-color scrolling image
 ;
 ; *** WAIT 2 FRAMES TO PROPERLY START
-; THIS MODE WHEN SWITCHING ***
+; THIS MODE ***
 ; ---------------------------------------
 
 mstr_gfx2_hblk:
@@ -1257,10 +1253,13 @@ mstr_gfx2:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 3:
+; Psdo-mode 3:
 ; Scalable 256-color screen
 ;
-; Drops frames.
+; Not as smooth as Mode 2
+;
+; *** SET YOUR SOURCE IMAGE
+; AS CACHE-THRU***
 ; ---------------------------------------
 
 mstr_gfx3_hblk:
@@ -1285,6 +1284,7 @@ mstr_gfx3_vblk:
 		mov.w	r0,@r4
 		rts
 		nop
+		align 4
 mstr_gfx3_init:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
@@ -1425,13 +1425,23 @@ mstr_gfx3:
 		bf	.wait_slv
 
 	; sprites will go here
-
 		bra	master_loop
 		nop
+		align 4
 
 ; ============================================================
 ; ---------------------------------------
 ; Mode 4: 3D MODE Polygons-only
+;
+; Objects are divided into read/write
+; buffers:
+;
+; - This CPU draws the polygons from
+; the READ buffer
+; - at the same time the Slave CPU is
+; building the 3d models and
+; sorts the polygons FOR THE NEXT FRAME
+; (NOT current)
 ; ---------------------------------------
 
 mstr_gfx4_hblk:
@@ -1468,6 +1478,7 @@ mstr_gfx4_init:
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_XShift,gbr)
+
 mstr_gfx4:
 		mov.w	@(marsGbl_BgDrwAll,gbr),r0
 		cmp/eq	#0,r0
@@ -1518,11 +1529,6 @@ mstr_gfx4:
 		stc	sr,r2
 		mov	#$F0,r0
 		ldc 	r0,sr
-; 		mov	#_CCR,r1
-; 		mov	#%00001000,r0			; Two-way mode
-; 		mov.w	r0,@r1
-; 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-; 		mov.w	r0,@r1
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A10,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
@@ -1647,17 +1653,20 @@ SH2_S_Entry:
 SH2_S_HotStart:
 		mov	#$F0,r0				; Interrupts OFF
 		ldc	r0,sr
+		mov	#CS3|$3F000,r15			; Reset stack
+		mov	#RAM_Mars_Global,r14		; Reset gbr
+		ldc	r14,gbr
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0			; Disable Watchdog
 		mov.w	r0,@r1
 		mov	#_CCR,r1
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#CS3|$3F000,r15			; Reset stack
-		mov	#RAM_Mars_Global,r14		; Reset gbr
-		ldc	r14,gbr
+		mov.b	@r1,r0
+		and	#%11111110,r0
+		mov.b	r0,@r1				; Cache disable
+		or	#%00010000,r0
+		mov.b	r0,@r1				; Purge bit
+		or	#%00001001,r0
+		mov.b	r0,@r1				; Two-way mode + Cache Enable
 		mov	#$20004000, r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -1865,8 +1874,6 @@ slave_loop:
 ; ---------------------------------------
 
 .slv_task_2:
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov 	#RAM_Mars_Polygons_0,r1
 		mov	#RAM_Mars_PlgnList_0,r2
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
@@ -1880,6 +1887,8 @@ slave_loop:
 		mov	r2,r0
 		mov	r0,@(marsGbl_CurrZList,gbr)
 		mov	r0,@(marsGbl_CurrZTop,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
 		nop

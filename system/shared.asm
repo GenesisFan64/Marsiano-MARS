@@ -60,11 +60,8 @@ Dreq_SclDX	ds.l 1		; DX 0000.0000
 Dreq_SclDY	ds.l 1		; DY 0000.0000
 Dreq_SclWidth	ds.l 1		; Width
 Dreq_SclHeight	ds.l 1		; Height
-
 Dreq_Palette	ds.w 256	; 256-color palette
-
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; <-- labels from SH2 side
-
 sizeof_dreq	ds.l 0
 		finish
 

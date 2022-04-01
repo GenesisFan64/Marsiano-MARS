@@ -98,6 +98,7 @@ RAM_SysRandSeed	ds.l 1				; Randomness seed
 RAM_initflug	ds.l 1				; "INIT" flag
 RAM_MdMarsVInt	ds.w 3				; VBlank jump (JMP xxxx xxxx)
 RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
+RAM_MdVBlkWait	ds.w 1
 RAM_SysFlags	ds.w 1				; Game engine flags (note: it's a byte)
 sizeof_mdsys	ds.l 0
 		finish

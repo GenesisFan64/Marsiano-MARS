@@ -78,16 +78,13 @@ System_WaitFrame:
 		move.w	#$0003|$80,-(sp)
 		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
-		move.l	#$94019318,(a6)
+		move.l	#$940193C0,(a6)
 		move.l	#$96009500|(RAM_Sprites<<7&$FF0000)|(RAM_Sprites>>1&$FF),(a6)
 		move.w	#$9700|(RAM_Sprites>>17&$7F),(a6)
 		move.w	#$7800,d7
 		move.w	#$0003|$80,-(sp)
 		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
-
-	; Palette dots will be hidden if we transfer
-	; the colors from here...
 		move.l	#$94009340,(a6)
 		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
 		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
@@ -99,12 +96,17 @@ System_WaitFrame:
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
 		bsr	Video_DmaBlast		; Process DMA Blast list
+		add.l	#1,(RAM_Framecount).l
+
+	; *** IMPORTANT ***
+.wait_in:
+		move.w	(vdp_ctrl),d4		; Inside VBlank?
+		btst	#bitVBlk,d4
+		bne.s	.wait_in
 
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
 		bsr	System_SendDreq
-
-		add.l	#1,(RAM_Framecount).l
 		rts
 
 ; --------------------------------------------------------
@@ -170,9 +172,9 @@ System_SendDreq:
 ; --------------------------------------------------------
 
 System_Input:
-; 		move.w	#$0100,(z80_bus).l	; TODO: check if need this...
+; 		move.w	#$0100,(z80_bus).l	; TODO: check if actually need this...
 ; .wait:
-; 		btst	#0,(z80_bus).l
+; 		btst	#0,(z80_bus).l		; works fine on hardware though.
 ; 		bne.s	.wait
 		lea	(sys_data_1),a5		; a5 - BASE Genesis Input regs area
 		lea	(RAM_InputData),a6	; a6 - Output
