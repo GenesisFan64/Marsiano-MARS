@@ -323,8 +323,8 @@ MD_Mode0:
 		move.l	Dreq_SclY(a0),d1
 		move.l	Dreq_SclDX(a0),d2
 		move.l	Dreq_SclDY(a0),d3
-		move.l	#$100,d4
-		move.l	#$200,d5
+		move.l	#$400,d4
+		move.l	#$400*2,d5
 
 		move.w	(Controller_1+on_hold),d7
 		move.w	d7,d6

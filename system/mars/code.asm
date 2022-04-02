@@ -57,15 +57,15 @@ sizeof_MarsGbl		ds.l 0
 SH2_Master:
 		dc.l SH2_M_Entry,CS3|$40000	; Power PC, Stack
 		dc.l SH2_M_Entry,CS3|$40000	; Reset PC, Stack
-		dc.l SH2_M_Error		; Illegal instruction
+		dc.l SH2_M_ErrIllg		; Illegal instruction
 		dc.l 0				; reserved
-		dc.l SH2_M_Error		; Invalid slot instruction
+		dc.l SH2_M_ErrInvl		; Invalid slot instruction
 		dc.l $20100400			; reserved
 		dc.l $20100420			; reserved
-		dc.l SH2_M_Error		; CPU address error
-		dc.l SH2_M_Error		; DMA address error
-		dc.l SH2_M_Error		; NMI vector
-		dc.l SH2_M_Error		; User break vector
+		dc.l SH2_M_ErrAddr		; CPU address error
+		dc.l SH2_M_ErrDma		; DMA address error
+		dc.l SH2_M_ErrNmi		; NMI vector
+		dc.l SH2_M_ErrUser		; User break vector
 		dc.l 0,0,0,0,0,0,0,0,0		; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
 		dc.l 0
@@ -121,15 +121,15 @@ SH2_Master:
 SH2_Slave:
 		dc.l SH2_S_Entry,CS3|$3F000	; Cold PC,SP
 		dc.l SH2_S_Entry,CS3|$3F000	; Manual PC,SP
-		dc.l SH2_S_Error		; Illegal instruction
+		dc.l SH2_S_ErrIllg		; Illegal instruction
 		dc.l 0				; reserved
-		dc.l SH2_S_Error		; Invalid slot instruction
+		dc.l SH2_S_ErrInvl		; Invalid slot instruction
 		dc.l $20100400			; reserved
 		dc.l $20100420			; reserved
-		dc.l SH2_S_Error		; CPU address error
-		dc.l SH2_S_Error		; DMA address error
-		dc.l SH2_S_Error		; NMI vector
-		dc.l SH2_S_Error		; User break vector
+		dc.l SH2_S_ErrAddr		; CPU address error
+		dc.l SH2_S_ErrDma		; DMA address error
+		dc.l SH2_S_ErrNmi		; NMI vector
+		dc.l SH2_S_ErrUser		; User break vector
 		dc.l 0,0,0,0,0,0,0,0,0		; reserved
 		dc.l 0,0,0,0,0,0,0,0,0
 		dc.l 0
@@ -263,19 +263,77 @@ int_s_list:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Noraml error trap
+; Normal error traps
 ; ----------------------------------------------------------------
 
+; Emulators ignore all of this anyway.
+
 SH2_M_Error:
-		nop
-		bra	SH2_M_Error
+		bra	SH2_M_ErrCode
+		mov	#$00FF,r0
+SH2_M_ErrIllg:
+		bra	SH2_M_ErrCode
+		mov	#1,r0
+SH2_M_ErrInvl:
+		bra	SH2_M_ErrCode
+		mov	#2,r0
+SH2_M_ErrAddr:
+		bra	SH2_M_ErrCode
+		mov	#3,r0
+SH2_M_ErrDma:
+		bra	SH2_M_ErrCode
+		mov	#4,r0
+SH2_M_ErrNmi:
+		bra	SH2_M_ErrCode
+		mov	#5,r0
+SH2_M_ErrUser:
+		bra	SH2_M_ErrCode
+		mov	#6,r0
+; r0 - value
+SH2_M_ErrCode:
+		mov	#_sysreg+comm2,r1
+		mov.w	r0,@r1
+		mov	#_sysreg+comm4,r1
+		mov	@r15,r0
+		mov	r0,@r1
+		bra	*
 		nop
 		align 4
+
+; ----------------------------------------------------
+
 SH2_S_Error:
-		nop
-		bra	SH2_S_Error
+		bra	SH2_S_ErrCode
+		mov	#$01FF,r0
+SH2_S_ErrIllg:
+		bra	SH2_S_ErrCode
+		mov	#$0101,r0
+SH2_S_ErrInvl:
+		bra	SH2_S_ErrCode
+		mov	#$0102,r0
+SH2_S_ErrAddr:
+		bra	SH2_S_ErrCode
+		mov	#$0103,r0
+SH2_S_ErrDma:
+		bra	SH2_S_ErrCode
+		mov	#$0104,r0
+SH2_S_ErrNmi:
+		bra	SH2_S_ErrCode
+		mov	#$0105,r0
+SH2_S_ErrUser:
+		bra	SH2_S_ErrCode
+		mov	#$0106,r0
+; r0 - value
+SH2_S_ErrCode:
+		mov	#_sysreg+comm2,r1
+		mov.w	r0,@r1
+		mov	#_sysreg+comm4,r1
+		mov	@r15,r0
+		mov	r0,@r1
+		bra	*
 		nop
 		align 4
+		ltorg
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -384,9 +442,8 @@ m_irq_cmd:
 	;
 	; The only workaround is to copy-paste the data
 	; we just received into another buffer for reading
-	; it safetly.
-	;
-	; 32X Emulators doesn't recreate this limitation.
+	; it safetly, as current 32X Emulators
+	; doesn't recreate this limitation.
 		mov	#RAM_Mars_DreqDma,r1
 		mov	#RAM_Mars_DreqRead,r2
 		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS
@@ -1529,6 +1586,11 @@ mstr_gfx4:
 		stc	sr,r2
 		mov	#$F0,r0
 		ldc 	r0,sr
+		mov	#_CCR,r1			; <-- Required for Watchdog
+		mov	#%00001000,r0			; Two-way mode
+		mov.w	r0,@r1
+		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r1
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A10,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
@@ -1632,7 +1694,7 @@ SH2_S_Entry:
 		bf/s	.copy
 		add 	#4,r2
 		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON|PWMIRQ_ON,r0			; Enable these interrupts
+		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		bsr	MarsSound_Init			; Init PWM
 		nop
@@ -1710,7 +1772,7 @@ slave_loop:
 		mov	#.list,r3		; Default LOOP points
 		mov	#_sysreg+comm14,r2
 		mov.w	@r2,r0			; r0 - INIT bit
-		and	#%1111,r0
+		and	#%00001111,r0
 		tst	r0,r0
 		bt	slave_loop
 		shll2	r0
@@ -1720,8 +1782,8 @@ slave_loop:
 		align 4
 .list:
 		dc.l slave_loop		; $00
-		dc.l .slv_task_1	; $01 - Draw BOTTOM half of Scaled BG (TODO: later...)
-		dc.l .slv_task_2	; $02 - Build 3D models
+		dc.l .slv_task_1	; $01 - Draw BOTTOM half of Scaled BG
+		dc.l .slv_task_2	; $02 - Build 3D models (TODO: BROKEN)
 		dc.l slave_loop		; $03
 		dc.l slave_loop		; $04
 		dc.l slave_loop		; $05
@@ -1738,7 +1800,8 @@ slave_loop:
 
 ; ============================================================
 ; ---------------------------------------
-; Task mode 1:
+; Slave task $01
+;
 ; Helps MASTER to draw the bottom half
 ; of the scaled background
 ; ---------------------------------------
@@ -1869,8 +1932,10 @@ slave_loop:
 
 ; ============================================================
 ; ---------------------------------------
-; Task mode 2: Build 3D Models
-; FOR THE NEXT FRAME (not current)
+; Slave task $02
+;
+; Build 3D Models FOR THE NEXT FRAME
+; (not current)
 ; ---------------------------------------
 
 .slv_task_2:
@@ -2001,6 +2066,7 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
+RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
@@ -2011,7 +2077,6 @@ RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
-RAM_Mars_BgBuffScrl	ds.w sizeof_marsbg
 RAM_Mars_BgBuffScale_M	ds.l 7
 RAM_Mars_BgBuffScale_S	ds.l 7
 sizeof_marsvid		ds.l 0

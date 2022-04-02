@@ -983,8 +983,8 @@ Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
 
 ; ------------------------------------------------
 .end:		phase CACHE_MASTER+.end&$1FFF
-CACHE_MASTER_E:
 		align 4
+CACHE_MASTER_E:
 	if MOMPASS=6
 		message "SH2 MASTER CACHE uses: \{(CACHE_MASTER_E-CACHE_MASTER)}"
 	endif
@@ -1253,6 +1253,7 @@ MarsMdl_MdlLoop:
 		align 4
 MarsMdl_ReadModel:
 		sts	pr,@-r15
+		nop
 ; 		mov	@(mdl_animdata,r14),r13
 ; 		cmp/pl	r13
 ; 		bf	.no_anim
@@ -1292,10 +1293,8 @@ MarsMdl_ReadModel:
 ; .no_anim:
 
 	; Now start reading
-		mov	#$3FFFFFFF,r0
 		mov	#Cach_CurrPlygn,r13		; r13 - temporal face output
 		mov	@(mdl_data,r14),r12		; r12 - model header
-		and	r0,r12
 		mov 	@(8,r12),r11			; r11 - face data
 		mov 	@(4,r12),r10			; r10 - vertice data (X,Y,Z)
 		mov.w	@r12,r9				;  r9 - Number of faces used on model
@@ -1306,6 +1305,7 @@ MarsMdl_ReadModel:
 		mov	.tag_maxfaces,r1
 		cmp/ge	r1,r0
 		bf	.can_build
+.no_model:
 		bra	.exit_model
 		nop
 		align 4
@@ -1378,6 +1378,7 @@ MarsMdl_ReadModel:
 		mov	r0,@(polygn_mtrl,r13)
 		bra	.go_faces
 		nop
+		align 4
 .tag_andmtrl:
 		dc.l $1FFF
 
@@ -1812,21 +1813,23 @@ mdlrd_rotate:
 		ltorg
 
 ; ------------------------------------------------
+
 			align 4
 MarsSnd_RvMode		ds.l 1
 MarsSnd_Active		ds.l 1
-Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
-Cach_BkupPnt_L		ds.l 8		;
-Cach_BkupPnt_S		ds.l 0		; <-- Reads backwards
-Cach_BkupS_L		ds.l 5		;
+Cach_BkupPnt_L		ds.l 8			;
+Cach_BkupPnt_S		ds.l 0			; <-- Reads backwards
+Cach_BkupS_L		ds.l 5			;
 Cach_BkupS_S		ds.l 0
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38	; 7 bytes per channel.
+MarsSnd_PwmControl	ds.b $38		; 7 bytes per channel.
+Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF
-CACHE_SLAVE_E:
+
 		align 4
+CACHE_SLAVE_E:
 	if MOMPASS=6
 		message "SH2 SLAVE CACHE uses: \{(CACHE_SLAVE_E-CACHE_SLAVE)}"
 	endif
