@@ -978,6 +978,11 @@ SH2_M_Entry:
 		mov.b	r0,@(5,r14)
 		mov	#$FFFFFFE2,r0
 		mov.b	r0,@(7,r14)
+		mov	#_CCR,r1
+		mov	#%00010000,r0			; Cache purge + Disable
+		mov.w	r0,@r1
+		mov	#%00001001,r0			; Cache two-way mode + Enable
+		mov.w	r0,@r1
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1023,14 +1028,6 @@ SH2_M_HotStart:
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0			; Disable Watchdog
 		mov.w	r0,@r1
-		mov	#_CCR,r1
-		mov.b	@r1,r0
-		and	#%11111110,r0
-		mov.b	r0,@r1				; Cache disable
-		or	#%00010000,r0
-		mov.b	r0,@r1				; Purge bit
-		or	#%00001001,r0
-		mov.b	r0,@r1				; Two-way mode + Cache Enable
 		mov	#$20004000,r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -1547,6 +1544,9 @@ mstr_gfx4:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
+		mov	#$FFFFFE80,r1		; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 .no_btmp:
 		mov	#_framebuffer,r3
 		mov	#$200/2,r0
@@ -1586,10 +1586,13 @@ mstr_gfx4:
 		stc	sr,r2
 		mov	#$F0,r0
 		ldc 	r0,sr
-		mov	#_CCR,r1			; <-- Required for Watchdog
+		mov.l	#_CCR,r1			; Refresh Cache
 		mov	#%00001000,r0			; Two-way mode
 		mov.w	r0,@r1
 		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r1
+		mov	#$FFFFFE80,r1
+		mov.w	#$5A10,r0			; Watchdog pre-timer
 		mov.w	r0,@r1
 		mov	#$FFFFFE80,r1
 		mov.w	#$5A10,r0			; Watchdog pre-timer
@@ -1601,7 +1604,7 @@ mstr_gfx4:
 	; ---------------------------------------
 	; Clear screen
 	; ---------------------------------------
-		mov	#_vdpreg,r1
+		mov	#_vdpreg,r1	; ** This also counts as a delay for Watchdog **
 		mov	#$100,r2
 		mov	r2,r3
 		mov	#240,r4
@@ -1623,6 +1626,9 @@ mstr_gfx4:
 
 	; ---------------------------------------
 
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+		tst	r0,r0
+		bt	.no_swap
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		tst	r0,r0
 		bt	.no_swap
@@ -1677,6 +1683,11 @@ SH2_S_Entry:
 		mov	#0,r0
 		mov.b	r0,@(3,r14)
 		mov.b	r0,@(2,r14)
+		mov	#_CCR,r1
+		mov	#%00010000,r0			; Cache purge + Disable
+		mov.w	r0,@r1
+		mov	#%00001001,r0			; Cache two-way mode + Enable
+		mov.w	r0,@r1
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1694,7 +1705,7 @@ SH2_S_Entry:
 		bf/s	.copy
 		add 	#4,r2
 		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
+		mov	#CMDIRQ_ON|PWMIRQ_ON,r0			; Enable these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		bsr	MarsSound_Init			; Init PWM
 		nop
@@ -1707,28 +1718,17 @@ SH2_S_Entry:
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Slave main code
-;
-; This CPU is used to help MASTER do some intensive tasks, this
-; also does the PWM playback
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
 		mov	#$F0,r0				; Interrupts OFF
 		ldc	r0,sr
-		mov	#CS3|$3F000,r15			; Reset stack
-		mov	#RAM_Mars_Global,r14		; Reset gbr
-		ldc	r14,gbr
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0			; Disable Watchdog
 		mov.w	r0,@r1
-		mov	#_CCR,r1
-		mov.b	@r1,r0
-		and	#%11111110,r0
-		mov.b	r0,@r1				; Cache disable
-		or	#%00010000,r0
-		mov.b	r0,@r1				; Purge bit
-		or	#%00001001,r0
-		mov.b	r0,@r1				; Two-way mode + Cache Enable
+		mov	#CS3|$3F000,r15			; Reset stack
+		mov	#RAM_Mars_Global,r14		; Reset gbr
+		ldc	r14,gbr
 		mov	#$20004000, r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -1751,6 +1751,7 @@ SH2_S_HotStart:
 		align 4
 		ltorg
 
+
 ; ----------------------------------------------------------------
 ; SLAVE CPU loop
 ;
@@ -1764,6 +1765,7 @@ SH2_S_HotStart:
 ; l - MAIN LOOP command/task, clears on finish
 ; ----------------------------------------------------------------
 
+		align 4
 slave_loop:
 		mov	#_sysreg+comm1,r1	; DEBUG counter
 		mov.b	@r1,r0

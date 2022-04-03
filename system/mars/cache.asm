@@ -9,6 +9,24 @@
 CACHE_MASTER:
 		phase $C0000000
 
+		align 4
+Cach_DDA_Top	ds.l 2*2	; First 2 points
+Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
+
+Cach_DDA_Src	ds.l 4*2
+Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
+Cach_DDA_Src_R	ds.l 4
+
+Cach_Bkup_L	ds.l 16		;
+Cach_Bkup_S	ds.l 0		; <-- Reads backwards
+
+Cach_XHead_L	ds.l 1		; Left draw beam
+Cach_XHead_R	ds.l 1		; Right draw beam
+Cach_YHead_U	ds.l 1		; Top draw beam
+Cach_YHead_D	ds.l 1		; Bottom draw beam
+Cach_BgFbPos_V	ds.l 1		; Framebuffer Y DIRECT position (then multiply with internal WIDTH externally)
+Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
+
 ; ====================================================================
 ; --------------------------------------------------------
 ; Watchdog interrupt for MASTER CPU
@@ -37,6 +55,7 @@ m_irq_wdg:
 wdg_task_0:
 		dt	r0
 		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
+
 		mov	@(marsGbl_IndxPlgn,gbr),r0
 ; 		mov	r0,r1
 		mov	@(4,r0),r14
@@ -44,6 +63,8 @@ wdg_task_0:
 ; 		mov	r0,@r1
 ; 		mov	r0,@(4,r1)
 
+
+; 	; TESTING
 		mov	#Cach_Bkup_S,r0
 		mov	r2,@-r0
 		mov	r3,@-r0
@@ -248,6 +269,7 @@ wdm_exit:
 
 ; --------------------------------------------------------
 
+		align 4
 set_left:
 		mov	r2,r8			; Get a copy of Xleft pointer
 		add	#$20,r8			; To read Texture SRC points
@@ -492,6 +514,7 @@ put_piece:
 ; Line width must be set as 512 pixels long
 ; --------------------------------------------------------
 
+		align 4
 VideoMars_DrwPlgnPz:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		cmp/pl	r0
@@ -964,24 +987,6 @@ drwtask_exit:
 		ltorg
 
 ; ------------------------------------------------
-
-		align 4
-Cach_Bkup_L	ds.l 16		;
-Cach_Bkup_S	ds.l 0		; <-- Reads backwards
-Cach_DDA_Top	ds.l 2*2	; First 2 points
-Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
-Cach_DDA_Src	ds.l 4*2
-Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
-Cach_DDA_Src_R	ds.l 4
-
-Cach_XHead_L	ds.l 1		; Left draw beam
-Cach_XHead_R	ds.l 1		; Right draw beam
-Cach_YHead_U	ds.l 1		; Top draw beam
-Cach_YHead_D	ds.l 1		; Bottom draw beam
-Cach_BgFbPos_V	ds.l 1		; Framebuffer Y DIRECT position (then multiply with internal WIDTH externally)
-Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
-
-; ------------------------------------------------
 .end:		phase CACHE_MASTER+.end&$1FFF
 		align 4
 CACHE_MASTER_E:
@@ -1253,7 +1258,6 @@ MarsMdl_MdlLoop:
 		align 4
 MarsMdl_ReadModel:
 		sts	pr,@-r15
-		nop
 ; 		mov	@(mdl_animdata,r14),r13
 ; 		cmp/pl	r13
 ; 		bf	.no_anim
@@ -1821,9 +1825,9 @@ Cach_BkupPnt_L		ds.l 8			;
 Cach_BkupPnt_S		ds.l 0			; <-- Reads backwards
 Cach_BkupS_L		ds.l 5			;
 Cach_BkupS_S		ds.l 0
+Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
 MarsSnd_PwmControl	ds.b $38		; 7 bytes per channel.
-Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

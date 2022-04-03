@@ -381,21 +381,24 @@ MD_Mode0:
 
 .page3_init:
 		bsr	Video_ClearScreen
+		bsr	Video_PrintInit
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
 		lea	str_Page3(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
+		bsr	System_WaitFrame
+
 		move.w	#4,d0
 		bsr	Video_MarsSetGfx
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
-		bsr	Video_FadePal_Mars
+		bsr	Video_LoadPal_Mars
 
-		bsr	.fade_in
+; 		bsr	.fade_in
 .page3:
 		lea	str_StatsPage0(pc),a0
 		move.l	#locate(0,2,4),d0

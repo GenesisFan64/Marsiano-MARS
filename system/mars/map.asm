@@ -109,7 +109,7 @@ _OCR_H		equ	$04		; Output compare register High
 _OCR_L		equ	$05		; Output compare register Low
 _TCR		equ	$06		; Timer control register
 _TOCR		equ	$07		; Timer output compare control register
-_CCR:		equ	$FFFFFE92	; Cache register (BYTE)
+_CCR:		equ	$FFFFFE92	; Cache register (WORD)
 _JR		equ	$FFFFFF00	; DIVU (--- / val)
 _HRL32		equ	$FFFFFF04	; DIVU (val / ---) or LOW Result if read
 _HRH		equ	$FFFFFF10	; DIVU Result, HIGH
