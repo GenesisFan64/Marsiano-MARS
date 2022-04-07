@@ -111,9 +111,9 @@ _TCR		equ	$06		; Timer control register
 _TOCR		equ	$07		; Timer output compare control register
 _CCR:		equ	$FFFFFE92	; Cache register (WORD)
 _JR		equ	$FFFFFF00	; DIVU (--- / val)
-_HRL32		equ	$FFFFFF04	; DIVU (val / ---) or LOW Result if read
-_HRH		equ	$FFFFFF10	; DIVU Result, HIGH
-_HRL		equ	$FFFFFF14	; DIVU Result, LOW
+_HRL32		equ	$FFFFFF04	; DIVU (val / ---) or RIGHT-long result if read
+_HRH		equ	$FFFFFF10	; DIVU Result: LEFT long
+_HRL		equ	$FFFFFF14	; DIVU Result: RIGHT long
 _DMASOURCE0	equ	$FFFFFF80	; DMA source address 0
 _DMADEST0	equ	$FFFFFF84	; DMA destination address 0
 _DMACOUNT0	equ	$FFFFFF88	; DMA transfer count 0

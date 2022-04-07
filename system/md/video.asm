@@ -138,26 +138,29 @@ ASCII_PAL_e:
 ; Clear all video data from VRAM
 ; --------------------------------------------------------
 
-; Video_Clear:
-; 		move.w	#0,d0			; Clears until $57F
-; 		move.w	#0,d1
-; 		move.w	#$57F*$20,d2
-; 		bsr	Video_Fill
+Video_Clear:
+		move.w	#0,d0			; Clears until $57F
+		move.w	#0,d1
+		move.w	#$57F*$20,d2
+		bsr	Video_Fill
 
 Video_ClearScreen:
+		moveq	#0,d0
 		move.w	#$FFF,d2		; FG/BG size
 		move.b	(RAM_VdpRegs+2).l,d1	; FG
 		andi.w	#%111000,d1
 		lsl.w	#8,d1
 		lsl.w	#2,d1
 		bsr	Video_Fill
-		move.b	(RAM_VdpRegs+3).l,d1	; BG
+
+		move.b	(RAM_VdpRegs+4).l,d1	; BG
 		andi.w	#%000111,d1
 		lsl.w	#8,d1
 		lsl.w	#5,d1
 		bsr	Video_Fill
+
 		move.w	#$FFF,d2		; WD Size
-		move.b	(RAM_VdpRegs+4).l,d1	; Window
+		move.b	(RAM_VdpRegs+3).l,d1	; Window
 		andi.w	#%111110,d1
 		lsl.w	#8,d1
 		lsl.w	#2,d1
@@ -911,7 +914,7 @@ Video_DmaMkEntry:
 ;
 ; d0 | WORD - Bytes to fill
 ; d1 | WORD - VRAM position
-; d2 | WORD - Size
+; d2 | WORD - Size (WORDS)
 ;
 ; Breaks:
 ; d6-d7,a6
@@ -929,7 +932,6 @@ Video_Fill:
 		move.w	#$8F01,(a6)	; Increment $01
 		move.w	d2,d7		; d2 - Size
 		move.l	#$94009300,d6
-		lsr.w	#1,d7
 		move.b	d7,d6
 		swap	d6
 		lsr.w	#8,d7
@@ -986,7 +988,7 @@ Video_Copy:
 		move.w	#$8F01,(a6)		; Increment $01
 		move.w	d2,d7			; SIZE
 		move.l	#$94009300,d6
-		lsr.w	#1,d7
+; 		lsr.w	#1,d7
 		move.b	d7,d6
 		swap	d6
 		lsr.w	#8,d7
@@ -1061,6 +1063,8 @@ Video_LoadArt:
 ; Code stored on RAM, these use the RV bit
 ; --------------------------------------------------------
 
+; *** RAM CODE ***
+
 dmacode_start:
 		phase 0
 
@@ -1095,12 +1099,9 @@ RAMDMA_Load:
  		move.b	d6,d5
  		move.w	d5,(a4)
 		move.w	d1,d6			; Destination
-; 		and.w	#$7FF,d6
-; 		lsl.w	#5,d6
 		move.w	d6,d5
 		and.l	#$3FE0,d6
 		ori.w	#$4000,d6
-
 		lsr.w	#8,d5
 		lsr.w	#6,d5
 		andi.w	#%11,d5
@@ -1110,17 +1111,17 @@ RAMDMA_Load:
 		lsr.w	#8,d7
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
-		jsr	Sound_DMA_Pause
+		jsr	System_Dma_Enter
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
  		move.w	d5,-(sp)
 		move.w	d6,(a4)				; d6 - First word
-		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until it DMA ends
+		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until DMA ends
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
 		move.w	#$8100,d6			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d6
 		move.w	d6,(a4)
 		move.w	(sp)+,sr
-		jmp	Sound_DMA_Resume
+		jmp	System_Dma_Exit
 .from_ram:
 		move.w	d7,(a4)
  		move.w	d5,-(sp)
@@ -1144,7 +1145,7 @@ RAMDMA_Blast:
 		move.b	(RAM_VdpRegs+1),d7
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a4)
-		jsr	Sound_DMA_Pause			; Request Z80 stop and SH2 backup
+		jsr	System_Dma_Enter		; Request Z80 stop and SH2 backup
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
 .next:		tst.w	(RAM_VdpDmaIndx).w
 		beq.s	.end
@@ -1164,7 +1165,7 @@ RAMDMA_Blast:
 		bra.s	.next
 .end:
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
-		jsr	Sound_DMA_Resume		; Resume Z80 and SH2 direct
+		jsr	System_Dma_Exit			; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a4)

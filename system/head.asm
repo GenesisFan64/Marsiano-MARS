@@ -308,8 +308,8 @@ MD_HotStart:
 		btst	#7,d0
 		beq.s	.waitframe
 		lea	($FFFF0000),a0			; Clear our RAM
-		move.l	#sizeof_mdram,d1		; Also using this as a delay in case
-		moveq	#0,d0				; DREQ needs to "cool down" (on soft reset)
+		move.l	#sizeof_mdram,d1
+		moveq	#0,d0
 .loop_ram:
 		move.w	d0,(a0)+
 		cmp.l	d1,a0

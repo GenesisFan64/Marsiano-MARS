@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Genesis sound using the GEMA Sound driver
+; Genesis sound (GEMA Sound driver)
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -13,7 +13,6 @@
 	; This align is for GEMS emulator only
 	; in case gets stuck in a black screen
 ; 		align $80
-
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
 		move.b	#1,(z80_reset).l		; And reset
@@ -71,10 +70,10 @@ sndUnlockZ80:
 ; ------------------------------------------------
 
 sndReq_Enter:
-		movem.l	d6-d7/a5-a6,(RAM_SndSaveReg).l
+		movem.l	d6-d7/a5-a6,(RAM_SndSaveReg).l	; <-- stack didn't work this time
 		moveq	#0,d6
-		move.w	sr,d6
 		move.w	#$0100,(z80_bus).l		; Request Z80 Stop
+		move.w	sr,d6
 		swap	d6
 		or.w	#$0700,sr			; disable ints
 		lea	(z80_cpu+commZWrite),a5		; a5 - commZWrite

@@ -43,12 +43,14 @@ System_Init:
 		rts
 
 ; --------------------------------------------------------
-; Call this to wait for the next frame.
+; System_WaitFrame
 ;
-; This will update the controllers, process DMA tasks
-; from the BLAST list, also transfer stored
+; Call this to wait and update next frame.
+;
+; This will also update the controllers, process DMA tasks
+; from the BLAST list, and transfer the
 ; Genesis palette, sprites and the scrolling lines/2cells
-; from RAM (Doesn't require RV bit)
+; from RAM to VDP (Doesn't require RV bit)
 ; --------------------------------------------------------
 
 System_WaitFrame:
@@ -107,6 +109,23 @@ System_WaitFrame:
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
 		bsr	System_SendDreq
+		rts
+
+; --------------------------------------------------------
+; System_Dma_Enter, System_Dma_Exit
+;
+; Call these before entering or exiting any
+; DMA ROM-to-VDP transfers
+;
+; Your Sound driver's z80 pause calls go here
+; --------------------------------------------------------
+
+System_Dma_Enter:
+		bsr	Sound_DMA_Pause
+		rts
+
+System_Dma_Exit:
+		bsr	Sound_DMA_Resume
 		rts
 
 ; --------------------------------------------------------
@@ -172,9 +191,9 @@ System_SendDreq:
 ; --------------------------------------------------------
 
 System_Input:
-; 		move.w	#$0100,(z80_bus).l	; TODO: check if actually need this...
+; 		move.w	#$0100,(z80_bus).l
 ; .wait:
-; 		btst	#0,(z80_bus).l		; works fine on hardware though.
+; 		btst	#0,(z80_bus).l
 ; 		bne.s	.wait
 		lea	(sys_data_1),a5		; a5 - BASE Genesis Input regs area
 		lea	(RAM_InputData),a6	; a6 - Output
@@ -225,7 +244,7 @@ System_Input:
 		dc.w .exit-.list	; $0C
 		dc.w .id_0D-.list	; $0D - Genesis controller (3 or 6 button)
 		dc.w .exit-.list
-		dc.w .exit-.list	; $0F - No controller OR Master System controller (Buttons 1 and 2)
+		dc.w .exit-.list	; $0F - No controller OR Master System controller (2 Buttons: 1(B),2(C))
 
 ; --------------------------------------------------------
 ; ID $03
@@ -303,7 +322,7 @@ System_Input:
 ; --------------------------------------------------------
 ; ID $0D
 ; 
-; Normal controller, 3 button or 6 button.
+; Normal controller: 3 button or 6 button.
 ; --------------------------------------------------------
 
 .id_0D:
@@ -315,27 +334,27 @@ System_Input:
 		move.b	#$00,(a5)	; Show SA|RLDU
 		nop
 		nop
-		move.b	(a5),d4
-		lsl.w	#2,d4
+		move.b	(a5),d4		; The following flips are for
+		lsl.w	#2,d4		; the 6pad's internal counter:
 		and.w	#%11000000,d4
 		or.w	d5,d4
-		move.b	#$40,(a5)	; Show CB|RLDU
+		move.b	#$40,(a5)	; Show CB|RLDU (2)
 		not.w	d4
 		move.b	on_hold+1(a6),d5
 		eor.b	d4,d5
-		move.b	#$00,(a5)	; Show SA|RLDU
+		move.b	#$00,(a5)	; Show SA|RLDU (3)
 		move.b	d4,on_hold+1(a6)
 		and.b	d4,d5
 		move.b	d5,on_press+1(a6)
-		move.b	#$40,(a5)	; 6 button responds
+		move.b	#$40,(a5)	; 6 button responds (4)
 		nop
 		nop
 		move.b	(a5),d4		; Grab ??|MXYZ
- 		move.b	#$00,(a5)
+ 		move.b	#$00,(a5)	; (5)
   		nop
   		nop
  		move.b	(a5),d6		; Type: $03 old, $0F new
- 		move.b	#$40,(a5)
+ 		move.b	#$40,(a5)	; (6)
  		nop
  		nop
 		and.w	#$F,d6

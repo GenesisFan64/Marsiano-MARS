@@ -67,34 +67,12 @@ MD_Mode0:
 		bsr	Video_init
 		bsr	System_Init
 
-; 		bsr	Mode_Init
-
-		bset	#bitDispEnbl,(RAM_VdpRegs+1).l	; Enable Genesis display
-		move.b	#%111,(RAM_VdpRegs+$B).l	; Horizontall linescroll
+		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-
-; 		lea	MasterTrkList(pc),a0
-; 		move.w	$C(a0),d1
-; 		move.w	$E(a0),d3
-; 		moveq	#0,d0
-; 		moveq	#0,d2
-; 		bsr	Sound_TrkPlay
-; 		move.w	#200+12,(RAM_CurrTempo).w
-
-	; QUICKJUMP
 		move.w	#set_StartPage,(RAM_CurrPage).w
-		lea	(RAM_MdDreq+Dreq_Objects),a0
-		move.l	#MarsObj_test,mdl_data(a0)
-		move.l	#-$600,mdl_z_pos(a0)
-; 		move.l	#$4000,mdl_y_pos(a0)
-		lea	(RAM_MdDreq+Dreq_SclData),a0
-		move.l	#TESTMARS_BG2|TH,(a0)+
-		move.l	#$00000000,(a0)+	; X pos
-		move.l	#$00000000,(a0)+	; Y pos
-		move.l	#$00010000,(a0)+	; DX
-		move.l	#$00010000,(a0)+	; DY
-		move.l	#320,(a0)+
-		move.l	#224,(a0)+
+		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
+		move.b	#%111,(RAM_VdpRegs+$B).l
+		bsr	Video_Update
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -230,7 +208,6 @@ MD_Mode0:
 		move.w	#256,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
-
 		lea	PAL_TESTBOARD(pc),a0
 		moveq	#0,d0
 		move.w	#$20,d1
@@ -303,6 +280,17 @@ MD_Mode0:
 		bsr	Video_ClearScreen
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
+
+		lea	(RAM_MdDreq),a0
+		move.l	#TESTMARS_BG2|TH,Dreq_SclData(a0)
+		move.l	#$00000000,Dreq_SclX(a0)	; X pos
+		move.l	#$00000000,Dreq_SclY(a0)	; Y pos
+		move.l	#$00010000,Dreq_SclDX(a0)	; DX
+		move.l	#$00010000,Dreq_SclDY(a0)	; DY
+		move.l	#320,Dreq_SclWidth(a0)
+		move.l	#224,Dreq_SclHeight(a0)
+		move.l	#0,Dreq_SclMode(a0)		;
+		bsr	System_WaitFrame
 
 		lea	str_Page2(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
@@ -381,14 +369,18 @@ MD_Mode0:
 
 .page3_init:
 		bsr	Video_ClearScreen
-		bsr	Video_PrintInit
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
+
+		lea	(RAM_MdDreq+Dreq_Objects),a0
+		move.l	#MarsObj_test,mdl_data(a0)
+		move.l	#-$600,mdl_z_pos(a0)
+; 		move.l	#$4000,mdl_y_pos(a0)
+		bsr	System_WaitFrame
 
 		lea	str_Page3(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
-		bsr	System_WaitFrame
 
 		move.w	#4,d0
 		bsr	Video_MarsSetGfx
@@ -396,18 +388,16 @@ MD_Mode0:
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
-		bsr	Video_LoadPal_Mars
+		bsr	Video_FadePal_Mars
 
-; 		bsr	.fade_in
+		bsr	.fade_in
 .page3:
 		lea	str_StatsPage0(pc),a0
 		move.l	#locate(0,2,4),d0
 		bsr	Video_Print
 
-; 		bsr	System_WaitFrame
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.l	#$4000,mdl_x_rot(a0)
-; 		add.l	#$1000,mdl_z_rot(a0)
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.page3_ret

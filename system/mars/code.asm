@@ -45,6 +45,7 @@ marsGbl_BgDrwR		ds.w 1	; Write 2 to only redraw offscreen section(s)
 marsGbl_BgDrwL		ds.w 1	;
 marsGbl_BgDrwU		ds.w 1	;
 marsGbl_BgDrwD		ds.w 1	;
+marsGbl_BgSclMode	ds.w 1
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -514,34 +515,35 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov.l	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov.l	#_sysreg,r1
-		mov.w	r0,@(vresintclr,r1)
-		mov	#_DMASOURCE0,r2
-		mov	@($C,r2),r0
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet
-		mov	#0,r0		; Force DMA off
-		mov	r0,@($30,r2)
-		mov	r0,@($C,r2)
-.not_yet:
-; 		mov.b   @(7,r1),r0
-; 		tst     #%001,r0
-; .rv_stuck:
-; 		bf	.rv_stuck
-		mov	#"M_OK",r0
-		mov	r0,@(comm0,r1)
+		mov	#_sysreg,r2
+		mov.w	r0,@(vresintclr,r2)
+
+		mov	#(CS3|$40000)-8,r15
 		mov	#SH2_M_HotStart,r0
-		jmp	@r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
+		mov	#_DMAOPERATION,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#_DMACHANNEL0,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#$44E0,r1
+		mov	r0,@r1
+		mov	#"M_OK",r0
+		mov	r0,@(comm0,r2)
+		rte
 		nop
 		align 4
-		ltorg		; Save MASTER IRQ literals here
+		ltorg		; Save literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -901,42 +903,32 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov.l	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov.l	#_sysreg,r1
-		mov.w	r0,@(vresintclr,r1)
-		mov	#_DMASOURCE0,r2
-		mov	@($C,r2),r0
-		and	#%01,r0
-		tst	r0,r0
-		bt	.not_yet
-		mov	#0,r0		; Force DMA off
-		mov	r0,@($30,r2)
-		mov	r0,@($C,r2)
-.not_yet:
-; 		mov	#$FFFFFE80,r1
-; 		mov.w	#$A518,r0	; Disable Watchdog
-; 		mov.w	r0,@r1
+		mov	#_sysreg,r2
+		mov.w	r0,@(vresintclr,r2)
 
-; 		mov.b   @(7,r1),r0
-; 		tst     #%001,r0
-; .rv_stuck:
-; 		bf	.rv_stuck
-		mov	#"M_OK",r2
-.wait_m:	mov	@(comm0,r1),r0
-		cmp/eq	r2,r0
-		bf	.wait_m
-		mov	#"S_OK",r0
-		mov	r0,@(comm4,r1)
+		mov	#(CS3|$3F000)-8,r15
 		mov	#SH2_S_HotStart,r0
-		jmp	@r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
+		mov	#_DMAOPERATION,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#_DMACHANNEL0,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#$44E0,r1
+		mov	r0,@r1
+		mov	#"S_OK",r0
+		mov	r0,@(comm4,r2)
+		rte
 		nop
 		align 4
-		ltorg			; Save SLAVE IRQ literals here
+		ltorg		; Save literals
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -954,6 +946,11 @@ s_irq_vres:
 
 		align 4
 SH2_M_Entry:
+		mov	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
+		mov	#CS3|$40000,r15			; Set default Stack for Master
+		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
+		ldc	r14,gbr
 		mov.l	#$FFFFFE10,r14
 		mov	#0,r0
 		mov.b	r0,@(0,r14)
@@ -1020,14 +1017,6 @@ SH2_M_Entry:
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
-		mov	#CS3|$40000,r15			; Set default Stack for Master
-		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
-		ldc	r14,gbr
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0			; Disable Watchdog
-		mov.w	r0,@r1
 		mov	#$20004000,r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -1167,8 +1156,16 @@ master_loop:
 
 ; ============================================================
 ; ---------------------------------------
-; Mode 0:
-; BLANK, nothing.
+; Pseudo-screen mode $00:
+;
+; BLANK, nothing to see here.
+;
+; MUST set mode $00 if you are doing
+; these on the Genesis side:
+;
+; - H32 mode
+; - Double interlace mode
+;   ("2 player split-screen")
 ; ---------------------------------------
 
 mstr_gfx0_hblk:
@@ -1181,13 +1178,19 @@ mstr_gfx0_init:
 		mov 	#_vdpreg,r1
 		mov	#0,r0
 		mov.b	r0,@(bitmapmd,r1)
+		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
+		mov.w	r0,@(marsGbl_BgDrwR,gbr)
+		mov.w	r0,@(marsGbl_BgDrwL,gbr)
+		mov.w	r0,@(marsGbl_BgDrwD,gbr)
+		mov.w	r0,@(marsGbl_BgDrwU,gbr)
 mstr_gfx0:
 		bra	master_loop
 		nop
 
 ; ============================================================
 ; ---------------------------------------
-; Psdo-mode 1:
+; Pseudo-screen mode $01:
+;
 ; Generic static screen in any
 ; bitmap mode: Indexed, Direct or RLE
 ;
@@ -1196,7 +1199,6 @@ mstr_gfx0:
 ; ---------------------------------------
 
 ; TODO: for later...
-
 mstr_gfx1_hblk:
 		rts
 		nop
@@ -1213,7 +1215,8 @@ mstr_gfx1:
 
 ; ============================================================
 ; ---------------------------------------
-; Psdo-mode 2:
+; Pseudo-screen mode $02:
+;
 ; 256-color scrolling image
 ;
 ; *** WAIT 2 FRAMES TO PROPERLY START
@@ -1228,7 +1231,6 @@ mstr_gfx2_vblk:
 		tst	r0,r0
 		bf	.mid_draw
 		mov	#RAM_Mars_BgBuffScrl,r14
-
 		mov	#RAM_Mars_DreqRead,r0
 		mov	@(Dreq_BgEx_X,r0),r1
 		mov	@(Dreq_BgEx_Y,r0),r2
@@ -1240,8 +1242,8 @@ mstr_gfx2_vblk:
 mstr_gfx2_init:
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwAll,gbr)
-		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	#$200,r2
+		mov	#RAM_Mars_BgBuffScrl,r1		; <-- TODO: make these configurable
+		mov	#$200,r2			; on Genesis side
 		mov	#16,r3
 		mov	#320,r4
 		mov	#256,r5
@@ -1307,13 +1309,10 @@ mstr_gfx2:
 
 ; ============================================================
 ; ---------------------------------------
-; Psdo-mode 3:
+; Pseudo-screen mode $03:
 ; Scalable 256-color screen
 ;
 ; Not as smooth as Mode 2
-;
-; *** SET YOUR SOURCE IMAGE
-; AS CACHE-THRU***
 ; ---------------------------------------
 
 mstr_gfx3_hblk:
@@ -1323,7 +1322,7 @@ mstr_gfx3_vblk:
 		mov	#RAM_Mars_DreqRead+Dreq_SclData,r1	; Copy-paste scale buffer
 		mov	#RAM_Mars_BgBuffScale_M,r2
 		mov	#RAM_Mars_BgBuffScale_S,r3
-		mov	#7,r4
+		mov	#8,r4
 .copy_me:
 		mov	@r1+,r0
 		mov	r0,@r2
@@ -1382,11 +1381,9 @@ mstr_gfx3:
 	; r9 - Loop: Line width / 2
 	; r10 - Loop: Number of lines
 	;
-	; TODO: a small word is missing
-	; if X/Y are in reverse
+	; TODO: a small word is missing if X/Y are in reverse
 		mov	#RAM_Mars_BgBuffScale_M,r14
 		mov	#_framebuffer+$200,r13	; r13 - Output
-
 		mov	@r14+,r7		; r7 - Input
 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
 		mov	@r14+,r2		; r2 - Y pos
@@ -1394,6 +1391,9 @@ mstr_gfx3:
 		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r5		; r5 - X width
 		mov	@r14+,r6		; r6 - Y height
+		mov	@r14+,r9		; r9 - Mode
+		mov	#TH,r0			; Force source as Cache-thru
+		or	r0,r7
 		shll16	r5
 		shll16	r6
 		dmuls	r1,r5			; Topleft X/Y calc
@@ -1404,18 +1404,27 @@ mstr_gfx3:
 		sts	mach,r0
 		sts	macl,r2
 		xtrct	r0,r2
+		lds	r9,mach			; mach - mode number
 		mov	#320/2,r9		; r9  - X loop
 		mov	#240/2,r10		; r10 - Y loop
-.y_loop2:
+
+	; X check
+		sts	mach,r0
+		tst	r0,r0
+		bt	.x_cont
+.x_fix:
 		cmp/pz	r1
-		bt	.y_add
-		bra	.y_loop2
+		bt	.x_cont
+		bra	.x_fix
 		add	r5,r1
-.y_add:
+.x_cont:
 
 
 ; *** LOOP
 .y_loop:
+		sts	mach,r0
+		tst	r0,r0
+		bt	.y_high
 		cmp/pz	r2
 		bt	.xy_set
 		bra	.y_loop
@@ -1427,7 +1436,7 @@ mstr_gfx3:
 		sub	r6,r2
 .y_high:
 		mov	r1,r11
-		shlr	r11			; /2
+		shar	r11		; /2
 		mov	r2,r0
 		shlr16	r0
 		mov	r5,r8
@@ -1438,17 +1447,40 @@ mstr_gfx3:
 		mov	r13,r8
 		mov	r9,r14
 .x_loop:
+	; 00 - single scale
+		sts	mach,r0
+		tst	r0,r0
+		bf	.x_rept
+		cmp/pz	r11
+		bt	.xwpos
+		bra	.x_next
+		mov	#0,r0
+.xwpos:
 		mov	r5,r0
 		shar	r0		; /2
-
-	; checks both negative and positive
+		cmp/ge	r0,r11
+		bf	.x_go
+		bra	.x_next
+		mov	#0,r0
+.x_go:
+		mov	#0,r0
+		cmp/pl	r2
+		bf	.x_next
+		cmp/ge	r6,r2
+		bt	.x_next
+		bra	.x_high
+		nop
+.x_rept:
+	; 01 - repeat check
+		mov	r5,r0
+		shar	r0		; /2
 		cmp/pl	r11
-		bt	.xwpos
+		bt	.xwpos2
 .x_loopm:	cmp/ge	r0,r11
 		bt	.x_high
 		bra	.x_loopm
 		add	r0,r11
-.xwpos:
+.xwpos2:
 		cmp/ge	r0,r11
 		bf	.x_high
 		bra	.xwpos
@@ -1459,14 +1491,13 @@ mstr_gfx3:
 		exts	r0,r0
 		shll	r0
 		mov.w	@(r12,r0),r0
+.x_next:
 		add	r3,r11
 		mov.w	r0,@r8
 		dt	r14
 		bf/s	.x_loop
 		add	#2,r8
-
 		add	r4,r2
-; 		add	r4,r2
 		mov	#320,r0
 		dt	r10
 		bf/s	.y_loop
@@ -1482,6 +1513,7 @@ mstr_gfx3:
 		bra	master_loop
 		nop
 		align 4
+		ltorg
 
 ; ============================================================
 ; ---------------------------------------
@@ -1667,6 +1699,11 @@ mstr_gfx4:
 
 		align 4
 SH2_S_Entry:
+		mov	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
+		mov	#CS3|$3F000,r15			; Reset stack
+		mov	#RAM_Mars_Global,r14		; Reset gbr
+		ldc	r14,gbr
 		mov.l	#$FFFFFE10,r14
 		mov	#0,r0
 		mov.b	r0,@(0,r14)
@@ -1721,15 +1758,7 @@ SH2_S_Entry:
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0			; Disable Watchdog
-		mov.w	r0,@r1
-		mov	#CS3|$3F000,r15			; Reset stack
-		mov	#RAM_Mars_Global,r14		; Reset gbr
-		ldc	r14,gbr
-		mov	#$20004000, r14
+		mov	#$20004000,r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
 		mov.w	r0,@($16,r14)
@@ -1750,7 +1779,6 @@ SH2_S_HotStart:
 		nop
 		align 4
 		ltorg
-
 
 ; ----------------------------------------------------------------
 ; SLAVE CPU loop
@@ -1824,7 +1852,6 @@ slave_loop:
 
 		mov	#RAM_Mars_BgBuffScale_S,r14
 		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
-
 		mov	@r14+,r7		; r7 - Input
 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
 		mov	@r14+,r2		; r2 - Y pos
@@ -1832,6 +1859,9 @@ slave_loop:
 		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r5		; r5 - X width
 		mov	@r14+,r6		; r6 - Y height
+		mov	@r14+,r9		; r9 - Mode
+		mov	#TH,r0			; Force source as Cache-thru
+		or	r0,r7
 		shll16	r5
 		shll16	r6
 		dmuls	r1,r5			; Topleft X/Y calc
@@ -1850,28 +1880,37 @@ slave_loop:
 		bra	.ymiddle
 		add	r6,r2
 .xy_set2:
-; 		cmp/ge	r6,r2
-; 		bf	.y_high2
-; 		bra	.xy_set2
-; 		sub	r6,r2
-; .y_high2:
+		cmp/ge	r6,r2
+		bf	.y_high2
+		bra	.xy_set2
+		sub	r6,r2
+.y_high2:
 		dt	r10
 		bf/s	.ymiddle
 		add	r4,r2
 
 ; *** LOOP
+		lds	r9,mach			; mach - mode number
 		mov	#320/2,r9		; r9  - X loop
 		mov	#240/2,r10		; r10 - Y loop
-.y_loop2:
+
+	; X check
+		sts	mach,r0
+		tst	r0,r0
+		bt	.x_cont
+.x_fix:
 		cmp/pz	r1
-		bt	.y_add
-		bra	.y_loop2
+		bt	.x_cont
+		bra	.x_fix
 		add	r5,r1
-.y_add:
+.x_cont:
 
 
 ; *** LOOP
 .y_loop:
+		sts	mach,r0
+		tst	r0,r0
+		bt	.y_high
 		cmp/pz	r2
 		bt	.xy_set
 		bra	.y_loop
@@ -1883,7 +1922,7 @@ slave_loop:
 		sub	r6,r2
 .y_high:
 		mov	r1,r11
-		shlr	r11			; /2
+		shar	r11		; /2
 		mov	r2,r0
 		shlr16	r0
 		mov	r5,r8
@@ -1894,17 +1933,40 @@ slave_loop:
 		mov	r13,r8
 		mov	r9,r14
 .x_loop:
+	; 00 - single scale
+		sts	mach,r0
+		tst	r0,r0
+		bf	.x_rept
+		cmp/pz	r11
+		bt	.xwpos
+		bra	.x_next
+		mov	#0,r0
+.xwpos:
 		mov	r5,r0
 		shar	r0		; /2
-
-	; checks both negative and positive
+		cmp/ge	r0,r11
+		bf	.x_go
+		bra	.x_next
+		mov	#0,r0
+.x_go:
+		mov	#0,r0
+		cmp/pl	r2
+		bf	.x_next
+		cmp/ge	r6,r2
+		bt	.x_next
+		bra	.x_high
+		nop
+.x_rept:
+	; 01 - repeat check
+		mov	r5,r0
+		shar	r0		; /2
 		cmp/pl	r11
-		bt	.xwpos
+		bt	.xwpos2
 .x_loopm:	cmp/ge	r0,r11
 		bt	.x_high
 		bra	.x_loopm
 		add	r0,r11
-.xwpos:
+.xwpos2:
 		cmp/ge	r0,r11
 		bf	.x_high
 		bra	.xwpos
@@ -1915,14 +1977,13 @@ slave_loop:
 		exts	r0,r0
 		shll	r0
 		mov.w	@(r12,r0),r0
+.x_next:
 		add	r3,r11
 		mov.w	r0,@r8
 		dt	r14
 		bf/s	.x_loop
 		add	#2,r8
-
 		add	r4,r2
-; 		add	r4,r2
 		mov	#320,r0
 		dt	r10
 		bf/s	.y_loop
@@ -2079,8 +2140,8 @@ RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
-RAM_Mars_BgBuffScale_M	ds.l 7
-RAM_Mars_BgBuffScale_S	ds.l 7
+RAM_Mars_BgBuffScale_M	ds.l 8
+RAM_Mars_BgBuffScale_S	ds.l 8
 sizeof_marsvid		ds.l 0
 			finish
 
