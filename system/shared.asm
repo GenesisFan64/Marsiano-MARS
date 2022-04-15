@@ -3,6 +3,7 @@
 ; MD/MARS shared constants
 ; ----------------------------------------------------------------
 
+; ====================================================================
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
@@ -35,7 +36,6 @@ sizeof_mdlobj	ds.l 0
 ; ----------------------------------------------------------------
 ; DREQ RAM control, shared for both sides.
 ;
-;
 ; To read these labels...
 ;
 ; On the Genesis Side:
@@ -48,12 +48,13 @@ sizeof_mdlobj	ds.l 0
 ; List MUST be aligned by 8bytes (end with 0 or 8)
 
 		struct 0
-Dreq_BgEx_Data	ds.l 1		; Screen mode 1: Source data (SH2's area)
+Dreq_Scrn1_Data	ds.l 1		; Screen mode 1: Source image (SH2's area)
+Dreq_BgEx_Data	ds.l 1		; Screen mode 2: Source image (SH2's area)
 Dreq_BgEx_X	ds.l 1		; X pos 0000.0000
 Dreq_BgEx_Y	ds.l 1		; Y pos 0000.0000
 Dreq_BgEx_W	ds.l 1		; Width
 Dreq_BgEx_H	ds.l 1		; Height
-Dreq_SclData	ds.l 1		; Screen mode 2: Source data (SH2's area)
+Dreq_SclData	ds.l 1		; Screen mode 3: Source data (SH2's area)
 Dreq_SclX	ds.l 1		; X pos 0000.0000
 Dreq_SclY	ds.l 1		; Y pos 0000.0000
 Dreq_SclDX	ds.l 1		; DX 0000.0000
@@ -61,7 +62,7 @@ Dreq_SclDY	ds.l 1		; DY 0000.0000
 Dreq_SclWidth	ds.l 1		; Width
 Dreq_SclHeight	ds.l 1		; Height
 Dreq_SclMode	ds.l 1
-Dreq_Filler	ds.l 1
+; Dreq_Filler	ds.l 1
 
 Dreq_Palette	ds.w 256	; 256-color palette
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; <-- labels from SH2 side

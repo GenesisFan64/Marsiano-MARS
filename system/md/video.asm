@@ -178,6 +178,24 @@ Video_ClearScreen:
 .ynext:
 		move.l	d0,(a0)+
 		dbf	d7,.ynext
+		lea	(RAM_Sprites),a0
+		move.w	#((70*8)/4)-1,d7
+		moveq	#0,d0
+.snext:
+		move.l	d0,(a0)+
+		dbf	d7,.snext
+		lea	(RAM_Palette),a0
+		move.w	#64-1,d7
+		moveq	#0,d0
+.pnext:
+		move.l	d0,(a0)+
+		dbf	d7,.pnext
+; 		lea	(RAM_Palette),a0
+; 		move.w	#256-1,d7
+; 		moveq	#0,d0
+; .pnext:
+; 		move.l	d0,(a0)+
+; 		dbf	d7,.pnext
 		rts
 
 ; ====================================================================
@@ -636,7 +654,7 @@ vid_PickLayer:
 ; --------------------------------------------------------
 
 Video_RunFade:
-		bsr	Video_PalFade
+		bsr	Video_DoPalFade
 		bsr	Video_MarsPalFade
 		move.w	(RAM_FadeMarsReq),d7
 		move.w	(RAM_FadeMdReq),d6
@@ -678,7 +696,7 @@ vidMd_Pal:
 		rts
 
 ; --------------------------------------------------------
-; Video_PalFade
+; Video_DoPalFade
 ;
 ; RAM_ReqFadeMars: (WORD)
 ; $00 - No task or finished.
@@ -688,7 +706,7 @@ vidMd_Pal:
 ; NOTE: ONLY CALL THIS OUTSIDE OF VBLANK
 ; --------------------------------------------------------
 
-Video_PalFade:
+Video_DoPalFade:
 		sub.w	#1,(RAM_FadeMdTmr).w
 		bpl.s	.active
 		move.w	(RAM_FadeMdDelay).w,(RAM_FadeMdTmr).w
@@ -1138,7 +1156,6 @@ RAMDMA_Blast:
 		bne.s	.exit
 		tst.w	(RAM_VdpDmaIndx).w		; Any requests?
 		beq.s	.exit
-
 		lea	(vdp_ctrl),a4			; Enter processing loop
 		lea	(RAM_VdpDmaList).w,a3
 		move.w	#$8100,d7			; DMA ON

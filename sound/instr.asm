@@ -135,8 +135,8 @@ FmIns_Trumpet_carnival:
 
 ; FmIns_Bell_Glass:
 ; 		binclude "sound/instr/fm/bell_glass.gsx",$2478,$20
-; FmIns_Marimba_1:
-; 		binclude "sound/instr/fm/marimba_1.gsx",$2478,$20
+FmIns_Marimba:
+		binclude "sound/instr/fm/marimba.gsx",$2478,$20
 
 ; FmIns_Ambient_dark:
 ; 		binclude "sound/instr/fm/ambient_dark.gsx",$2478,$20
@@ -161,3 +161,7 @@ FmIns_Banjo_puy:
 
 FmIns_PSynth_plus:
 		binclude "sound/instr/fm/psynth_plus.gsx",$2478,$20
+FmIns_Ding_1:
+		binclude "sound/instr/fm/ding_1.gsx",$2478,$20
+FmIns_Trombone_gem:
+		binclude "sound/instr/fm/trombone_gem.gsx",$2478,$20

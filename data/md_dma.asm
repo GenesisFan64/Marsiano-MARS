@@ -10,7 +10,8 @@
 		align $8000
 ART_EMI:	binclude "data/md/sprites/emi_art.bin"
 ART_EMI_e:
-
+; ART_TestMap:	binclude "data/md/bg/test_art.bin"
+; ART_TestMap_e:
 
 		align $8000
 ASCII_FONT:	binclude "system/md/data/font.bin"

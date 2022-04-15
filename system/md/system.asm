@@ -69,46 +69,36 @@ System_WaitFrame:
 		move.l	#$94009328,(a6)
 		move.l	#$96009500|(RAM_VerScroll<<7&$FF0000)|(RAM_VerScroll>>1&$FF),(a6)
 		move.w	#$9700|(RAM_VerScroll>>17&$7F),(a6)
-		move.w	#$4000,d7
+		move.w	#$4000,(a6)
 		move.w	#$0010|$80,-(sp)
-		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
 		move.l	#$940193E0,(a6)
 		move.l	#$96009500|(RAM_HorScroll<<7&$FF0000)|(RAM_HorScroll>>1&$FF),(a6)
 		move.w	#$9700|(RAM_HorScroll>>17&$7F),(a6)
-		move.w	#$7C00,d7
+		move.w	#$7C00,(a6)
 		move.w	#$0003|$80,-(sp)
-		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
 		move.l	#$940193C0,(a6)
 		move.l	#$96009500|(RAM_Sprites<<7&$FF0000)|(RAM_Sprites>>1&$FF),(a6)
 		move.w	#$9700|(RAM_Sprites>>17&$7F),(a6)
-		move.w	#$7800,d7
+		move.w	#$7800,(a6)
 		move.w	#$0003|$80,-(sp)
-		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
 		move.l	#$94009340,(a6)
 		move.l	#$96009500|(RAM_Palette<<7&$FF0000)|(RAM_Palette>>1&$FF),(a6)
 		move.w	#$9700|(RAM_Palette>>17&$7F),(a6)
-		move.w	#$C000,d7
+		move.w	#$C000,(a6)
 		move.w	#$0000|$80,-(sp)
-		move.w	d7,(a6)
 		move.w	(sp)+,(a6)
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
 		bsr	Video_DmaBlast		; Process DMA Blast list
 		add.l	#1,(RAM_Framecount).l
-
-	; *** IMPORTANT ***
 .wait_in:
-		move.w	(vdp_ctrl),d4		; Inside VBlank?
+		move.w	(vdp_ctrl),d4		; Still inside VBlank? *** IMPORTANT ***
 		btst	#bitVBlk,d4
 		bne.s	.wait_in
-
-		lea	(RAM_MdDreq),a0		; Send DREQ
-		move.w	#sizeof_dreq,d0
-		bsr	System_SendDreq
 		rts
 
 ; --------------------------------------------------------
@@ -127,6 +117,30 @@ System_Dma_Enter:
 System_Dma_Exit:
 		bsr	Sound_DMA_Resume
 		rts
+
+; ====================================================================
+; ----------------------------------------------------------------
+; 32X ONLY
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; System_MarsUpdate
+;
+; Call this on any change to the RAM_MdDreq area
+;
+; NOTE:
+; Only call this OUTSIDE of VBlank.
+; --------------------------------------------------------
+
+System_MarsUpdate:
+		move.w	(vdp_ctrl),d4
+		btst	#bitVBlk,d4
+		bne.s	System_MarsUpdate
+
+System_MarsUpd_Out:
+		lea	(RAM_MdDreq),a0		; Send DREQ
+		move.w	#sizeof_dreq,d0
+; 		jmp	(System_SendDreq).l
 
 ; --------------------------------------------------------
 ; System_SendDreq
@@ -253,7 +267,6 @@ System_Input:
 ; --------------------------------------------------------
 
 ; *** NOT TESTED ON HARDWARE ***
-
 .id_03:
 		move.b	#$20,(a5)
 		move.b	#$60,6(a5)
@@ -435,6 +448,7 @@ System_Random:
 ; d2 | LONG - Result (as 0000.0000)
 ; --------------------------------------------------------
 
+; TODO: improve this.
 System_SineWave_Cos:
 		movem.w	d0,-(sp)
 		moveq	#0,d2
@@ -531,6 +545,11 @@ System_SramInit:
 		move.b	#0,(md_bank_sram).l
 		rts
 
+; ====================================================================
+; ----------------------------------------------------------------
+; Screen mode subroutines
+; ----------------------------------------------------------------
+
 ; --------------------------------------------------------
 ; Initialize current screen mode
 ; --------------------------------------------------------
@@ -545,24 +564,21 @@ Mode_Init:
 		dbf	d5,.clr
 		rts
 
-; ; --------------------------------------------------------
-; ; System_JumpRamCode
-; ;
-; ; Transfer user code to RAM and jump into it.
-; ;
-; ; Input:
-; ; d0 - ROM pointer to code
-; ; --------------------------------------------------------
-;
-; System_JumpRamCode:
-; 		or.l	#$880000,d0
-; 		move.l	d0,a0
-; 		lea	(RAMCODE_USER),a1
-; 		move.w	#$8000-1,d7
-; .copyme2:
-; 		move.b	(a0)+,(a1)+
-; 		dbf	d7,.copyme2
-; 		jmp	(RAMCODE_USER).l
+; --------------------------------------------------------
+
+Mode_FadeOut:
+		move.w	#2,(RAM_FadeMdReq).w
+		move.w	#2,(RAM_FadeMarsReq).w
+		move.w	#1,(RAM_FadeMdIncr).w
+		move.w	#4,(RAM_FadeMarsIncr).w
+		move.w	#0,(RAM_FadeMdDelay).w
+		move.w	#0,(RAM_FadeMarsDelay).w
+.loopw:
+		bsr	System_WaitFrame
+		bsr	System_MarsUpdate
+		bsr	Video_RunFade
+		bne.s	.loopw
+		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------

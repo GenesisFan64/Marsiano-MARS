@@ -16,6 +16,10 @@
 ; Main 68k code
 ; ----------------------------------------------------------------
 
+		move.w	#$2700,sr
+		jsr	(Sound_init).l
+		jsr	(Video_init).l
+		jsr	(System_Init).l
 		jmp	(MD_Mode0).l
 
 ; ====================================================================
@@ -28,7 +32,8 @@ Md_TopCode:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
-		include "code/default.asm"
+		include "code/main.asm"
+		include "code/debug.asm"
 Md_TopCode_end:
 		dephase
 		align 2

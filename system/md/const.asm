@@ -92,7 +92,7 @@ bitClickS	equ 3
 		struct RAM_MdSystem
 RAM_InputData	ds.b sizeof_input*4		; Input data section
 RAM_SaveData	ds.b $200			; SRAM data cache
-RAM_DmaCode	ds.b $180
+RAM_DmaCode	ds.b $200
 RAM_SysRandVal	ds.l 1				; Random value
 RAM_SysRandSeed	ds.l 1				; Randomness seed
 RAM_initflug	ds.l 1				; "INIT" flag

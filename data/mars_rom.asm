@@ -75,6 +75,10 @@ TESTMARS_BG2:
 	binclude "data/mars/test2_art.bin"
 	align 4
 
+TESTMARS_DIRECT:
+	binclude "data/mars/tests/direct_art.bin"
+	align 4
+
 ; --------------------------------------------------------
 ; Models
 ; --------------------------------------------------------

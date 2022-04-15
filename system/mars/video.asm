@@ -12,8 +12,9 @@
 
 MAX_FACES	equ 256
 MAX_SVDP_PZ	equ 256+32
-MAX_ZDIST	equ -$2000		; Max 3D drawing distance (-Z)
-FBVRAM_PATCH	equ $1E000		; Framebuffer location for the affected XShift lines
+MAX_ZDIST	equ -$2000	; Max 3D drawing distance (-Z)
+FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines
+FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
 
 ; --------------------------------------------------------
 ; Variables
@@ -144,7 +145,7 @@ MarsVideo_Init:
 ; Make default linetable, waits for frameswap.
 .def_fb:
 		mov	r2,r3
-		mov	#$1FD80/2,r0		; very last usable (blank) line
+		mov	#FBVRAM_LAST/2,r0		; very last usable (blank) line
 		mov	#240,r4
 .nxt_lne:
 		mov.w	r0,@r3
@@ -272,6 +273,106 @@ MarsVideo_SetScrlBg:
 		ltorg
 
 ; --------------------------------------------------------
+; MarsVideo_ResetNameTbl
+;
+; Reset the nametable (points all lines to a blank line)
+; --------------------------------------------------------
+
+MarsVideo_ResetNameTbl:
+		mov	#_framebuffer,r1
+		mov	#FBVRAM_LAST,r0
+		mov	#240,r2
+.nxt_lne2:
+		mov.w	r0,@r1
+		dt	r2
+		bf/s	.nxt_lne2
+		add	#2,r1
+		rts
+		nop
+		align 4
+
+; --------------------------------------------------------
+; MarsVideo_MakeNametbl
+;
+; Builds the nametable for a normal screen, if
+; marsGbl_WaveEnable is set, it will add a
+; wave effect to the linetable (in WORDS)
+;
+; Input:
+; r1 | Background buffer
+; r2 | Width
+; r3 | Height
+; r4 | Y index position
+;
+; NOTE: after finishing all your screens
+; call MarsVideo_FixTblShift before doing frameswap
+; --------------------------------------------------------
+
+MarsVideo_MakeNameTbl:
+		mov	#_framebuffer,r10
+		shll	r4
+		add	r4,r10
+		mov 	#_vdpreg,r5
+		mov.b	@(bitmapmd,r5),r0	; Cannot mess with the RLE lines.
+		and	#%11,r0
+		cmp/eq	#3,r0
+		bt	.linetbl_normal
+		mov.w	@(marsGbl_WaveEnable,gbr),r0
+		tst	r0,r0
+		bt	.linetbl_normal
+
+		mov.w	@(marsGbl_WaveSpd,gbr),r0
+		mov	r0,r4
+		mov.w	@(marsGbl_WaveTan,gbr),r0
+		mov	#$7FF,r5
+		add	r4,r0			; wave speed
+		and	r5,r0
+		mov.w	r0,@(marsGbl_WaveTan,gbr)
+		mov	r0,r7
+		mov.w	@(marsGbl_WaveMax,gbr),r0
+		mov	r0,r5
+		mov.w	@(marsGbl_WaveDeform,gbr),r0
+		mov	r0,r4
+		mov	#0,r6
+		mov	#$7FF,r11
+		mov	#sin_table,r12
+.nxt_lne:
+		mov	r7,r0
+		add	r4,r7		; wave distord
+		and	r11,r7
+		shll2	r0
+		mov	@(r0,r12),r9
+		dmuls	r5,r9
+		sts	macl,r9
+		shlr16	r9
+		exts.w	r9,r9
+		mov	r1,r0
+		add	r6,r0
+		add	r9,r0
+		shlr	r0
+		mov.w	r0,@r10
+		add	r2,r6
+		dt	r3
+		bf/s	.nxt_lne
+		add	#2,r10
+		rts
+		nop
+		align 4
+
+.linetbl_normal:
+		shlr	r1
+		shlr	r2
+.nxt_lne2:
+		mov.w	r1,@r10
+		add	r2,r1
+		dt	r3
+		bf/s	.nxt_lne2
+		add	#2,r10
+		rts
+		nop
+		align 4
+
+; --------------------------------------------------------
 ; MarsVideo_ShowScrlBg
 ;
 ; Show the background on the screen.
@@ -289,42 +390,96 @@ MarsVideo_ShowScrlBg:
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
 		mov	@(mbg_fbdata,r1),r13		; r13 - Framebuffer pixeldata position
 		mov	@(mbg_intrl_size,r1),r12	; r12 - Full size of screen-scroll
-		mov	#0,r10				; r10 - line counter
+		mov	#0,r11				; r11 - line counter
 		mov.w	@(mbg_intrl_w,r1),r0
-		mov	r0,r9				;  r9 - Next line to add
+		mov	r0,r10				; r10 - Next line to add
+
 		mov	r2,r6
-		mov	r14,r8
 		mov	r2,r0
 		shll	r0
-		add	r0,r8
+		add	r0,r14
 		mov.w	@(mbg_yfb,r1),r0
-		mulu	r9,r0
-		mov	@(mbg_fbpos,r1),r5
-; 		shll	r5
-		mov	r5,r7
+		mulu	r10,r0
+		mov	@(mbg_fbpos,r1),r7
 		sts	macl,r0
 		add	r0,r7
-		mov	#$FF,r4
+
+		mov.w	@(marsGbl_WaveEnable,gbr),r0
+		tst	r0,r0
+		bf	.ln_wavy
 .ln_loop:
-		mov	r7,r5
-		cmp/ge	r12,r5
+		mov	r7,r8
+		cmp/ge	r12,r8
 		bf	.xl_r
-		sub	r12,r5
+		sub	r12,r8
 .xl_r:
-		cmp/pz	r5
+		cmp/pz	r8
 		bt	.xl_l
-		add	r12,r5
+		add	r12,r8
 .xl_l:
-		mov	r5,r7
-		add	r9,r7		; Add Y
-		add	r13,r5		; Add Framebuffer position
-		shlr	r5		; divide by 2 (shift reg does the missing bit 0)
-		mov.w	r5,@r8		; send to FB's table
-		add	#2,r8
-		add	#2,r10
+		mov	r8,r7
+		add	r10,r7		; Add Y
+		add	r13,r8		; Add Framebuffer position
+		shlr	r8		; divide by 2 (shift reg does the missing bit 0)
+		mov.w	r8,@r14		; send to FB's table
+		add	#2,r14
+		add	#2,r11
 		cmp/eq	r3,r6
 		bf/s	.ln_loop
 		add	#1,r6
+		rts
+		nop
+		align 4
+
+.ln_wavy:
+		mov.w	@(marsGbl_WaveSpd,gbr),r0
+		mov	r0,r4
+		mov.w	@(marsGbl_WaveTan,gbr),r0
+		mov	#$7FF,r5
+		add	r4,r0			; wave speed
+		and	r5,r0
+		mov.w	r0,@(marsGbl_WaveTan,gbr)
+		mov	r0,r9
+		mov.w	@(marsGbl_WaveMax,gbr),r0
+		mov	r0,r5
+		mov.w	@(marsGbl_WaveDeform,gbr),r0
+		mov	r0,r4
+.ln_loop_w:
+		mov	#$7FF,r8
+		mov	r9,r0
+		add	r4,r9		; wave distord
+		and	r8,r9
+		shll2	r0
+		mov	#sin_table,r8
+		mov	@(r0,r8),r0
+		dmuls	r5,r0
+		sts	macl,r0
+		shlr16	r0
+		exts.w	r0,r0
+
+		mov	r7,r8
+		cmp/ge	r12,r8
+		bf	.wxl_r
+		sub	r12,r8
+.wxl_r:
+		cmp/pz	r8
+		bt	.wxl_l
+		add	r12,r8
+.wxl_l:
+		mov	r8,r7
+		add	r10,r7		; Add Y
+		add	r13,r8		; Add Framebuffer position
+		add	r0,r8
+		shlr	r8		; divide by 2 (shift reg does the missing bit 0)
+		mov.w	r8,@r14		; send to FB's table
+		add	#2,r14
+		add	#2,r11
+		cmp/eq	r3,r6
+		bf/s	.ln_loop_w
+		add	#1,r6
+		rts
+		nop
+		align 4
 
 .no_lines:
 		rts
@@ -615,6 +770,7 @@ MarsVideo_DrawAllBg:
 		nop
 		align 4
 		ltorg
+		align 4
 
 ; --------------------------------------------------------
 ; MarsVideo_BgDrawLR
@@ -697,6 +853,7 @@ MarsVideo_BgDrawLR:
 		mov	r0,r5
 		align 4
 		ltorg
+		align 4
 
 	; r13 - Y lines
 	; r12 - X block width
@@ -892,6 +1049,7 @@ drw_ud_exit:
 		nop
 		align 4
 		ltorg
+		align 4
 
 ; --------------------------------------------------------
 ; MarsVideo_MoveBg

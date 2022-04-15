@@ -18,6 +18,7 @@
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
 ZSET_WTUNE	equ -24		; Manual frequency adjustment for DAC WAVE playback
 ZSET_TESTME	equ 0		; Set to 1 to "hear" test the DAC playback
+MAX_INS		equ 16
 
 ; --------------------------------------------------------
 ; Structs
@@ -27,22 +28,24 @@ ZSET_TESTME	equ 0		; Set to 1 to "hear" test the DAC playback
 
 ; trkBuff struct
 ; LIMIT: 20h (32) bytes
-trk_romBlk	equ 0	; 24-bit base block data
-trk_romPatt	equ 3	; 24-bit base patt data
-trk_romIns	equ 6	; 24-bit ROM instrument pointers
-trk_romPattRd	equ 9	; same but for reading
-trk_Read	equ 12	; Current track position (in our storage)
-trk_Rows	equ 14	; Current track length
-trk_Halfway	equ 16	; Only 00h or 80h
-trk_currBlk	equ 17	; Current block
-trk_setBlk	equ 18	; Start on this block
-trk_status	equ 19	; %ERPB Sxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats / S-silence
-trk_tickTmr	equ 20	; Ticks timer
-trk_tickSet	equ 21	; Ticks set for this track
-trk_sizeIns	equ 22	; Max instrument storage
-trk_rowPause	equ 23	; Row pause timer
-trk_CachNotes	equ 26	; Pointer to track storage (100h bytes long and aligned)
-trk_CmdReq	equ 28	; Track command requests
+trk_romBlk	equ 00h	; 24-bit base block data
+trk_romPatt	equ 03h	; 24-bit base patt data
+trk_romIns	equ 06h	; 24-bit ROM instrument pointers
+trk_romPattRd	equ 09h	; same but for reading
+trk_Read	equ 0Ch	; Current track position (in our storage)
+trk_Rows	equ 0Eh	; Current track length
+
+trk_Halfway	equ 10h	; Only 00h or 80h
+trk_currBlk	equ 11h	; Current block
+trk_setBlk	equ 12h	; Start on this block
+trk_status	equ 13h	; %ERPB Sxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats / S-silence
+
+trk_tickTmr	equ 14h	; Ticks timer
+trk_tickSet	equ 15h	; Ticks set for this track
+trk_sizeIns	equ 16h	; Max instrument storage
+trk_rowPause	equ 17h	; Row pause timer
+trk_CachNotes	equ 18h	; Pointer to track storage (100h bytes long and aligned)
+trk_CmdReq	equ 1Ah	; Track command requests
 
 ; Tracker channel data, 8 bytes each.
 chnl_Chip	equ 0		; *** MUST BE AT 0 ***
@@ -517,9 +520,9 @@ updtrack:
 		ld	a,c
 		or	b
 		call	z,.next_track		; If rowtimer == 0, get next track data
-		cp	-1			; or exit.
-		ret	z
-		rst	8
+; 		cp	-1
+; 		ret	z
+; 		rst	8
 
 ; --------------------------------
 ; Main reading loop
@@ -1009,7 +1012,7 @@ mars_scomm:
 		and	00001111b	; did it write?
 		cp	1
 		jr	nz,.wait_enter
-		set	7,(iy+comm14)	; Enter transfer loop
+		set	7,(iy+comm14)	; Set busy flag
 		set	1,(iy+standby)	; Request Slave CMD
 		rst	8
 .wait_cmd:
@@ -1042,7 +1045,7 @@ mars_scomm:
 		dec	c
 		jr	nz,.next_pass
 		res	7,(iy+comm14)	; Break transfer loop
-		res	6,(iy+comm14)
+		res	6,(iy+comm14)	; Clear CLK
 
 	; clear COM bytes here.
 .blocked:
@@ -4002,11 +4005,12 @@ daccom:		db 0			; single byte for key on, off and cut
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
+		align 10h
 trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
 trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
 
-insDataC_0	ds 8*16		; Instrument data for each Track slot
-insDataC_1	ds 8*16		; 8*MAX_INS
+insDataC_0	ds 8*MAX_INS	; Instrument data for each Track slot
+insDataC_1	ds 8*MAX_INS	; 8*MAX_INS
 currInsData	dw 0
 currTblPos	dw 0
 currInsPos	dw 0

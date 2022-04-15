@@ -27,8 +27,10 @@ gPwm macro locate,loop
 ; --------------------------------------------------------
 	align 4			; FIRST ALIGN FOR PWMs
 
-; PwmIns_Test_st:
-; 	gPwm "sound/instr/smpl/baila_st.wav",0
+PwmIns_String_1:
+	gPwm "sound/instr/smpl/string_1.wav",0
+PwmIns_Tropical:
+	gPwm "sound/instr/smpl/tropical.wav",0
 
 ; DacIns_wegot_kick:
 ; 	gSmpl "sound/instr/smpl/wegot_kick.wav",0
