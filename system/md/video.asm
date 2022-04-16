@@ -67,7 +67,7 @@ Video_Init:
 		dbf	d7,.loop
 .exit:
 		moveq	#0,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 
 	; DMA RV-bit safe code
 	; TODO: solo copiarme el write final en
@@ -1198,22 +1198,22 @@ dmacode_end:
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Video_MarsSetGfx
+; Video_Mars_GfxMode
 ; Sets graphics mode on the 32X side
 ;
 ; Input:
 ; d0 - Graphics mode
 ; --------------------------------------------------------
 
-Video_MarsSetGfx:
+Video_Mars_GfxMode:
 		move.w	d0,d6
 		and.w	#%00000111,d6			; Current limit: 8 modes
-		or.w	#$80,d6
+		bset	#7,d6
 		move.w	(sysmars_reg+comm12).l,d7	; Grab current comm12
 		and.w	#$FF00,d7			; Clear our byte
 		or.w	d6,d7				; merge changes
 		move.w	d7,(sysmars_reg+comm12).l	; Write into it.
-		bra	Video_MarsWait
+		bra	Video_Mars_Wait
 
 ; --------------------------------------------------------
 ; Video_MarsRedraw
@@ -1222,17 +1222,17 @@ Video_MarsSetGfx:
 ; on the 32X side.
 ; --------------------------------------------------------
 
-Video_MarsRedraw:
+Video_Mars_Redraw:
 		move.w	(sysmars_reg+comm12).l,d7
 		bset	#7,d7
 		move.w	d7,(sysmars_reg+comm12).l
 
 ; --------------------------------------------------------
 
-Video_MarsWait:
+Video_Mars_Wait:
 		move.w	(sysmars_reg+comm12).l,d7
 		btst	#7,d7
-		bne.s	Video_MarsWait
+		bne.s	Video_Mars_Wait
 		rts
 
 ; --------------------------------------------------------

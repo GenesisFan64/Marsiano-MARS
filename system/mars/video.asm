@@ -124,6 +124,7 @@ sizeof_polygn	ds.l 0
 ; Init MARS Video
 ; ----------------------------------------------------------------
 
+		align 4
 MarsVideo_Init:
 		sts	pr,@-r15
 		mov	#_sysreg,r1

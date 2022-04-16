@@ -576,9 +576,9 @@ s_irq_bad:
 ; ------------------------------------------------
 
 s_irq_cmd:
-		mov	#$F0,r0
+		mov	#.tag_F0,r0
 		ldc	r0,sr
-		mov	#_FRT,r1
+		mov	#.tag_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
@@ -594,7 +594,11 @@ s_irq_cmd:
 		bf	.valid_cmd
 		bra	.no_ztrnsfr
 		nop
-.valid_cmd
+		align 4
+.tag_FRT:	dc.l _FRT
+.tag_F0:	dc.l $F0
+
+.valid_cmd:
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -620,7 +624,6 @@ s_irq_cmd:
 		bt	.mode_3
 		bra	.no_trnsfrex
 		nop
-
 		align 4
 
 ; ---------------------------------
@@ -693,15 +696,27 @@ s_irq_cmd:
 		mov.b	@r14,r0
 		and	#$FF,r0
 		cmp/eq	#0,r0
-		bt	.no_req
+		bt	.no_req2
 		xor	r13,r13
 		mov.b	r13,@r14
 		mov	r0,r7
 		and	#%111,r0
-		cmp/eq	#4,r0
+		cmp/eq	#%001,r0
+		bt	.no_keyoff
+		cmp/eq	#%010,r0
+		bt	.pwm_keyoff
+		cmp/eq	#%100,r0
 		bt	.pwm_keycut
-		cmp/eq	#2,r0
-		bf	.no_keyoff
+		bra	.no_req
+		nop
+.pwm_keyoff:
+		mov	#$40,r2
+		mov	#MarsSound_SetVolume,r0
+		jsr	@r0
+		nop
+.no_req2:
+		bra	.no_req
+		nop
 .pwm_keycut:
 		mov	#0,r2
 		mov	#MarsSound_PwmEnable,r0
@@ -709,6 +724,7 @@ s_irq_cmd:
 		nop
 		bra	.no_req
 		nop
+
 	; Normal playback
 .no_keyoff:
 		mov	r7,r0
@@ -821,8 +837,10 @@ s_irq_cmd:
 .no_req:
 		add	#1,r1		; next PWM slot
 		dt	r10
-		bf/s	.next_chnl
+		bt	.end_chnls
+		bra	.next_chnl
 		add	#1,r14		; next PWM entry
+.end_chnls:
 
 	; ---------------------------------
 	; *** END of PWM driver for GEMA
@@ -847,7 +865,6 @@ s_irq_cmd:
 		mov	@r15+,r2
 
 .no_ztrnsfr:
-
 		nop
 		nop
 		nop
@@ -1059,13 +1076,15 @@ SH2_M_HotStart:
 ; MASTER CPU loop
 ;
 ; comm12:
-; bssscccc i0000lll
+; bssscccc ir000lll
 ;
 ; b - busy bit on the CMD interrupt
 ;     (68k knows that the interrupt is active)
 ; s - status bits for some CMD interrupt tasks
 ; c - command number for CMD interrupt
 ; i - Initialitation bit
+; r - Clears on screen's exit, 68k sets it and waits until frame
+;     is cleared
 ; l - MAIN LOOP command/task, inlcude the i bit to properly
 ;     (re)start
 ; ----------------------------------------------------------------
@@ -1107,6 +1126,10 @@ master_loop:
 	; we are still on VBlank
 	; ---------------------------------------
 
+		mov	#_sysreg+comm12+1,r1		; Clear R bit, tells 68k
+		mov.b	@r1,r0				; frame is ready.
+		and	#%10111111,r0
+		mov.b	r0,@r1
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
 		mov	#_vdpreg+shift,r1		; For the indexed-scrolling
 		and	#1,r0
@@ -1335,7 +1358,7 @@ mstr_gfx1_loop:
 		mov	#320*2,r2
 		mov	#200,r3
 		bsr	MarsVideo_MakeNameTbl
-		mov	#14,r4
+		mov	#12,r4
 
 		bra	master_loop
 		nop
@@ -1346,8 +1369,8 @@ mstr_gfx1_loop:
 ;
 ; 256-color scrolling image
 ;
-; *** WAIT 2 FRAMES TO PROPERLY START
-; THIS MODE ***
+; *** WAIT 2 FRAMES TO PROPERLY
+; START THIS MODE ***
 ; ---------------------------------------
 
 ; -------------------------------
@@ -1369,8 +1392,8 @@ mstr_gfx2_vblk:
 		bf	.mid_draw
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	#RAM_Mars_DreqRead,r0
-		mov	@(Dreq_BgEx_X,r0),r1
-		mov	@(Dreq_BgEx_Y,r0),r2
+		mov	@(Dreq_Scrn2_X,r0),r1
+		mov	@(Dreq_Scrn2_Y,r0),r2
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
 .mid_draw:
@@ -1397,9 +1420,9 @@ mstr_gfx2_init_1:
 		mov.w	r0,@(marsGbl_BgDrwD,gbr)	; draw requests
 		mov	#RAM_Mars_DreqRead,r0		; Set scrolling source data
 		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	@(Dreq_BgEx_Data,r0),r2
-		mov	@(Dreq_BgEx_W,r0),r3
-		mov	@(Dreq_BgEx_H,r0),r4
+		mov	@(Dreq_Scrn2_Data,r0),r2
+		mov	@(Dreq_Scrn2_W,r0),r3
+		mov	@(Dreq_Scrn2_H,r0),r4
 		bsr	MarsVideo_SetScrlBg
 		nop
 		bra	mstr_gfx2_init_cont
@@ -2323,13 +2346,13 @@ SH2_RAM:
 		struct SH2_RAM|TH
 	if MOMPASS=1
 MarsRam_System		ds.l 0
-MarsRam_Video		ds.l 0
 MarsRam_Sound		ds.l 0
+MarsRam_Video		ds.l 0
 sizeof_marsram		ds.l 0
 	else
 MarsRam_System		ds.b (sizeof_marssys-MarsRam_System)
-MarsRam_Video		ds.b (sizeof_marsvid-MarsRam_Video)
 MarsRam_Sound		ds.b (sizeof_marssnd-MarsRam_Sound)
+MarsRam_Video		ds.b (sizeof_marsvid-MarsRam_Video)
 sizeof_marsram		ds.l 0
 	endif
 
@@ -2356,6 +2379,9 @@ sizeof_marssnd		ds.l 0
 
 			struct MarsRam_Video
 RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
+RAM_Mars_BgBuffScale_M	ds.l 8
+RAM_Mars_BgBuffScale_S	ds.l 8
+
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
@@ -2366,8 +2392,7 @@ RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
-RAM_Mars_BgBuffScale_M	ds.l 8
-RAM_Mars_BgBuffScale_S	ds.l 8
+
 sizeof_marsvid		ds.l 0
 			finish
 

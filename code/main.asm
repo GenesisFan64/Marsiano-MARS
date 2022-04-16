@@ -74,7 +74,7 @@ MD_Mode0:
 ; 		move.l	#MarsObj_test,mdl_data(a0)
 ; 		move.l	#-$600,mdl_z_pos(a0)
 ; 		move.w	#4,d0
-; 		bsr	Video_MarsSetGfx
+; 		bsr	Video_Mars_GfxMode
 ; 		lea	(MDLDATA_PAL_TEST),a0
 ; 		moveq	#0,d0
 ; 		move.w	#256,d1
@@ -86,12 +86,6 @@ MD_Mode0:
 		move.w	#(320/2)+16,(RAM_EmiPosX).w
 		move.w	#(224/2)+8,(RAM_EmiPosY).w
 
-		lea	(GemaTrkData_Test),a0
-		moveq	#0,d0
-		moveq	#2,d1
-		moveq	#0,d2
-		moveq	#0,d3
-		bsr	Sound_TrkPlay
 		move.w	#1,(RAM_FadeMdReq).w
 		move.w	#1,(RAM_FadeMarsReq).w
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -102,6 +96,24 @@ MD_Mode0:
 		move.b	#%000,(RAM_VdpRegs+$B).l
 		move.b	#$10,(RAM_VdpRegs+7).l
 		bsr	Video_Update
+
+		moveq	#0,d0
+		bsr	Sound_TrkStop
+		move.w	#128+12,d1
+		bsr	Sound_GlbBeats
+
+		lea	(GemaTrkData_Test),a0
+		lea	MasterTrkList(pc),a1
+		moveq	#0,d0
+		move.w	#2,d1
+		moveq	#0,d2
+		move.w	#0,d3
+		bsr	Sound_TrkPlay
+
+; 		move.w	#$2700,sr
+; 		move.l	#$C0200000,(vdp_ctrl).l
+; 		move.w	#$0E8,(vdp_data).l
+; 		bra.s	*
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -196,7 +208,7 @@ MD_Mode0:
 ; 		move.w	#2,(RAM_FadeMdDelay).w
 ; 		move.w	#2,(RAM_FadeMarsDelay).w
 ; 		move.w	(RAM_CurrGfx).w,d0
-; 		bsr	Video_MarsSetGfx
+; 		bsr	Video_Mars_GfxMode
 ; .page0_loop:
 ; ; 		bsr	Emilie_MkSprite
 ; 		bsr	Video_RunFade
@@ -214,8 +226,8 @@ MD_Mode0:
 ; 		bsr	PlayThisSfx
 ; .noah:
 ;
-; 		move.l	(RAM_MdDreq+Dreq_BgEx_X).w,d0
-; 		move.l	(RAM_MdDreq+Dreq_BgEx_Y).w,d1
+; 		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
+; 		move.l	(RAM_MdDreq+Dreq_Scrn2_Y).w,d1
 ; 		move.l	#$10000,d5
 ; 		move.l	#1,d6
 ; 		move.w	(Controller_1+on_hold),d7
@@ -239,8 +251,8 @@ MD_Mode0:
 ; 		sub.l	d5,d1
 ; 		sub.w	d6,d3
 ; .nou_m:
-; 		move.l	d0,(RAM_MdDreq+Dreq_BgEx_X).w
-; 		move.l	d1,(RAM_MdDreq+Dreq_BgEx_Y).w
+; 		move.l	d0,(RAM_MdDreq+Dreq_Scrn2_X).w
+; 		move.l	d1,(RAM_MdDreq+Dreq_Scrn2_Y).w
 ;
 ; 		move.l	#0,d0
 ; 		move.l	#0,d1
@@ -735,5 +747,5 @@ Dplc_Nicole:
 		align 2
 
 str_Main:
-		dc.b "Main screen",0
+		dc.b "Probando cosas aqui nomas",0
 		align 2

@@ -312,7 +312,7 @@ Sound_TrkTicks:
 ; Set GLOBAL Sub-beats (not tempo...)
 ;
 ; Input:
-; d0 | BYTE - Track slot
+; d0 | BYTE - Track slot (TODO: for later...)
 ; d1 | WORD - Ticks
 ;
 ; Breaks:
@@ -325,7 +325,7 @@ Sound_GlbBeats:
 		bsr	sndReq_scmd
 		move.b	d0,d7		; d0 - Slot
 		bsr	sndReq_sbyte
-		move.w	d1,d7		; d1 - Tempo MSB
+		move.w	d1,d7		; d1 - Subbeats
 		bsr	sndReq_sword
 		bra 	sndReq_Exit
 

@@ -49,13 +49,13 @@ trk_CmdReq	equ 1Ah	; Track command requests
 
 ; Tracker channel data, 8 bytes each.
 chnl_Chip	equ 0		; *** MUST BE AT 0 ***
-chnl_Note	equ 1
-chnl_Ins	equ 2
-chnl_Vol	equ 3
-chnl_EffId	equ 4
-chnl_EffArg	equ 5
-chnl_Type	equ 6		; Impulse-note bits
-chnl_Flags	equ 7		; playback requests and other specific bits
+chnl_Flags	equ 1		; playback requests and other specific bits
+chnl_Note	equ 2
+chnl_Ins	equ 3
+chnl_Vol	equ 4
+chnl_EffId	equ 5
+chnl_EffArg	equ 6
+chnl_Type	equ 7		; Impulse-note bits
 
 ; --------------------------------------------------------
 ; Variables
@@ -189,7 +189,7 @@ currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 marsUpd		db 0		; flag to request a PWM transfer
 marsBlock	db 0		; flag to temporally disable PWM communication
 palMode		db 0		; PAL speed flag (TODO)
-sbeatPtck	dw 200+12	; Global tempo (sub beats)
+sbeatPtck_1	dw 200-64	; Global tempo (sub beats) (-32 for PAL)
 sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
 
 ; --------------------------------------------------------
@@ -363,11 +363,16 @@ drv_loop:
 .cmnd_trkstop:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iy
-		call	track_out
+		bit	7,(iy+trk_status)	; This track is active?
+		jp	z,.next_cmd
+		call	track_out		; track out.
 		jp	.next_cmd
 
 ; --------------------------------------------------------
-; $04 - Resume track
+; $03 - Resume track
+;
+; TODO: This doesn't work right. but I'm leaving
+; it here just in case.
 ; --------------------------------------------------------
 
 .cmnd_trkresume:
@@ -396,9 +401,9 @@ drv_loop:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iyc
 		call	get_cmdbyte
-		ld	(sbeatPtck),a
+		ld	(sbeatPtck_1),a
 		call	get_cmdbyte
-		ld	(sbeatPtck+1),a
+		ld	(sbeatPtck_1+1),a
 		jp	.next_cmd
 
 ; --------------------------------------------------------
@@ -434,11 +439,11 @@ get_cmdbyte:
 		push	de
 		push	hl
 .getcbytel:
-; 		ld	a,(commZWrite)
-; 		ld	b,a
+		ld	a,(commZWrite)
+		ld	b,a
 		ld	a,(commZRead)
-; 		cp	b
-; 		jr	z,.getcbytel	; wait for a command from 68k
+		cp	b
+		jr	z,.getcbytel	; wait for a command from 68k
 		rst	8
 		ld	b,0
 		ld	c,a
@@ -966,6 +971,7 @@ track_out:
 .nochip:
 		add	ix,de
 		djnz	.clrfe
+; 		set	7,(iy+trk_status)
 		ld	a,-1			; STOPALL track command
 		ld	(iy+trk_CmdReq),a
 		ret
@@ -1068,15 +1074,18 @@ setupchip:
 		ld	hl,insDataC_1
 		ld	iy,trkBuff_1
 .mk_chip:
+		ld	a,(iy+trk_CmdReq)
+		cp	-1
+		jr	z,.clr
 		ld	a,(iy+trk_status)	; enable bit? (as plus/minus test)
 		or	a
 		ret	p
-		ld	a,(iy+trk_CmdReq)
-		ld	(iy+trk_CmdReq),0
-		cp	-1
-		jr	nz,.clr
-		res	7,(iy+trk_status)
+		jr	.cont_ply
 .clr:
+; 		jr	$
+		ld	(iy+trk_CmdReq),0
+		res	7,(iy+trk_status)
+.cont_ply:
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
 ; 		rst	8
@@ -2709,7 +2718,7 @@ get_tick:
 		rst	8
 		push	de
 		ld	hl,(sbeatAcc)		; Increment subbeats
-		ld	de,(sbeatPtck)
+		ld	de,(sbeatPtck_1)
 		rst	8
 		add	hl,de
 		ld	(sbeatAcc),hl
@@ -4077,7 +4086,6 @@ pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 		db 00h,00h,00h,00h,00h,00h,00h,00h
 
-
 dDacPntr	db 0,0,0		; WAVE play current ROM position
 dDacCntr	db 0,0,0		; WAVE play length counter
 dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
@@ -4090,7 +4098,5 @@ commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
 dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
 trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
 trkData_1	ds 100h
-
-
 
 ; Stack area

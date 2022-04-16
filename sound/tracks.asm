@@ -81,8 +81,10 @@ GemaTrkData_Sfx:
 	dc.l GemaSfxIns_Boom
 GemaSfxBlk_Boom:
 	binclude "sound/tracks/sfxpack_blk.bin"
+	align 2
 GemaSfxPat_Boom:
 	binclude "sound/tracks/sfxpack_patt.bin"
+	align 2
 GemaSfxIns_Boom:
 	gInsFm3 0,FmIns_Fm3_Explosion
 	gInsPsgN 0,$00,$00,$00,$00,$02,%110
@@ -95,8 +97,10 @@ GemaTrkData_Test:
 	dc.l GemaIns_Test
 GemaBlk_Test:
 	binclude "sound/tracks/float_blk.bin"
+	align 2
 GemaPat_Test:
 	binclude "sound/tracks/float_patt.bin"
+	align 2
 GemaIns_Test:
 	gInsFm 0,FmIns_Bass_groove_2
 	gInsPwm 0,PwmIns_String_1,1
@@ -156,8 +160,10 @@ GemaTrkData_Test2:
 	dc.l GemaIns_Test2
 GemaBlk_Test2:
 	binclude "sound/tracks/wegot_blk.bin"
+	align 2
 GemaPat_Test2:
 	binclude "sound/tracks/wegot_patt.bin"
+	align 2
 GemaIns_Test2:
 	gInsFm 0,FmIns_PSynth_plus
 	gInsFm 0,FmIns_Bass_groove_2
@@ -176,8 +182,10 @@ GemaTrkData_Test3:
 	dc.l GemaIns_Test3
 GemaBlk_Test3:
 	binclude "sound/tracks/vuela_blk.bin"
+	align 2
 GemaPat_Test3:
 	binclude "sound/tracks/vuela_patt.bin"
+	align 2
 GemaIns_Test3:
 	gInsFm -12,FmIns_Brass_Eur
 	gInsFm 0,FmIns_Bass_italo

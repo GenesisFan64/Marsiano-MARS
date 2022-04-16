@@ -551,6 +551,7 @@ VideoMars_DrwPlgnPz:
 	; ------------------------------------
 	; If Y top / Y len are valid:
 	; ------------------------------------
+		align 4
 drwtsk1_vld_y:
 		mov	@(plypz_xl,r14),r1		; r1 - X left
 		mov	@(plypz_xl_dx,r14),r2		; r2 - DX left

@@ -125,7 +125,7 @@ MD_Mode1:
 		clr.w	(RAM_CurrSelc).w
 
 		move.w	#0,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 		lea	str_Title(pc),a0	; Print menu
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
@@ -171,7 +171,7 @@ MD_Mode1:
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		move.w	#1,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 		bsr	.fade_in
 .page1:
 		move.w	(Controller_1+on_press),d7
@@ -197,11 +197,11 @@ MD_Mode1:
 		bsr	Video_Print
 
 		lea	(RAM_MdDreq),a0
-		move.l	#TESTMARS_BG,Dreq_BgEx_Data(a0)
-		move.l	#1152,Dreq_BgEx_W(a0)
-		move.l	#368,Dreq_BgEx_H(a0)
-		move.l	#$00000000,Dreq_BgEx_X(a0)
-		move.l	#$00900000,Dreq_BgEx_Y(a0)
+		move.l	#TESTMARS_BG,Dreq_Scrn2_Data(a0)
+		move.l	#1152,Dreq_Scrn2_W(a0)
+		move.l	#368,Dreq_Scrn2_H(a0)
+		move.l	#$00000000,Dreq_Scrn2_X(a0)
+		move.l	#$00900000,Dreq_Scrn2_Y(a0)
 		bsr	System_MarsUpdate
 
 		move.l	#ART_FGTEST,d0
@@ -223,7 +223,7 @@ MD_Mode1:
 		move.w	#$0001,d2
 		bsr	Video_LoadMap
 		move.w	#2,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 		lea	(PalData_Mars_Test),a0
 		moveq	#0,d0
 		move.w	#256,d1
@@ -240,8 +240,8 @@ MD_Mode1:
 .page2:
 		bsr	.this_bg
 
-		move.l	(RAM_MdDreq+Dreq_BgEx_X).w,d0
-		move.l	(RAM_MdDreq+Dreq_BgEx_Y).w,d1
+		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
+		move.l	(RAM_MdDreq+Dreq_Scrn2_Y).w,d1
 		move.l	#$20000,d5
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -260,10 +260,10 @@ MD_Mode1:
 		beq.s	.nou_m
 		sub.l	d5,d1
 .nou_m:
-		move.l	d0,(RAM_MdDreq+Dreq_BgEx_X).w
-		move.l	d1,(RAM_MdDreq+Dreq_BgEx_Y).w
+		move.l	d0,(RAM_MdDreq+Dreq_Scrn2_X).w
+		move.l	d1,(RAM_MdDreq+Dreq_Scrn2_Y).w
 
-; 		add.l	#$10000,(RAM_MdDreq+Dreq_BgEx_X).w
+; 		add.l	#$10000,(RAM_MdDreq+Dreq_Scrn2_X).w
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -274,7 +274,7 @@ MD_Mode1:
 		rts
 
 .this_bg:
-		move.l	(RAM_MdDreq+Dreq_BgEx_X).w,d0
+		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
 		move.l	d0,d1
 		swap	d0
 		swap	d1
@@ -317,7 +317,7 @@ MD_Mode1:
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		move.w	#3,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 		lea	(PalData_Mars_Test2),a0
 		moveq	#0,d0
 		move.w	#256,d1
@@ -404,7 +404,7 @@ MD_Mode1:
 		bsr	Video_Print
 
 		move.w	#4,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
@@ -460,7 +460,7 @@ MD_Mode1:
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		move.w	#0,d0
-		bsr	Video_MarsSetGfx
+		bsr	Video_Mars_GfxMode
 		bsr	.page5_update
 		bsr	.fade_in
 .page5:
@@ -671,7 +671,7 @@ MD_Mode1:
 ; 		move.w	#2,(RAM_FadeMdDelay).w
 ; 		move.w	#2,(RAM_FadeMarsDelay).w
 ; 		move.w	(RAM_CurrGfx).w,d0
-; 		bsr	Video_MarsSetGfx
+; 		bsr	Video_Mars_GfxMode
 ; .page0_loop:
 ; ; 		bsr	Emilie_MkSprite
 ; 		bsr	Video_RunFade
@@ -689,8 +689,8 @@ MD_Mode1:
 ; 		bsr	PlayThisSfx
 ; .noah:
 ;
-; 		move.l	(RAM_MdDreq+Dreq_BgEx_X).w,d0
-; 		move.l	(RAM_MdDreq+Dreq_BgEx_Y).w,d1
+; 		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
+; 		move.l	(RAM_MdDreq+Dreq_Scrn2_Y).w,d1
 ; 		move.l	#$10000,d5
 ; 		move.l	#1,d6
 ; 		move.w	(Controller_1+on_hold),d7
@@ -714,8 +714,8 @@ MD_Mode1:
 ; 		sub.l	d5,d1
 ; 		sub.w	d6,d3
 ; .nou_m:
-; 		move.l	d0,(RAM_MdDreq+Dreq_BgEx_X).w
-; 		move.l	d1,(RAM_MdDreq+Dreq_BgEx_Y).w
+; 		move.l	d0,(RAM_MdDreq+Dreq_Scrn2_X).w
+; 		move.l	d1,(RAM_MdDreq+Dreq_Scrn2_Y).w
 ;
 ; 		move.l	#0,d0
 ; 		move.l	#0,d1
@@ -1061,9 +1061,9 @@ MasterTrkList:
 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
 	dc.w 3,%000
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
-	dc.w 3,%001
+	dc.w 2,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
-	dc.w 3,%001
+	dc.w 2,%001
 
 	align 2
 
@@ -1108,8 +1108,8 @@ str_Title:
 ; 		align 2
 ; str_Page1_l:
 ; 		dc.b "\\l \\l",0
-; 		dc.l RAM_MdDreq+Dreq_BgEx_X
-; 		dc.l RAM_MdDreq+Dreq_BgEx_Y
+; 		dc.l RAM_MdDreq+Dreq_Scrn2_X
+; 		dc.l RAM_MdDreq+Dreq_Scrn2_Y
 ; 		align 2
 
 str_Page1:

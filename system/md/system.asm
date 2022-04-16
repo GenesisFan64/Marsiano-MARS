@@ -54,9 +54,14 @@ System_Init:
 ; --------------------------------------------------------
 
 System_WaitFrame:
-		move.w	(vdp_ctrl),d4
+		lea	(vdp_ctrl),a6
+; .wait_lag:
+; 		move.w	(a6),d4			; LAG frame?
+; 		btst	#bitVBlk,d4
+; 		bne.s	.wait_lag
+.wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
 		btst	#bitVBlk,d4
-		beq.s	System_WaitFrame	; Wait until we reach VBlank
+		beq.s	.wait_in
 		bsr	System_Input		; Read inputs FIRST
 
 	; DMA'd Scroll and Palette
@@ -95,10 +100,12 @@ System_WaitFrame:
 		move.w	d7,(a6)
 		bsr	Video_DmaBlast		; Process DMA Blast list
 		add.l	#1,(RAM_Framecount).l
-.wait_in:
-		move.w	(vdp_ctrl),d4		; Still inside VBlank? *** IMPORTANT ***
+
+		lea	(vdp_ctrl),a6
+.wait_out:	move.w	(a6),d4
 		btst	#bitVBlk,d4
-		bne.s	.wait_in
+		bne.s	.wait_out
+
 		rts
 
 ; --------------------------------------------------------
