@@ -11,6 +11,7 @@
 set_StartPage	equ	0
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
+SCN0_TIMER	equ	8
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -35,6 +36,8 @@ RAM_CurrIndx	ds.w 1
 RAM_CurrTrack	ds.w 1
 RAM_CurrTicks	ds.w 1
 RAM_CurrTempo	ds.w 1
+RAM_Scrn0_Frame	ds.w 1
+RAM_Scrn0_Timer	ds.w 1
 		finish
 
 ; ====================================================================
@@ -42,7 +45,7 @@ RAM_CurrTempo	ds.w 1
 ; Code start
 ; ------------------------------------------------------
 
-MD_Mode1:
+MD_DebugMenu:
 		move.w	#$2700,sr
 		bsr	Mode_FadeOut
 		bsr	Mode_Init
@@ -68,7 +71,6 @@ MD_Mode1:
 
 .loop:
 		bsr	System_WaitFrame
-		bsr	System_MarsUpdate
 		bsr	Video_RunFade
 		bne.s	.loop
 
@@ -162,18 +164,29 @@ MD_Mode1:
 		bsr	Video_ClearScreen
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
-
-		lea	(RAM_MdDreq),a0
-		move.l	#TESTMARS_DIRECT|TH,Dreq_Scrn1_Data(a0)
+		bsr.s	.make_frame
+		lea	(RAM_MdDreq),a1
+		move.l	#1,Dreq_Scrn1_Flag(a1)
 		bsr	System_MarsUpdate
 
-		lea	str_Page1(pc),a0	; Print text
+		lea	str_Page1(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		move.w	#1,d0
 		bsr	Video_Mars_GfxMode
 		bsr	.fade_in
 .page1:
+		sub.w	#1,(RAM_Scrn0_Timer).w
+		bpl.s	.keep
+		move.w	#SCN0_TIMER,(RAM_Scrn0_Timer).w
+		bsr.s	.make_frame
+		bsr	Video_Mars_WaitFrame
+		add.w	#1,(RAM_Scrn0_Frame).w
+		and.w	#%11,(RAM_Scrn0_Frame).w
+.keep:
+		lea	str_Page1_info(pc),a0
+		move.l	#locate(0,2,4),d0
+		bsr	Video_Print
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.page1_ret
@@ -181,6 +194,21 @@ MD_Mode1:
 		bsr	.fade_out
 .page1_ret:
 		rts
+
+.make_frame:
+		move.w	(RAM_Scrn0_Frame).w,d0
+		lsl.w	#2,d0
+		lea	.frames(pc),a0
+		lea	(RAM_MdDreq),a1
+		move.l	(a0,d0.w),d0
+		add.l	#TH,d0
+		move.l	d0,Dreq_Scrn1_Data(a1)
+		rts
+.frames:
+		dc.l TESTMARS_DIRECT_1
+		dc.l TESTMARS_DIRECT_2
+		dc.l TESTMARS_DIRECT_3
+		dc.l TESTMARS_DIRECT_2
 
 ; ====================================================================
 ; --------------------------------------------------
@@ -192,9 +220,9 @@ MD_Mode1:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
-		lea	str_Page2(pc),a0	; Print text
-		move.l	#locate(0,2,2),d0
-		bsr	Video_Print
+; 		lea	str_Page2(pc),a0	; Print text
+; 		move.l	#locate(0,2,2),d0
+; 		bsr	Video_Print
 
 		lea	(RAM_MdDreq),a0
 		move.l	#TESTMARS_BG,Dreq_Scrn2_Data(a0)
@@ -310,7 +338,7 @@ MD_Mode1:
 		move.l	#$00010000,Dreq_SclDY(a0)	; DY
 		move.l	#320,Dreq_SclWidth(a0)
 		move.l	#224,Dreq_SclHeight(a0)
-		move.l	#0,Dreq_SclMode(a0)		;
+		move.l	#1,Dreq_SclMode(a0)		;
 		bsr	System_MarsUpdate
 
 		lea	str_Page3(pc),a0	; Print text
@@ -394,15 +422,14 @@ MD_Mode1:
 		clr.w	(RAM_CurrSelc).w
 
 		lea	(RAM_MdDreq+Dreq_Objects),a0
-		move.l	#MarsObj_test,mdl_data(a0)
-		move.l	#-$600,mdl_z_pos(a0)
+		move.l	#MarsObj_test|TH,mdl_data(a0)
+		move.l	#-$800,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
-		bsr	System_MarsUpdate
-
 		lea	str_Page4(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 
+		bsr	System_MarsUpdate
 		move.w	#4,d0
 		bsr	Video_Mars_GfxMode
 		lea	(MDLDATA_PAL_TEST),a0
@@ -416,9 +443,22 @@ MD_Mode1:
 		lea	str_StatsPage0(pc),a0
 		move.l	#locate(0,2,4),d0
 		bsr	Video_Print
-
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.l	#$4000,mdl_x_rot(a0)
+; 		add.l	#$4000,mdl_y_rot(a0)
+; 		add.l	#$4000,mdl_z_rot(a0)
+
+
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyUp,d7
+		beq.s	.z_up
+		sub.l	#$10,mdl_z_pos(a0)
+.z_up:
+		btst	#bitJoyDown,d7
+		beq.s	.z_dw
+		add.l	#$10,mdl_z_pos(a0)
+.z_dw:
+
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.page4_ret
@@ -1054,12 +1094,12 @@ MD_Mode1:
 ; 		bra	Sound_TrkTicks
 ; .task_04:
 ; 		move.w	(RAM_CurrTempo).w,d1
-; 		bra	Sound_GlbTempo
+; 		bra	Sound_GlbBeats
 ;
 ; ; test playlist
 MasterTrkList:
 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
-	dc.w 3,%000
+	dc.w 4,%000
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
 	dc.w 2,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
@@ -1092,7 +1132,6 @@ str_Cursor:	dc.b " ",$A
 		dc.b ">",$A
 		dc.b " ",0
 		align 2
-
 str_Title:
 		dc.b "MARSIANO dev-menu",$A
 		dc.b $A
@@ -1113,21 +1152,22 @@ str_Title:
 ; 		align 2
 
 str_Page1:
-		dc.b "Testing GfxMode 01",0
+		dc.b "GfxMode 01",0
 		align 2
-str_Page2:
-		dc.b "Testing GfxMode 02",0
-		align 2
+; str_Page2:
+; 		dc.b "GfxMode 02",0
+; 		align 2
 str_Page3:
-		dc.b "Testing GfxMode 03",0
+		dc.b "GfxMode 03",0
 		align 2
 str_Page4:
-		dc.b "Testing model objects",0
+		dc.b "GfxMode 04",0
 		align 2
-; str_Page4:	dc.b "GEMA",0
-; 		align 2
+str_Page1_info:
+		dc.b "\\w \\w",0
+		dc.l RAM_Scrn0_Frame,RAM_Scrn0_Timer
+		align 2
 
-;
 str_Status:
 		dc.b "\\w",$A,$A
 		dc.b "\\w",$A,$A,$A
@@ -1146,7 +1186,7 @@ str_Gema:
 		dc.b "  Sound_TrkStop",$A
 		dc.b "  Sound_TrkResume",$A
 		dc.b "  Sound_TrkTicks",$A
-		dc.b "  Sound_GlbTempo",0
+		dc.b "  Sound_GlbBeats",0
 		align 2
 str_StatsPage0:
 		dc.b "\\w \\w \\w \\w",$A
@@ -1162,7 +1202,14 @@ str_StatsPage0:
 		dc.l sysmars_reg+comm14
 		dc.l RAM_Framecount
 		align 2
-;
+
+; str_StatsPage4:
+; 		dc.b "\\l \\l \\l",0
+; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_x_pos
+; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_y_pos
+; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_z_pos
+; 		align 2
+
 ; str_InfoMouse:
 ; 		dc.b "comm0: \\w",$A
 ; 		dc.b "comm12: \\w comm14: \\w",$A,$A

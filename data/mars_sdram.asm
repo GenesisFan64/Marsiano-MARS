@@ -16,4 +16,4 @@
 ; Models
 ; --------------------------------------------------------
 
-; 	include "data/mars/objects/mdl/test/head.asm"
+	include "data/mars/objects/mdl/test/head.asm"

@@ -10,31 +10,33 @@
 ; Settings
 ; --------------------------------------------------------
 
-MAX_FACES	equ 256
-MAX_SVDP_PZ	equ 256+32
-MAX_ZDIST	equ -$2000	; Max 3D drawing distance (-Z)
+MAX_SCRNBUFF	equ $10000	; MAX storage for each screen mode
+MAX_SUPERSPR	equ 128		; Number of Super Sprites
+
+; Screen mode 02
 FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines
 FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
+
+; Screen mode 04
+MAX_FACES	equ 256
+MAX_SVDP_PZ	equ 256+64
+MAX_ZDIST	equ -$2000	; Max 3D drawing distance (-Z)
 
 ; --------------------------------------------------------
 ; Variables
 ; --------------------------------------------------------
 
-; Screen width and height positions used
-; by 3D object rendering
-SCREEN_WIDTH	equ 320
-SCREEN_HEIGHT	equ 224
-
-; plypz_type (MSB byte)
-PLGN_TEXURE	equ %10000000
+; Screen mode 04
+SCREEN_WIDTH	equ 320		; Screen width and height positions used
+SCREEN_HEIGHT	equ 224		; by 3D object rendering
+PLGN_TEXURE	equ %10000000	; plypz_type (MSB byte)
 PLGN_TRI	equ %01000000
 
 ; --------------------------------------------------------
 ; Structs
 ; --------------------------------------------------------
 
-; Note some structs are located on shared.asm
-
+; Note: some structs are located on shared.asm
 ; Be careful modifing these...
 ; The SH2 has extrange limitation with indexing, bytes go first.
 ; (don't forget to align it)
@@ -67,13 +69,18 @@ mbg_ypos	ds.l 1		; 0000.0000
 sizeof_marsbg	ds.l 0
 		finish
 
+; "Super" sprites
 		struct 0
-mbgsc_x_pos	ds.w 1		; 00.00
-mbgsc_y_pos	ds.w 1		; 00.00
-mbgsc_x_dx	ds.w 1		; 00.00
-mbgsc_y_dy	ds.w 1		; 00.00
-mbgsc_data	ds.l 1		; source data location
-sizeof_marsscbg	ds.l 0
+marsspr_x	ds.l 1		; 0000.0000
+marsspr_y	ds.l 1		; 0000.0000
+marsspr_xs	ds.l 1		; 0000.0000
+marsspr_ys	ds.l 1		; 0000.0000
+marsspr_data	ds.l 1		; Pixel data
+marsspr_anim	ds.l 1		; Animation data
+marsspr_anitmr	ds.l 1		; Animation timer
+marsspr_animspd	ds.l 1		; Animation speed
+marsspr_frame	ds.l 1
+sizeof_marsspr	ds.l 0
 		finish
 
 ; Current camera view values

@@ -1213,7 +1213,7 @@ Video_Mars_GfxMode:
 		and.w	#$FF00,d7			; Clear our byte
 		or.w	d6,d7				; merge changes
 		move.w	d7,(sysmars_reg+comm12).l	; Write into it.
-		bra	Video_Mars_Wait
+		bra	Video_Mars_WaitInit
 
 ; --------------------------------------------------------
 ; Video_MarsRedraw
@@ -1226,13 +1226,27 @@ Video_Mars_Redraw:
 		move.w	(sysmars_reg+comm12).l,d7
 		bset	#7,d7
 		move.w	d7,(sysmars_reg+comm12).l
-
-; --------------------------------------------------------
-
-Video_Mars_Wait:
+Video_Mars_WaitInit:
 		move.w	(sysmars_reg+comm12).l,d7
 		btst	#7,d7
-		bne.s	Video_Mars_Wait
+		bne.s	Video_Mars_WaitInit
+		rts
+
+; --------------------------------------------------------
+; Video_Mars_WaitFrame
+;
+;
+; on the 32X side.
+; --------------------------------------------------------
+
+Video_Mars_WaitFrame:
+		move.w	(sysmars_reg+comm12).l,d7	; Set R bit
+		bset	#6,d7
+		move.w	d7,(sysmars_reg+comm12).l
+.wait:
+		move.w	(sysmars_reg+comm12).l,d7
+		btst	#6,d7
+		bne.s	.wait
 		rts
 
 ; --------------------------------------------------------

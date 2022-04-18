@@ -30,33 +30,31 @@ Sound, Genesis and 32X:
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
 
 Notes/Current issues:
-- SOFT reset takes a LOT to go back, and may freeze.
-- (256-color bg) If the X/Y positions are moving in the middle of switching modes the image might fail draw
-- (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play corrupt wave data.
+- SOFT reset has a low chance of freezing.
+- (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play trash wave data.
 
 Planned/TODO:
-- Implement NORMAL sprites, depending of the screen mode.
-- Add map layout support on normal-scrolling background
-- A generic-screen mode that supports all bitmap modes (Indexed,Direct,RLE) for things like title screens or cutscenes...
-
+- Implement "SUPER" sprites for the psuedo-graphics modes that can use them.
+- Add map layout support on psd-Mode 2 (256-color scrolling background)
 
 LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 
 -- General --
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
-- MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
+- MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does, and not even close): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
 - The actual purpose of Cache isn't emulated at all. so emulators just treat everything as "Cache-thru"
 - The 4-byte LONG alignment limitation is ignored.
+- Fusion 3.64: vdpfill might get stuck in a infinite loop.
 
 -- 68000 --
-- RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers. (from $88xxxx/$9xxxxx to $0xxxxx, all 4MB view area) If you do any DMA-transfer without setting this bit it will read trash data. Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the and last VDP write on the RAM area. (Note: Transferring RAM data to VDP doesn't require the RV bit) Also for the SH2 side: If RV is set, any read from the ROM area will return trash data.
+- RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers. (from $88xxxx/$9xxxxx to $0xxxxx, all 4MB view area) If you do any DMA-transfer without setting this bit it will read trash data. Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the and last VDP write on the RAM area. (Note: Transferring RAM data to VDP doesn't require the RV bit) For the SH2 side: If RV is set, any read from the ROM area will return trash data.
 - Writing to the DREQ's FIFO only works properly on the $880000/$900000 areas. Doing the writes in the RAM area ($FF0000) will cause to miss some WORD writes during transfer.
 
 -- SH2---
 - The SDRAM, Framebuffer, ROM area and Cache run at different speeds for Reading/Writing and depending where the Program Counter (PC) is currently located. Cache being the fastest BUT with the lowest space to store code or data.
 - BUS fighting: If any of the SH2 CPUs READ/WRITE the same location at the same time it will crash the add-on. Only tested on the SDRAM area but believe the video and audio registers are affected too. only the comm's are safe for both sides (and Genesis too.)
 - After setting _DMAOPERATION to 1 (Starting the DMA), it takes a little to start. add 5 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0)
-- After DMA (Channel 0) finishes: If at any part of the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches that last part that got modified.
+- After DMA (Channel 0) finishes: If at any part of the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
 - If you force _DMAOPERATION to OFF while DMA is active it crashes the system. (or maybe not, needs more testing)
 
 -- SuperVDP --
@@ -68,7 +66,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - The output limit for both LEFT and RIGHT channels is 1023 ($03FF), NOT 4095 ($0FFF) mentioned in the docs.
 
 --- Both sides ---
-- FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The Framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP's Framebuffer or the 256-color Palette it will freeze the entire system (either Genesis 68K or 32X SH2).
+- FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The Framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP it will freeze the entire system (either Genesis 68K or 32X SH2).
 
 A prebuilt binary is located in the /out folder (rom_mars.bin) for testing, works on any Genesis/MD flashcart WITH the 32X inserted. ROM is for NTSC systems, can be played on PAL but with slowdown.
 If it doesn't boot or it freezes: I probably broke something without testing on HW

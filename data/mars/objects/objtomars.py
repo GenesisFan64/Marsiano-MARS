@@ -28,19 +28,22 @@ import os
 # Init
 # -------------------------------------------------
 
-# REQUIRES MODIFICATION TO export_obj.py IN BLENDER
+# If you are importing separate objects from Blender
+# (object pieces) It requires a change in the export_obj.py
+# script
+#
 # from
 # me.transform(EXPORT_GLOBAL_MATRIX @ ob_mat)
 # to
 # me.transform(EXPORT_GLOBAL_MATRIX)
-SCALE_SIZE	  = 0x40#0x100
+SCALE_SIZE	  = 0x80#0x100
 img_width         = 1			# failsafe.
 img_height        = 1
 
 # reserved names for textures
 TAG_NOMATERIAL	  = "MARSNULL"		# random color mode
-TAG_MARSCOLOR	  = "MARSINDX"		# set specific pixel color (0-255)
-TAG_MARSINDX_LIST = "MARSLIST"          # set index color in the material (for animated stuff)
+TAG_MARSCOLOR	  = "MARSINDX"		# set index color (0-255) ex. for color 10: MARSINDX_10
+#TAG_MARSINDX_LIST = "MARSLIST"          # set index color in the material (for animated stuff)
 TAG_TEXTUR        = "Textr_"		# tag for texture data in assembly
 TAG_OBJECTSDIR    = "import"		# folder name that stores your objs (and material)
 

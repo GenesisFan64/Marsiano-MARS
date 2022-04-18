@@ -55,10 +55,11 @@ System_Init:
 
 System_WaitFrame:
 		lea	(vdp_ctrl),a6
-; .wait_lag:
-; 		move.w	(a6),d4			; LAG frame?
-; 		btst	#bitVBlk,d4
-; 		bne.s	.wait_lag
+.wait_lag:
+		move.w	(a6),d4			; LAG frame?
+		btst	#bitVBlk,d4
+		bne.s	.wait_lag
+		bsr	System_MarsUpdate_Out	; Process any DREQ update.
 .wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
 		btst	#bitVBlk,d4
 		beq.s	.wait_in
@@ -101,10 +102,10 @@ System_WaitFrame:
 		bsr	Video_DmaBlast		; Process DMA Blast list
 		add.l	#1,(RAM_Framecount).l
 
-		lea	(vdp_ctrl),a6
-.wait_out:	move.w	(a6),d4
-		btst	#bitVBlk,d4
-		bne.s	.wait_out
+; 		lea	(vdp_ctrl),a6
+; .wait_out:	move.w	(a6),d4
+; 		btst	#bitVBlk,d4
+; 		bne.s	.wait_out
 
 		rts
 
@@ -140,11 +141,11 @@ System_Dma_Exit:
 ; --------------------------------------------------------
 
 System_MarsUpdate:
-		move.w	(vdp_ctrl),d4
+		move.w	(vdp_ctrl),d4		; Got on VBlank?
 		btst	#bitVBlk,d4
 		bne.s	System_MarsUpdate
 
-System_MarsUpd_Out:
+System_MarsUpdate_Out:
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
 ; 		jmp	(System_SendDreq).l
@@ -156,7 +157,7 @@ System_MarsUpd_Out:
 ;
 ; Input:
 ; a0 - LONG | Source data
-; d0 - WORD | Size (8byte aligned)
+; d0 - WORD | Size (MUST end with 0 or 8)
 ;
 ; NOTE:
 ; THIS CODE ONLY WORKS PROPERLY ON THE
@@ -193,6 +194,7 @@ System_SendDreq:
 		dbf	d5,.l0
 ; 		btst	#2,(sysmars_reg+dreqctl).l
 ; 		bne	.retry
+.bad_trnsfr:
 		move.w	d7,sr
 		rts
 
@@ -563,12 +565,15 @@ System_SramInit:
 
 Mode_Init:
 ; 		bsr	Video_Clear
-		lea	(RAM_ModeBuff),a4
-		move.w	#(MAX_MDERAM/2)-1,d5
-		moveq	#0,d4
-.clr:
-		move.w	d4,(a4)+
-		dbf	d5,.clr
+; 		lea	(RAM_ModeBuff),a4
+; 		move.w	#(MAX_MDERAM/2)-1,d5
+; 		moveq	#0,d4
+; .clr:
+; 		move.w	d4,(a4)+
+; 		dbf	d5,.clr
+
+
+
 		rts
 
 ; --------------------------------------------------------
@@ -582,7 +587,6 @@ Mode_FadeOut:
 		move.w	#0,(RAM_FadeMarsDelay).w
 .loopw:
 		bsr	System_WaitFrame
-		bsr	System_MarsUpdate
 		bsr	Video_RunFade
 		bne.s	.loopw
 		rts

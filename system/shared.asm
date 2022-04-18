@@ -50,6 +50,8 @@ sizeof_mdlobj	ds.l 0
 		struct 0
 Dreq_Scrn1_Data	ds.l 1		; Screen mode 1: Source image (SH2's area)
 Dreq_Scrn1_Type	ds.l 1
+Dreq_Scrn1_Flag	ds.l 1
+Dreq_Scrn1_Free ds.l 1
 
 Dreq_Scrn2_Data	ds.l 1		; Screen mode 2: Source image (SH2's area)
 Dreq_Scrn2_X	ds.l 1		; X pos 0000.0000

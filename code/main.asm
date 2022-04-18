@@ -39,7 +39,7 @@ RAM_EmiUpd	ds.w 1
 ; ------------------------------------------------------
 
 MD_Mode0:
-; 		bra	MD_Mode1
+		bra	MD_DebugMenu
 
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
@@ -105,7 +105,7 @@ MD_Mode0:
 		lea	(GemaTrkData_Test),a0
 		lea	MasterTrkList(pc),a1
 		moveq	#0,d0
-		move.w	#2,d1
+		move.w	#4,d1
 		moveq	#0,d2
 		move.w	#0,d3
 		bsr	Sound_TrkPlay
@@ -121,7 +121,6 @@ MD_Mode0:
 ; ------------------------------------------------------
 
 .loop:
-; 		bsr	System_MarsUpdate
 		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.loop
@@ -163,7 +162,7 @@ MD_Mode0:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq	.loop
-		bra	MD_Mode1
+		bra	MD_DebugMenu
 
 ; ====================================================================
 ; ----------------------------------------------

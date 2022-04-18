@@ -506,6 +506,44 @@ put_piece:
 
 ; ====================================================================
 ; --------------------------------------------------------
+; VideoMars_ClearScreen
+;
+; Clears screen using VDPFILL
+;
+; Input:
+; r1 - VRAM location
+; r2 - Width
+; r3 - height
+; r4 - Pixel(s) to write
+; --------------------------------------------------------
+
+; Using CACHE just to be safe, move this to
+; video.asm if needed.
+
+MarsVideo_ClearScreen:
+		shlr	r1
+		mov	r1,r5
+		mov	#_vdpreg,r8
+.fb_loop:
+		mov	r2,r0
+		mov.w	r0,@(filllength,r8)
+		mov	r1,r0
+		mov.w	r0,@(fillstart,r8)
+		mov	r4,r0
+		mov.w	r0,@(filldata,r8)
+.wait_fb2:	mov.w	@(vdpsts,r8),r0
+		tst	#%10,r0
+		bf	.wait_fb2
+		dt	r3
+		bf/s	.fb_loop
+		add	r5,r1
+.no_redraw_2:
+		rts
+		nop
+		align 4
+
+; ====================================================================
+; --------------------------------------------------------
 ; VideoMars_DrwPlgnPz
 ;
 ; Draws polygons on framebuffer using the pieces list

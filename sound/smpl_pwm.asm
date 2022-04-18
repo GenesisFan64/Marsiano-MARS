@@ -3,15 +3,15 @@
 ;
 ; For SH2's visible areas: ROM ($02000000) or SDRAM ($06000000)
 ;
-; SDRAM is safest but it has very low storage
-;
-; ROM area can use all the 4 Megabytes of storage, BUT when the
-; RV bit is set, the sample data will be lost... but luckily
+; - SDRAM is safest but it has very LOW storage
+; - ROM area can use all the 4 Megabytes of storage, BUT when the
+; RV bit is set: the sample data will be lost. Luckily
 ; a "Wave-backup" feature is implemented to copy a small
-; amount of bytes of the sample data to a safe place for playback
+; amount of bytes of the sample data into a safe place for playback
 ; while RV bit is active.
-; Do note that if the RV bit stays active too long it will cause
-; the sample to click.
+;
+; Do note that if the RV bit stays active too long it will ran out of
+; backup data and the sample will play trash bytes.
 ; ====================================================================
 
 ; Special sample data macro

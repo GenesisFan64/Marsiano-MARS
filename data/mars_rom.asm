@@ -68,24 +68,29 @@ SmpIns_PlusPiano_st:
 
 	align 4
 TESTMARS_BG:
-	binclude "data/mars/test_art.bin"
+	binclude "data/mars/tests/test_art.bin"
 	align 4
 
 TESTMARS_BG2:
-	binclude "data/mars/test2_art.bin"
+	binclude "data/mars/tests/test2_art.bin"
 	align 4
 
-TESTMARS_DIRECT:
-	binclude "data/mars/tests/direct_art.bin"
+TESTMARS_DIRECT_1:
+	binclude "data/mars/tests/direct/frame0_art.bin"
+	align 4
+TESTMARS_DIRECT_2:
+	binclude "data/mars/tests/direct/frame1_art.bin"
+	align 4
+TESTMARS_DIRECT_3:
+	binclude "data/mars/tests/direct/frame2_art.bin"
 	align 4
 
 ; --------------------------------------------------------
 ; Models
 ; --------------------------------------------------------
 
-	include "data/mars/objects/mdl/test/head.asm"
+; 	include "data/mars/objects/mdl/test/head.asm"
 
 Textr_test:
 	binclude "data/mars/objects/mtrl/smoke_art.bin"
 	align 4
-

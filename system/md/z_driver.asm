@@ -166,8 +166,8 @@ commZWrite	db 0			; cmd fifo wptr (from 68k)
 ; *** self-modifiable code ***
 ;
 ; Checks if the WAVE cache needs refilling to keep
-; it playing, THIS BREAKS ALL REGISTERS IF
-; REFILL IS NEEDED.
+; it playing.
+; *** THIS BREAKS ALL REGISTERS IF REFILL IS REQUESTED ***
 ; --------------------------------------------------------
 
 		org 20h
@@ -189,18 +189,16 @@ currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 marsUpd		db 0		; flag to request a PWM transfer
 marsBlock	db 0		; flag to temporally disable PWM communication
 palMode		db 0		; PAL speed flag (TODO)
-sbeatPtck_1	dw 200-64	; Global tempo (sub beats) (-32 for PAL)
+sbeatPtck_1	dw 200-56	; Global tempo (sub beats) (-32 for PAL)
 sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
 
 ; --------------------------------------------------------
 ; Z80 Interrupt at 0038h
-;
-; Sets the TICK flag
 ; --------------------------------------------------------
 
-		org 38h			; Align 38h
-		ld	(tickFlag),sp	; Use sp to set TICK flag (xx1F, read as tickFlag+1)
-		di			; Disable interrupt until next request
+		org 38h				; Align 38h
+		ld	(tickFlag),sp		; Use sp to set the TICK flag (xx1F, read as tickFlag+1)
+		di				; Disable interrupt
 		ret
 
 ; --------------------------------------------------------
@@ -208,7 +206,7 @@ sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
 ; --------------------------------------------------------
 
 z80_init:
-		call	gema_init	; Initilize VBLANK sound driver
+		call	gema_init		; Initilize VBLANK sound driver
 		ei
 
 ; --------------------------------------------------------
@@ -258,16 +256,20 @@ drv_loop:
 		ld	a,(commZRead)
 		cp	b
 		jr	z,drv_loop		; If both are equal: no requests
+		rst	20h			; first dacfill
+		rst	8
 		call	get_cmdbyte
 		cp	-1			; Got -1? (Start of command)
 		jr	nz,drv_loop
 		call	get_cmdbyte		; Read command number
 		add	a,a			; * 2
 		ld	hl,.list		; Then jump to one of these...
+		rst	8
 		ld	d,0
 		ld	e,a
 		add	hl,de
 		ld	a,(hl)
+		rst	8
 		inc	hl
 		ld	h,(hl)
 		ld	l,a
@@ -965,13 +967,13 @@ track_out:
 		jr	z,.nochip
 		ld	(ix+chnl_Note),-2
 		ld	a,(ix+chnl_Flags)
-		and	11110000b
+; 		and	11110000b
 		or	1
 		ld	(ix+chnl_Flags),a
 .nochip:
 		add	ix,de
 		djnz	.clrfe
-; 		set	7,(iy+trk_status)
+		set	7,(iy+trk_status)
 		ld	a,-1			; STOPALL track command
 		ld	(iy+trk_CmdReq),a
 		ret
@@ -1074,18 +1076,15 @@ setupchip:
 		ld	hl,insDataC_1
 		ld	iy,trkBuff_1
 .mk_chip:
-		ld	a,(iy+trk_CmdReq)
-		cp	-1
-		jr	z,.clr
 		ld	a,(iy+trk_status)	; enable bit? (as plus/minus test)
 		or	a
 		ret	p
-		jr	.cont_ply
-.clr:
-; 		jr	$
+		ld	a,(iy+trk_CmdReq)
+		cp	-1
+		jr	nz,.clr
 		ld	(iy+trk_CmdReq),0
 		res	7,(iy+trk_status)
-.cont_ply:
+.clr:
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
 ; 		rst	8
@@ -2547,9 +2546,9 @@ setupchip:
 ; This auto-replaces the LINKED channel
 .chk_tbln:
 
-; 	TODO: priority overwrite goes here...
-; 		push	iy
-; 		pop	de		; de - Copy of curr track-channel
+	; **** MSB priority overwrite
+		push	iy
+		pop	de		; de - Copy of curr track-channel
 ; 		rst	8
 ; 		ld	a,(ix+1)	; MSB | LSB
 ; 		or	(ix)		; Check if blank
@@ -2560,7 +2559,10 @@ setupchip:
 ; 		ld	a,(ix)
 ; 		cp	e		; Same LSB?
 ; 		jr	nc,.busy_s
-.new:
+; .new:
+	; ****
+
+
 		rst	8
 		ld	(ix),e		; NEW slot
 		ld	(ix+1),d
@@ -2610,10 +2612,14 @@ setupchip:
 		jr	z,.fndlink
 		cp	-1
 		jr	z,.fndlink
+
 		jr	.alrdfnd
+	; **** MSB priority overwrite
 ; 		ld	a,e		; TODO: priority.
 ; 		cp	d
 ; 		jr	nc,.alrdfnd
+	; ****
+
 .fndlink:
 		push	ix		; bc - got new link
 		pop	bc
@@ -3395,7 +3401,7 @@ chip_env:
 .fm_insupd:
 		push	bc
 		call	.fm_keyoff		; restart chip channel
-		rst	20h;call dac_fill	; TODO: ver si se pone lento aqui...
+		rst	20h			; <--- TODO: si se pone lento, quitarlo
 		push	ix			; copy ix to hl
 		pop	hl
 		ld	a,c
@@ -4014,7 +4020,8 @@ daccom:		db 0			; single byte for key on, off and cut
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
-		align 10h
+		align 8
+; NOTE: MSB is used as the priority.
 trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
 trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
 

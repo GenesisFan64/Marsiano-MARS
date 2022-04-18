@@ -185,9 +185,9 @@ SH2_Slave:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; irq
+; IRQ
 ;
-; r0-r1 are safe
+; r0-r1 are saved first.
 ; ----------------------------------------------------------------
 
 		align 4
@@ -209,28 +209,12 @@ master_irq:
 		rte
 		nop
 		align 4
-		ltorg
-
-; ------------------------------------------------
-; irq list
-; ------------------------------------------------
-
-		align 4
-int_m_list:
-		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_wdg,m_irq_wdg
-		dc.l m_irq_pwm,m_irq_pwm
-		dc.l m_irq_cmd,m_irq_cmd
-		dc.l m_irq_h,m_irq_h
-		dc.l m_irq_v,m_irq_v
-		dc.l m_irq_vres,m_irq_vres
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; irq
+; IRQ
 ;
-; r0-r1 are safe
+; r0-r1 are saved first
 ; ----------------------------------------------------------------
 
 slave_irq:
@@ -253,11 +237,22 @@ slave_irq:
 		rte
 		nop
 		align 4
+		ltorg
 
 ; ------------------------------------------------
 ; irq list
 ; ------------------------------------------------
 
+		align 4
+int_m_list:
+		dc.l m_irq_bad,m_irq_bad
+		dc.l m_irq_bad,m_irq_bad
+		dc.l m_irq_wdg,m_irq_wdg
+		dc.l m_irq_pwm,m_irq_pwm
+		dc.l m_irq_cmd,m_irq_cmd
+		dc.l m_irq_h,m_irq_h
+		dc.l m_irq_v,m_irq_v
+		dc.l m_irq_vres,m_irq_vres
 int_s_list:
 		dc.l s_irq_bad,s_irq_bad
 		dc.l s_irq_bad,s_irq_bad
@@ -270,10 +265,26 @@ int_s_list:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Normal error traps
+; Error handler
 ; ----------------------------------------------------------------
 
-; Emulators ignore all of this anyway.
+; *** Only works on HARDWARE ***
+;
+; comm2: (CPU)(CODE)
+; comm4: Last program counter
+;
+;  CPU | SH2 who got the error:
+;        $00 - Master
+;        $01 - Slave
+;
+; CODE | Error type:
+;	 -1: Unknown error
+;	 $01: Illegal instruction
+;	 $02: Invalid slot instruction
+;	 $03: Address error (most common if you don't align by 4)
+;	 $04: DMA error
+;	 $05: NMI vector
+;	 $06: User break
 
 SH2_M_Error:
 		bra	SH2_M_ErrCode
@@ -952,7 +963,7 @@ s_irq_vres:
 		rte
 		nop
 		align 4
-		ltorg		; Save literals
+		ltorg
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1060,7 +1071,7 @@ SH2_M_HotStart:
 
 ; 		mov	#1,r0
 ; 		mov.w	r0,@(marsGbl_WaveEnable,gbr)
-		mov	#4,r0
+		mov	#8,r0
 		mov.w	r0,@(marsGbl_WaveSpd,gbr)
 		mov	#8,r0
 		mov.w	r0,@(marsGbl_WaveMax,gbr)
@@ -1083,8 +1094,8 @@ SH2_M_HotStart:
 ; s - status bits for some CMD interrupt tasks
 ; c - command number for CMD interrupt
 ; i - Initialitation bit
-; r - Clears on screen's exit, 68k sets it and waits until frame
-;     is cleared
+; r - Clears on exit, set this bit on 68k side to wait for the
+;     current screen to finish.
 ; l - MAIN LOOP command/task, inlcude the i bit to properly
 ;     (re)start
 ; ----------------------------------------------------------------
@@ -1126,8 +1137,8 @@ master_loop:
 	; we are still on VBlank
 	; ---------------------------------------
 
-		mov	#_sysreg+comm12+1,r1		; Clear R bit, tells 68k
-		mov.b	@r1,r0				; frame is ready.
+		mov	#_sysreg+comm12+1,r1		; Clear R bit, this
+		mov.b	@r1,r0				; tells to 68k that frame is ready.
 		and	#%10111111,r0
 		mov.b	r0,@r1
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
@@ -1175,26 +1186,31 @@ master_loop:
 		mov	r0,r1				; r1 - mode
 		tst	#$80,r0				; First time/Full redraw?
 		bt	.no_init
-		and	#$7F,r0				; Reset bit after this.
+		mov	#_sysreg+comm14,r4		; Wait slave first.
+.wait_slv:	mov.w	@r4,r0
+		and	#$FF,r0
+		tst	r0,r0
+		bf	.wait_slv
+		mov.w	@r2,r0
+		and	#$7F,r0				; Reset init bit
 		mov.w	r0,@r2
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_MdInitTmr,gbr)
 .no_init:
 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
-		shll2	r0
 		mov	r0,r2
+		tst	r0,r0
+		bt	.tmr_off
+		dt	r0
+		mov.w	r0,@(marsGbl_MdInitTmr,gbr)
+.tmr_off:
+		shll2	r2
 		mov	r1,r0
 		and	#%111,r0
 		shll2	r0
 		shll2	r0
 		add	r2,r0
 		mov	@(r3,r0),r3
-		mov.w	@(marsGbl_MdInitTmr,gbr),r0
-		tst	r0,r0
-		bt	.tmr_off
-		dt	r0
-		mov.w	r0,@(marsGbl_MdInitTmr,gbr)
-.tmr_off:
 		jmp	@r3
 		nop
 		align 4
@@ -1338,22 +1354,31 @@ mstr_gfx1_init_2:
 mstr_gfx1_init_1:
 		bsr	MarsVideo_ResetNameTbl
 		nop
-		mov	#RAM_Mars_DreqRead+Dreq_Scrn1_Data,r1
-		mov	@r1,r1
-		mov	#_framebuffer+$200,r2
-		mov	#320*200/2,r3
-.copy_me:
-		mov	@r1+,r0
-		mov	r0,@r2
-		dt	r3
-		bf/s	.copy_me
-		add	#4,r2
 
 ; -------------------------------
 ; Loop
 ; -------------------------------
 
 mstr_gfx1_loop:
+		mov	#RAM_Mars_DreqRead,r1
+		mov	@(Dreq_Scrn1_Flag,r1),r0
+		tst	r0,r0
+		bt	.dont_rdrw
+		add	#Dreq_Scrn1_Data,r1
+		mov	@r1,r1
+		mov	#_framebuffer+$200,r2
+		mov	#(320*200/2)/2,r3
+.copy_me:
+		mov	@r1+,r0
+		mov	r0,@r2
+		add	#4,r2
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.copy_me
+		add	#4,r2
+.dont_rdrw:
+
 		mov	#$200,r1
 		mov	#320*2,r2
 		mov	#200,r3
@@ -1632,7 +1657,7 @@ mstr_gfx3_loop:
 		mov	#0,r0
 .x_go:
 		mov	#0,r0
-		cmp/pl	r2
+		cmp/pz	r2		; <-- TODO: checar bien esto
 		bf	.x_next
 		cmp/ge	r6,r2
 		bt	.x_next
@@ -1755,25 +1780,13 @@ mstr_gfx4_init_1:
 		mov.b	r0,@(bitmapmd,r1)
 
 mstr_gfx4_init_2:
-		mov	#_vdpreg,r1	; ** This also counts as a delay for Watchdog **
-		mov	#$100,r2
-		mov	r2,r3
-		mov	#240,r4
-		mov	#(511)/2,r5
-		mov	#0,r6
-.fb_loop2:
-		mov	r5,r0
-		mov.w	r0,@(filllength,r1)
-		mov	r2,r0
-		mov.w	r0,@(fillstart,r1)
-		mov	r6,r0
-		mov.w	r0,@(filldata,r1)
-.wait_fb3:	mov.w	@(vdpsts,r1),r0
-		tst	#%10,r0
-		bf	.wait_fb3
-		dt	r4
-		bf/s	.fb_loop2
-		add	r3,r2
+		mov	#$200,r1
+		mov	#(511)/2,r2
+		mov	#240,r3
+		mov	#0,r4
+		mov	#MarsVideo_ClearScreen,r0
+		jsr	@r0
+		nop
 
 ; -------------------------------
 ; Loop
@@ -1828,29 +1841,17 @@ mstr_gfx4_loop:
 	; ---------------------------------------
 	; Clear screen
 	; ---------------------------------------
-
 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
 		tst	r0,r0
 		bf	.no_redraw_2
-		mov	#_vdpreg,r1	; ** This also counts as a delay for Watchdog **
-		mov	#$100,r2
-		mov	r2,r3
-		mov	#240,r4
-		mov	#(320)/2,r5
-		mov	#0,r6
-.fb_loop:
-		mov	r5,r0
-		mov.w	r0,@(filllength,r1)
-		mov	r2,r0
-		mov.w	r0,@(fillstart,r1)
-		mov	r6,r0
-		mov.w	r0,@(filldata,r1)
-.wait_fb2:	mov.w	@(vdpsts,r1),r0
-		tst	#%10,r0
-		bf	.wait_fb2
-		dt	r4
-		bf/s	.fb_loop
-		add	r3,r2
+	; ** This also counts as a delay for Watchdog **
+		mov	#$200,r1
+		mov	#(320)/2,r2
+		mov	#240,r3
+		mov	#0,r4
+		mov	#MarsVideo_ClearScreen,r0
+		jsr	@r0
+		nop
 .no_redraw_2:
 
 		mov	#$200,r1
@@ -2375,13 +2376,30 @@ sizeof_marssnd		ds.l 0
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; MARS Video RAM
+;
+; RAM_Mars_ScrnBuff is recycled for all pseudo-screen modes,
+; check MAX_SCRNBUFF to set the maximum size.
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
+RAM_Mars_SuperSprites	ds.b sizeof_marsspr	; Sprites for screens that support them
+RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF	; Single buffer for all screen modes
+sizeof_marsvid		ds.l 0
+			finish
+
+; --------------------------------------------------------
+; per-screen buffers
+
+			struct RAM_Mars_ScrnBuff
 RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
+sizeof_scrn02		ds.l 0
+			finish
+			struct RAM_Mars_ScrnBuff
 RAM_Mars_BgBuffScale_M	ds.l 8
 RAM_Mars_BgBuffScale_S	ds.l 8
-
+sizeof_scrn03		ds.l 0
+			finish
+			struct RAM_Mars_ScrnBuff
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
@@ -2392,9 +2410,21 @@ RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
-
-sizeof_marsvid		ds.l 0
+sizeof_scrn04		ds.l 0
 			finish
+	if MOMPASS=6
+	if sizeof_scrn02-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
+		error "RAN OUT OF RAM FOR MARS SCREEN 02 (\{(sizeof_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
+	elseif sizeof_scrn03-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
+		error "RAN OUT OF RAM FOR MARS SCREEN 03 (\{(sizeof_scrn03-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
+	elseif sizeof_scrn04-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
+		error "RAN OUT OF RAM FOR MARS SCREEN 04 (\{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
+	endif
+
+; 	message "MARS VIDEO 02: \{(sizeof_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)}"
+; 	message "MARS VIDEO 03: \{(sizeof_scrn03-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)}"
+; 	message "MARS VIDEO 04: \{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)}"
+	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------
