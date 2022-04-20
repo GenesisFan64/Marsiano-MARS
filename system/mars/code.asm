@@ -31,8 +31,10 @@ marsGbl_IndxPlgn	ds.l 1	; Current polygon to slice
 marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
+marsGbl_SuperSpr_W	ds.w 1	; Super-sprites internal width
+marsGbl_SuperSpr_H	ds.w 1	; Super-sprites internal height
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
-marsGbl_UpdModels	ds.w 1	; Flag to update models
+; marsGbl_UpdModels	ds.w 1	; Flag to update models
 marsGbl_WdgMode		ds.w 1	; Current Watchdog task
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
@@ -40,13 +42,12 @@ marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
 marsGbl_RomBlkM		ds.w 1	; Flag to report that MASTER is reading from ROM area
 marsGbl_RomBlkS		ds.w 1	; Flag to report that SLAVE is reading from ROM area
-marsGbl_MdInitTmr	ds.w 1	; Write 2 to request FULL redraw
-marsGbl_BgDrwR		ds.w 1	; Write 2 to only redraw offscreen section(s)
-marsGbl_BgDrwL		ds.w 1	;
-marsGbl_BgDrwU		ds.w 1	;
-marsGbl_BgDrwD		ds.w 1	;
-marsGbl_BgSclMode	ds.w 1
-marsGbl_WaveEnable	ds.w 1	; Disable/Enable linetable wave effect
+marsGbl_MdInitTmr	ds.w 1	; Redraw counter (Write $02)
+marsGbl_BgDrwR		ds.w 1	; Write 2 to redraw these offscreen sections
+marsGbl_BgDrwL		ds.w 1	; ***
+marsGbl_BgDrwU		ds.w 1	; ***
+marsGbl_BgDrwD		ds.w 1	; ***
+marsGbl_WaveEnable	ds.w 1	; General wave effect: Disable/Enable
 marsGbl_WaveSpd		ds.w 1	; Linetable wave speed
 marsGbl_WaveMax		ds.w 1	; Maximum wave
 marsGbl_WaveDeform	ds.w 1	; Wave increment value
@@ -608,7 +609,6 @@ s_irq_cmd:
 		align 4
 .tag_FRT:	dc.l _FRT
 .tag_F0:	dc.l $F0
-
 .valid_cmd:
 		mov	r2,@-r15
 		mov	r3,@-r15
@@ -626,7 +626,6 @@ s_irq_cmd:
 		sts	macl,@-r15
 		sts	mach,@-r15
 		sts	pr,@-r15
-
 		cmp/eq	#1,r0
 		bt	.mode_1
 		cmp/eq	#2,r0
@@ -1145,6 +1144,10 @@ master_loop:
 		mov	#_vdpreg+shift,r1		; For the indexed-scrolling
 		and	#1,r0
 		mov.w	r0,@r1
+	; ---------------------------------------
+	; TODO: cambiar esto a longwords, los docs dicen
+	; que solo por WORDS pero el HWDIAG si escribe
+	; en LONGS...
 		mov	#_vdpreg,r1
 .wait:		mov.b	@(vdpsts,r1),r0
 		and	#$20,r0
@@ -1161,14 +1164,12 @@ master_loop:
 	endm
 		dt	r3
 		bf	.copy_pal
-		ldc	@r15+,sr		; Interrupts ON
-
+		ldc	@r15+,sr			; Interrupts ON
 	; ---------------------------------------
-	; Mode-specific VBlank changes
-
-		mov	#mstr_gfxlist_v,r1			; Point to VBLANK jumps
+	; Per-mode VBlank changes
+		mov	#mstr_gfxlist_v,r1		; Point to VBLANK jumps
 		mov	#_sysreg+comm12,r2
-		mov.w	@r2,r0				; r0 - INIT bit
+		mov.w	@r2,r0
 		and	#%0111,r0
 		shll2	r0
 		shll2	r0
@@ -1220,8 +1221,7 @@ master_loop:
 ; jump lists
 
 		align 4
-mstr_gfxlist_h:
-		dc.l mstr_gfx0_hblk	; $00
+mstr_gfxlist_h:	dc.l mstr_gfx0_hblk	; $00
 		dc.l mstr_gfx1_hblk	; $01
 		dc.l mstr_gfx2_hblk	; $02
 		dc.l mstr_gfx3_hblk	; $03
@@ -1360,12 +1360,28 @@ mstr_gfx1_init_1:
 ; -------------------------------
 
 mstr_gfx1_loop:
-		mov	#RAM_Mars_DreqRead,r1
-		mov	@(Dreq_Scrn1_Flag,r1),r0
-		tst	r0,r0
-		bt	.dont_rdrw
-		add	#Dreq_Scrn1_Data,r1
-		mov	@r1,r1
+		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1
+		mov	@(Dreq_Scrn1_Type,r1),r0
+		and	#%11,r0
+		shll2	r0
+		mov	#.m1list,r2
+		mov	@(r0,r2),r2
+		jmp	@r2
+		nop
+		align 4
+.m1list:
+		dc.l master_loop
+		dc.l master_loop	; Indexed
+		dc.l .direct		; Direct
+		dc.l master_loop
+
+; -------------------------------
+; Direct color
+; currently 320x200 (DOS-style)
+.direct:
+; 		tst	r0,r0
+; 		bt	.dont_rdrw
+		mov	@(Dreq_Scrn1_Data,r1),r1
 		mov	#_framebuffer+$200,r2
 		mov	#(320*200/2)/2,r3
 .copy_me:
@@ -1378,13 +1394,20 @@ mstr_gfx1_loop:
 		bf/s	.copy_me
 		add	#4,r2
 .dont_rdrw:
-
 		mov	#$200,r1
 		mov	#320*2,r2
 		mov	#200,r3
 		bsr	MarsVideo_MakeNameTbl
 		mov	#12,r4
+		bra	master_loop
+		nop
 
+; -------------------------------
+; RLE indexed-compressed image
+; (maybe make the RLE frames
+; compressed too.?)
+
+.rle:
 		bra	master_loop
 		nop
 
@@ -1416,7 +1439,7 @@ mstr_gfx2_vblk:
 		tst	r0,r0
 		bf	.mid_draw
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead,r0
+		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r0
 		mov	@(Dreq_Scrn2_X,r0),r1
 		mov	@(Dreq_Scrn2_Y,r0),r2
 		mov	r1,@(mbg_xpos,r14)
@@ -1433,9 +1456,9 @@ mstr_gfx2_vblk:
 mstr_gfx2_init_1:
 		mov	#RAM_Mars_BgBuffScrl,r1		; <-- TODO: make these configurable
 		mov	#$200,r2			; on Genesis side
-		mov	#16,r3
-		mov	#320,r4
-		mov	#256,r5
+		mov	#16,r3		; block size
+		mov	#320,r4		; max width
+		mov	#256,r5		; max height
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
 		xor	r0,r0
@@ -1443,7 +1466,7 @@ mstr_gfx2_init_1:
 		mov.w	r0,@(marsGbl_BgDrwL,gbr)	; all
 		mov.w	r0,@(marsGbl_BgDrwU,gbr)	; these
 		mov.w	r0,@(marsGbl_BgDrwD,gbr)	; draw requests
-		mov	#RAM_Mars_DreqRead,r0		; Set scrolling source data
+		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r0		; Set scrolling source data
 		mov	#RAM_Mars_BgBuffScrl,r1
 		mov	@(Dreq_Scrn2_Data,r0),r2
 		mov	@(Dreq_Scrn2_W,r0),r3
@@ -1523,7 +1546,7 @@ mstr_gfx3_hblk:
 ; -------------------------------
 
 mstr_gfx3_vblk:
-		mov	#RAM_Mars_DreqRead+Dreq_SclData,r1	; Copy-paste scale buffer
+		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1	; Copy-paste scale buffer
 		mov	#RAM_Mars_BgBuffScale_M,r2
 		mov	#RAM_Mars_BgBuffScale_S,r3
 		mov	#8,r4
@@ -1580,10 +1603,10 @@ mstr_gfx3_loop:
 		mov	@r14+,r7		; r7 - Input
 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
 		mov	@r14+,r2		; r2 - Y pos
-		mov	@r14+,r3		; r3 - DX
-		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r5		; r5 - X width
 		mov	@r14+,r6		; r6 - Y height
+		mov	@r14+,r3		; r3 - DX
+		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r9		; r9 - Mode
 		mov	#TH,r0			; Force source as Cache-thru
 		or	r0,r7
@@ -2105,10 +2128,10 @@ slave_loop:
 		mov	@r14+,r7		; r7 - Input
 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
 		mov	@r14+,r2		; r2 - Y pos
-		mov	@r14+,r3		; r3 - DX
-		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r5		; r5 - X width
 		mov	@r14+,r6		; r6 - Y height
+		mov	@r14+,r3		; r3 - DX
+		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r9		; r9 - Mode
 		mov	#TH,r0			; Force source as Cache-thru
 		or	r0,r7

@@ -24,7 +24,7 @@ Sound, Genesis and 32X:
 - YM2612: DAC sample playback at 18000hz aprox. with pitch, supports FM3 special mode for extra frequencies.
 - PWM: 7-psuedo channels at 22050hz in both Stereo and Mono with Pitch, Volume and Panning, controlled by the sound driver in the Genesis side. Has PWM-overflow and ROM RV protection. (RV protection currently disabled, 16/03/2022)
 - Supports Ticks and Global tempo (default tempos: 150 for NTSC and 120 for PAL)
-- Channel-link system: Any track channel automaticly picks the available channel in the soundchip. (PSG, FM, PWM)
+- Channel-link system: Any track-channel automaticly picks the available channel in the soundchip. (PSG, FM, PWM)
 - Two playback slots: Second slot has priority for SFX sound effects, it can temporally override channels used by the first slot.
 - Can autodetect each soundchips' special features (PSG, DAC and FM3 special) and swap those features mid-playback in the same slot. (ex. FM6 to DAC or DAC to FM6)
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
@@ -33,8 +33,8 @@ Notes/Current issues:
 - SOFT reset has a low chance of freezing.
 - (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play trash wave data.
 
-Planned/TODO:
-- Implement "SUPER" sprites for the psuedo-graphics modes that can use them.
+Planned:
+- Implement "Super" sprites for the psuedo-graphics modes that can use them.
 - Add map layout support on psd-Mode 2 (256-color scrolling background)
 
 LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:

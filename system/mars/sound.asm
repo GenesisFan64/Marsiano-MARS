@@ -1,19 +1,18 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 32X Sound
-;
-; The main PWM playback code (PWM interrupt) and it's channel list
-; is located on the cache.asm file.
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
 
-; MAXIMUM usable PWM channels
-; TODO: keep it like this, might break the Z80 side...
-MAX_PWMCHNL	equ	7
+MAX_PWMCHNL	equ	7	; MAXIMUM usable PWM channels (TODO: keep it like this, might break the Z80 side...)
+MAX_PWMBACKUP	equ	$80	; 1-bit sizes only. ($40,$80,$100...)
 
+; --------------------------------------------------------
+; Structs
+; --------------------------------------------------------
 
 ; 32X sound channel
 		struct 0
@@ -30,7 +29,10 @@ mchnsnd_vol	ds.l 1
 sizeof_sndchn	ds.l 0
 		finish
 
-; *** PWM INTERRUPT MOVED TO CACHE (see cache.asm)
+; ====================================================================
+
+; *** The main PWM playback code (PWM interrupt) and the
+; channel list is located on the cache.asm file. ***
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -68,7 +70,8 @@ MarsSound_Init:
 ; --------------------------------------------------------
 ; MarsSound_SetPwm
 ;
-; Sets new sound data to a channel slot
+; Sets new sound data to a channel slot, automaticly
+; plays.
 ;
 ; Input:
 ; r1 | Channel
@@ -78,7 +81,7 @@ MarsSound_Init:
 ; r5 | Pitch ($xxxxxx.xx, $100 default speed)
 ; r6 | Volume (Reverse: higher value is lower)
 ; r7 | Flags: %xxxxslLR
-;      LR - Output to these speakers
+;      LR - Enable output to these speakers
 ;       l - LOOP flag
 ;       s - Sample data is in Stereo (16-bit)
 ;
@@ -158,7 +161,7 @@ MarsSound_SetPwmPitch:
 ;
 ; Input:
 ; r1 | Channel
-; r2 | Volume (Reverse: higher value is lower)
+; r2 | Volume (in reverse: higher value is low)
 ;
 ; Breaks:
 ; r8,macl
@@ -211,7 +214,7 @@ MarsSound_PwmEnable:
 ; MarsSound_Refill
 ;
 ; Call this before the 68K side closes ROM access
-; (by setting bit RV)
+; (before 68k side sets RV=1)
 ;
 ; Breaks:
 ; r1-r8
@@ -227,38 +230,36 @@ MarsSnd_Refill:
 		mov	#sizeof_sndchn,r7
 		mov	#MarsSnd_PwmCache,r5
 .next_one:
-		mov	@(mchnsnd_enbl,r8),r0	; Finished already?
+		mov	@(mchnsnd_enbl,r8),r0	; This channel is active?
 		cmp/eq	#1,r0
 		bf	.not_enbl
-		mov	@(mchnsnd_bank,r8),r0
+		mov	@(mchnsnd_bank,r8),r0	; ROM area?
 		mov	#CS1,r2
 		cmp/eq	r2,r0
 		bf	.not_enbl
-		mov	#0,r1
+		mov	#0,r1			; Reset backup LSB
 		mov	r1,@(mchnsnd_cchread,r8)
 		mov	r5,r1
-		mov	#$80/4,r2		; Max bytes / 4
+		mov	#MAX_PWMBACKUP/4,r2	; Max bytes / 4
 		mov	@(mchnsnd_read,r8),r4	; r4 - OLD READ pos
 		mov	r4,r3
 		shlr8	r3
 		add	r0,r3
+
+	; TODO: luego checar si ya puedo usar LONGs.
 .copy_now:
+	rept 4-1
 		mov.b	@r3+,r0		; byte by byte...
 		mov.b	r0,@r1
 		add	#1,r1
-		mov.b	@r3+,r0
-		mov.b	r0,@r1
-		add	#1,r1
-		mov.b	@r3+,r0
-		mov.b	r0,@r1
-		add	#1,r1
+	endm
 		mov.b	@r3+,r0
 		mov.b	r0,@r1
 		dt	r2
 		bf/s	.copy_now
 		add	#1,r1
 .not_enbl:
-		mov	#$80,r0
+		mov	#MAX_PWMBACKUP,r0
 		add	r0,r5
 		dt	r6
 		bf/s	.next_one

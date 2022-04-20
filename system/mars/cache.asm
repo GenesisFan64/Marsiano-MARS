@@ -520,6 +520,7 @@ put_piece:
 ; Using CACHE just to be safe, move this to
 ; video.asm if needed.
 
+		align 4
 MarsVideo_ClearScreen:
 		shlr	r1
 		mov	r1,r5
@@ -1084,7 +1085,7 @@ s_irq_pwm:
 		cmp/eq	#0,r0
 		bf	.on
 .silent:
-		mov	#$7F,r0
+		mov	#$7F,r0			; Silence...
 		mov	r0,r2
 		bra	.skip
 		mov	r0,r1
@@ -1141,7 +1142,7 @@ s_irq_pwm:
 .mono_c:
 		mov	@(mchnsnd_cchread,r9),r2
 		shlr8	r2
-		mov	#$7F,r1
+		mov	#MAX_PWMBACKUP-1,r1	; backup size limit
 		and	r1,r2
 		add	r10,r2
 		mov.b	@r2+,r1
@@ -1213,7 +1214,7 @@ s_irq_pwm:
 		add	#1,r2
 		add	r1,r6
 		add	r2,r7
-		mov	#$80,r0
+		mov	#MAX_PWMBACKUP,r0
 		add	r0,r10
 		dt	r8
 		bf/s	.loop

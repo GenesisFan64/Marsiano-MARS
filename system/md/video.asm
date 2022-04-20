@@ -184,18 +184,22 @@ Video_ClearScreen:
 .snext:
 		move.l	d0,(a0)+
 		dbf	d7,.snext
+
 		lea	(RAM_Palette),a0
-		move.w	#64-1,d7
+		lea	(RAM_PaletteFd),a1
+		move.w	#(64/2)-1,d7
 		moveq	#0,d0
 .pnext:
 		move.l	d0,(a0)+
+		move.l	d0,(a1)+
 		dbf	d7,.pnext
-; 		lea	(RAM_Palette),a0
-; 		move.w	#256-1,d7
-; 		moveq	#0,d0
-; .pnext:
-; 		move.l	d0,(a0)+
-; 		dbf	d7,.pnext
+	; Only the 256-color's fade...
+		lea	(RAM_MdMarsPalFd),a0
+		move.w	#(256/2)-1,d7
+		moveq	#0,d0
+.pmnext:
+		move.l	d0,(a0)+
+		dbf	d7,.pmnext
 		rts
 
 ; ====================================================================
@@ -378,6 +382,7 @@ Video_PrintInit:
 		move.w	#varPrintVram|(varPrintPal<<13),d3
 		move.w	d3,(RAM_VidPrntVram).w
 		bsr	Video_LoadArt
+Video_PrintPal:
 		lea	ASCII_PAL(pc),a0
 		moveq	#(varPrintPal<<4),d0
 		move.w	#$F,d1

@@ -123,8 +123,8 @@ RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
 RAM_VerScroll		ds.l 320/16		; DMA Vertical scroll data (TODO: check if this is the correct size)
 RAM_Sprites		ds.w 8*70		; DMA Sprites
 RAM_Palette		ds.w 64			; DMA palette
-RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out
 RAM_PaletteFd		ds.w 64			; Target MD palette for FadeIn/Out
+RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out
 RAM_VdpDmaList		ds.w 7*MAX_MDDMATSK	; DMA BLAST Transfer list for VBlank
 RAM_VidPrntList		ds.w 3*64		; Video_Print list: Address, Type
 RAM_VdpDmaIndx		ds.w 1			; Current index in DMA BLAST list

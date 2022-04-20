@@ -49,6 +49,7 @@ MD_DebugMenu:
 		move.w	#$2700,sr
 		bsr	Mode_FadeOut
 		bsr	Mode_Init
+		bsr	Video_PrintInit
 
 		moveq	#0,d0
 		bsr	Sound_TrkStop
@@ -122,7 +123,7 @@ MD_DebugMenu:
 		rts
 .page0_init:
 		bsr	Video_ClearScreen
-		bsr	Video_PrintInit
+		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
@@ -162,11 +163,13 @@ MD_DebugMenu:
 
 .page1_init:
 		bsr	Video_ClearScreen
+		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 		bsr.s	.make_frame
-		lea	(RAM_MdDreq),a1
-		move.l	#1,Dreq_Scrn1_Flag(a1)
+
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
+		move.l	#2,Dreq_Scrn1_Type(a1)
 		bsr	System_MarsUpdate
 
 		lea	str_Page1(pc),a0
@@ -199,7 +202,7 @@ MD_DebugMenu:
 		move.w	(RAM_Scrn0_Frame).w,d0
 		lsl.w	#2,d0
 		lea	.frames(pc),a0
-		lea	(RAM_MdDreq),a1
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
 		move.l	(a0,d0.w),d0
 		add.l	#TH,d0
 		move.l	d0,Dreq_Scrn1_Data(a1)
@@ -217,6 +220,7 @@ MD_DebugMenu:
 
 .page2_init:
 		bsr	Video_ClearScreen
+		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
@@ -224,12 +228,12 @@ MD_DebugMenu:
 ; 		move.l	#locate(0,2,2),d0
 ; 		bsr	Video_Print
 
-		lea	(RAM_MdDreq),a0
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 		move.l	#TESTMARS_BG,Dreq_Scrn2_Data(a0)
-		move.l	#1152,Dreq_Scrn2_W(a0)
-		move.l	#368,Dreq_Scrn2_H(a0)
-		move.l	#$00000000,Dreq_Scrn2_X(a0)
-		move.l	#$00900000,Dreq_Scrn2_Y(a0)
+		move.l	#688,Dreq_Scrn2_W(a0)
+		move.l	#672,Dreq_Scrn2_H(a0)
+		move.l	#$00BC0000,Dreq_Scrn2_X(a0)
+		move.l	#$00280000,Dreq_Scrn2_Y(a0)
 		bsr	System_MarsUpdate
 
 		move.l	#ART_FGTEST,d0
@@ -268,8 +272,8 @@ MD_DebugMenu:
 .page2:
 		bsr	.this_bg
 
-		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
-		move.l	(RAM_MdDreq+Dreq_Scrn2_Y).w,d1
+		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w,d0
+		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w,d1
 		move.l	#$20000,d5
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -288,8 +292,8 @@ MD_DebugMenu:
 		beq.s	.nou_m
 		sub.l	d5,d1
 .nou_m:
-		move.l	d0,(RAM_MdDreq+Dreq_Scrn2_X).w
-		move.l	d1,(RAM_MdDreq+Dreq_Scrn2_Y).w
+		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w
+		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w
 
 ; 		add.l	#$10000,(RAM_MdDreq+Dreq_Scrn2_X).w
 
@@ -302,22 +306,22 @@ MD_DebugMenu:
 		rts
 
 .this_bg:
-		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
-		move.l	d0,d1
-		swap	d0
-		swap	d1
-		lsr.l	#1,d0
-		lsr.l	#2,d1
-		neg.w	d0
-		neg.w	d1
-		lea	(RAM_HorScroll),a0
-		move.w	#(224/2)-1,d7
-.next:
-		move.w	d0,(a0)+
-		move.w	d1,(a0)+
-		move.w	d0,(a0)+
-		move.w	d1,(a0)+
-		dbf	d7,.next
+; 		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
+; 		move.l	d0,d1
+; 		swap	d0
+; 		swap	d1
+; 		lsr.l	#1,d0
+; 		lsr.l	#2,d1
+; 		neg.w	d0
+; 		neg.w	d1
+; 		lea	(RAM_HorScroll),a0
+; 		move.w	#(224/2)-1,d7
+; .next:
+; 		move.w	d0,(a0)+
+; 		move.w	d1,(a0)+
+; 		move.w	d0,(a0)+
+; 		move.w	d1,(a0)+
+; 		dbf	d7,.next
 		rts
 
 ; ====================================================================
@@ -327,10 +331,11 @@ MD_DebugMenu:
 
 .page3_init:
 		bsr	Video_ClearScreen
+		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
-		lea	(RAM_MdDreq),a0
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 		move.l	#TESTMARS_BG2|TH,Dreq_SclData(a0)
 		move.l	#$00000000,Dreq_SclX(a0)	; X pos
 		move.l	#$00000000,Dreq_SclY(a0)	; Y pos
@@ -355,7 +360,7 @@ MD_DebugMenu:
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.fade_in
 .page3:
-		lea	(RAM_MdDreq),a0
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 		move.l	Dreq_SclX(a0),d0
 		move.l	Dreq_SclY(a0),d1
 		move.l	Dreq_SclDX(a0),d2
@@ -396,11 +401,11 @@ MD_DebugMenu:
 		move.w	d7,d6
 		btst	#bitJoyX,d6
 		beq.s	.nox_x
-		lea	(RAM_MdDreq+Dreq_SclX),a0
-		move.l	#$00000000,(a0)+	; X pos
-		move.l	#$00000000,(a0)+	; Y pos
-		move.l	#$00010000,(a0)+	; DX
-		move.l	#$00010000,(a0)+	; DY
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
+		move.l	#$00000000,Dreq_SclX(a0)	; X pos
+		move.l	#$00000000,Dreq_SclY(a0)	; Y pos
+		move.l	#$00010000,Dreq_SclDX(a0)	; DX
+		move.l	#$00010000,Dreq_SclDY(a0)	; DY
 .nox_x:
 
 		move.w	(Controller_1+on_press),d7
@@ -418,6 +423,7 @@ MD_DebugMenu:
 
 .page4_init:
 		bsr	Video_ClearScreen
+		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
@@ -474,6 +480,7 @@ MD_DebugMenu:
 
 .page5_init:
 		bsr	Video_ClearScreen
+		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
