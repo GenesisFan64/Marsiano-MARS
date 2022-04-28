@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	0
+set_StartPage	equ	2
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -224,36 +224,49 @@ MD_DebugMenu:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
+	; SUPER SPRITES TEST
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		move.l	#SuperSpr_Test|TH,marsspr_data(a0)
+		move.w	#32,marsspr_dwidth(a0)
+		move.w	#320/2,marsspr_x(a0)
+		move.w	#224/2,marsspr_y(a0)
+		move.w	#32,marsspr_xs(a0)
+		move.w	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+; 		move.w	#$100,marsspr_dx(a0)
+; 		move.w	#$100,marsspr_dy(a0)
+; 		move.l	#$00000000,marsspr_t_x(a0)
+; 		move.l	#$00000000,marsspr_b_x(a0)
+
 ; 		lea	str_Page2(pc),a0	; Print text
 ; 		move.l	#locate(0,2,2),d0
 ; 		bsr	Video_Print
+; 		move.l	#ART_FGTEST,d0
+; 		move.w	#$280*$20,d1
+; 		move.w	#ART_FGTEST_e-ART_FGTEST,d2
+; 		bsr	Video_LoadArt
+; 		move.l	#ART_BGTEST,d0
+; 		move.w	#1*$20,d1
+; 		move.w	#ART_BGTEST_e-ART_BGTEST,d2
+; 		bsr	Video_LoadArt
+; 		lea	(MAP_FGTEST),a0
+; 		move.l	#locate(0,0,0),d0
+; 		move.l	#mapsize(512,256),d1
+; 		move.w	#$2000+$0280,d2
+; 		bsr	Video_LoadMap
+; 		lea	(MAP_BGTEST),a0
+; 		move.l	#locate(1,0,0),d0
+; 		move.l	#mapsize(512,256),d1
+; 		move.w	#$0001,d2
+; 		bsr	Video_LoadMap
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 		move.l	#TESTMARS_BG,Dreq_Scrn2_Data(a0)
-		move.l	#688,Dreq_Scrn2_W(a0)
-		move.l	#672,Dreq_Scrn2_H(a0)
-		move.l	#$00BC0000,Dreq_Scrn2_X(a0)
-		move.l	#$00280000,Dreq_Scrn2_Y(a0)
+		move.l	#320,Dreq_Scrn2_W(a0)
+		move.l	#240,Dreq_Scrn2_H(a0)
+		move.l	#$00000000,Dreq_Scrn2_X(a0)
+		move.l	#$00000000,Dreq_Scrn2_Y(a0)
 		bsr	System_MarsUpdate
-
-		move.l	#ART_FGTEST,d0
-		move.w	#$280*$20,d1
-		move.w	#ART_FGTEST_e-ART_FGTEST,d2
-		bsr	Video_LoadArt
-		move.l	#ART_BGTEST,d0
-		move.w	#1*$20,d1
-		move.w	#ART_BGTEST_e-ART_BGTEST,d2
-		bsr	Video_LoadArt
-		lea	(MAP_FGTEST),a0
-		move.l	#locate(0,0,0),d0
-		move.l	#mapsize(512,256),d1
-		move.w	#$2000+$0280,d2
-		bsr	Video_LoadMap
-		lea	(MAP_BGTEST),a0
-		move.l	#locate(1,0,0),d0
-		move.l	#mapsize(512,256),d1
-		move.w	#$0001,d2
-		bsr	Video_LoadMap
 		move.w	#2,d0
 		bsr	Video_Mars_GfxMode
 		lea	(PalData_Mars_Test),a0
@@ -261,17 +274,16 @@ MD_DebugMenu:
 		move.w	#256,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
-		lea	PAL_TESTBOARD(pc),a0
-		moveq	#0,d0
-		move.w	#$20,d1
-		bsr	Video_FadePal
+; 		lea	PAL_TESTBOARD(pc),a0
+; 		moveq	#0,d0
+; 		move.w	#$20,d1
+; 		bsr	Video_FadePal
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.this_bg
 		bsr	.fade_in
 .page2:
 		bsr	.this_bg
-
 		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w,d0
 		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w,d1
 		move.l	#$20000,d5
@@ -294,6 +306,32 @@ MD_DebugMenu:
 .nou_m:
 		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w
 		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w
+
+	; SUPER SPRITE MOVE
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		move.w	marsspr_x(a0),d0
+		move.w	marsspr_y(a0),d1
+		moveq	#1,d2
+		moveq	#1,d3
+		move.w	(Controller_2+on_hold),d7
+		btst	#bitJoyRight,d7
+		beq.s	.nor_s
+		add.w	d2,d0
+.nor_s:
+		btst	#bitJoyLeft,d7
+		beq.s	.nol_s
+		sub.w	d2,d0
+.nol_s:
+		btst	#bitJoyDown,d7
+		beq.s	.nod_s
+		add.w	d3,d1
+.nod_s:
+		btst	#bitJoyUp,d7
+		beq.s	.nou_s
+		sub.w	d3,d1
+.nou_s:
+		move.w	d0,marsspr_x(a0)
+		move.w	d1,marsspr_y(a0)
 
 ; 		add.l	#$10000,(RAM_MdDreq+Dreq_Scrn2_X).w
 

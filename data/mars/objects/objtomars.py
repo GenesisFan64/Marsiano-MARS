@@ -208,17 +208,17 @@ while reading:
       use_img = False
       random_mode = False
 
-    elif a == TAG_MARSINDX_LIST:
-      a = mtlname.split("_")
-      out_mtrl.write("\t dc.l "+str(a[1])+","+str(0)+"\n")
-      mtrl_curr = mtrl_index
-      mtrl_index += 1
-      print("INDEX Material: Color",indx_color)
-      #img_width = 1
-      #img_height = 1
-      has_img = False
-      use_img = False
-      random_mode = False
+    #elif a == TAG_MARSINDX_LIST:
+      #a = mtlname.split("_")
+      #out_mtrl.write("\t dc.l "+str(a[1])+","+str(0)+"\n")
+      #mtrl_curr = mtrl_index
+      #mtrl_index += 1
+      #print("INDEX Material: Color",indx_color)
+      ##img_width = 1
+      ##img_height = 1
+      #has_img = False
+      #use_img = False
+      #random_mode = False
 
     # TEXTURE
     else:
@@ -240,7 +240,7 @@ while reading:
                   
               # filename
               if b.find("map_Kd") == False:
-                  tex_fname = b[7:].rstrip('\r\n')[1:]
+                  tex_fname = b[6:].rstrip('\r\n')[1:]
                   print(TAG_OBJECTSDIR+"/"+tex_fname)
                   tex_file = open(TAG_OBJECTSDIR+"/"+tex_fname,"rb")
                   tex_file.seek(1)
@@ -334,7 +334,7 @@ while reading:
 
       # Set material id and size
       if use_img == True:
-        a = 0x8000|0x4000|mtrl_curr&0x1FFF		# Texture mode | Triangle | mtrl_id
+        a = 0x8000|0x4000|mtrl_curr&0x3FFF		# Texture mode | Triangle | mtrl_id
       else:
         if random_mode == True:
           a = 0x4000|random_color
@@ -402,7 +402,7 @@ while reading:
 
       # Set material id and size
       if use_img == True:
-        a = 0x8000|mtrl_curr&0x1FFF		# Texture mode | mtrl_id
+        a = 0x8000|mtrl_curr&0x3FFF		# Texture mode | mtrl_id
       else:
         if random_mode == True:
           a = random_color

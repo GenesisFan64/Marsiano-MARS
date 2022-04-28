@@ -27,7 +27,8 @@
 			struct 0
 marsGbl_PlyPzList_R	ds.l 1	; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
-marsGbl_IndxPlgn	ds.l 1	; Current polygon to slice
+marsGbl_CurrRdSpr	ds.l 1	; Current sprite to process
+marsGbl_CurrRdPlgn	ds.l 1	; Current polygon to slice
 marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
@@ -36,9 +37,11 @@ marsGbl_SuperSpr_H	ds.w 1	; Super-sprites internal height
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 ; marsGbl_UpdModels	ds.w 1	; Flag to update models
 marsGbl_WdgMode		ds.w 1	; Current Watchdog task
+marsGbl_WdgStatus	ds.w 1	; Watchdog status
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
-marsGbl_PlgnCntr	ds.w 1	; Number of polygons to slice
+marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
+marsGbl_CntrRdSpr	ds.w 1	; Number of sprites to read
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
 marsGbl_RomBlkM		ds.w 1	; Flag to report that MASTER is reading from ROM area
 marsGbl_RomBlkS		ds.w 1	; Flag to report that SLAVE is reading from ROM area
@@ -388,7 +391,6 @@ m_irq_pwm:
 		nop
 		nop
 		nop
-		nop
 		rts
 		nop
 		align 4
@@ -473,10 +475,10 @@ m_irq_cmd:
 		bf/s	.copy_safe
 		add	#4,r2
 .bad_size:
-
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
+		nop
 		rts
 		nop
 		align 4
@@ -495,7 +497,6 @@ m_irq_h:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+hintclr,r1
 		mov.w	r0,@r1
-		nop
 		nop
 		nop
 		nop
@@ -522,7 +523,6 @@ m_irq_v:
 		nop
 		nop
 		nop
-		nop
 		rts
 		nop
 		align 4
@@ -539,7 +539,9 @@ m_irq_vres:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg,r2
 		mov.w	r0,@(vresintclr,r2)
-
+		mov.b	@(dreqctl+1,r2),r0
+		tst	#%10,r0
+		bf	.rv_busy
 		mov	#(CS3|$40000)-8,r15
 		mov	#SH2_M_HotStart,r0
 		mov	r0,@r15
@@ -559,6 +561,10 @@ m_irq_vres:
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r2)
 		rte
+		nop
+		align 4
+.rv_busy:
+		bra	.rv_busy
 		nop
 		align 4
 		ltorg		; Save literals
@@ -873,9 +879,7 @@ s_irq_cmd:
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
-
 .no_ztrnsfr:
-		nop
 		nop
 		nop
 		nop
@@ -943,12 +947,17 @@ s_irq_vres:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg,r2
 		mov.w	r0,@(vresintclr,r2)
-
+		mov.b	@(dreqctl+1,r2),r0
+		tst	#%10,r0
+		bf	.rv_busy
 		mov	#(CS3|$3F000)-8,r15
 		mov	#SH2_S_HotStart,r0
 		mov	r0,@r15
 		mov.w   #$F0,r0
 		mov	r0,@(4,r15)
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -962,7 +971,11 @@ s_irq_vres:
 		rte
 		nop
 		align 4
-		ltorg
+.rv_busy:
+		bra	.rv_busy
+		nop
+		align 4
+		ltorg		; Save literals
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -980,11 +993,6 @@ s_irq_vres:
 
 		align 4
 SH2_M_Entry:
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
-		mov	#CS3|$40000,r15			; Set default Stack for Master
-		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
-		ldc	r14,gbr
 		mov.l	#$FFFFFE10,r14
 		mov	#0,r0
 		mov.b	r0,@(0,r14)
@@ -1009,6 +1017,10 @@ SH2_M_Entry:
 		mov.b	r0,@(5,r14)
 		mov	#$FFFFFFE2,r0
 		mov.b	r0,@(7,r14)
+
+		mov	#CS3|$40000,r15			; Set default Stack for Master
+		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
+		ldc	r14,gbr
 		mov	#_CCR,r1
 		mov	#%00010000,r0			; Cache purge + Disable
 		mov.w	r0,@r1
@@ -1435,6 +1447,17 @@ mstr_gfx2_hblk:
 ; -------------------------------
 
 mstr_gfx2_vblk:
+	; Copypaste Supersprites from DREQ
+		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r1	; Copy Dreq models from here.
+		mov	#RAM_Mars_SuperSprites,r2
+		mov	#(sizeof_marsspr*MAX_SUPERSPR)/4,r3	; LONG copies
+.copy_safe:
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.copy_safe
+		add	#4,r2
+
 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
 		tst	r0,r0
 		bf	.mid_draw
@@ -1456,9 +1479,9 @@ mstr_gfx2_vblk:
 mstr_gfx2_init_1:
 		mov	#RAM_Mars_BgBuffScrl,r1		; <-- TODO: make these configurable
 		mov	#$200,r2			; on Genesis side
-		mov	#16,r3		; block size
-		mov	#320,r4		; max width
-		mov	#256,r5		; max height
+		mov	#16,r3				; block size
+		mov	#320,r4				; max width
+		mov	#256,r5				; max height
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
 		xor	r0,r0
@@ -1475,12 +1498,10 @@ mstr_gfx2_init_1:
 		nop
 		bra	mstr_gfx2_init_cont
 		nop
-
 mstr_gfx2_init_2:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
-
 mstr_gfx2_init_cont:
 		bsr	MarsVideo_DrawAllBg		; Process FULL image (only two times)
 		nop
@@ -1498,16 +1519,42 @@ mstr_gfx2_loop:
 		mov.w	r0,@(marsGbl_XShift,gbr)
 		bsr	MarsVideo_MoveBg
 		nop
+
+		mov	#RAM_Mars_SuperSprites,r0
+		mov	r0,@(marsGbl_CurrRdSpr,gbr)	; Set watchdog for sprites
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_CntrRdSpr,gbr)
+		bsr	MarsVideo_SetWatchdog
+		mov	#1,r1
+
 ; 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
 ; 		tst	r0,r0
 ; 		bt	.from_drwall
+		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
 		jsr	@r0
 		nop
 		mov	#MarsVideo_BgDrawUD,r0
 		jsr	@r0
 		nop
-.from_drwall:
+; .from_drwall:
+
+	; ---------------------------------------
+	; Draw super sprites
+	; ---------------------------------------
+
+; .no_swap2:
+; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+; 		tst	r0,r0
+; 		bt	.no_swap2
+.wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0	; <-- enable this if something goes wrong.
+		tst	r0,r0
+		bt	.wait_wd
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	#MarsVideo_DrawSuperSpr,r0
+		jsr	@r0
+		nop
+.no_swap:
 
 	; ---------------------------------------
 	; Build linetable
@@ -1531,6 +1578,8 @@ mstr_gfx2_loop:
 ;
 ; Not as smooth as Mode 2
 ; ---------------------------------------
+
+; TODO: reparar ese WORD de la ultima linea.
 
 ; -------------------------------
 ; HBlank
@@ -1596,8 +1645,6 @@ mstr_gfx3_loop:
 	; r8 - Output
 	; r9 - Loop: Line width / 2
 	; r10 - Loop: Number of lines
-	;
-	; TODO: a small word is missing if X/Y are in reverse
 		mov	#RAM_Mars_BgBuffScale_M,r14
 		mov	#_framebuffer+$200,r13	; r13 - Output
 		mov	@r14+,r7		; r7 - Input
@@ -1608,7 +1655,7 @@ mstr_gfx3_loop:
 		mov	@r14+,r3		; r3 - DX
 		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r9		; r9 - Mode
-		mov	#TH,r0			; Force source as Cache-thru
+		mov	#TH,r0			; Force source as Cache-Thru
 		or	r0,r7
 		shll16	r5
 		shll16	r6
@@ -1773,7 +1820,7 @@ mstr_gfx4_vblk:
 		bf	.slv_busy
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models from here.
 		mov	#RAM_Mars_Objects,r2
-		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
+		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3	; LONG copies
 .copy_safe:
 		mov	@r1+,r0
 		mov	r0,@r2
@@ -1834,32 +1881,13 @@ mstr_gfx4_loop:
 		mov	#RAM_Mars_PlgnNum_1,r1
 		nop
 .cont_plgn:
-		mov	r0,@(marsGbl_IndxPlgn,gbr)
+		mov	r0,@(marsGbl_CurrRdPlgn,gbr)
 		mov	@r1,r0
-		mov.w	r0,@(marsGbl_PlgnCntr,gbr)
-		mov	#RAM_Mars_VdpDrwList,r0		; Reset DDA pieces Read/Write points
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)	; And counter
-		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		mov.w	r0,@(marsGbl_WdgMode,gbr)
-		stc	sr,r2
-		mov	#$F0,r0
-		ldc 	r0,sr
-		mov.l	#_CCR,r1			; Refresh Cache
-		mov	#%00001000,r0			; Two-way mode
-		mov.w	r0,@r1
-		mov	#%00011001,r0			; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#$FFFFFE80,r1
-		mov.w	#$5A10,r0			; Watchdog pre-timer
-		mov.w	r0,@r1
-		mov	#$FFFFFE80,r1
-		mov.w	#$5A10,r0			; Watchdog pre-timer
-		mov.w	r0,@r1
-		mov.w	#$A538,r0			; Enable Watchdog
-		mov.w	r0,@r1
-		ldc	r2,sr
+		mov.w	r0,@(marsGbl_CntrRdPlgn,gbr)
+; 		mov	#0,r2
+; 		mov	#_overwrite+$200,r3
+		bsr	MarsVideo_SetWatchdog
+		mov	#2,r1
 
 	; ---------------------------------------
 	; Clear screen
@@ -1876,7 +1904,6 @@ mstr_gfx4_loop:
 		jsr	@r0
 		nop
 .no_redraw_2:
-
 		mov	#$200,r1
 		mov	#512,r2		; <-- fixed WIDTH
 		mov	#240,r3
@@ -1884,71 +1911,14 @@ mstr_gfx4_loop:
 		mov	#0,r4
 
 	; ---------------------------------------
-	; update linetable on every frame...
-; 		mov	#_framebuffer,r14
-; 		mov.w	@(marsGbl_WaveEnable,gbr),r0
+
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+		tst	r0,r0
+		bt	.no_swap
+; .wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0	; <-- enable this if something goes wrong.
 ; 		tst	r0,r0
-; 		bt	.linetbl_normal
-; 		mov.w	@(marsGbl_WaveTan,gbr),r0
-; 		mov	#$7FF,r1
-; 		add	#32,r0		; wave speed
-; 		and	r1,r0
-; 		mov.w	r0,@(marsGbl_WaveTan,gbr)
-; 		mov	r0,r2
-; 		mov	#_framebuffer,r8
-; 		mov	#$200,r5
-; 		mov	#512,r6
-; 		mov	#240,r7
-;
-; 		mov	#16,r9		; wave distord
-; 		mov	#4,r10		; wave max X
-; .nxt_lne:
-; 		mov	#$7FF,r3
-; 		mov	r2,r0
-; 		add	r9,r2
-; 		and	r3,r2
-; 		shll2	r0
-; 		mov	#sin_table,r3
-; 		mov	@(r0,r3),r4
-; 		mov	#8,r0
-; 		dmuls	r10,r4
-; 		sts	macl,r4
-; 		shlr16	r4
-; 		exts.w	r4,r4
-; 		mov	r5,r0
-; 		shlr	r0
-; 		add	r4,r0
-; 		mov.w	r0,@r14
-; 		add	r6,r5
-; 		dt	r7
-; 		bf/s	.nxt_lne
-; 		add	#2,r14
-; 		bra	.linetbl_cont
-; 		nop
-; .linetbl_normal:
-; 		mov	#$200/2,r0
-; 		mov	#512/2,r1
-; 		mov	#240,r4
-; .nxt_lne2:
-; 		mov.w	r0,@r14
-; 		add	r1,r0
-; 		dt	r4
-; 		bf/s	.nxt_lne2
-; 		add	#2,r14
-; .linetbl_cont:
-
-	; ---------------------------------------
-
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-		tst	r0,r0
-		bt	.no_swap
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-		tst	r0,r0
-		bt	.no_swap
-.wait_wd:	mov.w	@(marsGbl_WdgMode,gbr),r0
-		tst	r0,r0
-		bt	.wait_wd
-		mov	#VideoMars_DrwPlgnPz,r0
+; 		bt	.wait_wd
+		mov	#MarsVideo_DrawPzPlgns,r0
 		jsr	@r0
 		nop
 .no_swap:
@@ -1971,11 +1941,6 @@ mstr_gfx4_loop:
 
 		align 4
 SH2_S_Entry:
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
-		mov	#CS3|$3F000,r15			; Reset stack
-		mov	#RAM_Mars_Global,r14		; Reset gbr
-		ldc	r14,gbr
 		mov.l	#$FFFFFE10,r14
 		mov	#0,r0
 		mov.b	r0,@(0,r14)
@@ -1992,6 +1957,9 @@ SH2_S_Entry:
 		mov	#0,r0
 		mov.b	r0,@(3,r14)
 		mov.b	r0,@(2,r14)
+		mov	#CS3|$3F000,r15			; Reset stack
+		mov	#RAM_Mars_Global,r14		; Reset gbr
+		ldc	r14,gbr
 		mov	#_CCR,r1
 		mov	#%00010000,r0			; Cache purge + Disable
 		mov.w	r0,@r1
@@ -2014,7 +1982,7 @@ SH2_S_Entry:
 		bf/s	.copy
 		add 	#4,r2
 		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON|PWMIRQ_ON,r0			; Enable these interrupts
+		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		bsr	MarsSound_Init			; Init PWM
 		nop
@@ -2036,6 +2004,8 @@ SH2_S_HotStart:
 		mov.w	r0,@($16,r14)
 		mov.w	r0,@($18,r14)
 		mov.w	r0,@($1A,r14)
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#0,r0				; Stop ALL active PWM channels
 		mov	#MarsSnd_PwmChnls,r1
 		mov	#MAX_PWMCHNL,r2
@@ -2067,7 +2037,6 @@ SH2_S_HotStart:
 
 		align 4
 slave_loop:
-
 		mov	#_sysreg+comm1,r1	; DEBUG counter
 		mov.b	@r1,r0
 		add	#1,r0
@@ -2122,7 +2091,6 @@ slave_loop:
 	; r8 - Output
 	; r9 - line size / 2
 	; r10 - Number of lines
-
 		mov	#RAM_Mars_BgBuffScale_S,r14
 		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
 		mov	@r14+,r7		; r7 - Input
@@ -2133,7 +2101,7 @@ slave_loop:
 		mov	@r14+,r3		; r3 - DX
 		mov	@r14+,r4		; r4 - DY
 		mov	@r14+,r9		; r9 - Mode
-		mov	#TH,r0			; Force source as Cache-thru
+		mov	#TH,r0			; Force source as Cache-Thru
 		or	r0,r7
 		shll16	r5
 		shll16	r6
@@ -2405,16 +2373,19 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_SuperSprites	ds.b sizeof_marsspr	; Sprites for screens that support them
-RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF	; Single buffer for all screen modes
+RAM_Mars_SuperSprBuff	ds.l $10				; Supersprites screen settings
+RAM_Mars_SuperSprites	ds.b sizeof_marsspr*MAX_SUPERSPR	; Sprites for screens that support them
+RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
+RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
+RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF			; Single buffer for all screen modes
 sizeof_marsvid		ds.l 0
 			finish
 
 ; --------------------------------------------------------
 ; per-screen buffers
-
 			struct RAM_Mars_ScrnBuff
 RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
+RAM_Mars_RdrwBlocks	ds.b (512*256)/4	; Block redraw flags (WIDTH * $80)
 sizeof_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff
@@ -2427,8 +2398,6 @@ RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; 3D Camera buffer
-RAM_Mars_VdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Sprites / Polygon pieces
-RAM_Mars_VdpDrwList_e	ds.l 0				; (END point label)
 RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
@@ -2443,10 +2412,6 @@ sizeof_scrn04		ds.l 0
 	elseif sizeof_scrn04-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
 		error "RAN OUT OF RAM FOR MARS SCREEN 04 (\{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
 	endif
-
-; 	message "MARS VIDEO 02: \{(sizeof_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)}"
-; 	message "MARS VIDEO 03: \{(sizeof_scrn03-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)}"
-; 	message "MARS VIDEO 04: \{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)}"
 	endif
 
 ; ====================================================================
@@ -2457,7 +2422,7 @@ sizeof_scrn04		ds.l 0
 			struct MarsRam_System
 RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data recieved from Genesis in DMA ***DO NOT READ FROM HERE***
 RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy of DREQ for reading.
-RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here.
+RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here
 sizeof_marssys		ds.l 0
 			finish
 

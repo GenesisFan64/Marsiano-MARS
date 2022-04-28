@@ -996,8 +996,8 @@ mars_scomm:
 		ld	(hl),0
 		ld	(hl),1
 		ld	(hl),0
-		ld	(hl),1
 		rst	8
+		ld	(hl),1
 		ld	iy,5100h|8000h	; iy - mars sysreg
 		ld	ix,pwmcom
 		ld	a,(marsBlock)	; block MARS requests?
@@ -2547,8 +2547,8 @@ setupchip:
 .chk_tbln:
 
 	; **** MSB priority overwrite
-		push	iy
-		pop	de		; de - Copy of curr track-channel
+; 		push	iy
+; 		pop	de		; de - Copy of curr track-channel
 ; 		rst	8
 ; 		ld	a,(ix+1)	; MSB | LSB
 ; 		or	(ix)		; Check if blank
@@ -2601,23 +2601,23 @@ setupchip:
 		ld	a,(ix)
 		or	e
 		jr	z,.fndlink
-		push	de		; Check if this link is
-		ld	d,(ix+1)	; floating.
-		ld	e,(ix)
-		inc	de
-		rst	8
-		ld	a,(de)
-		pop	de
-		cp	-2
-		jr	z,.fndlink
-		cp	-1
-		jr	z,.fndlink
+; 		push	de		; Check if this link is
+; 		ld	d,(ix+1)	; floating.
+; 		ld	e,(ix)
+; 		inc	de
+; 		rst	8
+; 		ld	a,(de)
+; 		pop	de
+; 		cp	-2
+; 		jr	z,.fndlink
+; 		cp	-1
+; 		jr	z,.fndlink
 
-		jr	.alrdfnd
+; 		jr	.alrdfnd
 	; **** MSB priority overwrite
-; 		ld	a,e		; TODO: priority.
-; 		cp	d
-; 		jr	nc,.alrdfnd
+		ld	a,e		; TODO: priority.
+		cp	d
+		jr	nc,.alrdfnd
 	; ****
 
 .fndlink:

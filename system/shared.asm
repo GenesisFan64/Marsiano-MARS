@@ -9,10 +9,12 @@
 ; --------------------------------------------------------
 
 MAX_MODELS	equ 14		; MAX 3D Models
-MAX_SUPERSPR	equ 64		; Number of Super Sprites
+MAX_SUPERSPR	equ 32		; Number of Super Sprites
 
 ; --------------------------------------------------------
 ; Structs
+;
+; MUST be 4-byte aligned.
 ; --------------------------------------------------------
 
 ; model objects
@@ -35,20 +37,18 @@ sizeof_mdlobj	ds.l 0
 
 ; "Super" sprite
 		struct 0
-marsspr_x	ds.l 1		; 0000.0000
-marsspr_y	ds.l 1		; 0000.0000
-marsspr_xs	ds.l 1		; 0000.0000
-marsspr_ys	ds.l 1		; 0000.0000
-marsspr_data	ds.l 1		; Pixel data
-marsspr_anim	ds.l 1		; Animation data
-marsspr_anitmr	ds.l 1		; Animation timer
-marsspr_animspd	ds.l 1		; Animation speed
-marsspr_frame	ds.l 1
+marsspr_data	ds.l 1		; Sprite pixel data (0-endoflist)
+marsspr_indx	ds.w 1		; Start from index
+marsspr_dwidth	ds.w 1		; WIDTH size of spritesheet
+marsspr_x	ds.w 1		; 0000
+marsspr_xs	ds.w 1
+marsspr_y	ds.w 1		; 0000
+marsspr_ys	ds.w 1
 sizeof_marsspr	ds.l 0
 		finish
 
 ; ------------------------------------------------
-; Variables for each pseudo-Screen
+; Structs for each pseudo-Screen, max $20 bytes
 ;
 ; Read these as:
 ; RAM_MdDreq+Dreq_ScrnBuff
@@ -56,7 +56,6 @@ sizeof_marsspr	ds.l 0
 		struct 0
 Dreq_Scrn1_Data	ds.l 1		; Screen mode 1: Source image (SH2's area)
 Dreq_Scrn1_Type	ds.l 1		; Source format: 0-NULL 1-Indexed 2-Direct 3-RLE
-DREQ_FILLER	ds.l 1
 		finish
 
 		struct 0
@@ -94,10 +93,10 @@ Dreq_SclMode	ds.l 1
 ; *** List MUST be aligned by 8bytes (end with 0 or 8) ***
 
 		struct 0
-Dreq_Palette	ds.w 256			; 256-color palette
-Dreq_ScrnBuff	ds.b $20			; <-- only one buffer per screen
-Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; <-- labels from SH2 side
-Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR
+Dreq_Palette	ds.w 256				; 256-color palette
+Dreq_ScrnBuff	ds.b $20				; <-- only one buffer per screen
+Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
+Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; SuperVDP sprites
 sizeof_dreq	ds.l 0
 		finish
 
