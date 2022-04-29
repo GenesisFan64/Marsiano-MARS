@@ -251,7 +251,7 @@ slave_irq:
 int_m_list:
 		dc.l m_irq_bad,m_irq_bad
 		dc.l m_irq_bad,m_irq_bad
-		dc.l m_irq_wdg,m_irq_wdg
+		dc.l $C0000000,$C0000000	; <-- TOP code on Cache
 		dc.l m_irq_pwm,m_irq_pwm
 		dc.l m_irq_cmd,m_irq_cmd
 		dc.l m_irq_h,m_irq_h
@@ -412,10 +412,10 @@ m_irq_cmd:
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
-		mov	#_sysreg,r4
-		mov	#_DMASOURCE0,r3
-		mov	#_sysreg+comm12,r2	; LSB only
-		mov	#_sysreg+dreqfifo,r1
+		mov	#_sysreg,r4		; r4 - sysreg base
+		mov	#_DMASOURCE0,r3		; r3 - DMA base register
+		mov	#_sysreg+comm12,r2	; r2 - comm to write the signal
+		mov	#_sysreg+dreqfifo,r1	; r1 - Source point: DREQ FIFO
 		mov	@($C,r3),r0		; Check if last DMA is active
 		and	#%01,r0
 		tst	r0,r0
@@ -463,8 +463,8 @@ m_irq_cmd:
 	;
 	; The only workaround is to copy-paste the data
 	; we just received into another buffer for reading
-	; it safetly, as current 32X Emulators
-	; doesn't recreate this limitation.
+	; it safetly, as current 32X Emulators doesn't recreate
+	; this limitation.
 		mov	#RAM_Mars_DreqDma,r1
 		mov	#RAM_Mars_DreqRead,r2
 		mov	#sizeof_dreq/4,r3	; NOTE: copying as LONGS
@@ -977,6 +977,87 @@ s_irq_vres:
 		align 4
 		ltorg		; Save literals
 
+
+; =================================================================
+; ------------------------------------------------
+; Master | Watchdog interrupt
+; ------------------------------------------------
+
+; m_irq_wdg:
+; check cache_m_plgn.asm
+
+; =================================================================
+; ------------------------------------------------
+; Slave | Watchdog interrupt
+; ------------------------------------------------
+
+s_irq_wdg:
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	r2,@-r15
+		mov	#_FRT,r1
+		mov.b   @(7,r1),r0
+		xor     #2,r0
+		mov.b   r0,@(7,r1)
+
+		mov	#$FFFFFE80,r1
+		mov.w   #$A518,r0		; Watchdog OFF
+		mov.w   r0,@r1
+		or      #$20,r0			; ON again
+		mov.w   r0,@r1
+		mov	#$10,r2
+		mov.w   #$5A00,r0		; Timer for the next one
+		or	r2,r0
+		mov.w	r0,@r1
+
+		mov	@r15+,r2
+		rts
+		nop
+		align 4
+		ltorg
+		align 4
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Mars_LoadFastCode
+;
+; Loads "fast code" into the SH2's cache
+; ($800 bytes max)
+;
+; Input:
+; r1 - Code to transfer
+; r2 - Size / 4
+;
+; Breaks:
+; r3
+;
+; NOTE:
+; Interrupts MUST be OFF
+; ----------------------------------------------------------------
+
+		align 4
+Mars_LoadFastCode:
+		stc	sr,@-r15	; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#_CCR,r3
+		mov	#%00010000,r0	; Cache purge + Disable
+		mov.w	r0,@r3
+		mov	#%00001001,r0	; Cache two-way mode + Enable
+		mov.w	r0,@r3
+		mov 	#$C0000000,r3
+.copy:
+		mov 	@r1+,r0
+		mov 	r0,@r3
+		dt	r2
+		bf/s	.copy
+		add 	#4,r3
+		rts
+		ldc	@r15+,sr
+		align 4
+		ltorg
+		align 4
+
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; MARS System features
@@ -1021,11 +1102,6 @@ SH2_M_Entry:
 		mov	#CS3|$40000,r15			; Set default Stack for Master
 		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
 		ldc	r14,gbr
-		mov	#_CCR,r1
-		mov	#%00010000,r0			; Cache purge + Disable
-		mov.w	r0,@r1
-		mov	#%00001001,r0			; Cache two-way mode + Enable
-		mov.w	r0,@r1
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1033,15 +1109,7 @@ SH2_M_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-		mov 	#CACHE_MASTER,r1		; Transfer Master's "fast code" to CACHE
-		mov 	#$C0000000,r2
-		mov 	#(CACHE_MASTER_E-CACHE_MASTER)/4,r3
-.copy:
-		mov 	@r1+,r0
-		mov 	r0,@r2
-		dt	r3
-		bf/s	.copy
-		add 	#4,r2
+
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
@@ -1477,6 +1545,11 @@ mstr_gfx2_vblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
+		mov	#CACHE_MSTR_SCRL,r1
+		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
+		mov	#Mars_LoadFastCode,r0
+		jsr	@r0
+		nop
 		mov	#RAM_Mars_BgBuffScrl,r1		; <-- TODO: make these configurable
 		mov	#$200,r2			; on Genesis side
 		mov	#16,r3				; block size
@@ -1503,7 +1576,7 @@ mstr_gfx2_init_2:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx2_init_cont:
-		bsr	MarsVideo_DrawAllBg		; Process FULL image (only two times)
+		bsr	MarsVideo_DrawAllBg	; Process FULL image
 		nop
 
 ; -------------------------------
@@ -1525,7 +1598,7 @@ mstr_gfx2_loop:
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_CntrRdSpr,gbr)
 		bsr	MarsVideo_SetWatchdog
-		mov	#1,r1
+		nop
 
 ; 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
 ; 		tst	r0,r0
@@ -1843,13 +1916,22 @@ mstr_gfx4_vblk:
 ; -------------------------------
 
 mstr_gfx4_init_1:
+		mov	#CACHE_MSTR_PLGN,r1
+		mov	#(CACHE_MSTR_PLGN_E-CACHE_MSTR_PLGN)/4,r2
+		mov	#Mars_LoadFastCode,r0
+		jsr	@r0
+		nop
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_XShift,gbr)
+		bra	mstr_gfx4_init_cont
+		nop
+
+mstr_gfx4_init_2:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 
-mstr_gfx4_init_2:
+mstr_gfx4_init_cont:
 		mov	#$200,r1
 		mov	#(511)/2,r2
 		mov	#240,r3
@@ -1887,7 +1969,8 @@ mstr_gfx4_loop:
 ; 		mov	#0,r2
 ; 		mov	#_overwrite+$200,r3
 		bsr	MarsVideo_SetWatchdog
-		mov	#2,r1
+		nop
+; 		mov	#2,r1
 
 	; ---------------------------------------
 	; Clear screen
@@ -1960,11 +2043,6 @@ SH2_S_Entry:
 		mov	#CS3|$3F000,r15			; Reset stack
 		mov	#RAM_Mars_Global,r14		; Reset gbr
 		ldc	r14,gbr
-		mov	#_CCR,r1
-		mov	#%00010000,r0			; Cache purge + Disable
-		mov.w	r0,@r1
-		mov	#%00001001,r0			; Cache two-way mode + Enable
-		mov.w	r0,@r1
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1972,15 +2050,11 @@ SH2_S_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-		mov 	#CACHE_SLAVE,r1			; Transfer Slave's fast-code to CACHE
-		mov 	#$C0000000,r2
-		mov 	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r3
-.copy:
-		mov 	@r1+,r0
-		mov 	r0,@r2
-		dt	r3
-		bf/s	.copy
-		add 	#4,r2
+		mov	#CACHE_SLAVE,r1
+		mov	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r2
+		mov	#Mars_LoadFastCode,r0
+		jsr	@r0
+		nop
 		mov	#_sysreg,r1
 		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
     		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
@@ -2279,42 +2353,13 @@ slave_loop:
 		align 4
 		ltorg
 
-; =================================================================
 ; ------------------------------------------------
-; Slave | Watchdog interrupt
+; Includes
 ; ------------------------------------------------
 
-s_irq_wdg:
-		mov	#$F0,r0
-		ldc	r0,sr
-		mov	r2,@-r15
-		mov	#_FRT,r1
-		mov.b   @(7,r1),r0
-		xor     #2,r0
-		mov.b   r0,@(7,r1)
-
-		mov	#$FFFFFE80,r1
-		mov.w   #$A518,r0		; Watchdog OFF
-		mov.w   r0,@r1
-		or      #$20,r0			; ON again
-		mov.w   r0,@r1
-		mov	#$10,r2
-		mov.w   #$5A00,r0		; Timer for the next one
-		or	r2,r0
-		mov.w	r0,@r1
-
-		mov	@r15+,r2
-		rts
-		nop
-		align 4
-		ltorg
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Cache routines
-; ----------------------------------------------------------------
-
-		include "system/mars/cache.asm"
+		include "system/mars/cache/cache_m_scrlspr.asm"
+		include "system/mars/cache/cache_m_plgn.asm"
+		include "system/mars/cache/cache_slv.asm"
 
 ; ====================================================================
 ; ----------------------------------------------------------------
