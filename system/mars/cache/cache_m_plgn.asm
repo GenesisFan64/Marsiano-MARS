@@ -11,7 +11,7 @@ CACHE_MSTR_PLGN:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; Watchdog interrupt for MASTER CPU
+; Watchdog interrupt
 ; --------------------------------------------------------
 
 		mov	#$F0,r0
@@ -170,20 +170,24 @@ CACHE_MSTR_PLGN:
 		bt	.lefth
 		mov	r9,r0
 .lefth:
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r5,@-r15
-		mov	r7,@-r15
-		mov	r8,@-r15
-		mov	r9,@-r15
+		mov	#Cach_Bkup_SPZ,r0
+		mov	r2,@-r0
+		mov	r3,@-r0
+		mov	r5,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r11,@-r0
 		bsr	put_piece
 		nop
-		mov	@r15+,r9
-		mov	@r15+,r8
-		mov	@r15+,r7
-		mov	@r15+,r5
-		mov	@r15+,r3
-		mov	@r15+,r2
+		mov	#Cach_Bkup_LPZ,r0
+		mov	@r0+,r11
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r5
+		mov	@r0+,r3
+		mov	@r0+,r2
 	; X direction update
 		cmp/gt	r9,r8				; Left width > Right width?
 		bf	.lefth2
@@ -197,7 +201,7 @@ CACHE_MSTR_PLGN:
 		bra	.next_pz
 		nop
 .exit:
-		mov	#Cach_Bkup_L,r0
+		mov	#Cach_Bkup_LT,r0
 		lds	@r0+,pr
 		lds	@r0+,mach
 		lds	@r0+,macl
@@ -217,13 +221,13 @@ CACHE_MSTR_PLGN:
 		mov	@(marsGbl_CurrRdPlgn,gbr),r0
 		add	#8,r0
 		mov	r0,@(marsGbl_CurrRdPlgn,gbr)
-wdm_next:
+; wdm_next:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
 		mov.w   r0,@r1
 		or      #$20,r0			; ON
 		mov.w   r0,@r1
-		mov.w   #$5A10,r0		; Timer for the next WD
+		mov.w   #$5A20,r0		; Timer for the next WD
 		mov.w   r0,@r1
 		rts
 		nop
@@ -387,86 +391,118 @@ set_right:
 
 ; --------------------------------------------------------
 
+	; r2
+	; r3
+	; r4 - Left X
+	; r5
+	; r6 - Right X
+	; r7
+	; r8
+	; r9
+	; r10 - Top Y, gets updated after calling put_piece
+
 put_piece:
-		mov	@(4,r2),r8
-		mov	@(4,r3),r9
+		mov	@(4,r2),r8	; Left DDA's Y
+		mov	@(4,r3),r9	; Right DDA's Y
 		sub	r10,r8
 		sub	r10,r9
-		mov	r8,r0
-		cmp/gt	r8,r9
+		cmp/gt	r9,r8
 		bt	.lefth
-		mov	r9,r0
+		mov	r8,r9
 .lefth:
-		mov 	r4,@(plypz_xl,r1)
+		mov	r4,r8
+		mov	r6,r0
+		shlr16	r8
+		xtrct	r8,r0
+		mov	r0,@(plypz_xl,r1)
 		mov 	r5,@(plypz_xl_dx,r1)
-		mov 	r6,@(plypz_xr,r1)
+		dmuls	r9,r5
 		mov 	r7,@(plypz_xr_dx,r1)
-		dmuls	r0,r5
 		sts	macl,r2
-		dmuls	r0,r7
+		dmuls	r9,r7
 		sts	macl,r3
 		add 	r2,r4
 		add	r3,r6
 		mov	r10,r2
-		add	r0,r10
-		mov	r10,r3
+		add	r9,r10
+		mov	r10,r11
 		shll16	r2
-		or	r2,r3
-		mov	r3,@(plypz_ypos,r1)
-		mov	r3,@-r15
-		mov	#Cach_DDA_Src_L,r2
-		mov	@r2,r5
-		mov	r5,@(plypz_src_xl,r1)
-		mov	@(4,r2),r7
-		mov	r7,@(plypz_src_xl_dx,r1)
-		mov	@(8,r2),r8
-		mov	r8,@(plypz_src_yl,r1)
-		mov	@($C,r2),r9
-		mov	r9,@(plypz_src_yl_dx,r1)
-		dmuls	r0,r7
-		sts	macl,r2
-		dmuls	r0,r9
-		sts	macl,r3
-		add 	r2,r5
-		add	r3,r8
-		mov	#Cach_DDA_Src_L,r2
-		mov	r5,@r2
-		mov	r8,@(8,r2)
-		mov	#Cach_DDA_Src_R,r2
-		mov	@r2,r5
-		mov	r5,@(plypz_src_xr,r1)
-		mov	@(4,r2),r7
-		mov	r7,@(plypz_src_xr_dx,r1)
-		mov	@(8,r2),r8
-		mov	r8,@(plypz_src_yr,r1)
-		mov	@($C,r2),r9
-		mov	r9,@(plypz_src_yr_dx,r1)
-		dmuls	r0,r7
-		sts	macl,r2
-		dmuls	r0,r9
-		sts	macl,r3
-		add 	r2,r5
-		add	r3,r8
-		mov	#Cach_DDA_Src_R,r2
-		mov	r5,@r2
-		mov	r8,@(8,r2)
-		mov	@r15+,r3
-		cmp/pl	r3			; TOP check, 2 steps
+		or	r2,r11
+		mov	r11,@(plypz_ytb,r1)
+
+	; r9 - Y multiply
+	;
+	; free:
+	; r2,r3,r5,r7,r8,r11
+		mov	#Cach_DDA_Src_L,r8
+		mov	#Cach_DDA_Src_R,r7
+		mov	@r8,r2
+		mov	@r7,r3
+		mov	r2,r5
+		mov	r3,r0
+		shlr16	r5
+		xtrct	r5,r0
+		mov	r0,@(plypz_src_xl,r1)
+; 		mov	r2,@(plypz_src_xl,r1)
+; 		mov	r3,@(plypz_src_xr,r1)
+
+		mov	@(4,r8),r0
+		mov	@(4,r7),r5
+		mov	r0,@(plypz_src_xl_dx,r1)
+		mov	r5,@(plypz_src_xr_dx,r1)
+		dmuls	r9,r0
+		sts	macl,r0
+		dmuls	r9,r5
+		sts	macl,r5
+		add 	r0,r2
+		add	r5,r3
+		mov	r2,@r8
+		mov	r3,@r7
+
+		add	#8,r8	; Go to Y/DY
+		add	#8,r7
+		mov	@r8,r2
+		mov	@r7,r3
+		mov	r2,r5
+		mov	r3,r0
+		shlr16	r5
+		xtrct	r5,r0
+		mov	r0,@(plypz_src_yl,r1)
+
+; 		mov	r2,@(plypz_src_yl,r1)
+; 		mov	r3,@(plypz_src_yr,r1)
+		mov	@(4,r8),r0
+		mov	@(4,r7),r5
+		mov	r0,@(plypz_src_yl_dx,r1)
+		mov	r5,@(plypz_src_yr_dx,r1)
+		dmuls	r9,r0
+		sts	macl,r0
+		dmuls	r9,r5
+		sts	macl,r5
+		add 	r0,r2
+		add	r5,r3
+		mov	r2,@r8
+		mov	r3,@r7
+
+		cmp/pl	r11			; TOP check, 2 steps
 		bt	.top_neg
-		shll16	r3
-		cmp/pl	r3
+		shll16	r11
+		cmp/pl	r11
 		bf	.bad_piece
 .top_neg:
 		mov	@(polygn_mtrl,r14),r0
 		mov 	r0,@(plypz_mtrl,r1)
 		mov	@(polygn_type,r14),r0
 		mov 	r0,@(plypz_type,r1)
+
+	; next piece
 		add	#sizeof_plypz,r1
+		mov	@(marsGbl_PlyPzList_End,gbr),r0
+		mov	r0,r8				; r8 - end point
 		mov	r1,r0
-		mov	#RAM_Mars_SVdpDrwList_e,r8
 		cmp/ge	r8,r0
 		bf	.dontreset_pz
-		mov	#RAM_Mars_SVdpDrwList,r0
+		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r1
 .dontreset_pz:
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
@@ -492,9 +528,17 @@ MarsVideo_DrawPzPlgns:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		cmp/pl	r0
 		bf	.no_pz
-		mov	@(marsGbl_PlyPzList_R,gbr),r0	; r14 - Current pieces pointer to READ
-		mov	r0,r14
-		mov	@(plypz_ypos,r14),r9		; Start grabbing StartY/EndY positions
+
+		mov	@(marsGbl_PlyPzList_R,gbr),r0
+		mov	r0,r9
+		mov	#Cach_PlgnPzCopy,r10
+		mov	r10,r14
+	rept sizeof_plypz/4
+		mov	@r9+,r0
+		mov	r0,@r10
+		add	#4,r10
+	endm
+		mov	@(plypz_ytb,r14),r9		; Start grabbing StartY/EndY positions
 		mov	r9,r10
 		mov	#$FFFF,r0
 		shlr16	r9
@@ -527,10 +571,13 @@ MarsVideo_DrawPzPlgns:
 	; ------------------------------------
 
 drwtsk1_vld_y:
-		mov	@(plypz_xl,r14),r1		; r1 - X left
+		mov	@(plypz_xl,r14),r1
+		mov	r1,r3
+		shlr16	r1
 		mov	@(plypz_xl_dx,r14),r2		; r2 - DX left
-		mov	@(plypz_xr,r14),r3		; r3 - X right
+		shll16	r1
 		mov	@(plypz_xr_dx,r14),r4		; r4 - DX right
+		shll16	r3
 		mov	@(plypz_type,r14),r0		; Check material options
 		shlr16	r0
 		shlr8	r0
@@ -559,41 +606,52 @@ go_drwsld_updline_tex:
 		bra	drwsld_updline_tex
 		nop
 go_drwtex_gonxtpz:
-		bra	drwtex_gonxtpz
+		bra	drwsld_nextpz
 		nop
 drwtsk_texmode:
-		mov	@(plypz_src_xl,r14),r5		; Texture X left
-		mov	@(plypz_src_xr,r14),r6		; Texture X right
-		mov	@(plypz_src_yl,r14),r7		; Texture Y up
-		mov	@(plypz_src_yr,r14),r8		; Texture Y down
+		mov	@(plypz_src_xl,r14),r5		; Texture X left/right
+		mov	r5,r6
+		shlr16	r5
+		mov	@(plypz_src_yl,r14),r7		; Texture Y up/down
+		mov	r7,r8
+		shlr16	r7
+
+		shll16	r5
+		shll16	r6
+		shll16	r7
+		shll16	r8
 drwsld_nxtline_tex:
-		cmp/pz	r9			; Y Start below 0?
+		cmp/pz	r9				; Y Start below 0?
 		bf	go_drwsld_updline_tex
-		mov	tag_yhght,r0		; Y Start after 224?
+		mov	tag_yhght,r0			; Y Start after 224?
 		cmp/ge	r0,r9
 		bt	go_drwtex_gonxtpz
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
-		mov	r6,@-r15
-		mov	r7,@-r15
-		mov	r8,@-r15
-		mov	r10,@-r15
-; 		mov	r13,@-r15
-		mov	r1,r11			; r11 - X left copy
-		mov	r3,r12			; r12 - X right copy
-		shlr16	r11
-		shlr16	r12
-		exts	r11,r11
-		exts	r12,r12
-		mov	r12,r0			; r0: X Right - X Left
-		sub	r11,r0
+
+		mov	#Cach_Bkup_S,r0
+		mov	r1,@-r0
+		mov	r2,@-r0
+		mov	r3,@-r0
+		mov	r4,@-r0
+		mov	r5,@-r0
+		mov	r6,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r10,@-r0
+		mov	r11,@-r0
+
+	; r11-r12 are free now.
+		shlr16	r1
+		shlr16	r3
+		exts	r1,r1
+		exts	r3,r3
+		mov	r3,r0			; r0: X Right - X Left
+		sub	r1,r0
 		cmp/pl	r0			; Line reversed?
 		bt	.txrevers
-		mov	r12,r0			; Swap XL and XR values
-		mov	r11,r12
-		mov	r0,r11
+		mov	r3,r0			; Swap XL and XR values
+		mov	r1,r3
+		mov	r0,r1
 		mov	r5,r0
 		mov	r6,r5
 		mov	r0,r6
@@ -601,15 +659,15 @@ drwsld_nxtline_tex:
 		mov	r8,r7
 		mov	r0,r8
 .txrevers:
-		cmp/eq	r11,r12				; Same X position?
+		cmp/eq	r1,r3				; Same X position?
 		bt	.tex_skip_line
 		mov	tag_width,r0			; X right < 0?
-		cmp/pl	r12
+		cmp/pl	r3
 		bf	.tex_skip_line
-		cmp/gt	r0,r11				; X left > 320?
+		cmp/gt	r0,r1				; X left > 320?
 		bt	.tex_skip_line
-		mov	r12,r2
-		mov 	r11,r0
+		mov	r3,r2
+		mov 	r1,r0
 		sub 	r0,r2
 		sub	r5,r6
 		sub	r7,r8
@@ -630,28 +688,28 @@ drwsld_nxtline_tex:
 	; Limit X destination points
 	; and correct the texture's X positions
 		mov	tag_width,r0		; XR point > 320?
-		cmp/gt	r0,r12
+		cmp/gt	r0,r3
 		bf	.tr_fix
-		mov	r0,r12				; Force XR to 320
+		mov	r0,r3				; Force XR to 320
 .tr_fix:
-		cmp/pz	r11				; XL point < 0?
+		cmp/pz	r1				; XL point < 0?
 		bt	.tl_fix
-		neg	r11,r2				; Fix texture positions
+		neg	r1,r2				; Fix texture positions
 		dmuls	r6,r2
 		sts	macl,r0
 		add	r0,r5
 		dmuls	r8,r2
 		sts	macl,r0
 		add	r0,r7
-		xor	r11,r11				; And reset XL to 0
+		xor	r1,r1				; And reset XL to 0
 .tl_fix:
 	; start
 		mov	#-2,r0
-		and	r0,r11
-		and	r0,r12
-		sub 	r11,r12
-		shar	r12
-		cmp/pl	r12
+		and	r0,r1
+		and	r0,r3
+		sub 	r1,r3
+		shar	r3
+		cmp/pl	r3
 		bf	.tex_skip_line
 		mov	#_overwrite+$200,r10
 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
@@ -665,8 +723,8 @@ drwsld_nxtline_tex:
 		shll8	r0
 		shll	r0
 		add 	r0,r10			; Add Y
-		add 	r11,r10			; Add X
-		mov	@(plypz_mtrl,r14),r11	; r11 - texture data
+		add 	r1,r10			; Add X
+		mov	@(plypz_mtrl,r14),r1
 .tex_xloop:
 		mov	r7,r2
 		shlr16	r2
@@ -675,7 +733,7 @@ drwsld_nxtline_tex:
 		sts	macl,r0
 		shlr16	r2
 		add	r2,r0
-		mov.b	@(r0,r11),r0		; Read texture pixel
+		mov.b	@(r0,r1),r0		; Read texture pixel
 		add	r13,r0			; Add index increment
 		and	#$FF,r0
 		shll8	r0
@@ -689,27 +747,30 @@ drwsld_nxtline_tex:
 		sts	macl,r0
 		shlr16	r2
 		add	r2,r0
-		mov.b	@(r0,r11),r0		; Read texture pixel
+		mov.b	@(r0,r1),r0		; Read texture pixel
 		add	r13,r0			; Add index increment
 		and	#$FF,r0
-		dt	r12
 		sts	mach,r2
 		or	r2,r0
 		mov.w	r0,@r10
 		add	#2,r10
 		add	r6,r5			; Update X
+		dt	r3
 		bf/s	.tex_xloop
 		add	r8,r7			; Update Y
 .tex_skip_line:
-; 		mov	@r15+,r13
-		mov	@r15+,r10
-		mov	@r15+,r8
-		mov	@r15+,r7
-		mov	@r15+,r6
-		mov	@r15+,r5
-		mov	@r15+,r4
-		mov	@r15+,r3
-		mov	@r15+,r2
+		mov	#Cach_Bkup_LB,r0
+		mov	@r0+,r11
+		mov	@r0+,r10
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r6
+		mov	@r0+,r5
+		mov	@r0+,r4
+		mov	@r0+,r3
+		mov	@r0+,r2
+		mov	@r0+,r1
 drwsld_updline_tex:
 		mov	@(plypz_src_xl_dx,r14),r0	; Update DX postions
 		add	r0,r5
@@ -721,28 +782,12 @@ drwsld_updline_tex:
 		add	r0,r8
 		add	r2,r1				; Update X postions
 		dt	r10
-		bt/s	drwtex_gonxtpz
+		bt/s	drwsld_nextpz
 		add	r4,r3
 		bra	drwsld_nxtline_tex
 		add	#1,r9
-drwtex_gonxtpz:
-		add	#sizeof_plypz,r14		; And set new point
-		mov	r14,r0
-		mov	#RAM_Mars_SVdpDrwList_e,r14	; End-of-list?
-		cmp/ge	r14,r0
-		bf	.reset_rd
-		mov	#RAM_Mars_SVdpDrwList,r0
-.reset_rd:
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
-		add	#-1,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		cmp/pl	r0
-		bf	.finish_it
-		bra	MarsVideo_DrawPzPlgns
-		nop
-.finish_it:
-		bra	drwtask_exit
+; drwtex_gonxtpz:
+		bra	drwsld_nextpz
 		nop
 		align 4
 tag_JR:		dc.l _JR
@@ -763,9 +808,9 @@ tag_yhght:	dc.l SCREEN_HEIGHT
 drwtsk_solidmode:
 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r6
+		and	r0,r6
 		mov	@(plypz_type,r14),r5
 		and	r0,r5
-		and	r0,r6
 		add	r5,r6
 		mov	#_vdpreg,r13
 .wait:		mov.w	@(10,r13),r0
@@ -846,12 +891,13 @@ drwsld_updline:
 ; ------------------------------------
 
 drwsld_nextpz:
-		add	#sizeof_plypz,r14		; And set new point
-		mov	r14,r0
-		mov	#RAM_Mars_SVdpDrwList_e,r14	; End-of-list?
+		mov	@(marsGbl_PlyPzList_End,gbr),r0
+		mov	r0,r14
+		mov	@(marsGbl_PlyPzList_R,gbr),r0
+		add	#sizeof_plypz,r0		; And set new point
 		cmp/ge	r14,r0
 		bf	.reset_rd
-		mov	#RAM_Mars_SVdpDrwList,r0
+		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 .reset_rd:
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
@@ -870,19 +916,17 @@ drwtask_exit:
 ; ------------------------------------------------
 
 		align 4
+Cach_PlgnPzCopy	ds.l sizeof_plypz
 Cach_DDA_Top	ds.l 2*2	; First 2 points
 Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2
 Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
 Cach_DDA_Src_R	ds.l 4
-Cach_Bkup_L	ds.l 16		;
+Cach_Bkup_LT	ds.l 5		;
+Cach_Bkup_LB	ds.l 11
 Cach_Bkup_S	ds.l 0		; <-- Reads backwards
-Cach_XHead_L	ds.l 1		; Left draw beam
-Cach_XHead_R	ds.l 1		; Right draw beam
-Cach_YHead_U	ds.l 1		; Top draw beam
-Cach_YHead_D	ds.l 1		; Bottom draw beam
-Cach_BgFbPos_V	ds.l 1		; Framebuffer Y DIRECT position (then multiply with internal WIDTH)
-Cach_BgFbPos_H	ds.l 1		; Framebuffer TOPLEFT position
+Cach_Bkup_LPZ	ds.l 7
+Cach_Bkup_SPZ	ds.l 0		; <-- Reads backwards
 
 ; ------------------------------------------------
 .end:		phase CACHE_MSTR_PLGN+.end&$1FFF

@@ -11,8 +11,8 @@
 ; Only access here on these conditions:
 ; - Stop all tracks that use PWM samples
 ; - If you wanna keep any tracks active: set 1 to marsBlock
-;   in the Z80 driver, all tracks will continue playing
-;   only with PSG and FM instruments
+;   in the Z80 driver, all tracks will continue playing using
+;   only the PSG and FM instruments
 ;   (TODO: check how it peforms)
 ;
 ; The PWM samples are safe to use with the implementation
@@ -26,73 +26,10 @@
 ; PWM samples
 ; --------------------------------------------------------
 
-SmpIns_PlusPiano_st:
-	gSmpl "sound/instr/smpl/plus_piano_st.wav",0
-; SmpIns_Vctr04:
-; 	gSmpl "sound/instr/smpl/vctr04.wav",124
-; SmpIns_VctrSnare:
-; 	gSmpl "sound/instr/smpl/vctrSnare.wav",0
-; SmpIns_VctrKick:
-; 	gSmpl "sound/instr/smpl/vctrKick.wav",0
-; SmpIns_VctrTimpani:
-; 	gSmpl "sound/instr/smpl/vctrTimpani.wav",0
-; SmpIns_VctrCrash:
-; 	gSmpl "sound/instr/smpl/vctrCrash.wav",0
-; SmpIns_VctrBrass:
-; 	gSmpl "sound/instr/smpl/vctrBrass.wav",1004
-; SmpIns_VctrAmbient:
-; 	gSmpl "sound/instr/smpl/vctrBrass.wav",124
-;
-; SmpIns_Bell_Ice:
-; 	gSmpl "sound/instr/smpl/bell_ice.wav",0
-; SmpIns_Brass1_Hi:
-; 	gSmpl "sound/instr/smpl/brass1_hi.wav",0
-; SmpIns_Brass1_Low:
-; 	gSmpl "sound/instr/smpl/brass1_low.wav",0
-; SmpIns_Forest_1:
-; 	gSmpl "sound/instr/smpl/forest1.wav",0
-; SmpIns_Kick_jam:
-; 	gSmpl "sound/instr/smpl/kick_jam.wav",0
-; SmpIns_Snare_jam:
-; 	gSmpl "sound/instr/smpl/snare_jam.wav",0
-; SmpIns_SnrTom_1:
-; 	gSmpl "sound/instr/smpl/snrtom_1.wav",0
-; SmpIns_PIANO_1:
-; 	gSmpl "sound/instr/smpl/PIANO__1.wav",0
-; SmpIns_SSTR162A:
-; 	gSmpl "sound/instr/smpl/SSTR162A.wav",0
+	include "sound/smpl_pwm.asm"
 
 ; --------------------------------------------------------
 ; Graphics
 ; --------------------------------------------------------
 
-	align 4
-TESTMARS_BG:
-	binclude "data/mars/tests/test_art.bin"
-	align 4
-TESTMARS_BG2:
-	binclude "data/mars/tests/test2_art.bin"
-	align 4
-TESTMARS_DIRECT_1:
-	binclude "data/mars/tests/direct/frame0_art.bin"
-	align 4
-TESTMARS_DIRECT_2:
-	binclude "data/mars/tests/direct/frame1_art.bin"
-	align 4
-TESTMARS_DIRECT_3:
-	binclude "data/mars/tests/direct/frame2_art.bin"
-	align 4
-
-Textr_smoke:
-	binclude "data/mars/objects/mtrl/smoke_art.bin"
-	align 4
-
-; --------------------------------------------------------
-; Models
-; --------------------------------------------------------
-
-; 	include "data/mars/objects/mdl/test/head.asm"
-	align 4
-SuperSpr_Test:
-	binclude "data/mars/tests/superspr/sprites_art.bin"
-	align 4
+	include "data/mars/graphics.asm"

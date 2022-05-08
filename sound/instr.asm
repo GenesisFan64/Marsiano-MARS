@@ -86,6 +86,8 @@ FmIns_Bass_club:
 		binclude "sound/instr/fm/bass_club.gsx",$2478,$20
 FmIns_Bass_donna:
 		binclude "sound/instr/fm/bass_donna.gsx",$2478,$20
+FmIns_Bass_groove:
+		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
 FmIns_Bass_groove_2:
 		binclude "sound/instr/fm/bass_groove_2.gsx",$2478,$20
 FmIns_Bass_groove_gem:
@@ -120,8 +122,9 @@ FmIns_Bass_italo:
 ; ; 		binclude "sound/instr/fm/brass_gem.gsx",$2478,$20
 ; ; FmIns_Piano_Small:
 ; ; 		binclude "sound/instr/fm/piano_small.gsx",$2478,$20
-; ; FmIns_Piano:
-; ; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+FmIns_Piano_Aqua:
+		binclude "sound/instr/fm/piano_aqua.gsx",$2478,$20
+
 FmIns_Trumpet_1:
 		binclude "sound/instr/fm/trumpet_1.gsx",$2478,$20
 FmIns_Trumpet_2:
@@ -138,12 +141,12 @@ FmIns_Trumpet_carnival:
 FmIns_Marimba:
 		binclude "sound/instr/fm/marimba.gsx",$2478,$20
 
-; FmIns_Ambient_dark:
-; 		binclude "sound/instr/fm/ambient_dark.gsx",$2478,$20
-; FmIns_Ambient_spook:
-; 		binclude "sound/instr/fm/ambient_spook.gsx",$2478,$20
-; FmIns_Ambient_3:
-; 		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
+FmIns_Ambient_dark:
+		binclude "sound/instr/fm/ambient_dark.gsx",$2478,$20
+FmIns_Ambient_spook:
+		binclude "sound/instr/fm/ambient_spook.gsx",$2478,$20
+FmIns_Ambient_3:
+		binclude "sound/instr/fm/ambient_3.gsx",$2478,$20
 FmIns_Ding_toy:
 		binclude "sound/instr/fm/ding_toy.gsx",$2478,$20
 ; FmIns_Bell_China:

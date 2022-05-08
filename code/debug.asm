@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	0
+set_StartPage	equ	4
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -38,6 +38,12 @@ RAM_CurrTicks	ds.w 1
 RAM_CurrTempo	ds.w 1
 RAM_Scrn0_Frame	ds.w 1
 RAM_Scrn0_Timer	ds.w 1
+RAM_GemaUpd	ds.w 1
+RAM_GemaList	ds.w 4
+RAM_GemaListFM	ds.w 6
+RAM_GemaListPWM	ds.w 7
+RAM_SprTimer	ds.w 1
+RAM_SprFrame	ds.w 1
 		finish
 
 ; ====================================================================
@@ -74,7 +80,6 @@ MD_DebugMenu:
 		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.loop
-
 		move.w	(RAM_CurrPage).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -226,13 +231,23 @@ MD_DebugMenu:
 
 	; SUPER SPRITES TEST
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.l	#SuperSpr_Test|TH,marsspr_data(a0)
-		move.w	#32,marsspr_dwidth(a0)
-		move.w	#320/2,marsspr_x(a0)
-		move.w	#224/2,marsspr_y(a0)
+
+		move.l	#SuperSpr_Test,d0
+		moveq	#2-1,d7
+.copy:
+		move.l	d0,d1
+		or.l	#TH,d1
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#(320/2)-16,marsspr_x(a0)
+		move.w	#(224/2)-24,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
+		add.l	#(32*48)*2,d0
+		adda	#sizeof_marsspr,a0
+		dbf	d7,.copy
+
 ; 		move.w	#$100,marsspr_dx(a0)
 ; 		move.w	#$100,marsspr_dy(a0)
 ; 		move.l	#$00000000,marsspr_t_x(a0)
@@ -307,34 +322,7 @@ MD_DebugMenu:
 		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w
 		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w
 
-	; SUPER SPRITE MOVE
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.w	marsspr_x(a0),d0
-		move.w	marsspr_y(a0),d1
-		moveq	#1,d2
-		moveq	#1,d3
-		move.w	(Controller_2+on_hold),d7
-		btst	#bitJoyRight,d7
-		beq.s	.nor_s
-		add.w	d2,d0
-.nor_s:
-		btst	#bitJoyLeft,d7
-		beq.s	.nol_s
-		sub.w	d2,d0
-.nol_s:
-		btst	#bitJoyDown,d7
-		beq.s	.nod_s
-		add.w	d3,d1
-.nod_s:
-		btst	#bitJoyUp,d7
-		beq.s	.nou_s
-		sub.w	d3,d1
-.nou_s:
-		move.w	d0,marsspr_x(a0)
-		move.w	d1,marsspr_y(a0)
-
-; 		add.l	#$10000,(RAM_MdDreq+Dreq_Scrn2_X).w
-
+		bsr	SuperSprite_Test
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.page2_ret
@@ -446,6 +434,7 @@ MD_DebugMenu:
 		move.l	#$00010000,Dreq_SclDY(a0)	; DY
 .nox_x:
 
+		bsr	SuperSprite_Test
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.page3_ret
@@ -467,7 +456,7 @@ MD_DebugMenu:
 
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test|TH,mdl_data(a0)
-		move.l	#-$800,mdl_z_pos(a0)
+		move.l	#-$600,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
 		lea	str_Page4(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
@@ -491,7 +480,6 @@ MD_DebugMenu:
 		add.l	#$4000,mdl_x_rot(a0)
 ; 		add.l	#$4000,mdl_y_rot(a0)
 ; 		add.l	#$4000,mdl_z_rot(a0)
-
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
@@ -544,11 +532,18 @@ MD_DebugMenu:
 		lea	str_Gema(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
+		lea	str_GemaStatus(pc),a0
+		move.l	#locate(0,5,12),d0
+		bsr	Video_Print
+
 		move.w	#0,d0
 		bsr	Video_Mars_GfxMode
 		bsr	.page5_update
 		bsr	.fade_in
 .page5:
+		bsr	.page5_updvars
+
+	; Controller
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyY,d7
 		beq.s	.noy2
@@ -638,7 +633,6 @@ MD_DebugMenu:
 		bsr	.fade_out
 .page5_ret:
 		rts
-
 .page5_update:
 		lea	str_Status(pc),a0
 		move.l	#locate(0,20,4),d0
@@ -647,7 +641,62 @@ MD_DebugMenu:
 		moveq	#0,d0
 		move.w	(RAM_CurrSelc).w,d0
 		add.l	#locate(0,2,5),d0
+		bra	Video_Print
+		rts
+.page5_updvars:
+		tst.w	(RAM_GemaUpd).w
+		beq	.no_upd2
+		move.w	#$0100,(z80_bus).l
+.wait:
+		btst	#0,(z80_bus).l
+		bne.s	.wait
+		lea	(RAM_GemaList),a6
+		lea	(z80_cpu+(psgcom)).l,a4
+		lea	(z80_cpu+(psgdtl)).l,a5
+		move.w	#4-1,d1
+.copy_1:
+		move.w	#-1,d0
+		move.b	6(a5),d0
+		lsl.w	#8,d0
+		move.b	(a5)+,d0
+		move.w	d0,(a6)+
+		dbf	d1,.copy_1
+		move.w	#0,(z80_bus).l
+
+		lea	(z80_cpu+(fmcom+24)).l,a5
+		move.w	#6-1,d1
+.copy_2:
+		move.b	6(a5),d0
+		lsl.w	#8,d0
+		move.b	(a5)+,d0
+		ror.w	#8,d0
+		move.w	d0,(a6)+
+		dbf	d1,.copy_2
+
+		lea	(z80_cpu+(pwmcom+8)).l,a5
+		move.w	#7-1,d1
+.copy_3:
+		move.b	8(a5),d0
+		lsl.w	#8,d0
+		move.b	(a5)+,d0
+		ror.w	#8,d0
+		and.w	#$3FF,d0
+		move.w	d0,(a6)+
+		dbf	d1,.copy_3
+
+		move.w	#0,(z80_bus).l
+.no_upd2:
+	; ****
+
+		lea	str_GemaPsg(pc),a0
+		move.l	#locate(0,10,14),d0
 		bsr	Video_Print
+		lea	str_GemaFm(pc),a0
+		move.l	#locate(0,20,14),d0
+		bsr	Video_Print
+		lea	str_GemaPwm(pc),a0
+		move.l	#locate(0,31,14),d0
+		bra	Video_Print
 		rts
 
 ; d1 - Track slot
@@ -673,9 +722,13 @@ MD_DebugMenu:
 		move.w	$C(a0),d1
 		moveq	#0,d2
 		move.w	$E(a0),d3
-		bra	Sound_TrkPlay
+		bsr	Sound_TrkPlay
+		move.w	#1,(RAM_GemaUpd).w
+		bra.s	.cleanup
 .task_01:
-		bra	Sound_TrkStop
+		move.w	#0,(RAM_GemaUpd).w
+		bsr	Sound_TrkStop
+		bra.s	.cleanup
 .task_02:
 		bra	Sound_TrkResume
 .task_03:
@@ -684,6 +737,15 @@ MD_DebugMenu:
 .task_04:
 		move.w	(RAM_CurrTempo).w,d1
 		bra	Sound_GlbBeats
+
+.cleanup:
+		lea	(RAM_GemaList),a0
+		moveq	#0,d0
+		move.w	#17-1,d1
+.clnup:
+		move.w	d0,(a0)+
+		dbf	d1,.clnup
+		rts
 
 ; ====================================================================
 ; ----------------------------------------------
@@ -1143,6 +1205,8 @@ MD_DebugMenu:
 ;
 ; ; test playlist
 MasterTrkList:
+	dc.l GemaPat_BeMine,GemaBlk_BeMine,GemaIns_BeMine
+	dc.w $A,%000
 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
 	dc.w 4,%000
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
@@ -1156,6 +1220,36 @@ MasterTrkList:
 ; ------------------------------------------------------
 ; Subroutines
 ; ------------------------------------------------------
+
+SuperSprite_Test:
+	; SUPER SPRITE MOVE
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		move.w	marsspr_xs(a0),d0
+		move.w	marsspr_ys(a0),d1
+		moveq	#1,d2
+		moveq	#1,d3
+		move.w	(Controller_2+on_hold),d7
+		btst	#bitJoyRight,d7
+		beq.s	.nor_s
+		add.w	d2,d0
+.nor_s:
+		btst	#bitJoyLeft,d7
+		beq.s	.nol_s
+		sub.w	d2,d0
+.nol_s:
+		btst	#bitJoyDown,d7
+		beq.s	.nod_s
+		add.w	d3,d1
+.nod_s:
+		btst	#bitJoyUp,d7
+		beq.s	.nou_s
+		sub.w	d3,d1
+.nou_s:
+		move.w	d0,marsspr_xs(a0)
+		move.w	d1,marsspr_ys(a0)
+
+		add.w	#1,(RAM_SprFrame).w
+		rts
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -1233,6 +1327,58 @@ str_Gema:
 		dc.b "  Sound_TrkTicks",$A
 		dc.b "  Sound_GlbBeats",0
 		align 2
+str_GemaStatus:
+		dc.b "     *** Channel freqs ***",$A
+		dc.b $A
+		dc.b "PSG1       FM1       PWM1     ",$A,$A
+		dc.b "PSG2       FM2       PWM2     ",$A,$A
+		dc.b "PSG3       FM3       PWM3     ",$A,$A
+		dc.b "PHAT       FM4       PWM4     ",$A,$A
+		dc.b "           FM5       PWM5     ",$A,$A
+		dc.b "           FM6       PWM6     ",$A,$A
+		dc.b "                     PWM7     ",0
+		align 2
+str_GemaPsg:
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",0
+		dc.l RAM_GemaList
+		dc.l RAM_GemaList+2
+		dc.l RAM_GemaList+4
+		dc.l RAM_GemaList+6
+		align 2
+str_GemaFm:
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",0
+		dc.l RAM_GemaListFM
+		dc.l RAM_GemaListFM+2
+		dc.l RAM_GemaListFM+4
+		dc.l RAM_GemaListFM+6
+		dc.l RAM_GemaListFM+8
+		dc.l RAM_GemaListFM+10
+		align 2
+str_GemaPwm:
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",$A,$A
+		dc.b "\\w",0
+		dc.l RAM_GemaListPWM
+		dc.l RAM_GemaListPWM+2
+		dc.l RAM_GemaListPWM+4
+		dc.l RAM_GemaListPWM+6
+		dc.l RAM_GemaListPWM+8
+		dc.l RAM_GemaListPWM+10
+		dc.l RAM_GemaListPWM+12
+		align 2
+
 str_StatsPage0:
 		dc.b "\\w \\w \\w \\w",$A
 		dc.b "\\w \\w \\w \\w",$A,$A

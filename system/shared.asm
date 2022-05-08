@@ -14,11 +14,9 @@ MAX_SUPERSPR	equ 32		; Number of Super Sprites
 ; --------------------------------------------------------
 ; Structs
 ;
-; MUST be 4-byte aligned.
+; NOTE: SIZES MUST BE ALIGNED BY 4-bytes
 ; --------------------------------------------------------
 
-; model objects
-;
 		struct 0
 mdl_data	ds.l 1			; Model data pointer, if zero: no model
 mdl_option	ds.l 1			; Model options: pixelvalue add
@@ -37,13 +35,17 @@ sizeof_mdlobj	ds.l 0
 
 ; "Super" sprite
 		struct 0
-marsspr_data	ds.l 1		; Sprite pixel data (0-endoflist)
-marsspr_indx	ds.w 1		; Start from index
+marsspr_data	ds.l 1		; Sprite pixel data (Cache'd or not), if 0 == end-of-list
 marsspr_dwidth	ds.w 1		; WIDTH size of spritesheet
-marsspr_x	ds.w 1		; 0000
-marsspr_xs	ds.w 1
-marsspr_y	ds.w 1		; 0000
-marsspr_ys	ds.w 1
+marsspr_indx	ds.w 1		; Palette index base
+marsspr_x	ds.w 1		; Screen X position
+marsspr_y	ds.w 1		; Screen Y position
+marsspr_xs	ds.w 1		; Sprite X size (Scrn Xpos + this)
+marsspr_ys	ds.w 1		; Sprite Y size (Scrn Ypos + this)
+marsspr_xtex	ds.b 1		; Texture X size
+marsspr_ytex	ds.b 1		; Texture Y size
+marsspr_xindx	ds.b 1		; Frame in X order
+marsspr_yindx	ds.b 1		; Frame in Y order
 sizeof_marsspr	ds.l 0
 		finish
 

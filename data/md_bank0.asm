@@ -9,17 +9,8 @@
 ; Maximum size: $0FFFFF bytes per bank
 ; ----------------------------------------------------------------
 
-		align 2
-PalData_Mars_Test:
-		binclude "data/mars/tests/test_pal.bin"
-		binclude "data/mars/tests/superspr/sprites_pal.bin"
-		align 2
-PalData_Mars_Test2:
-		binclude "data/mars/tests/test2_pal.bin"
-		align 2
-MDLDATA_PAL_TEST:
-		binclude "data/mars/objects/mtrl/smoke_pal.bin"
-		align 2
+		include "data/mars/palettes.asm"	; All 32X palettes will be here.
+
 ; MAP_FGTEST:	binclude "data/md/bg/fg_map.bin"
 ; 		align 2
 ; MAP_BGTEST:	binclude "data/md/bg/bg_map.bin"

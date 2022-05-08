@@ -10,7 +10,7 @@
 ; Settings
 ; --------------------------------------------------------
 
-MAX_SCRNBUFF	equ $10000	; MAX storage for each screen mode
+MAX_SCRNBUFF	equ $12800	; MAX storage for each screen mode
 FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
 
 ; Screen mode 02
@@ -19,7 +19,7 @@ FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines
 ; Screen mode 04
 MAX_FACES	equ 256
 MAX_SVDP_PZ	equ 256+16
-MAX_ZDIST	equ -$2000	; Max 3D drawing distance (-Z)
+MAX_ZDIST	equ -$1000	; Max 3D drawing distance (-Z)
 
 ; --------------------------------------------------------
 ; Variables
@@ -85,17 +85,14 @@ sizeof_camera	ds.l 0
 		finish
 
 		struct 0
-plypz_type	ds.l 1			; Type | Option
-plypz_mtrl	ds.l 1
-plypz_ypos	ds.l 1			; Ytop | Ybottom
-plypz_xl	ds.l 1
-plypz_xr	ds.l 1
-plypz_src_xl	ds.l 1
-plypz_src_xr	ds.l 1
-plypz_src_yl	ds.l 1
-plypz_src_yr	ds.l 1
-plypz_xl_dx	ds.l 1
-plypz_xr_dx	ds.l 1
+plypz_type	ds.l 1		; Type | Option
+plypz_mtrl	ds.l 1		; Material data (ROM or SDRAM)
+plypz_ytb	ds.l 1		; Ytop | Ybottom
+plypz_xl	ds.l 1		;  Screen X-Left | X-Right  16-bit
+plypz_src_xl	ds.l 1		; Texture X-Left | X-Right  16-bit
+plypz_src_yl	ds.l 1		; Texture Y-Top  | Y-Bottom 16-bit
+plypz_xl_dx	ds.l 1		; 0000.0000
+plypz_xr_dx	ds.l 1		; 0000.0000
 plypz_src_xl_dx	ds.l 1
 plypz_src_xr_dx	ds.l 1
 plypz_src_yl_dx	ds.l 1
@@ -366,37 +363,37 @@ MarsVideo_FixTblShift:
 ; Prepares watchdog interrupt for Master
 ;
 ; Input:
-; r1 - Task mode
-;
-; Note:
-; Check marsGbl_PlyPzCntr if !=0 to process the
-; svdp-draw list
+; r1 - Watchdog CPU clock divider
+; r2 - Watchdog Pre-timer
 ; --------------------------------------------------------
 
 MarsVideo_SetWatchdog:
 		mov	#RAM_Mars_SVdpDrwList,r0		; Reset DDA pieces Read/Write points
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)		; And counter
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+		mov	r0,@(marsGbl_PlyPzList_Start,gbr)
+		mov	#RAM_Mars_SVdpDrwList_E,r0
+		mov	r0,@(marsGbl_PlyPzList_End,gbr)
+
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		mov.w	r0,@(marsGbl_WdgStatus,gbr)
-		stc	sr,r2
+		stc	sr,r4
 		mov	#$F0,r0
 		ldc 	r0,sr
-		mov.l	#_CCR,r1				; Refresh Cache
+		mov.l	#_CCR,r3				; Refresh Cache
 		mov	#%00001000,r0				; Two-way mode
-		mov.w	r0,@r1
+		mov.w	r0,@r3
 		mov	#%00011001,r0				; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r1
-		mov	#$FFFFFE80,r1
-		mov.w	#$5A10,r0				; Watchdog pre-timer
-		mov.w	r0,@r1
-		mov	#$FFFFFE80,r1
-		mov.w	#$5A10,r0				; Watchdog pre-timer
-		mov.w	r0,@r1
+		mov.w	r0,@r3
+		mov	#$FFFFFE80,r3
+		mov.w	#$5A00,r0				; Watchdog pre-timer
+		or	r2,r0
+		mov.w	r0,@r3
 		mov.w	#$A538,r0				; Enable Watchdog
-		mov.w	r0,@r1
-		ldc	r2,sr
+		or	r1,r0
+		mov.w	r0,@r3
+		ldc	r4,sr
 		rts
 		nop
 		align 4

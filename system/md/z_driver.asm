@@ -183,14 +183,14 @@ dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
 
 ; --------------------------------------------------------
 
-x68ksrclsb	db 0		; transferRom temporal LSB
-x68ksrcmid	db 0		; transferRom temporal MID
+marsBlock	db 0		; flag to temporally disable PWM communication
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 marsUpd		db 0		; flag to request a PWM transfer
-marsBlock	db 0		; flag to temporally disable PWM communication
 palMode		db 0		; PAL speed flag (TODO)
 sbeatPtck_1	dw 200-56	; Global tempo (sub beats) (-32 for PAL)
 sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
+x68ksrclsb	db 0		; transferRom temporal LSB
+x68ksrcmid	db 0		; transferRom temporal MID
 
 ; --------------------------------------------------------
 ; Z80 Interrupt at 0038h
@@ -327,6 +327,8 @@ drv_loop:
 .cmnd_trkplay:
 		call	get_cmdbyte		; Get track slot
 		call	get_trkindx		; and read index iy
+		call	track_out		; track out.
+		ld	(iy+trk_CmdReq),-2
 		call	get_cmdbyte		; Get ticks
 		ld	(iy+trk_tickSet),a
 		call	get_cmdbyte		; Start block
@@ -368,6 +370,8 @@ drv_loop:
 		bit	7,(iy+trk_status)	; This track is active?
 		jp	z,.next_cmd
 		call	track_out		; track out.
+		ld	(iy+trk_CmdReq),-1
+		set	7,(iy+trk_status)
 		jp	.next_cmd
 
 ; --------------------------------------------------------
@@ -942,6 +946,7 @@ updtrack:
 		pop	hl			; Get hl back
 .trkend_effC:
 		call	track_out
+; 		ld	(iy+trk_CmdReq),-1
 		rst	8
 		ld	(iy+trk_rowPause),0
 		ld	(iy+trk_tickTmr),0
@@ -967,15 +972,13 @@ track_out:
 		jr	z,.nochip
 		ld	(ix+chnl_Note),-2
 		ld	a,(ix+chnl_Flags)
-; 		and	11110000b
-		or	1
+		ld	a,1
 		ld	(ix+chnl_Flags),a
 .nochip:
 		add	ix,de
 		djnz	.clrfe
-		set	7,(iy+trk_status)
-		ld	a,-1			; STOPALL track command
-		ld	(iy+trk_CmdReq),a
+		ld	a,1
+		ld	(marsUpd),a
 		ret
 
 ; --------------------------------------------------------
@@ -1079,12 +1082,14 @@ setupchip:
 		ld	a,(iy+trk_status)	; enable bit? (as plus/minus test)
 		or	a
 		ret	p
+
 		ld	a,(iy+trk_CmdReq)
+		ld	(iy+trk_CmdReq),0
 		cp	-1
 		jr	nz,.clr
-		ld	(iy+trk_CmdReq),0
 		res	7,(iy+trk_status)
 .clr:
+
 		ld	(currInsData),hl
 		ld	(currTrkCtrl),iy
 ; 		rst	8
@@ -2545,24 +2550,18 @@ setupchip:
 
 ; This auto-replaces the LINKED channel
 .chk_tbln:
+		push	iy
+		pop	de		; de - Copy of curr track-channel
 
 	; **** MSB priority overwrite
-; 		push	iy
-; 		pop	de		; de - Copy of curr track-channel
-; 		rst	8
-; 		ld	a,(ix+1)	; MSB | LSB
-; 		or	(ix)		; Check if blank
-; 		jr	z,.new
-; 		ld	a,(ix+1)	; MSB | LSB
-; 		cp	d		; Same MSB?
-; 		jr	nz,.busy_s
-; 		ld	a,(ix)
-; 		cp	e		; Same LSB?
-; 		jr	nc,.busy_s
-; .new:
-	; ****
-
-
+		rst	8
+		ld	a,(ix+1)	; MSB | LSB
+		or	(ix)		; Check if blank
+		jr	z,.new
+		ld	a,(ix+1)
+		cp	d
+		jr	c,.busy_s
+.new:
 		rst	8
 		ld	(ix),e		; NEW slot
 		ld	(ix+1),d
@@ -2601,6 +2600,11 @@ setupchip:
 		ld	a,(ix)
 		or	e
 		jr	z,.fndlink
+
+	; priority
+
+		jr	.alrdfnd
+
 ; 		push	de		; Check if this link is
 ; 		ld	d,(ix+1)	; floating.
 ; 		ld	e,(ix)
@@ -2615,9 +2619,9 @@ setupchip:
 
 ; 		jr	.alrdfnd
 	; **** MSB priority overwrite
-		ld	a,e		; TODO: priority.
-		cp	d
-		jr	nc,.alrdfnd
+; 		ld	a,e
+; 		cp	d
+; 		jr	nc,.alrdfnd
 	; ****
 
 .fndlink:
@@ -3982,65 +3986,48 @@ wavFreq_List:	dw 100h		; C-0
 		dw 100h
 		dw 100h
 
-; --------------------------------------------------------
+; ====================================================================
+; ----------------------------------------------------------------
+; Z80 RAM
+; ----------------------------------------------------------------
 
-	; PSG psuedo-controls
-psgcom		db 00h,00h,00h,00h	;  0 command 1 = key on, 2 = key off, 4 = stop snd
-psglev		db -1, -1, -1, -1	;  4 output level attenuation (%llll.0000, -1 = silent)
-psgatk		db 00h,00h,00h,00h	;  8 attack rate
-psgdec		db 00h,00h,00h,00h	; 12 decay rate
-psgslv		db 00h,00h,00h,00h	; 16 sustain level attenuation
-psgrrt		db 00h,00h,00h,00h	; 20 release rate
-psgenv		db 00h,00h,00h,00h	; 24 envelope mode 0 = off, 1 = attack, 2 = decay, 3 = sustain, 4
-psgdtl		db 00h,00h,00h,00h	; 28 tone bottom 4 bits
-psgdth		db 00h,00h,00h,00h	; 32 tone upper 6 bits
-psgalv		db 00h,00h,00h,00h	; 36 attack level attenuation
-whdflg		db 00h,00h,00h,00h	; 40 flags to indicate hardware should be updated
-psgtim		db 00h,00h,00h,00h	; 44 timer for sustain
-psgvol		db 00h,00h,00h,00h
+		align 10h
+pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; 0 - Playback bits: KeyOn/KeyOff/KeyCut/other update bits
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; 8 - Volume | Pitch MSB
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; 16 - Pitch LSB
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; 24 - Playback flags: Loop/Stereo/Left/Right | 32-bit
+		db 00h,00h,00h,00h,00h,00h,00h,00h	; 32 - sample location
+		db 00h,00h,00h,00h,00h,00h,00h,00h
+		db 00h,00h,00h,00h,00h,00h,00h,00h
 fmcom:		db 00h,00h,00h,00h,00h,00h	;  0 - play bits: 2-cut 1-off 0-play
 		db 00h,00h,00h,00h,00h,00h	;  6 - keys xxxx0000b
 		db 00h,00h,00h,00h,00h,00h	; 12 - volume (for 40h+)
 		db 00h,00h,00h,00h,00h,00h	; 18 - panning (%LR000000)
 		db 00h,00h,00h,00h,00h,00h	; 24 - A4h+ (MSB FIRST)
 		db 00h,00h,00h,00h,00h,00h	; 30 - A0h+
-fmins_com:	ds 028h			; Current instrument data for each FM
+psgcom		db 00h,00h,00h,00h		;  0 command 1 = key on, 2 = key off, 4 = stop snd
+psglev		db -1, -1, -1, -1		;  4 output level attenuation (%llll.0000, -1 = silent)
+psgatk		db 00h,00h,00h,00h		;  8 attack rate
+psgdec		db 00h,00h,00h,00h		; 12 decay rate
+psgslv		db 00h,00h,00h,00h		; 16 sustain level attenuation
+psgrrt		db 00h,00h,00h,00h		; 20 release rate
+psgenv		db 00h,00h,00h,00h		; 24 envelope mode 0 = off, 1 = attack, 2 = decay, 3 = sustain, 4
+psgdtl		db 00h,00h,00h,00h		; 28 tone bottom 4 bits
+psgdth		db 00h,00h,00h,00h		; 32 tone upper 6 bits
+psgalv		db 00h,00h,00h,00h		; 36 attack level attenuation
+whdflg		db 00h,00h,00h,00h		; 40 flags to indicate hardware should be updated
+psgtim		db 00h,00h,00h,00h		; 44 timer for sustain
+psgvol		db 00h,00h,00h,00h
+fmins_com:	ds 028h				; Current instrument data for each FM
 fmins_com2:	ds 028h
 fmins_com3:	ds 028h
 fmins_com4:	ds 028h
 fmins_com5:	ds 028h
 fmins_com6:	ds 028h
-fm3reg:		dw 0AC00h,0A800h	; S3-S1, S4 is at A6/A2
+fm3reg:		dw 0AC00h,0A800h		; S3-S1, S4 is at A6/A2
 		dw 0AD00h,0A900h
 		dw 0AE00h,0AA00h
-daccom:		db 0			; single byte for key on, off and cut
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Z80 RAM
-; ----------------------------------------------------------------
-
-		align 8
-; NOTE: MSB is used as the priority.
-trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0, 100h aligned ****
-trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1, 100h aligned ****
-
-insDataC_0	ds 8*MAX_INS	; Instrument data for each Track slot
-insDataC_1	ds 8*MAX_INS	; 8*MAX_INS
-currInsData	dw 0
-currTblPos	dw 0
-currInsPos	dw 0
-currTrkCtrl	dw 0
-tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
-tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
-wave_Start	dw 0		; START: 68k 24-bit pointer
-		db 0
-wave_Len	dw 0		; LENGTH 24-bit
-		db 0
-wave_Loop	dw 0		; LOOP POINT 24-bit (MUST BE BELOW wave_Len)
-		db 0
-wave_Pitch	dw 0100h	; 01.00h
-wave_Flags	db 0		; WAVE playback flags (%10x: 1 loop / 0 no loop)
+daccom:		db 0				; single byte for key on, off and cut
 
 	; Channel tables: 10h bytes
 	; 0  - Link addr (0000h = free, used chnls start from +0020h)
@@ -4076,34 +4063,40 @@ tblPWM:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,06h,00h,00h,00h,00h,00h	; Channel 7
 		dw -1
 
-	; Format:
-	; %00VP0CFO
-	; $vp
-	; $pp
-	; $fi + flags
-	; $ii
-	; $ii
-	; $ii
-; 	 align 8
-pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback bits: KeyOn/KeyOff/KeyCut/other update bits
-		db 00h,00h,00h,00h,00h,00h,00h,00h	; Volume | Pitch MSB
-		db 00h,00h,00h,00h,00h,00h,00h,00h	; Pitch LSB
-		db 00h,00h,00h,00h,00h,00h,00h,00h	; Playback flags: Loop/Stereo/Left/Right | 32-bit
-		db 00h,00h,00h,00h,00h,00h,00h,00h	; sample location
-		db 00h,00h,00h,00h,00h,00h,00h,00h
-		db 00h,00h,00h,00h,00h,00h,00h,00h
+insDataC_0	ds 8*MAX_INS	; Instrument data for each Track slot
+insDataC_1	ds 8*MAX_INS	; 8*MAX_INS
 
+		align 10h
+; NOTE: MSB is used as the priority.
+trkBuff_0	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 0****
+trkBuff_1	ds 20h+(MAX_TRKCHN*8)	;  *** TRACK BUFFER 1****
+
+		org 1B00h
+dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
+trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
+trkData_1	ds 100h
+
+; very last variables...
+commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
+currInsData	dw 0
+currTblPos	dw 0
+currInsPos	dw 0
+currTrkCtrl	dw 0
+tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
+tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
+wave_Start	dw 0		; START: 68k 24-bit pointer
+		db 0
+wave_Len	dw 0		; LENGTH 24-bit
+		db 0
+wave_Loop	dw 0		; LOOP POINT 24-bit (MUST BE BELOW wave_Len)
+		db 0
+wave_Pitch	dw 0100h	; 01.00h
+wave_Flags	db 0		; WAVE playback flags (%10x: 1 loop / 0 no loop)
 dDacPntr	db 0,0,0		; WAVE play current ROM position
 dDacCntr	db 0,0,0		; WAVE play length counter
 dDacFifoMid	db 0			; WAVE play halfway refill flag (00h/80h)
 psgHatMode	db 0
 fmSpcMode	db 0
 trkHdOut	ds 6			; temporal Header for reading Track position/row count
-commZfifo	ds 40h			; Buffer for command requests from 68k (40h bytes, loops)
-
-		org 1C00h
-dWaveBuff	ds 100h			; WAVE data buffer: 100h bytes, updates every 80h
-trkData_0	ds 100h			; Track note-cache buffers: 100h bytes, updates every 80h
-trkData_1	ds 100h
 
 ; Stack area

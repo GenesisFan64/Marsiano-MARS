@@ -131,7 +131,6 @@ MARS_RAMDATA_E:
 		phase CS1+*
 		align 4
 		include "data/mars_rom.asm"
-		include "sound/smpl_pwm.asm"
 		dephase
 
 ; ====================================================================

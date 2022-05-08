@@ -265,36 +265,36 @@ GemaIns_Test3:
 ; 	gInsPsgN 0,$00,$00,$00,$00,$08,%100
 ; 	gInsPwm -17,SmpIns_VctrBrass,%001
 ;
-; GemaTrk_blk_BeMine:
-; 	binclude "sound/tracks/bemine_blk.bin"
-; GemaTrk_patt_BeMine:
-; 	binclude "sound/tracks/bemine_patt.bin"
-; GemaTrk_ins_BeMine:
-; 	gInsPwm -17,SmpIns_Bell_Ice,0
-; 	gInsPwm -17,SmpIns_Brass1_Hi,%01
-; 	gInsPwm -17,SmpIns_Brass1_Low,%01
-; 	gInsFm  -24,FmIns_Bass_groove
-; 	gInsFm3   0,FmIns_Fm3_OpenHat
-; 	gInsPwm -17,SmpIns_Snare_jam,0
-; 	gInsPwm -17,SmpIns_Kick_jam,0
-; 	gInsPwm -17,SmpIns_SnrTom_1,0
-; 	gInsPwm -17,SmpIns_Forest_1,0
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
+GemaBlk_BeMine:
+	binclude "sound/tracks/bemine_blk.bin"
+GemaPat_BeMine:
+	binclude "sound/tracks/bemine_patt.bin"
+GemaIns_BeMine:
+	gInsPwm -17,SmpIns_Bell_Ice,0
+	gInsPwm -17,SmpIns_Brass1_Hi,%01
+	gInsPwm -17,SmpIns_Brass1_Low,%01
+	gInsFm  -24,FmIns_Bass_groove
+	gInsFm3   0,FmIns_Fm3_OpenHat
+	gInsPwm -17,SmpIns_Snare_jam,0
+	gInsPwm -17,SmpIns_Kick_jam,0
+	gInsPwm -17,SmpIns_SnrTom_1,0
+	gInsPwm -17,SmpIns_Forest_1,0
+	gInsFm -36,FmIns_Ambient_dark
+	gInsPsg +12,$00,$00,$00,$08,$04
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
 ;
 ; GemaTrk_blk_HILLS:
 ; 	binclude "sound/tracks/hill_blk.bin"

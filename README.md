@@ -34,7 +34,6 @@ Notes/Current issues:
 - (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play trash wave data.
 
 Planned:
-- Implement "Super" sprites for the psuedo-graphics modes that can use them.
 - Add map layout support on psd-Mode 2 (256-color scrolling background)
 
 LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
@@ -44,7 +43,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does, and not even close): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
 - The actual purpose of Cache isn't emulated at all. so emulators just treat everything as "Cache-thru"
 - The 4-byte LONG alignment limitation is ignored.
-- Fusion 3.64: vdpfill might get stuck in a infinite loop.
+- Fusion 3.64: vdpfill might randomly get stuck waiting for the framebuffer-busy bit.
 
 -- 68000 --
 - RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers. (from $88xxxx/$9xxxxx to $0xxxxx, all 4MB view area) If you do any DMA-transfer without setting this bit it will read trash data. Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the and last VDP write on the RAM area. (Note: Transferring RAM data to VDP doesn't require the RV bit) For the SH2 side: If RV is set, any read from the ROM area will return trash data.
@@ -58,7 +57,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 - If you force _DMAOPERATION to OFF while DMA is active it crashes the system. (or maybe not, needs more testing)
 
 -- SuperVDP --
-- Writing pixels in to the framebuffer in BYTEs cause a small delay.
+- Writing pixels in to the framebuffer in BYTEs cause a small delay. 6 NOPs aprox.
 - If any entry of the linetable ends with $xxFF and the XShift video register is set to 1, that line will NOT get shifted.
 
 -- PWM --
