@@ -21,10 +21,19 @@ CACHE_MSTR_PLGN:
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 
+; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+; 		mov	#MAX_SVDP_PZ,r1
+; 		cmp/ge	r1,r0
+; 		bt	.wdg_pzfull
+
 		mov.w	@(marsGbl_CntrRdPlgn,gbr),r0
 		cmp/eq	#0,r0
 		bf	.has_plgn
 		bra	wdg_finish
+		nop
+		align 4
+.wdg_pzfull:
+		bra	wdg_pzfull
 		nop
 		align 4
 .has_plgn:
@@ -222,6 +231,8 @@ CACHE_MSTR_PLGN:
 		add	#8,r0
 		mov	r0,@(marsGbl_CurrRdPlgn,gbr)
 ; wdm_next:
+
+wdg_pzfull:
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0		; OFF
 		mov.w   r0,@r1
@@ -500,7 +511,7 @@ put_piece:
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
 		mov	r0,r8				; r8 - end point
 		mov	r1,r0
-		cmp/ge	r8,r0
+		cmp/ge	r8,r1
 		bf	.dontreset_pz
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r1
@@ -531,6 +542,7 @@ MarsVideo_DrawPzPlgns:
 
 		mov	@(marsGbl_PlyPzList_R,gbr),r0
 		mov	r0,r9
+
 		mov	#Cach_PlgnPzCopy,r10
 		mov	r10,r14
 	rept sizeof_plypz/4
@@ -897,6 +909,9 @@ drwsld_nextpz:
 		add	#sizeof_plypz,r0		; And set new point
 		cmp/ge	r14,r0
 		bf	.reset_rd
+; .wait_too:	mov	@(marsGbl_PlyPzList_W,gbr),r0
+; 		cmp/eq	r14,r0
+; 		bf	.wait_too
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 .reset_rd:
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)

@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	4
+set_StartPage	equ	2
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -233,20 +233,29 @@ MD_DebugMenu:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 
 		move.l	#SuperSpr_Test,d0
-		moveq	#2-1,d7
-.copy:
 		move.l	d0,d1
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#(320/2)-16,marsspr_x(a0)
-		move.w	#(224/2)-24,marsspr_y(a0)
+		move.w	#0,marsspr_x(a0)
+		move.w	#0,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
+
+		move.l	#SuperSpr_Test,d0
 		add.l	#(32*48)*2,d0
+		move.l	d0,d1
+		or.l	#TH,d1
 		adda	#sizeof_marsspr,a0
-		dbf	d7,.copy
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#(320/2)-64,marsspr_x(a0)
+		move.w	#(224/2)-64,marsspr_y(a0)
+		move.w	#32,marsspr_xs(a0)
+		move.w	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+
 
 ; 		move.w	#$100,marsspr_dx(a0)
 ; 		move.w	#$100,marsspr_dy(a0)
@@ -477,9 +486,9 @@ MD_DebugMenu:
 		move.l	#locate(0,2,4),d0
 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
-		add.l	#$4000,mdl_x_rot(a0)
-; 		add.l	#$4000,mdl_y_rot(a0)
-; 		add.l	#$4000,mdl_z_rot(a0)
+		add.l	#$3000,mdl_x_rot(a0)
+; 		add.l	#$2000,mdl_y_rot(a0)
+; 		add.l	#$2000,mdl_z_rot(a0)
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
@@ -661,7 +670,6 @@ MD_DebugMenu:
 		move.b	(a5)+,d0
 		move.w	d0,(a6)+
 		dbf	d1,.copy_1
-		move.w	#0,(z80_bus).l
 
 		lea	(z80_cpu+(fmcom+24)).l,a5
 		move.w	#6-1,d1
@@ -684,8 +692,9 @@ MD_DebugMenu:
 		move.w	d0,(a6)+
 		dbf	d1,.copy_3
 
-		move.w	#0,(z80_bus).l
+
 .no_upd2:
+		move.w	#0,(z80_bus).l
 	; ****
 
 		lea	str_GemaPsg(pc),a0
@@ -1224,8 +1233,8 @@ MasterTrkList:
 SuperSprite_Test:
 	; SUPER SPRITE MOVE
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.w	marsspr_xs(a0),d0
-		move.w	marsspr_ys(a0),d1
+		move.w	marsspr_x(a0),d0
+		move.w	marsspr_y(a0),d1
 		moveq	#1,d2
 		moveq	#1,d3
 		move.w	(Controller_2+on_hold),d7
@@ -1245,8 +1254,8 @@ SuperSprite_Test:
 		beq.s	.nou_s
 		sub.w	d3,d1
 .nou_s:
-		move.w	d0,marsspr_xs(a0)
-		move.w	d1,marsspr_ys(a0)
+		move.w	d0,marsspr_x(a0)
+		move.w	d1,marsspr_y(a0)
 
 		add.w	#1,(RAM_SprFrame).w
 		rts

@@ -1,3 +1,3 @@
-	 dc.l Textr_smoke
-	 dc.w 264
+	 dc.l Textr_test_yui
+	 dc.w 500
 	 dc.w 0

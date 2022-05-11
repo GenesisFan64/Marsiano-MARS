@@ -1540,8 +1540,17 @@ mstr_gfx2_vblk:
 		mov	r1,@(mbg_xpos,r14)
 		mov	r2,@(mbg_ypos,r14)
 .mid_draw:
-		rts
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	@(mbg_xpos,r14),r1
+		mov	@(mbg_ypos,r14),r2
+		mov	r1,r0
+		shlr16	r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
+		bra	MarsVideo_MoveBg
 		nop
+
+; 		rts
+; 		nop
 		align 4
 
 ; -------------------------------
@@ -1596,14 +1605,18 @@ mstr_gfx2_loop:
 		mov	#$20,r2
 		bsr	MarsVideo_SetWatchdog
 		nop
+
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	@(mbg_xpos,r14),r1
-		mov	@(mbg_ypos,r14),r2
-		mov	r1,r0
-		shlr16	r0
-		mov.w	r0,@(marsGbl_XShift,gbr)
-		bsr	MarsVideo_MoveBg
+		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
+		jsr	@r0
 		nop
+		mov	#MarsVideo_BgDrawUD,r0
+		jsr	@r0
+		nop
+		mov	#MarsVideo_SprBlkRefill,r0
+		jsr	@r0
+		nop
+
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_fbdata,r14),r1
 		mov	@(mbg_fbpos,r14),r2
@@ -1614,21 +1627,13 @@ mstr_gfx2_loop:
 		mov.w	@(mbg_intrl_h,r14),r0
 		mov	r0,r5
 		mov	@(mbg_intrl_size,r14),r6
-		mov	#MarsVideo_SetSuperSpr,r0
+		mov	#MarsVideo_SetSuperSpr,r0	; Setup sprites buffer
 		jsr	@r0
 		nop
-	; *** BG refill goes here
-; 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
-; 		tst	r0,r0
-; 		bt	.from_drwall
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#MarsVideo_BgDrawLR,r0		; Process U/D/L/R
+		mov	#MarsVideo_MarkSprBlocks,r0	; Mark blocks that need redrawing
 		jsr	@r0
 		nop
-		mov	#MarsVideo_BgDrawUD,r0
-		jsr	@r0
-		nop
-; .from_drwall:
+
 ; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 ; 		tst	r0,r0
 ; 		bt	.no_swap
@@ -1969,6 +1974,9 @@ mstr_gfx4_vblk:
 ; -------------------------------
 
 mstr_gfx4_init_1:
+		mov	#$FFFFFE80,r1		; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 		mov	#CACHE_MSTR_PLGN,r1
 		mov	#(CACHE_MSTR_PLGN_E-CACHE_MSTR_PLGN)/4,r2
 		mov	#Mars_LoadFastCode,r0
@@ -1998,9 +2006,6 @@ mstr_gfx4_init_cont:
 ; -------------------------------
 
 mstr_gfx4_loop:
-		mov	#$FFFFFE80,r1		; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
 
 	; ---------------------------------------
 	; Prepare WATCHDOG interrupt
@@ -2047,10 +2052,10 @@ mstr_gfx4_loop:
 
 	; ---------------------------------------
 
-; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-; 		tst	r0,r0
-; 		bt	.no_swap
-; .wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0	; <-- enable this if something goes wrong.
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
+		tst	r0,r0
+		bt	.no_swap
+; .wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0
 ; 		tst	r0,r0
 ; 		bt	.wait_wd
 		mov	#MarsVideo_DrawPzPlgns,r0
@@ -2484,10 +2489,10 @@ sizeof_marsvid		ds.l 0
 ; --------------------------------------------------------
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
-RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
-RAM_Mars_RdrwBlocks	ds.b (512*256)/4	; Block redraw flags *FIXED SIZE* (WIDTH * $80)
+RAM_Mars_RdrwBlocks	ds.b (512*256)/4	; Block redraw flags, each row is $80 bytes long
 RAM_Mars_UD_Pixels	ds.b 384*64		; RAM pixel-side
 RAM_Mars_LR_Pixels	ds.b 64*256
+RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
 sizeof_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

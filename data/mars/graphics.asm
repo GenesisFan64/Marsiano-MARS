@@ -25,8 +25,8 @@ TESTMARS_DIRECT_3:
 		binclude "data/mars/tests/direct/frame2_art.bin"
 		align 4
 
-Textr_smoke:
-		binclude "data/mars/objects/mtrl/smoke_art.bin"
+Textr_test_yui:
+		binclude "data/mars/objects/mtrl/yui_art.bin"
 		align 4
 
 SuperSpr_Test:

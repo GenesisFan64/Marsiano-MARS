@@ -18,8 +18,8 @@ FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines
 
 ; Screen mode 04
 MAX_FACES	equ 256
-MAX_SVDP_PZ	equ 256+16
-MAX_ZDIST	equ -$1000	; Max 3D drawing distance (-Z)
+MAX_SVDP_PZ	equ 256+64
+MAX_ZDIST	equ -$C00	; Max 3D drawing distance (-Z)
 
 ; --------------------------------------------------------
 ; Variables
@@ -835,7 +835,7 @@ MarsVideo_DrawAllBg:
 		bf/s	.nxtlng
 		add	#4,r4
 
-		add	r11,r8	; TODO
+		add	r11,r8
 		dt	r2
 		bf/s	.yblk_loopn
 		add	r10,r9
@@ -852,7 +852,6 @@ MarsVideo_DrawAllBg:
 		nop
 		align 4
 		ltorg
-		align 4
 
 ; --------------------------------------------------------
 ; MarsVideo_BgDrawLR
@@ -861,6 +860,7 @@ MarsVideo_DrawAllBg:
 ; movement
 ; --------------------------------------------------------
 
+		align 4
 MarsVideo_BgDrawLR:
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_data,r14),r0
@@ -935,7 +935,7 @@ MarsVideo_BgDrawLR:
 		mov	r0,r5
 		align 4
 		ltorg
-		align 4
+
 
 	; r13 - Y lines
 	; r12 - X block width
@@ -946,6 +946,7 @@ MarsVideo_BgDrawLR:
 	;  r7 - Pixeldata Y-Start
 	;  r6 - Pixeldata Y-End
 	;  r5 - Xadd
+		align 4
 dtsk01_lrdraw:
 		cmp/ge	r6,r8
 		bf	.yres
@@ -1002,6 +1003,7 @@ dtsk01_lrdraw:
 ; movement
 ; --------------------------------------------------------
 
+		align 4
 MarsVideo_BgDrawUD:
 		mov	@(mbg_fbdata,r14),r13
 		mov	#_framebuffer,r0
@@ -1429,4 +1431,199 @@ MarsVideo_MoveBg:
 		nop
 		align 4
 		ltorg
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Super sprites
+; ----------------------------------------------------------------
+
+; NOTE: MarsVideo_DrawSuperSpr is located on cache_m_scrlspr.asm
+
+; --------------------------------------------------------
+; MarsVideo_SetSuperSpr
+;
+; Sets screen variables drawing the Super Sprites
+;
+; Input:
+; r1 - VRAM base
+; r2 - X VRAM position
+; r3 - Y position
+; r4 - Scrolling area Width
+; r5 - Scrolling area Height
+; r6 - Scroll area size
+; --------------------------------------------------------
+
+		align 4
+MarsVideo_SetSuperSpr:
+		mov	#Cach_Intrl_Size+4,r7
+		mov	r6,@-r7
+		mov	r1,@-r7
+		mov	r2,@-r7
+		mov	r3,@-r7
+		mov	r5,@-r7
+		mov	r4,@-r7
+		rts
+		nop
+		align 4
+		ltorg
+
+; --------------------------------------------------------
+; MarsVideo_MarkSprBlocks
+;
+; Set which blocks need redrawing for the next frame
+; after drawing the Super Sprites.
+;
+; r14 - Background buffer to use
+; --------------------------------------------------------
+
+; TODO: ONLY WORKS WITH 16x16 BLOCKS
+
+		align 4
+MarsVideo_MarkSprBlocks:
+		mov	#RAM_Mars_SuperSprites,r13
+		mov	#RAM_Mars_RdrwBlocks,r12
+.next_one:
+		mov	@(marsspr_data,r13),r0
+		tst	r0,r0
+		bt	.exit
+
+		mov.w	@(marsspr_x,r13),r0		; r1 - X pos (left)
+		mov	r0,r1
+		mov.w	@(marsspr_xs,r13),r0		; r3 - XS (right)
+		mov	r0,r2
+		mov.w	@(marsspr_y,r13),r0		; r2 - Y pos (top)
+		mov	r0,r3
+		mov.w	@(marsspr_ys,r13),r0		; r4 - YS (bottom)
+		mov	r0,r4
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r5
+; 		add	#4,r0
+		add	r1,r2
+		add	r3,r4
+		sub	r0,r1
+		sub	r0,r3
+		add	r0,r2
+		add	r0,r4
+		mov	r2,r0		; Check for reverse
+		sub	r1,r0
+		cmp/pl	r0
+		bt	.x_good
+		mov	r1,r0
+		mov	r2,r1
+		mov	r0,r2
+.x_good:
+		mov	r4,r0		; Check for reverse
+		sub	r3,r0
+		cmp/pl	r0
+		bt	.y_good
+		mov	r3,r0
+		mov	r4,r3
+		mov	r0,r4
+.y_good:
+; 		muls	r5,r1
+; 		sts	macl,r1
+; 		shlr8	r1
+; 		muls	r5,r2
+; 		sts	macl,r2
+; 		shlr8	r2
+; 		muls	r5,r3
+; 		sts	macl,r3
+; 		shlr8	r3
+; 		muls	r5,r4
+; 		sts	macl,r4
+; 		shlr8	r4
+; 		exts.w	r1,r1
+; 		exts.w	r2,r2
+; 		exts.w	r3,r3
+; 		exts.w	r4,r4
+
+; 		mov.w	@(mbg_intrl_w,r14),r0
+		mov	#320,r0
+; 		muls	r5,r0
+; 		sts	macl,r0
+; 		shlr8	r0
+		cmp/pl	r1
+		bt	.xl_t
+		xor	r1,r1
+.xl_t:
+		cmp/pl	r2
+		bt	.xr_t
+		xor	r2,r2
+.xr_t:
+		cmp/ge	r0,r1
+		bf	.xl_b
+		mov	r0,r1
+.xl_b:
+		cmp/ge	r0,r2
+		bf	.xr_b
+		mov	r0,r2
+.xr_b:
+		mov	#240,r0
+; 		muls	r5,r0
+; 		sts	macl,r0
+; 		shlr8	r0
+		cmp/pl	r3
+		bt	.yl_t
+		xor	r3,r3
+.yl_t:
+		cmp/pl	r4
+		bt	.yr_t
+		xor	r4,r4
+.yr_t:
+		cmp/ge	r0,r3
+		bf	.yl_b
+		mov	r0,r3
+.yl_b:
+		cmp/ge	r0,r4
+		bf	.yr_b
+		mov	r0,r4
+.yr_b:
+		cmp/eq	r1,r2
+		bt	.bad_xy
+		cmp/eq	r3,r4
+		bt	.bad_xy
+
+		mov	#CS3+$50,r7	; DEBUG
+		mov	r4,@-r7
+		mov	r3,@-r7
+		mov	r2,@-r7
+		mov	r1,@-r7
+
+.y_loop:
+		neg	r5,r6
+		mov	r12,r7
+
+	; TODO: una forma de calcular
+	; los bloques asap.
+		mov	r3,r0		; Y
+		and	r6,r0
+		shll2	r0
+		shll	r0
+		add	r0,r7
+		mov	r1,r0		; X
+		and	r6,r0
+		shlr2	r0
+		shlr2	r0
+		add	r0,r7
+
+		mov	r1,r6
+		mov	#1,r0
+.x_loop:
+		mov.b	r0,@r7
+		add	#1,r7
+		cmp/gt	r2,r6
+		bf/s	.x_loop
+		add	r5,r6
+		cmp/gt	r4,r3
+		bf/s	.y_loop
+		add	r5,r3
+.bad_xy:
+		bra	.next_one
+		add	#sizeof_marsspr,r13
+.exit:
+		rts
+		nop
+		align 4
+		ltorg
+
 		align 4
