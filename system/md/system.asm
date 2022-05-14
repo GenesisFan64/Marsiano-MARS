@@ -55,11 +55,10 @@ System_Init:
 
 System_WaitFrame:
 		lea	(vdp_ctrl),a6
-.wait_lag:
-		move.w	(a6),d4			; LAG frame?
+.wait_lag:	move.w	(a6),d4			; LAG frame?
 		btst	#bitVBlk,d4
 		bne.s	.wait_lag
-		bsr	System_MarsUpdate_Out	; Process any DREQ update.
+		bsr	System_MarsUpdate_Out	; Process DREQ now.
 .wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
 		btst	#bitVBlk,d4
 		beq.s	.wait_in
@@ -144,11 +143,9 @@ System_MarsUpdate:
 		move.w	(vdp_ctrl),d4		; Got on VBlank?
 		btst	#bitVBlk,d4
 		bne.s	System_MarsUpdate
-
 System_MarsUpdate_Out:
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
-; 		jmp	(System_SendDreq).l
 
 ; --------------------------------------------------------
 ; System_SendDreq
@@ -156,31 +153,32 @@ System_MarsUpdate_Out:
 ; Send data to the 32X using DREQ and CMD interrupt
 ;
 ; Input:
-; a0 - LONG | Source data
-; d0 - WORD | Size (MUST end with 0 or 8)
+; a0 - LONG | Source data to transfer
+; d0 - WORD | Size (aligned by 8, MUST end with 0 or 8)
 ;
-; NOTE:
-; THIS CODE ONLY WORKS PROPERLY ON THE
-; $880000/$900000 AREAS.
+; NOTE: THIS CODE ONLY WORKS PROPERLY ON THE
+; $880000/$900000 AREAS. (FOR real hardware)
+;
+; CALL THIS OUTSIDE OF VBLANK ONLY.
 ; --------------------------------------------------------
 
 System_SendDreq:
 		move.w	sr,d7
 		move.w	#$2700,sr
+.l1:		btst	#2,(sysmars_reg+dreqctl+1).l	; Wait until 68S finishes.
+		bne.s	.l1
 		lea	($A15112).l,a5			; a5 - DREQ FIFO port
 		move.w	d0,d6				; Length in bytes
 		lsr.w	#1,d6				; d6 - (length/2)
-.retry:
-		move.w	#0,(sysmars_reg+dreqctl).l	; Reset 68S (Force cancel first)
-		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer LENgth
+		move.w	#0,(sysmars_reg+dreqctl).l	; Clear both 68S and RV
+		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer length (size/2)
 		bset	#2,(sysmars_reg+dreqctl+1).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l
+; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; <-- not needed, we'll use this bit instead:
 ; 		bne.s	.wait_cmd
 .wait_bit:	btst	#6,(sysmars_reg+comm12).l	; Wait comm bit signal from SH2 to fill the first words.
 		beq.s	.wait_bit
 		bclr	#6,(sysmars_reg+comm12).l	; Clear it afterwards.
-
 	; *** CRITICAL PART, MUST BE SYNCRONIZED ***
 		move.w	d6,d5				; (length/2)/4
 		lsr.w	#2,d5
@@ -188,12 +186,8 @@ System_SendDreq:
 .l0:		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)
-; .l1:		btst	#7,(sysmars_reg+dreqctl+1).l	; <-- Not needed
-; 		bne.s	.l1
+		move.w  (a0)+,(a5)			; FIFO-FULL check not needed.
 		dbf	d5,.l0
-; 		btst	#2,(sysmars_reg+dreqctl).l
-; 		bne	.retry
 .bad_trnsfr:
 		move.w	d7,sr
 		rts

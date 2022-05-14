@@ -85,9 +85,9 @@ sizeof_camera	ds.l 0
 		finish
 
 		struct 0
-plypz_type	ds.l 1		; Type | Option
+plypz_type	ds.l 1		; Type + Material settings (width + index add)
 plypz_mtrl	ds.l 1		; Material data (ROM or SDRAM)
-plypz_ytb	ds.l 1		; Ytop | Ybottom
+plypz_ytb	ds.l 1		; Ytop | Ybottom (0-slot is free)
 plypz_xl	ds.l 1		;  Screen X-Left | X-Right  16-bit
 plypz_src_xl	ds.l 1		; Texture X-Left | X-Right  16-bit
 plypz_src_yl	ds.l 1		; Texture Y-Top  | Y-Bottom 16-bit
@@ -228,7 +228,7 @@ MarsVideo_ResetNameTbl:
 ; r1 | Background buffer
 ; r2 | Width (Width*2 for Direct color)
 ; r3 | Height
-; r4 | Y index position
+; r4 | Y line position
 ;
 ; NOTE: after finishing, for Indexed mode
 ; call MarsVideo_FixTblShift before swapping the
@@ -243,11 +243,13 @@ MarsVideo_MakeNameTbl:
 		mov.b	@(bitmapmd,r5),r0	; Cannot mess with the RLE lines.
 		and	#%11,r0
 		cmp/eq	#3,r0
-		bt	.linetbl_normal
+		bt	.cant_use
 		mov.w	@(marsGbl_WaveEnable,gbr),r0
 		tst	r0,r0
 		bt	.linetbl_normal
 
+	; Special linetable with
+	; wave deformation.
 		mov.w	@(marsGbl_WaveSpd,gbr),r0
 		mov	r0,r4
 		mov.w	@(marsGbl_WaveTan,gbr),r0
@@ -295,6 +297,7 @@ MarsVideo_MakeNameTbl:
 		dt	r3
 		bf/s	.nxt_lne2
 		add	#2,r10
+.cant_use:
 		rts
 		nop
 		align 4
@@ -311,14 +314,15 @@ MarsVideo_MakeNameTbl:
 
 MarsVideo_FixTblShift:
 	; TODO: A check for direct mode and RLE.
-		mov.w	@(marsGbl_XShift,gbr),r0	; XShift is set?
-		and	#1,r0
+		mov	#_vdpreg,r14
+		mov.b	@(bitmapmd,r14),r0		; Check if we are on indexed mode
+		and	#%11,r0
 		cmp/eq	#1,r0
 		bf	.ptchset
-; 		mov.b	@(mbg_flags,r1),r0
-; 		and	#%00000010,r0
-; 		tst	r0,r0
-; 		bf	.ptchset
+		mov.w	@(marsGbl_XShift,gbr),r0	; XShift is set?
+		and	#1,r0
+		tst	r0,r0
+		bt	.ptchset
 
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
 		mov	r14,r13				; r13 - Framebuffer lines to check
@@ -1476,11 +1480,9 @@ MarsVideo_SetSuperSpr:
 ; r14 - Background buffer to use
 ; --------------------------------------------------------
 
-; TODO: ONLY WORKS WITH 16x16 BLOCKS
-
 		align 4
 MarsVideo_MarkSprBlocks:
-		mov	#RAM_Mars_SuperSprites,r13
+		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
 		mov	#RAM_Mars_RdrwBlocks,r12
 .next_one:
 		mov	@(marsspr_data,r13),r0
@@ -1497,9 +1499,10 @@ MarsVideo_MarkSprBlocks:
 		mov	r0,r4
 		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r5
-; 		add	#4,r0
 		add	r1,r2
 		add	r3,r4
+
+; 		shlr	r0
 		sub	r0,r1
 		sub	r0,r3
 		add	r0,r2
@@ -1578,10 +1581,10 @@ MarsVideo_MarkSprBlocks:
 		bf	.yr_b
 		mov	r0,r4
 .yr_b:
-		cmp/eq	r1,r2
-		bt	.bad_xy
-		cmp/eq	r3,r4
-		bt	.bad_xy
+; 		cmp/eq	r1,r2
+; 		bt	.bad_xy
+; 		cmp/eq	r3,r4
+; 		bt	.bad_xy
 
 		mov	#CS3+$50,r7	; DEBUG
 		mov	r4,@-r7
@@ -1593,24 +1596,24 @@ MarsVideo_MarkSprBlocks:
 		neg	r5,r6
 		mov	r12,r7
 
-	; TODO: una forma de calcular
-	; los bloques asap.
 		mov	r3,r0		; Y
 		and	r6,r0
+		shll2	r0
 		shll2	r0
 		shll	r0
 		add	r0,r7
 		mov	r1,r0		; X
 		and	r6,r0
 		shlr2	r0
-		shlr2	r0
 		add	r0,r7
 
+		mov	r5,r8
+		shlr2	r8
 		mov	r1,r6
 		mov	#1,r0
 .x_loop:
 		mov.b	r0,@r7
-		add	#1,r7
+		add	r8,r7
 		cmp/gt	r2,r6
 		bf/s	.x_loop
 		add	r5,r6

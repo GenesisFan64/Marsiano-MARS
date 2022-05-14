@@ -37,6 +37,7 @@ CACHE_MSTR_PLGN:
 		nop
 		align 4
 .has_plgn:
+		mov.w	@(marsGbl_CntrRdPlgn,gbr),r0
 		dt	r0
 		mov.w	r0,@(marsGbl_CntrRdPlgn,gbr)
 		mov	@(marsGbl_CurrRdPlgn,gbr),r0
