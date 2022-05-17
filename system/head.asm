@@ -278,7 +278,7 @@ MD_ErrorEx:		; Error exception
 MD_ErrorTrap:
 		move.w	#$2700,sr			; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
-		move.w	#$000E,(vdp_data).l		; Write blue
+		move.w	#$000E,(vdp_data).l		; Write red
 		bra.s	*
 
 ; ------------------------------------------------
@@ -287,24 +287,21 @@ MD_ErrorTrap:
 
 MD_Init:
 		move.w	#$2700,sr
-		tst.w	(vdp_ctrl).l
+		lea	(sysmars_reg).l,a5
 		lea	(vdp_ctrl).l,a6
 .wait_dma:	move.w	(a6),d7				; Check if our DMA is active.
 		btst	#1,d7
 		bne.s	.wait_dma
-		lea	(sysmars_reg).l,a5
-	; This gets stuck on reset, even if
-	; put these strings on VRES...
 ; .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 ; 		bne.s	.wm
 ; .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
 ; 		bne.s	.ws
-		moveq	#0,d0				; Reset comm values
-		move.l	d0,comm0(a5)
-		move.l	d0,comm4(a5)
-		move.l	d0,comm8(a5)
-		move.l	d0,comm10(a5)
-		move.l	d0,comm12(a5)			; Clear last modes
+; 		moveq	#0,d0				; Reset comm values
+; 		move.l	d0,comm0(a5)
+; 		move.l	d0,comm4(a5)
+; 		move.l	d0,comm8(a5)
+; 		move.l	d0,comm10(a5)
+; 		move.l	d0,comm12(a5)			; Clear last modes
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
 		cmp.l	#"INIT",(RAM_initflug).l

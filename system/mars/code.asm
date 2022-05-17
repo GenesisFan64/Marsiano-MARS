@@ -435,11 +435,11 @@ m_irq_cmd:
 		mov	#_sysreg+comm12,r2	; r2 - comm to write the signal
 		mov	#_sysreg+dreqfifo,r1	; r1 - Source point: DREQ FIFO
 		mov	#RAM_Mars_DreqDma,r0
-		mov	r1,@r3			; Source
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0	; TODO: a check if this gets Zero'd
-		exts.w	r0,r0
+		extu.w	r0,r0
 		mov	r0,@(8,r3)		; Length (set by 68k)
+		mov	r1,@r3			; Source
 		mov	#%0100010011100001,r0	; Transfer mode + DMA enable bit
 		mov	r0,@($C,r3)		; Dest:Incr(01) Src:Keep(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
@@ -517,32 +517,32 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov	#_FRT,r1
-		mov.b	@(7,r1),r0
-		xor	#2,r0
-		mov.b	r0,@(7,r1)
-		mov.l	#$20004014,r1
-		mov.w	r0,@r1
-		mov.w	@r1,r0
-		mov	#$FFFFFE80,r1	; Disable Watchdog
-		mov.w	#$A518,r0
-		mov.w	r0,@r1
-		nop
-		nop
-		rts
-		nop
-		align 4
-		ltorg
-
-; 		mov	#_sysreg,r1
-; 		mov	#1,r0
-; 		mov.w	r0,@(vresintclr,r1)
-; 		mov.b	@(dreqctl+1,r1),r0
-; 		tst	#%10,r0
-; 		bf	.rv_busy
-; 		mov	#$FFFFFE80,r1
-; 		mov.w	#$A518,r0		; Disable Watchdog
+; 		mov	#_FRT,r1
+; 		mov.b	@(7,r1),r0
+; 		xor	#2,r0
+; 		mov.b	r0,@(7,r1)
+; 		mov.l	#$20004014,r1
 ; 		mov.w	r0,@r1
+; 		mov.w	@r1,r0
+; 		mov	#$FFFFFE80,r1	; Disable Watchdog
+; 		mov.w	#$A518,r0
+; 		mov.w	r0,@r1
+; 		nop
+; 		nop
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
+
+		mov	#_sysreg,r1
+		mov	r1,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.b	@(dreqctl+1,r1),r0
+		tst	#%10,r0
+		bf	.rv_busy
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
 ; 		mov	#_DMASOURCE0,r1
 ; 		mov	@($C,r1),r0
 ; 		tst	#%01,r0
@@ -550,35 +550,35 @@ m_irq_vres:
 ; .wait_dma:	mov	@($C,r1),r0
 ; 		tst	#%10,r0
 ; 		bt	.wait_dma
-; 		mov	#_DMAOPERATION,r1
-; 		mov     #0,r0
-; 		mov	r0,@r1
-; 		mov	#_DMACHANNEL0,r1
-; 		mov     #0,r0
-; 		mov	r0,@r1
-; 		mov	#$44E0,r1
-; 		mov	r0,@r1
+		mov	#_DMAOPERATION,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#_DMACHANNEL0,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#$44E0,r1
+		mov	r0,@r1
 ; .no_dma:
-; 		mov	#(CS3|$40000)-8,r15
-; 		mov	#SH2_M_HotStart,r0
-; 		mov	r0,@r15
-; 		mov.w   #$F0,r0
-; 		mov	r0,@(4,r15)
-; 		mov	#_sysreg,r1
-; 		mov	#"M_OK",r0
-; 		mov	r0,@(comm0,r1)
-; 		rte
-; 		nop
-; 		align 4
-; .rv_busy:
-; 		mov	#_FRT,r1
-; 		mov.b	@(7,r1),r0
-; 		xor	#2,r0
-; 		mov.b	r0,@(7,r1)
-; 		bra	*
-; 		nop
-; 		align 4
-; 		ltorg		; Save literals
+		mov	#_sysreg,r1
+		mov	#"VRES",r0
+		mov	r0,@(comm0,r1)
+		mov	#(CS3|$40000)-8,r15
+		mov	#SH2_M_HotStart,r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
+		rte
+		nop
+		align 4
+.rv_busy:
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
+		bra	*
+		nop
+		align 4
+		ltorg		; Save literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -596,7 +596,7 @@ s_irq_bad:
 ; Slave | PWM Interrupt
 ; ------------------------------------------------
 
-; check cache.asm
+; check cache_slv.asm
 ; s_irq_pwm:
 
 ; =================================================================
@@ -604,15 +604,14 @@ s_irq_bad:
 ; Slave | CMD Interrupt
 ; ------------------------------------------------
 
+		align 4
 s_irq_cmd:
 		mov	#.tag_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov.b	@(7,r1),r0
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
-		mov.w	@r1,r0
 
 	; ---------------------------------
 
@@ -952,60 +951,60 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov	#_FRT,r1
-		mov.b	@(7,r1),r0
-		xor	#2,r0
-		mov.b	r0,@(7,r1)
-		mov.l	#$20004014,r1
-		mov.w	r0,@r1
-		mov.w	@r1,r0
-		mov	#$FFFFFE80,r1	; Disable Watchdog
-		mov.w	#$A518,r0
-		mov.w	r0,@r1
-		nop
-		nop
-		rts
-		nop
-		align 4
-		ltorg
-
-; 		mov	#_sysreg,r1
-; 		mov	#1,r0
-; 		mov.w	r0,@(vresintclr,r1)
-; 		mov.b	@(dreqctl+1,r1),r0
-; 		tst	#%10,r0
-; 		bf	.rv_busy
-; 		mov	#(CS3|$3F000)-8,r15
-; 		mov	#SH2_S_HotStart,r0
-; 		mov	r0,@r15
-; 		mov.w   #$F0,r0
-; 		mov	r0,@(4,r15)
-; 		mov	#$FFFFFE80,r1
-; 		mov.w	#$A518,r0		; Disable Watchdog
-; 		mov.w	r0,@r1
-; 		mov	#_DMAOPERATION,r1
-; 		mov     #0,r0
-; 		mov	r0,@r1
-; 		mov	#_DMACHANNEL0,r1
-; 		mov     #0,r0
-; 		mov	r0,@r1
-; 		mov	#$44E0,r1
-; 		mov	r0,@r1
-; 		mov	#_sysreg,r1
-; 		mov	#"S_OK",r0
-; 		mov	r0,@(comm4,r1)
-; 		rte
-; 		nop
-; 		align 4
-; .rv_busy:
 ; 		mov	#_FRT,r1
 ; 		mov.b	@(7,r1),r0
 ; 		xor	#2,r0
 ; 		mov.b	r0,@(7,r1)
-; 		bra	*
+; 		mov.l	#$20004014,r1
+; 		mov.w	r0,@r1
+; 		mov.w	@r1,r0
+; 		mov	#$FFFFFE80,r1	; Disable Watchdog
+; 		mov.w	#$A518,r0
+; 		mov.w	r0,@r1
+; 		nop
+; 		nop
+; 		rts
 ; 		nop
 ; 		align 4
-; 		ltorg		; Save literals
+; 		ltorg
+
+		mov	#_sysreg,r1
+		mov	r1,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.b	@(dreqctl+1,r1),r0
+		tst	#%10,r0
+		bf	.rv_busy
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
+		mov	#_DMAOPERATION,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#_DMACHANNEL0,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#$44E0,r1
+		mov	r0,@r1
+		mov	#_sysreg,r1
+		mov	#"VRES",r0
+		mov	r0,@(comm4,r1)
+		mov	#(CS3|$3F000)-8,r15
+		mov	#SH2_S_HotStart,r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
+		rte
+		nop
+		align 4
+.rv_busy:
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
+		bra	*
+		nop
+		align 4
+		ltorg		; Save literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -1020,6 +1019,7 @@ s_irq_vres:
 ; Slave | Watchdog interrupt
 ; ------------------------------------------------
 
+		align 4
 s_irq_wdg:
 ; 		mov	#$F0,r0
 ; 		ldc	r0,sr
@@ -1140,9 +1140,6 @@ SH2_M_Entry:
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
-		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
-    		mov.b	r0,@(intmask,r1)
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1153,6 +1150,9 @@ SH2_M_Entry:
 ; ----------------------------------------------------------------
 
 SH2_M_HotStart:
+		mov	#_sysreg,r1
+		mov	#0,r0
+    		mov.b	r0,@(intmask,r1)
 		mov	#$20004000,r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -1169,10 +1169,8 @@ SH2_M_HotStart:
 		dt	r2
 		bf/s	.clrram
 		add	#4,r1
-		mov	#$20,r0				; Interrupts ON
-		ldc	r0,sr
 
-	; TEMPORAL
+	; **** TESTING
 ; 		mov	#1,r0
 ; 		mov.w	r0,@(marsGbl_WaveEnable,gbr)
 		mov	#8,r0
@@ -1181,7 +1179,13 @@ SH2_M_HotStart:
 		mov.w	r0,@(marsGbl_WaveMax,gbr)
 		mov	#32,r0
 		mov.w	r0,@(marsGbl_WaveDeform,gbr)
+	; ****
 
+		mov	#_sysreg,r1
+		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
+    		mov.b	r0,@(intmask,r1)
+		mov	#$20,r0				; Interrupts ON
+		ldc	r0,sr
 		bra	master_loop
 		nop
 		align 4
@@ -1252,9 +1256,9 @@ master_loop:
 		bt	.wait
 		mov	#RAM_Mars_DreqRead+Dreq_Palette,r1
 		mov	#_palette,r2
- 		mov	#256/8,r3
+ 		mov	#(256/8),r3
 .copy_pal:
-	rept 8
+	rept 4
 		mov	@r1+,r0			; Copy as LONGs, works on HW
 		mov	r0,@r2
 		add	#4,r2
@@ -1414,6 +1418,7 @@ mstr_gfx0_init_2:
 mstr_gfx0_loop:
 		bra	master_loop
 		nop
+		align 4
 
 ; ============================================================
 ; ---------------------------------------
@@ -1999,16 +2004,8 @@ SH2_S_Entry:
 		mov	#Mars_LoadFastCode,r0
 		jsr	@r0
 		nop
-		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON|PWMIRQ_ON,r0		; Enable these interrupts
-    		mov.b	r0,@(intmask,r1)		; (Watchdog is external)
 		bsr	MarsSound_Init			; Init PWM
 		nop
-.wait_md:
-; 		mov 	#_sysreg+comm12,r2
-; 		mov.w	@r2,r0
-; 		cmp/eq	#0,r0
-; 		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2016,6 +2013,9 @@ SH2_S_Entry:
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
+		mov	#_sysreg,r1
+		mov	#0,r0
+    		mov.b	r0,@(intmask,r1)
 		mov	#$20004000,r14
 		mov	#0,r0
 		mov.w	r0,@($14,r14)
@@ -2033,6 +2033,9 @@ SH2_S_HotStart:
 		dt	r2
 		bf/s	.clr_enbl
 		add	r3,r1
+		mov	#_sysreg,r1
+		mov	#CMDIRQ_ON|PWMIRQ_ON,r0
+    		mov.b	r0,@(intmask,r1)
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	slave_loop

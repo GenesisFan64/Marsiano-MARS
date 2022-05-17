@@ -154,34 +154,35 @@ System_MarsUpdate_Out:
 ; a0 - LONG | Source data to transfer
 ; d0 - WORD | Size (aligned by 8, MUST end with 0 or 8)
 ;
-; NOTE: THIS CODE ONLY WORKS PROPERLY ON THE
-; $880000/$900000 AREAS. (FOR real hardware)
-;
 ; CALL THIS OUTSIDE OF VBLANK ONLY.
+;
+; NOTE: THIS CODE MUST BE LOCATED IN THE
+; $880000/$900000 AREAS.
 ; --------------------------------------------------------
 
 System_SendDreq:
 		move.w	sr,d7
 		move.w	#$2700,sr
-		move.w	#%000,(sysmars_reg+dreqctl).l	; Clear RV and 68S
-		lea	($A15112).l,a5			; a5 - DREQ FIFO port
-		move.w	d0,d6				; Length in bytes
-		lsr.w	#1,d6				; d6 - (length/2)
-		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer length (size/2)
-		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-		move.w	d6,d5				; d5 - (length/2)/4
+		lea	(sysmars_reg).l,a5
+		lea	($A15112).l,a4
+		move.w	#%000,dreqctl(a5)	; Clear 68S
+		move.w	d0,d6			; Length in bytes
+		lsr.w	#1,d6			; d6 - (length/2)
+		move.w	d6,dreqlen(a5)		; Set transfer length (size/2)
+		bset	#0,standby(a5)		; Request Master CMD
+		move.w	d6,d5			; d5 - (length/2)/4
 		lsr.w	#2,d5
 		sub.w	#1,d5
-.wait_bit:	move.b	(sysmars_reg+comm12).l,d4	; Wait comm bit signal
+.wait_bit:	move.b	comm12(a5),d4		; Wait comm bit signal
 		btst	#6,d4
 		beq.s	.wait_bit
-		move.w	#%100,(sysmars_reg+dreqctl).l	; Clear RV, set 68S
-.l0:		move.w  (a0)+,(a5)			; *** CRITICAL PART***
-		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)
+		move.w	#%100,dreqctl(a5)	; Set 68S
+.l0:		move.w  (a0)+,(a4)		; *** CRITICAL PART***
+		move.w  (a0)+,(a4)
+		move.w  (a0)+,(a4)
+		move.w  (a0)+,(a4)
 		dbf	d5,.l0
-		move.w	#%000,(sysmars_reg+dreqctl).l	; Clear RV and 68S
+		move.w	#%000,dreqctl(a5)	; Clear 68S on exit
 .bad_trnsfr:
 		move.w	d7,sr
 		rts
@@ -559,6 +560,9 @@ Mode_Init:
 ; .clr:
 ; 		move.w	d4,(a4)+
 ; 		dbf	d5,.clr
+
+		move.w	#0,d0
+		bsr	Video_Mars_GfxMode
 		rts
 
 ; --------------------------------------------------------

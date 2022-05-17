@@ -29,8 +29,8 @@ Sound, Genesis and 32X:
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
 
 Notes/Current issues:
-- DREQ-transfer might get stuck on SOFT reset.
-- (PWM) RV-backup: If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play trash wave data.
+- SOFT reseting too much times will freeze the entire 32X requiring to unplug it's power and plugging it again. (!!)
+- (PWM, RV-backup) If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play trash wave data.
 
 Planned:
 - Add map layout support on psd-Mode 2 (256-color scrolling background)

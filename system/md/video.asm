@@ -66,9 +66,6 @@ Video_Init:
 		add.w	#$100,d6
 		dbf	d7,.loop
 .exit:
-		moveq	#0,d0
-		bsr	Video_Mars_GfxMode
-
 	; DMA RV-bit safe code
 	; TODO: solo copiarme el write final en
 	; vez de todo el codigo.
