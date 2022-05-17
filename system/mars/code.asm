@@ -24,7 +24,9 @@
 ; Settings
 ; ----------------------------------------------------------------
 
-SH2_DEBUG		equ 0	; Set to 1 too see if CPUs are active using comm counters (0 and 1)
+SH2_DEBUG	equ 0		; Set to 1 too see if CPUs are active using comm counters (0 and 1)
+STACK_MSTR	equ CS3|$40000
+STACK_SLV	equ CS3|$3F000
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -48,8 +50,7 @@ marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
 marsGbl_CntrRdSpr	ds.w 1	; Number of sprites to read
-
-marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: maybe a HBlank list?)
+marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: a HBlank list)
 marsGbl_RomBlkM		ds.w 1	; Flag to report that MASTER is reading from ROM area
 marsGbl_RomBlkS		ds.w 1	; Flag to report that SLAVE is reading from ROM area
 marsGbl_MdInitTmr	ds.w 1	; Redraw counter (Write $02)
@@ -72,8 +73,8 @@ sizeof_MarsGbl		ds.l 0
 
 		align 4
 SH2_Master:
-		dc.l SH2_M_Entry,CS3|$40000	; Power PC, Stack
-		dc.l SH2_M_Entry,CS3|$40000	; Reset PC, Stack
+		dc.l SH2_M_Entry,STACK_MSTR	; Power PC, Stack
+		dc.l SH2_M_Entry,STACK_MSTR	; Reset PC, Stack
 		dc.l SH2_M_ErrIllg		; Illegal instruction
 		dc.l 0				; reserved
 		dc.l SH2_M_ErrInvl		; Invalid slot instruction
@@ -136,8 +137,8 @@ SH2_Master:
 
 		align 4
 SH2_Slave:
-		dc.l SH2_S_Entry,CS3|$3F000	; Cold PC,SP
-		dc.l SH2_S_Entry,CS3|$3F000	; Manual PC,SP
+		dc.l SH2_S_Entry,STACK_SLV	; Cold PC,SP
+		dc.l SH2_S_Entry,STACK_SLV	; Manual PC,SP
 		dc.l SH2_S_ErrIllg		; Illegal instruction
 		dc.l 0				; reserved
 		dc.l SH2_S_ErrInvl		; Invalid slot instruction
@@ -208,7 +209,10 @@ master_irq:
 		stc	sr,r0
 		shlr2	r0
 		and	#$3C,r0
-		mov	#int_m_list,r1
+		mov	r0,r1
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#int_m_list,r0
 		add	r1,r0
 		mov	@r0,r1
 		jsr	@r1
@@ -234,7 +238,10 @@ slave_irq:
 		stc	sr,r0
 		shlr2	r0
 		and	#$3C,r0
-		mov	#int_s_list,r1
+		mov	r0,r1
+		mov	#$F0,r0
+		ldc	r0,sr
+		mov	#int_s_list,r0
 		add	r1,r0
 		mov	@r0,r1
 		jsr	@r1
@@ -279,7 +286,7 @@ int_s_list:
 ; *** Only works on HARDWARE ***
 ;
 ; comm2: (CPU)(CODE)
-; comm4: Last program counter
+; comm4: PC counter
 ;
 ;  CPU | SH2 who got the error:
 ;        $00 - Master
@@ -289,7 +296,7 @@ int_s_list:
 ;	 -1: Unknown error
 ;	 $01: Illegal instruction
 ;	 $02: Invalid slot instruction
-;	 $03: Address error (most common if you don't align by 4)
+;	 $03: Address error <-- most common if you don't align by 4
 ;	 $04: DMA error
 ;	 $05: NMI vector
 ;	 $06: User break
@@ -383,8 +390,8 @@ m_irq_bad:
 ; ------------------------------------------------
 
 m_irq_pwm:
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -404,14 +411,20 @@ m_irq_pwm:
 ; Master | CMD Interrupt
 ; ------------------------------------------------
 
+	; *** HARDWARE NOTE ***
+	; DMA takes a little to start properly:
+	; after writing _DMAOPERATION = 1 put
+	; 5 instructions (or 5 nops) in case
+	; you need to manually check if the
+	; DMA it's active or not.
+	;
+	; On Emulators it just starts right away.
 m_irq_cmd:
-		mov	#$F0,r0
-		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_sysreg+cmdintclr,r1
+		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 
 		mov	r2,@-r15
@@ -431,25 +444,21 @@ m_irq_cmd:
 		mov	r0,@($C,r3)		; Dest:Incr(01) Src:Keep(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
-
-	; *** HARDWARE NOTE ***
-	; DMA takes a little to start properly:
-	; Put 5 instructions (ex. 5 nops) after
-	; writing _DMAOPERATION = 1 in case
-	; you need to manually check if it's
-	; active or not.
-	;
-	; On Emulators it just starts right away.
 		mov.b	@r2,r0			; Tell Genesis we are ready to
 		or	#%01000000,r0		; recieve the data from DREQ
 		mov.b	r0,@r2
 		nop
 		nop
-.wait_dma:	mov	@($C,r3),r0			; Active?
+.wait_dma:	mov	@($C,r3),r0		; Active?
 		tst	#%10,r0
 		bt	.wait_dma
-		mov	#0,r0				; _DMAOPERATION = 0
+		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
+		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
+		mov	r0,@($C,r3)
+		mov.b	@r2,r0			; Clear comm bit signal
+		and	#%10111111,r0
+		mov.b	r0,@r2
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -464,8 +473,8 @@ m_irq_cmd:
 ; ------------------------------------------------
 
 m_irq_h:
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -486,8 +495,8 @@ m_irq_h:
 ; ------------------------------------------------
 
 m_irq_v:
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -512,46 +521,64 @@ m_irq_vres:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_sysreg,r2
-		mov.w	r0,@(vresintclr,r2)
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0		; Disable Watchdog
+		mov.l	#$20004014,r1
 		mov.w	r0,@r1
-		mov.b	@(dreqctl+1,r2),r0
-		tst	#%10,r0
-		bf	.rv_busy
+		mov.w	@r1,r0
+		mov	#$FFFFFE80,r1	; Disable Watchdog
+		mov.w	#$A518,r0
+		mov.w	r0,@r1
+		nop
+		nop
+		rts
+		nop
+		align 4
+		ltorg
 
-		mov	#_DMASOURCE0,r1
-		mov	@($C,r1),r0
-		tst	#%01,r0
-		bt	.no_dma
-.wait_dma:	mov	@($C,r1),r0
-		tst	#%10,r0
-		bt	.wait_dma
-		mov	#_DMAOPERATION,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#_DMACHANNEL0,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#$44E0,r1
-		mov	r0,@r1
-.no_dma:
-		mov	#(CS3|$40000)-8,r15
-		mov	#SH2_M_HotStart,r0
-		mov	r0,@r15
-		mov.w   #$F0,r0
-		mov	r0,@(4,r15)
-		mov	#"M_OK",r0
-		mov	r0,@(comm0,r2)
-		rte
-		nop
-		align 4
-.rv_busy:
-		bra	.rv_busy
-		nop
-		align 4
-		ltorg		; Save literals
+; 		mov	#_sysreg,r1
+; 		mov	#1,r0
+; 		mov.w	r0,@(vresintclr,r1)
+; 		mov.b	@(dreqctl+1,r1),r0
+; 		tst	#%10,r0
+; 		bf	.rv_busy
+; 		mov	#$FFFFFE80,r1
+; 		mov.w	#$A518,r0		; Disable Watchdog
+; 		mov.w	r0,@r1
+; 		mov	#_DMASOURCE0,r1
+; 		mov	@($C,r1),r0
+; 		tst	#%01,r0
+; 		bt	.no_dma
+; .wait_dma:	mov	@($C,r1),r0
+; 		tst	#%10,r0
+; 		bt	.wait_dma
+; 		mov	#_DMAOPERATION,r1
+; 		mov     #0,r0
+; 		mov	r0,@r1
+; 		mov	#_DMACHANNEL0,r1
+; 		mov     #0,r0
+; 		mov	r0,@r1
+; 		mov	#$44E0,r1
+; 		mov	r0,@r1
+; .no_dma:
+; 		mov	#(CS3|$40000)-8,r15
+; 		mov	#SH2_M_HotStart,r0
+; 		mov	r0,@r15
+; 		mov.w   #$F0,r0
+; 		mov	r0,@(4,r15)
+; 		mov	#_sysreg,r1
+; 		mov	#"M_OK",r0
+; 		mov	r0,@(comm0,r1)
+; 		rte
+; 		nop
+; 		align 4
+; .rv_busy:
+; 		mov	#_FRT,r1
+; 		mov.b	@(7,r1),r0
+; 		xor	#2,r0
+; 		mov.b	r0,@(7,r1)
+; 		bra	*
+; 		nop
+; 		align 4
+; 		ltorg		; Save literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -578,14 +605,14 @@ s_irq_bad:
 ; ------------------------------------------------
 
 s_irq_cmd:
-		mov	#.tag_F0,r0
-		ldc	r0,sr
 		mov	#.tag_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
+		mov.b	@(7,r1),r0
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
+		mov.w	@r1,r0
 
 	; ---------------------------------
 
@@ -879,8 +906,8 @@ s_irq_cmd:
 ; ------------------------------------------------
 
 s_irq_h:
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -902,8 +929,8 @@ s_irq_h:
 ; ------------------------------------------------
 
 s_irq_v:
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -929,38 +956,56 @@ s_irq_vres:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_sysreg,r2
-		mov.w	r0,@(vresintclr,r2)
-		mov.b	@(dreqctl+1,r2),r0
-		tst	#%10,r0
-		bf	.rv_busy
-		mov	#(CS3|$3F000)-8,r15
-		mov	#SH2_S_HotStart,r0
-		mov	r0,@r15
-		mov.w   #$F0,r0
-		mov	r0,@(4,r15)
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0		; Disable Watchdog
+		mov.l	#$20004014,r1
 		mov.w	r0,@r1
-		mov	#_DMAOPERATION,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#_DMACHANNEL0,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#$44E0,r1
-		mov	r0,@r1
-		mov	#"S_OK",r0
-		mov	r0,@(comm4,r2)
-		rte
+		mov.w	@r1,r0
+		mov	#$FFFFFE80,r1	; Disable Watchdog
+		mov.w	#$A518,r0
+		mov.w	r0,@r1
+		nop
+		nop
+		rts
 		nop
 		align 4
-.rv_busy:
-		bra	.rv_busy
-		nop
-		align 4
-		ltorg		; Save literals
+		ltorg
 
+; 		mov	#_sysreg,r1
+; 		mov	#1,r0
+; 		mov.w	r0,@(vresintclr,r1)
+; 		mov.b	@(dreqctl+1,r1),r0
+; 		tst	#%10,r0
+; 		bf	.rv_busy
+; 		mov	#(CS3|$3F000)-8,r15
+; 		mov	#SH2_S_HotStart,r0
+; 		mov	r0,@r15
+; 		mov.w   #$F0,r0
+; 		mov	r0,@(4,r15)
+; 		mov	#$FFFFFE80,r1
+; 		mov.w	#$A518,r0		; Disable Watchdog
+; 		mov.w	r0,@r1
+; 		mov	#_DMAOPERATION,r1
+; 		mov     #0,r0
+; 		mov	r0,@r1
+; 		mov	#_DMACHANNEL0,r1
+; 		mov     #0,r0
+; 		mov	r0,@r1
+; 		mov	#$44E0,r1
+; 		mov	r0,@r1
+; 		mov	#_sysreg,r1
+; 		mov	#"S_OK",r0
+; 		mov	r0,@(comm4,r1)
+; 		rte
+; 		nop
+; 		align 4
+; .rv_busy:
+; 		mov	#_FRT,r1
+; 		mov.b	@(7,r1),r0
+; 		xor	#2,r0
+; 		mov.b	r0,@(7,r1)
+; 		bra	*
+; 		nop
+; 		align 4
+; 		ltorg		; Save literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -976,8 +1021,8 @@ s_irq_vres:
 ; ------------------------------------------------
 
 s_irq_wdg:
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	r2,@-r15
 		mov	#_FRT,r1
 		mov.b   @(7,r1),r0
@@ -999,7 +1044,6 @@ s_irq_wdg:
 		nop
 		align 4
 		ltorg
-		align 4
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1058,7 +1102,7 @@ Mars_LoadFastCode:
 
 		align 4
 SH2_M_Entry:
-		mov.l	#$FFFFFE10,r14
+		mov.l	#_FRT,r14
 		mov	#0,r0
 		mov.b	r0,@(0,r14)
 		mov	#$FFFFFFE2,r0
@@ -1083,7 +1127,7 @@ SH2_M_Entry:
 		mov	#$FFFFFFE2,r0
 		mov.b	r0,@(7,r14)
 
-		mov	#CS3|$40000,r15			; Set default Stack for Master
+		mov	#STACK_MSTR,r15			; Set default Stack for Master
 		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
 		ldc	r14,gbr
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
@@ -1093,18 +1137,12 @@ SH2_M_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
 		mov	#_sysreg,r1
 		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
     		mov.b	r0,@(intmask,r1)
-.wait_md:
-; 		mov 	#_sysreg+comm12,r2
-; 		mov.w	@r2,r0
-; 		cmp/eq	#0,r0
-; 		bf	.wait_md
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1121,6 +1159,8 @@ SH2_M_HotStart:
 		mov.w	r0,@($16,r14)
 		mov.w	r0,@($18,r14)
 		mov.w	r0,@($1A,r14)
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#RAM_Mars_DreqRead,r1		; Clear DREQ output
 		mov	#sizeof_dreq/4,r2		; NOTE: length as 4bytes
 		mov	#0,r0
@@ -1153,8 +1193,7 @@ SH2_M_HotStart:
 ; comm12:
 ; bssscccc ir000lll
 ;
-; b - busy bit on the CMD interrupt
-;     (68k knows that the interrupt is active)
+; b - busy bit, this CPU can't be interrupted by request.
 ; s - status bits for some CMD interrupt tasks
 ; c - command number for CMD interrupt
 ; i - Initialitation bit
@@ -1175,6 +1214,9 @@ master_loop:
 
 	; ---------------------------------------
 	; Wait frameswap manually
+		stc	sr,@-r15			; Interrupts OFF
+		mov	#$F0,r0
+		ldc	r0,sr
 		mov	#_vdpreg,r1			; r1 - SVDP area
 .wait_fb:	mov.w	@(vdpsts,r1),r0			; SVDP FILL active?
 		tst	#%10,r0
@@ -1186,11 +1228,8 @@ master_loop:
 .wait_frmswp:	mov.b	@(framectl,r1),r0		; Framebuffer ready?
 		cmp/eq	r0,r2
 		bf	.wait_frmswp
-		stc	sr,@-r15			; Interrupts OFF
-		mov	#$F0,r0
-		ldc	r0,sr
 		mov	#_sysreg+comm12+1,r1		; Clear comm R bit
-		mov.b	@r1,r0				; this tells to 68k that frame is ready.
+		mov.b	@r1,r0				; this tells to 68k that the frame is ready.
 		and	#%10111111,r0
 		mov.b	r0,@r1
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
@@ -1282,14 +1321,14 @@ master_loop:
 ; jump lists
 
 		align 4
-mstr_gfxlist_h:	dc.l mstr_gfx0_hblk	; $00 ***placeholder***
+mstr_gfxlist_h:	dc.l mstr_gfx0_hblk	; $00 ***placeholder list***
 		dc.l mstr_gfx1_hblk	; $01
 		dc.l mstr_gfx2_hblk	; $02
 		dc.l mstr_gfx3_hblk	; $03
 		dc.l mstr_gfx4_hblk	; $04
 		dc.l mstr_gfx0_hblk	; $05
 		dc.l mstr_gfx0_hblk	; $06
-		dc.l mstr_gfx0_hblk	; $07
+		dc.l mstr_gfx0_hblk	; $07 ***
 mstr_gfxlist:	dc.l mstr_gfx0_loop	; $00
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
@@ -1414,7 +1453,8 @@ mstr_gfx1_init_2:
 		mov	#2,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx1_init_1:
-		bsr	MarsVideo_ResetNameTbl
+		mov	#MarsVideo_ResetNameTbl,r0
+		jsr	@r0
 		nop
 
 ; -------------------------------
@@ -1457,7 +1497,8 @@ mstr_gfx1_loop:
 		mov	#$200,r1
 		mov	#320*2,r2
 		mov	#200,r3
-		bsr	MarsVideo_MakeNameTbl
+		mov	#MarsVideo_MakeNametbl,r0
+		jsr	@r0
 		mov	#12,r4
 		bra	master_loop
 		nop
@@ -1563,7 +1604,8 @@ mstr_gfx2_loop:
 		mov.w	r0,@(marsGbl_CntrRdSpr,gbr)
 		mov	#0,r1
 		mov	#$20,r2
-		bsr	MarsVideo_SetWatchdog
+		mov	#MarsVideo_SetWatchdog,r0
+		jsr	@r0
 		nop
 
 		mov	#RAM_Mars_BgBuffScrl,r14
@@ -1608,10 +1650,12 @@ mstr_gfx2_loop:
 		mov	#RAM_Mars_BgBuffScrl,r1		; Make visible background
 		mov	#0,r2				; section on screen
 		mov	#240,r3
-		bsr	MarsVideo_ShowScrlBg
+		mov	#MarsVideo_ShowScrlBg,r0
+		jsr	@r0
 		nop
-		bsr	MarsVideo_FixTblShift		; Fix those broken lines that
-		nop					; the Xshift register can't move
+		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
+		jsr	@r0				; the Xshift register can't move
+		nop
 		bra	master_loop
 		nop
 		align 4
@@ -1689,7 +1733,8 @@ mstr_gfx3_loop:
 		mov.w	r0,@(marsGbl_CntrRdSpr,gbr)
 		mov	#2,r1
 		mov	#$20,r2
-		bsr	MarsVideo_SetWatchdog
+		mov	#MarsVideo_SetWatchdog,r0
+		jsr	@r0
 		nop
 		mov	#$200,r1
 		mov	#0,r2
@@ -1707,7 +1752,8 @@ mstr_gfx3_loop:
 		mov	#$200,r1
 		mov	#320,r2
 		mov	#240,r3
-		bsr	MarsVideo_MakeNametbl
+		mov	#MarsVideo_MakeNametbl,r0
+		jsr	@r0
 		mov	#0,r4
 
 	; Wait Slave to finish
@@ -1841,9 +1887,10 @@ mstr_gfx4_loop:
 		mov	r0,@(marsGbl_CurrRdPlgn,gbr)
 		mov	@r1,r0
 		mov.w	r0,@(marsGbl_CntrRdPlgn,gbr)
-		mov	#1,r1
-		mov	#$10,r2
-		bsr	MarsVideo_SetWatchdog
+		mov	#0,r1
+		mov	#$20,r2
+		mov	#MarsVideo_SetWatchdog,r0
+		jsr	@r0
 		nop
 
 	; ---------------------------------------
@@ -1863,7 +1910,8 @@ mstr_gfx4_loop:
 		mov	#$200,r1
 		mov	#512,r2			; <-- fixed WIDTH
 		mov	#240,r3
-		bsr	MarsVideo_MakeNametbl
+		mov	#MarsVideo_MakeNametbl,r0
+		jsr	@r0
 		mov	#0,r4
 
 	; ---------------------------------------
@@ -1894,10 +1942,10 @@ mstr_gfx4_loop:
 
 		align 4
 SH2_S_Entry:
-		mov.l	#$FFFFFE10,r14
+		mov.l	#_FRT,r14
 		mov	#0,r0
 		mov.b	r0,@(0,r14)
-		mov	#$FFFFFFE2, r0
+		mov	#$FFFFFFE2,r0
 		mov.b	r0,@(7,r14)
 		mov	#0,r0
 		mov.b	r0,@(4,r14)
@@ -1910,7 +1958,33 @@ SH2_S_Entry:
 		mov	#0,r0
 		mov.b	r0,@(3,r14)
 		mov.b	r0,@(2,r14)
-		mov	#CS3|$3F000,r15			; Reset stack
+		mov	#$FFFFFFF2,r0
+		mov.b	r0,@(7,r14)
+		mov	#0,r0
+		mov.b	r0,@(4,r14)
+		mov	#1,r0
+		mov.b	r0,@(5,r14)
+		mov	#$FFFFFFE2,r0
+		mov.b	r0,@(7,r14)
+
+; 		mov.l	#$FFFFFE10,r14
+; 		mov	#0,r0
+; 		mov.b	r0,@(0,r14)
+; 		mov	#$FFFFFFE2, r0
+; 		mov.b	r0,@(7,r14)
+; 		mov	#0,r0
+; 		mov.b	r0,@(4,r14)
+; 		mov	#1,r0
+; 		mov.b	r0,@(5,r14)
+; 		mov	#0,r0
+; 		mov.b	r0,@(6,r14)
+; 		mov	#1,r0
+; 		mov.b	r0,@(1,r14)
+; 		mov	#0,r0
+; 		mov.b	r0,@(3,r14)
+; 		mov.b	r0,@(2,r14)
+
+		mov	#STACK_SLV,r15			; Reset stack
 		mov	#RAM_Mars_Global,r14		; Reset gbr
 		ldc	r14,gbr
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
@@ -1991,8 +2065,6 @@ slave_loop:
 		mov	#_sysreg+comm14,r2
 		mov.w	@r2,r0			; r0 - INIT bit
 		and	#%00001111,r0
-		tst	r0,r0
-		bt	slave_loop
 		shll2	r0
 		mov	@(r3,r0),r4
 		jmp	@r4
@@ -2016,177 +2088,11 @@ slave_loop:
 		dc.l slave_loop		; $0E
 		dc.l slave_loop		; $0F
 
-; ; ============================================================
-; ; ---------------------------------------
-; ; Slave task $01
-; ;
-; ; Helps MASTER to draw the bottom half
-; ; of the scaled background
-; ; ---------------------------------------
-;
-; .slv_task_1:
-;
-; 	; MAIN scaler
-; 	; r1 - X pos xxxx.0000
-; 	; r2 - Y pos yyyy.0000
-; 	; r3 - X dx  xxxx.0000
-; 	; r4 - Y dx  yyyy.0000
-; 	; r5 - Source WIDTH
-; 	; r6 - Source HEIGHT
-; 	; r7 - Source DATA
-; 	; r8 - Output
-; 	; r9 - line size / 2
-; 	; r10 - Number of lines
-; 		mov	#RAM_Mars_BgBuffScale_S,r14
-; 		mov	#(_framebuffer+$200)+(320*120),r13	; r8 - Output
-; 		mov	@r14+,r7		; r7 - Input
-; 		mov	@r14+,r1		; r1 - X pos (2 pixels wide)
-; 		mov	@r14+,r2		; r2 - Y pos
-; 		mov	@r14+,r5		; r5 - X width
-; 		mov	@r14+,r6		; r6 - Y height
-; 		mov	@r14+,r3		; r3 - DX
-; 		mov	@r14+,r4		; r4 - DY
-; 		mov	@r14+,r9		; r9 - Mode
-; 		mov	#TH,r0			; Force source as Cache-Thru
-; 		or	r0,r7
-; 		shll16	r5
-; 		shll16	r6
-; 		dmuls	r1,r5			; Topleft X/Y calc
-; 		sts	mach,r0
-; 		sts	macl,r1
-; 		xtrct	r0,r1
-; 		dmuls	r2,r6
-; 		sts	mach,r0
-; 		sts	macl,r2
-; 		xtrct	r0,r2
-;
-; 	; SLAVE ONLY: Manually get to the middle...
-; 		mov	#240/2,r10		; r10 - Y loop
-; .ymiddle:
-; 		cmp/pz	r2
-; 		bt	.xy_set2
-; 		bra	.ymiddle
-; 		add	r6,r2
-; .xy_set2:
-; 		cmp/ge	r6,r2
-; 		bf	.y_high2
-; 		bra	.xy_set2
-; 		sub	r6,r2
-; .y_high2:
-; 		dt	r10
-; 		bf/s	.ymiddle
-; 		add	r4,r2
-;
-; ; *** LOOP
-; 		lds	r9,mach			; mach - mode number
-; 		mov	#320/2,r9		; r9  - X loop
-; 		mov	#240/2,r10		; r10 - Y loop
-;
-; 	; X check
-; 		sts	mach,r0
-; 		tst	r0,r0
-; 		bt	.x_cont
-; .x_fix:
-; 		cmp/pz	r1
-; 		bt	.x_cont
-; 		bra	.x_fix
-; 		add	r5,r1
-; .x_cont:
-;
-;
-; ; *** LOOP
-; .y_loop:
-; 		sts	mach,r0
-; 		tst	r0,r0
-; 		bt	.y_high
-; 		cmp/pz	r2
-; 		bt	.xy_set
-; 		bra	.y_loop
-; 		add	r6,r2
-; .xy_set:
-; 		cmp/ge	r6,r2
-; 		bf	.y_high
-; 		bra	.xy_set
-; 		sub	r6,r2
-; .y_high:
-; 		mov	r1,r11
-; 		shar	r11		; /2
-; 		mov	r2,r0
-; 		shlr16	r0
-; 		mov	r5,r8
-; 		shlr16	r8
-; 		muls	r8,r0
-; 		sts	macl,r12
-; 		add	r7,r12
-; 		mov	r13,r8
-; 		mov	r9,r14
-; .x_loop:
-; 	; 00 - single scale
-; 		sts	mach,r0
-; 		tst	r0,r0
-; 		bf	.x_rept
-; 		cmp/pz	r11
-; 		bt	.xwpos
-; 		bra	.x_next
-; 		mov	#0,r0
-; .xwpos:
-; 		mov	r5,r0
-; 		shar	r0		; /2
-; 		cmp/ge	r0,r11
-; 		bf	.x_go
-; 		bra	.x_next
-; 		mov	#0,r0
-; .x_go:
-; 		mov	#0,r0
-; 		cmp/pl	r2
-; 		bf	.x_next
-; 		cmp/ge	r6,r2
-; 		bt	.x_next
-; 		bra	.x_high
-; 		nop
-; .x_rept:
-; 	; 01 - repeat check
-; 		mov	r5,r0
-; 		shar	r0		; /2
-; 		cmp/pl	r11
-; 		bt	.xwpos2
-; .x_loopm:	cmp/ge	r0,r11
-; 		bt	.x_high
-; 		bra	.x_loopm
-; 		add	r0,r11
-; .xwpos2:
-; 		cmp/ge	r0,r11
-; 		bf	.x_high
-; 		bra	.xwpos2
-; 		sub	r0,r11
-; .x_high:
-; 		mov	r11,r0
-; 		shlr16	r0
-; 		exts	r0,r0
-; 		shll	r0
-; 		mov.w	@(r12,r0),r0
-; .x_next:
-; 		add	r3,r11
-; 		mov.w	r0,@r8
-; 		dt	r14
-; 		bf/s	.x_loop
-; 		add	#2,r8
-; 		add	r4,r2
-; 		mov	#320,r0
-; 		dt	r10
-; 		bf/s	.y_loop
-; 		add	r0,r13
-;
-; 		bra	.slv_exit
-; 		nop
-; 		align 4
-
 ; ============================================================
 ; ---------------------------------------
 ; Slave task $01
 ;
 ; Build 3D Models FOR THE NEXT FRAME
-; (not current)
 ; ---------------------------------------
 
 		align 4
@@ -2209,9 +2115,6 @@ slave_loop:
 		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
 		nop
-; 		bra	.slv_exit
-; 		nop
-; 		align 4
 
 ; ============================================================
 

@@ -17,7 +17,7 @@
 ; ----------------------------------------------------------------
 
 		move.w	#$2700,sr
-		jsr	(Sound_init).l
+		jsr	(Sound_init).l		; $880000+ jumps
 		jsr	(Video_init).l
 		jsr	(System_Init).l
 		jmp	(MD_Mode0).l

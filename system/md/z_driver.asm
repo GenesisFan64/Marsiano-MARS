@@ -1014,6 +1014,7 @@ mars_scomm:
 		ld	(marsUpd),a
 
 .wait_enter:
+		nop
 		ld	a,(iy+comm14)	; check if 68k got first.
 		bit	7,a
 		jr	nz,.wait_enter
@@ -1027,8 +1028,8 @@ mars_scomm:
 		set	1,(iy+standby)	; Request Slave CMD
 		rst	8
 .wait_cmd:
-		bit	1,(iy+standby)	; Got in?
-		jr	nz,.wait_cmd
+; 		bit	1,(iy+standby)	; <-- this might fail on HW
+; 		jr	nz,.wait_cmd
 		ld	c,14		; c - 14 words
 .next_pass:
 		push	iy
@@ -1057,13 +1058,13 @@ mars_scomm:
 		jr	nz,.next_pass
 		res	7,(iy+comm14)	; Break transfer loop
 		res	6,(iy+comm14)	; Clear CLK
-
-	; clear COM bytes here.
+		rst	8
 .blocked:
-		ld	hl,pwmcom
+		ld	hl,pwmcom	; clear our COM bytes
 		ld	b,7		; MAX PWM channels
+		xor	a
 .clrcom:
-		ld	(hl),0
+		ld	(hl),a
 		inc	hl
 		djnz	.clrcom
 		ret

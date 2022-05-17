@@ -14,8 +14,8 @@ CACHE_MSTR_SCRL:
 ; Watchdog interrupt
 ; --------------------------------------------------------
 
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
@@ -120,20 +120,16 @@ CACHE_MSTR_SCRL:
 		mov	@r0+,r2
 ; wdm_next:
 
-	; TODO: ver porque esto se
-	; traba en hardware
-; 		mov.l   #$FFFFFE80,r1
-; 		mov.w   #$A518,r0		; OFF
-; 		mov.w   r0,@r1
-; 		or      #$20,r0			; ON
-; 		mov.w   r0,@r1
-; 		mov.w   #$5A20,r0		; Timer for the next WD
-; 		mov.w   r0,@r1
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0		; OFF
+		mov.w   r0,@r1
+		or      #$20,r0			; ON
+		mov.w   r0,@r1
+		mov.w   #$5A20,r0		; Timer for the next WD
+		mov.w   r0,@r1
+		rts
+		nop
+		align 4
 .finish_now:
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_WdgStatus,gbr)

@@ -14,17 +14,12 @@ CACHE_MSTR_PLGN:
 ; Watchdog interrupt
 ; --------------------------------------------------------
 
-		mov	#$F0,r0
-		ldc	r0,sr
+; 		mov	#$F0,r0
+; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-
-; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-; 		mov	#MAX_SVDP_PZ,r1
-; 		cmp/ge	r1,r0
-; 		bt	.wdg_pzfull
 
 		mov.w	@(marsGbl_CntrRdPlgn,gbr),r0
 		cmp/eq	#0,r0
@@ -77,7 +72,7 @@ CACHE_MSTR_PLGN:
 	; Polygon points
 	; ----------------------------------------
 
-	; TODO: put custom WIDTH/HEIGHT halfs here
+	; TODO: maka these w/h halfs customizable
 		mov	#4,r8			; Copy polygon points Cache's DDA
 		mov	#SCREEN_WIDTH/2,r6
 		mov	#SCREEN_HEIGHT/2,r7
@@ -239,7 +234,7 @@ wdg_pzfull:
 		mov.w   r0,@r1
 		or      #$20,r0			; ON
 		mov.w   r0,@r1
-		mov.w   #$5A20,r0		; Timer for the next WD
+		mov.w   #$5A10,r0		; Timer for the next WD
 		mov.w   r0,@r1
 		rts
 		nop
@@ -746,11 +741,12 @@ drwsld_nxtline_tex:
 		sts	macl,r0
 		shlr16	r2
 		add	r2,r0
-		mov.b	@(r0,r1),r0		; Read texture pixel
-		add	r13,r0			; Add index increment
+		mov.b	@(r0,r1),r0		; Read left pixel
+		add	r13,r0			; color-index increment
 		and	#$FF,r0
 		shll8	r0
 		lds	r0,mach			; Save left pixel
+
 		add	r6,r5			; Update X
 		add	r8,r7			; Update Y
 		mov	r7,r2
@@ -760,9 +756,10 @@ drwsld_nxtline_tex:
 		sts	macl,r0
 		shlr16	r2
 		add	r2,r0
-		mov.b	@(r0,r1),r0		; Read texture pixel
-		add	r13,r0			; Add index increment
+		mov.b	@(r0,r1),r0		; Read right pixel
+		add	r13,r0			; color-index increment
 		and	#$FF,r0
+
 		sts	mach,r2
 		or	r2,r0
 		mov.w	r0,@r10

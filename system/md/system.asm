@@ -65,7 +65,6 @@ System_WaitFrame:
 		bsr	System_Input		; Read inputs FIRST
 
 	; DMA'd Scroll and Palette
-	; RV bit not needed here
 		lea	(vdp_ctrl),a6
 		move.w	#$8100,d7			; DMA ON
 		move.b	(RAM_VdpRegs+1),d7
@@ -100,12 +99,10 @@ System_WaitFrame:
 		move.w	d7,(a6)
 		bsr	Video_DmaBlast		; Process DMA Blast list
 		add.l	#1,(RAM_Framecount).l
-
 ; 		lea	(vdp_ctrl),a6
 ; .wait_out:	move.w	(a6),d4
 ; 		btst	#bitVBlk,d4
 ; 		bne.s	.wait_out
-
 		rts
 
 ; --------------------------------------------------------
@@ -136,13 +133,14 @@ System_Dma_Exit:
 ; Call this on any change to the RAM_MdDreq area
 ;
 ; NOTE:
-; Only call this OUTSIDE of VBlank.
+; Call this OUTSIDE of VBlank only.
 ; --------------------------------------------------------
 
 System_MarsUpdate:
 		move.w	(vdp_ctrl),d4		; Got on VBlank?
 		btst	#bitVBlk,d4
 		bne.s	System_MarsUpdate
+
 System_MarsUpdate_Out:
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
@@ -165,29 +163,25 @@ System_MarsUpdate_Out:
 System_SendDreq:
 		move.w	sr,d7
 		move.w	#$2700,sr
-.l1:		btst	#2,(sysmars_reg+dreqctl+1).l	; Wait until 68S finishes.
-		bne.s	.l1
+		move.w	#%000,(sysmars_reg+dreqctl).l	; Clear RV and 68S
 		lea	($A15112).l,a5			; a5 - DREQ FIFO port
 		move.w	d0,d6				; Length in bytes
 		lsr.w	#1,d6				; d6 - (length/2)
-		move.w	#0,(sysmars_reg+dreqctl).l	; Clear both 68S and RV
 		move.w	d6,(sysmars_reg+dreqlen).l	; Set transfer length (size/2)
-		bset	#2,(sysmars_reg+dreqctl+1).l	; Set 68S bit
 		bset	#0,(sysmars_reg+standby).l	; Request Master CMD
-; .wait_cmd:	btst	#0,(sysmars_reg+standby).l	; <-- not needed, we'll use this bit instead:
-; 		bne.s	.wait_cmd
-.wait_bit:	btst	#6,(sysmars_reg+comm12).l	; Wait comm bit signal from SH2 to fill the first words.
-		beq.s	.wait_bit
-		bclr	#6,(sysmars_reg+comm12).l	; Clear it afterwards.
-	; *** CRITICAL PART, MUST BE SYNCRONIZED ***
-		move.w	d6,d5				; (length/2)/4
+		move.w	d6,d5				; d5 - (length/2)/4
 		lsr.w	#2,d5
-		sub.w	#1,d5				; minus 1 for the loop
-.l0:		move.w  (a0)+,(a5)
+		sub.w	#1,d5
+.wait_bit:	move.b	(sysmars_reg+comm12).l,d4	; Wait comm bit signal
+		btst	#6,d4
+		beq.s	.wait_bit
+		move.w	#%100,(sysmars_reg+dreqctl).l	; Clear RV, set 68S
+.l0:		move.w  (a0)+,(a5)			; *** CRITICAL PART***
 		move.w  (a0)+,(a5)
 		move.w  (a0)+,(a5)
-		move.w  (a0)+,(a5)			; FIFO-FULL check not needed.
+		move.w  (a0)+,(a5)
 		dbf	d5,.l0
+		move.w	#%000,(sysmars_reg+dreqctl).l	; Clear RV and 68S
 .bad_trnsfr:
 		move.w	d7,sr
 		rts
@@ -565,9 +559,6 @@ Mode_Init:
 ; .clr:
 ; 		move.w	d4,(a4)+
 ; 		dbf	d5,.clr
-
-
-
 		rts
 
 ; --------------------------------------------------------

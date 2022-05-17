@@ -287,25 +287,23 @@ MD_ErrorTrap:
 
 MD_Init:
 		move.w	#$2700,sr
-		lea	(sysmars_reg).l,a5
+		tst.w	(vdp_ctrl).l
 		lea	(vdp_ctrl).l,a6
-.wait_blk:	move.w	(a6),d7
-		btst	#7,d7
-		beq.s	.wait_blk
-		move.l	#$80048104,(vdp_ctrl).l		; Default top VDP regs
 .wait_dma:	move.w	(a6),d7				; Check if our DMA is active.
 		btst	#1,d7
 		bne.s	.wait_dma
-
-	; This doesn't work properly...
+		lea	(sysmars_reg).l,a5
+	; This gets stuck on reset, even if
+	; put these strings on VRES...
 ; .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 ; 		bne.s	.wm
 ; .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
 ; 		bne.s	.ws
-
 		moveq	#0,d0				; Reset comm values
 		move.l	d0,comm0(a5)
 		move.l	d0,comm4(a5)
+		move.l	d0,comm8(a5)
+		move.l	d0,comm10(a5)
 		move.l	d0,comm12(a5)			; Clear last modes
 		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
 MD_HotStart:
@@ -314,12 +312,14 @@ MD_HotStart:
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp
-		lea	($FFFF0000),a0			; Clear our RAM
+		lea	($FFFF0000),a0			; Cleanup our RAM
 		move.l	#sizeof_mdram,d1
 		moveq	#0,d0
 .loop_ram:
 		move.w	d0,(a0)+
 		cmp.l	d1,a0
 		bcs.s	.loop_ram
-		movem.l	($FF0000),d0-a6			; Clear registers (using zeros from RAM)
+		move.l	#$80048104,(vdp_ctrl).l		; Default top VDP regs
+		movem.l	($FF0000),d0-a6			; Clear registers using zeros from RAM
+
 	; jump goes here...

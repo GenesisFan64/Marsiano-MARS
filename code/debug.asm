@@ -256,6 +256,8 @@ MD_DebugMenu:
 		move.w	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
 
+		adda	#sizeof_marsspr,a0
+		move.l	#0,marsspr_data(a0)
 
 ; 		move.w	#$100,marsspr_dx(a0)
 ; 		move.w	#$100,marsspr_dy(a0)
@@ -465,7 +467,7 @@ MD_DebugMenu:
 
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test|TH,mdl_data(a0)
-		move.l	#-$600,mdl_z_pos(a0)
+		move.l	#-$400,mdl_z_pos(a0)
 ; 		move.l	#$4000,mdl_y_pos(a0)
 		lea	str_Page4(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
