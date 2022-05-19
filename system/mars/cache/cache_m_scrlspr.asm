@@ -14,38 +14,91 @@ CACHE_MSTR_SCRL:
 ; Watchdog interrupt
 ; --------------------------------------------------------
 
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
+; TODO: mover el MarsVideo_SprBlkRefill aqui y
+; que avance por piezas
+
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 
-		mov	@(marsGbl_CurrRdSpr,gbr),r0
-		mov	r0,r1
+; 		mov	#Cach_SprBkup_S,r0
+; 		mov	r2,@-r0
+; 		mov	r3,@-r0
+; 		mov	r4,@-r0
+; 		mov	r5,@-r0
+; 		mov	r6,@-r0
+; 		mov	r7,@-r0
+; 		mov	r8,@-r0
+; 		mov	r9,@-r0
+; 		mov	r10,@-r0
+; 		sts	macl,@-r0
+; 		sts	mach,@-r0
+; 		mov	#Cach_SprBkup_LB,r0
+; 		lds	@r0+,mach
+; 		lds	@r0+,macl
+; 		mov	@r0+,r10
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+; 		mov	@r0+,r7
+; 		mov	@r0+,r6
+; 		mov	@r0+,r5
+; 		mov	@r0+,r4
+; 		mov	@r0+,r3
+; 		mov	@r0+,r2
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+		mov	#$FFFFFE80,r1			; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
+		rts
+		nop
+		align 4
+		ltorg
+
+; 	; NEXT
+; 		mov.l   #$FFFFFE80,r1
+; 		mov.w   #$A518,r0		; OFF
+; 		mov.w   r0,@r1
+; 		or      #$20,r0			; ON
+; 		mov.w   r0,@r1
+; 		mov.w   #$5A20,r0		; Timer for the next WD
+; 		mov.w   r0,@r1
+; 		rts
+; 		nop
+; 		align 4
+; .finish_now:
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+; 		mov	#$FFFFFE80,r1			; Stop watchdog
+; 		mov.w   #$A518,r0
+; 		mov.w   r0,@r1
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Super sprites
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; MarsVideo_MkSprPz
+;
+; Read sprite list and build pieces
+; --------------------------------------------------------
+
+MarsVideo_MkSprPz:
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
+		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r1
+		mov	#RAM_Mars_SVdpDrwList,r2
+.next_spr:
 		mov	@(marsspr_data,r1),r0
 		tst	r0,r0
 		bt	.finish_now
-		mov	#Cach_SprBkup_S,r0
-		mov	r2,@-r0
-		mov	r3,@-r0
-		mov	r4,@-r0
-		mov	r5,@-r0
-		mov	r6,@-r0
-		mov	r7,@-r0
-		mov	r8,@-r0
-		mov	r9,@-r0
-		mov	r10,@-r0
-		sts	macl,@-r0
-		sts	mach,@-r0
 
-	; quick.
-	; r1 - current sprite
-	; r2 - output piece
-
-	; TODO: WIP
-		mov	@(marsGbl_PlyPzList_W,gbr),r0
-		mov	r0,r2
 		mov	@(marsspr_data,r1),r0
 		mov	r0,@(plypz_mtrl,r2)
 		mov.w	@(marsspr_x,r1),r0		; r3 - X pos
@@ -57,6 +110,7 @@ CACHE_MSTR_SCRL:
 		mov.w	@(marsspr_ys,r1),r0		; r6 - YS
 		mov	r0,r6
 		mov.w	@(marsspr_dwidth,r1),r0
+		mov	r0,r10
 		mov	r0,r7
 		shll16	r7
 		mov	r7,r8				; spritesheet width
@@ -75,76 +129,63 @@ CACHE_MSTR_SCRL:
 		mov	r3,r8
 		mov	r3,r9
 		add	r5,r9
-		shll16	r8			; XL/XR
+		shll16	r8			; Screen XL/XR
 		extu.w	r9,r9
 		or	r8,r9
 		mov	r9,@(plypz_xl,r2)
-		mov	#0,r0			; no screen DX/DY
+		mov	#0,r0			; No screen DX/DY
 		mov	r0,@(plypz_xl_dx,r2)
 		mov	r0,@(plypz_xr_dx,r2)
 
-		mov	#$00000020,r3
-		mov	#$00000000,r4
+	; Set pixel data position
+	; XL *----* XR
+	;    |    |
+	;    |    |
+	;    *----*
+	;    YL  YR
+		mov.w	@(marsspr_xt,r1),r0	; X frame and points
+		extu.b	r0,r8
+		shlr8	r0
+		mov	r0,r9
+		mov.w	@(marsspr_xfrm,r1),r0
+		shlr8	r0
+		mulu	r9,r0
+		sts	macl,r7
+		mov	r9,r3
+		add	r7,r3
+		shll16	r7
+		add	r7,r3
 		mov	r3,@(plypz_src_xl,r2)
+
+		mov.w	@(marsspr_xfrm,r1),r0
+		extu.b	r0,r0
+		mulu	r8,r0
+		sts	macl,r0
+		mov	r0,r4
+		shll16	r0
+		or	r0,r4
 		mov	r4,@(plypz_src_yl,r2)
 
-		xor	r0,r0
+		xor	r0,r0				; No X scale
 		mov	r0,@(plypz_src_xl_dx,r2)
 		mov	r0,@(plypz_src_xr_dx,r2)
-		mov	#1<<16,r0
+		mov	#1<<16,r0			; TODO: Y scaler goes here
 		mov	r0,@(plypz_src_yl_dx,r2)
 		mov	r0,@(plypz_src_yr_dx,r2)
 
 	; Next sprite and SVDP piece
-		add	#sizeof_marsspr,r1
-		add	#sizeof_plypz,r2
-		mov	r1,r0
-		mov	r0,@(marsGbl_CurrRdSpr,gbr)
-		mov	r2,r0
-		mov	r0,@(marsGbl_PlyPzList_W,gbr)
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; add one
 		add	#1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 
-		mov	#Cach_SprBkup_LB,r0
-		lds	@r0+,mach
-		lds	@r0+,macl
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		mov	@r0+,r4
-		mov	@r0+,r3
-		mov	@r0+,r2
-; wdm_next:
-
-		mov.l   #$FFFFFE80,r1
-		mov.w   #$A518,r0		; OFF
-		mov.w   r0,@r1
-		or      #$20,r0			; ON
-		mov.w   r0,@r1
-		mov.w   #$5A20,r0		; Timer for the next WD
-		mov.w   r0,@r1
-		rts
-		nop
-		align 4
+		add	#sizeof_marsspr,r1
+		bra	.next_spr
+		add	#sizeof_plypz,r2
 .finish_now:
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgStatus,gbr)
-		mov	#$FFFFFE80,r1			; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
 		rts
 		nop
 		align 4
 		ltorg
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Super sprites
-; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
 ; MarsVideo_SprBlkRefill
@@ -169,14 +210,15 @@ MarsVideo_SprBlkRefill:
 		shlr16	r2
 		exts.w	r1,r1
 		exts.w	r2,r2
-		mov	r1,r0
-		mov.w	r0,@(mbg_xpos_old,r14)
-		mov	r2,r0
-		mov.w	r0,@(mbg_ypos_old,r14)
+; 		mov	r1,r0
+; 		mov.w	r0,@(mbg_xpos_old,r14)
+; 		mov	r2,r0
+; 		mov.w	r0,@(mbg_ypos_old,r14)
 		mov.w	@(mbg_intrl_blk,r14),r0
-		neg	r0,r0
-		and	r0,r1
-		and	r0,r2
+; 		shar	r0
+; 		neg	r0,r0
+; 		and	r0,r1
+; 		and	r0,r2
 
 		mov	#_framebuffer,r12
 		mov	@(mbg_fbdata,r14),r0
@@ -260,7 +302,7 @@ MarsVideo_SprBlkRefill:
 		and	r6,r3
 		and	r6,r2
 		and	r6,r1
-		mov	#0,r6
+		xor	r6,r6
 .nxt_y:
 		cmp/ge	r8,r4
 		bf	.nxt_y_l
@@ -274,7 +316,7 @@ MarsVideo_SprBlkRefill:
 		mov	r6,@-r15
 		mov	r3,@-r15
 		mov	r1,@-r15
-		mov	#0,r6
+		xor	r6,r6
 .nxt_x:
 		cmp/ge	r11,r1		; X pixel-data wrap
 		bf	.xbg_l
@@ -307,19 +349,17 @@ MarsVideo_SprBlkRefill:
 		shll2	r0
 		shll2	r0
 		shll	r0
-
 		mov	@r15+,r1
 		mov	@r15+,r3
 		mov	@r15+,r6
 		mov	@r15+,r13
 
-
 		add	r0,r13
 		add	r7,r4
 		add	r7,r2
-		add 	r7,r6
 		cmp/ge	r8,r6
-		bf	.nxt_y
+		bf/s	.nxt_y
+		add 	r7,r6
 
 .no_data:
 		lds	@r15+,pr

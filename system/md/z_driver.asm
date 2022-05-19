@@ -1018,17 +1018,18 @@ mars_scomm:
 		ld	a,(iy+comm14)	; check if 68k got first.
 		bit	7,a
 		jr	nz,.wait_enter
-		or	1		; Set CMD mode 1
+		and	11110000b
+		or	1		; Set CMD task mode $01
 		ld	(iy+comm14),a
 		rst	8
-		and	00001111b	; did it write?
+		and	00001111b	; Did it write?
 		cp	1
 		jr	nz,.wait_enter
-		set	7,(iy+comm14)	; Set busy flag
+		set	7,(iy+comm14)	; Set CMD as ours.
 		set	1,(iy+standby)	; Request Slave CMD
 		rst	8
 .wait_cmd:
-; 		bit	1,(iy+standby)	; <-- this might fail on HW
+; 		bit	1,(iy+standby)	; <-- required
 ; 		jr	nz,.wait_cmd
 		ld	c,14		; c - 14 words
 .next_pass:
@@ -1052,6 +1053,7 @@ mars_scomm:
 		set	6,(iy+comm14)	; Send CLK to Slave CMD
 		rst	8
 .w_pass2:
+		nop
 		bit	6,(iy+comm14)	; CLK cleared?
 		jr	nz,.w_pass2
 		dec	c

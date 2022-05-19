@@ -1,4 +1,5 @@
 Marsiano-MARS
+
 A GameBase/Engine/Library for making Sega 32X Games in pure assembly on ALL CPUs *WORK IN PROGRESS*
 
 I'm also using this to research those real-hardware bugs and limitations that current emulators ignore.
@@ -20,9 +21,9 @@ Sound, Genesis and 32X:
 - Runs on Z80, with DMA-protection on the Genesis side
 - Supports PSG, FM and PWM. Up to 17 channels.
 - PSG: supports effects like Attack and Release. can autodetect if the NOISE channel uses Tone3(frequency-steal) mode.
-- YM2612: DAC sample playback at 18000hz aprox. with pitch, supports FM3 special mode .
+- YM2612: DAC sample playback at 18000hz with pitch, supports FM3 special mode .
 - PWM: 7-psuedo channels at 22050hz in Stereo and Mono with Pitch, Volume and Panning. Controlled by the sound driver in the Genesis side. Has PWM-overflow and ROM RV protection.
-- Supports Ticks and "sub-step" Tempo (default tracker tempos: 150 for NTSC and 120 for PAL)
+- Supports Ticks and "sub-steps" Tempo (default tracker tempos: 150 for NTSC and 120 for PAL)
 - Channel-link system: Any track-channel automaticly picks the available channel in the soundchip. (PSG, FM, PWM)
 - Two playback slots: Second slot has priority for SFX sound effects, it can temporally override channels used by the first slot.
 - Can autodetect each soundchips' special features (PSG, DAC and FM3 special) and swap those features mid-playback in the same slot. (ex. FM6 to DAC or DAC to FM6)
@@ -40,7 +41,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 
 -- General --
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
-- MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does, and not even close): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code it's just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
+- MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does, and not even close): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code used here is just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
 - The actual purpose of Cache isn't emulated at all. so emulators just treat everything as "Cache-thru"
 - The 4-byte LONG alignment limitation is ignored.
 - Fusion 3.64: vdpfill might randomly get stuck waiting for the framebuffer-busy bit.
@@ -52,11 +53,13 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 -- SH2---
 - The SDRAM, Framebuffer, ROM area and Cache run at different speeds for Reading/Writing and depending where the Program Counter (PC) is currently located. Cache being the fastest BUT with the lowest space to store code or data.
 - BUS fighting: If any of the SH2 CPUs READ/WRITE the same location at the same time it will crash the add-on. Only tested on the SDRAM area but I believe the video and audio registers are affected too. only the comm's are safe for both sides (and Genesis too.)
-- After setting _DMAOPERATION to 1 (Starting the DMA), it takes a little to start. add 5 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0)
+- After writing _DMAOPERATION to 1 (Starting the DMA), it takes a little to start. add 5 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0)
 - After DMA (Channel 0) finishes: If at any part of the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
+- If 68S is set to 0 WHILE the SH2's DMA trasnfer is active, it will crash the ENTIRE 32X add-on (both SH2)
+- If the 68k or Z80 requested CMD interrupt in the middle of SOFT-reset, the bit will get stuck and any new CMD requests will no longer happen. The solution is to set intmask to 0 then set your bits again on your "HotStart" code.
 
 -- SuperVDP --
-- Writing pixels in to the framebuffer in BYTEs cause a small delay. 6 NOPs aprox.
+- Writing pixels in to the framebuffer in BYTEs are slow. 6 NOPs aprox.
 - If any entry of the linetable ends with $xxFF and the XShift video register is set to 1, that line will NOT get shifted.
 
 -- PWM --

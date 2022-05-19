@@ -1483,7 +1483,6 @@ MarsVideo_MarkSprBlocks:
 		mov	@(marsspr_data,r13),r0
 		tst	r0,r0
 		bt	.exit
-
 		mov.w	@(marsspr_x,r13),r0		; r1 - X pos (left)
 		mov	r0,r1
 		mov.w	@(marsspr_xs,r13),r0		; r3 - XS (right)
@@ -1492,17 +1491,9 @@ MarsVideo_MarkSprBlocks:
 		mov	r0,r3
 		mov.w	@(marsspr_ys,r13),r0		; r4 - YS (bottom)
 		mov	r0,r4
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r5
 		add	r1,r2
 		add	r3,r4
-
-; 		shlr	r0
-		sub	r0,r1
-		sub	r0,r3
-		add	r0,r2
-		add	r0,r4
-		mov	r2,r0		; Check for reverse
+		mov	r2,r0		; Check X reverse
 		sub	r1,r0
 		cmp/pl	r0
 		bt	.x_good
@@ -1510,7 +1501,7 @@ MarsVideo_MarkSprBlocks:
 		mov	r2,r1
 		mov	r0,r2
 .x_good:
-		mov	r4,r0		; Check for reverse
+		mov	r4,r0		; Check Y reverse
 		sub	r3,r0
 		cmp/pl	r0
 		bt	.y_good
@@ -1518,6 +1509,14 @@ MarsVideo_MarkSprBlocks:
 		mov	r4,r3
 		mov	r0,r4
 .y_good:
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r5
+; 		shlr2	r0
+		sub	r0,r1
+		sub	r0,r3
+		add	r0,r2
+		add	r0,r4
+
 ; 		muls	r5,r1
 ; 		sts	macl,r1
 ; 		shlr8	r1

@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	0
+set_StartPage	equ	2
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -241,10 +241,11 @@ MD_DebugMenu:
 		move.w	#0,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
+		move.b	#32,marsspr_xt(a0)
+		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
 
 		move.l	#SuperSpr_Test,d0
-		add.l	#(32*48)*2,d0
 		move.l	d0,d1
 		or.l	#TH,d1
 		adda	#sizeof_marsspr,a0
@@ -254,6 +255,8 @@ MD_DebugMenu:
 		move.w	#(224/2)-64,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
+		move.b	#32,marsspr_xt(a0)
+		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
 
 		adda	#sizeof_marsspr,a0
@@ -1235,6 +1238,23 @@ MasterTrkList:
 SuperSprite_Test:
 	; SUPER SPRITE MOVE
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		sub.w	#1,(RAM_SprTimer).w
+		bpl.s	.wspr
+		move.w	#14,(RAM_SprTimer).w
+
+		move.b	marsspr_xfrm(a0),d0
+		add.w	#1,d0
+		and.w	#1,d0
+		move.b	d0,marsspr_xfrm(a0)
+		adda	#sizeof_marsspr,a0
+		move.b	marsspr_yfrm(a0),d0
+		add.w	#1,d0
+		and.w	#%11,d0
+		move.b	d0,marsspr_yfrm(a0)
+.wspr:
+
+
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		move.w	marsspr_x(a0),d0
 		move.w	marsspr_y(a0),d1
 		moveq	#1,d2
@@ -1258,6 +1278,21 @@ SuperSprite_Test:
 .nou_s:
 		move.w	d0,marsspr_x(a0)
 		move.w	d1,marsspr_y(a0)
+
+		move.w	marsspr_xs(a0),d0
+; 		move.w	marsspr_ys(a0),d1
+		moveq	#1,d2
+		moveq	#1,d3
+		btst	#bitJoyC,d7
+		beq.s	.nod_s2
+		add.w	d3,d0
+.nod_s2:
+		btst	#bitJoyB,d7
+		beq.s	.nou_s2
+		sub.w	d3,d0
+.nou_s2:
+		move.w	d0,marsspr_xs(a0)
+; 		move.w	d1,marsspr_ys(a0)
 
 		add.w	#1,(RAM_SprFrame).w
 		rts
@@ -1283,12 +1318,12 @@ str_Cursor:	dc.b " ",$A
 		dc.b " ",0
 		align 2
 str_Title:
-		dc.b "MARSIANO dev-menu",$A
+		dc.b "Proyecto MARSIANO test menu",$A
 		dc.b $A
-		dc.b "  Pseudo-GFX mode 01",$A
-		dc.b "  Pseudo-GFX mode 02",$A
-		dc.b "  Pseudo-GFX mode 03",$A
-		dc.b "  Pseudo-GFX mode 04",$A
+		dc.b "  Screen test 01",$A
+		dc.b "  Screen test 02",$A
+		dc.b "  Screen test 03",$A
+		dc.b "  Screen test 04",$A
 		dc.b "  GEMA sound player",0
 		align 2
 

@@ -8,7 +8,7 @@
 ; Settings
 ; --------------------------------------------------------
 
-MAX_MODELS	equ 14		; MAX 3D Models
+MAX_MODELS	equ 12		; MAX 3D Models
 MAX_SUPERSPR	equ 32		; Number of Super Sprites
 
 ; --------------------------------------------------------
@@ -36,16 +36,16 @@ sizeof_mdlobj	ds.l 0
 ; "Super" sprite
 		struct 0
 marsspr_data	ds.l 1		; Sprite pixel data (Cache'd or not), if 0 == end-of-list
-marsspr_dwidth	ds.w 1		; WIDTH size of spritesheet
+marsspr_dwidth	ds.w 1		; WIDTH size of the pixel data
 marsspr_indx	ds.w 1		; Palette index base
 marsspr_x	ds.w 1		; Screen X position
 marsspr_y	ds.w 1		; Screen Y position
 marsspr_xs	ds.w 1		; Sprite X size (Scrn Xpos + this)
 marsspr_ys	ds.w 1		; Sprite Y size (Scrn Ypos + this)
-marsspr_xtex	ds.b 1		; Texture X size
-marsspr_ytex	ds.b 1		; Texture Y size
-marsspr_xindx	ds.b 1		; Frame in X order
-marsspr_yindx	ds.b 1		; Frame in Y order
+marsspr_xt	ds.b 1		; Texture X size
+marsspr_yt	ds.b 1		; Texture Y size
+marsspr_xfrm	ds.b 1		; Frame in X order
+marsspr_yfrm	ds.b 1		; Frame in Y order
 sizeof_marsspr	ds.l 0
 		finish
 
@@ -96,13 +96,11 @@ Dreq_SclMode	ds.l 1
 
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
-Dreq_ScrnBuff	ds.b $20				; <-- only one buffer per screen
+Dreq_ScrnBuff	ds.b $20				; Buffer for the current screen mode
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
 Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; SuperVDP sprites
 sizeof_dreq	ds.l 0
 		finish
-
-; MAX_DREQ		equ sizeof_dreq
 
 	if MOMPASS=7
 		message "DREQ RAM uses: \{sizeof_dreq}"

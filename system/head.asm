@@ -6,7 +6,7 @@
 ; ----------------------------------------------------------------
 
 		dc.l 0				; Stack point
-		dc.l $3F0			; Entry point (always $3F0)
+		dc.l $3F0			; Entry point: MUST point to $3F0
 		dc.l MD_ErrBus			; Bus error
 		dc.l MD_ErrAddr			; Address error
 		dc.l MD_ErrIll			; ILLEGAL Instruction
@@ -90,8 +90,9 @@
 ; ----------------------------------------------------------------
 ; Second header for 32X
 ;
-; These new jumps are for the 68K if the 32X is currently
-; active.
+; These new jumps are for the 68K if the 32X is currently active.
+;
+; Disable ALL interrupts if you are using the RV bit
 ; ----------------------------------------------------------------
 
 		jmp	($880000|MARS_Entry).l
@@ -201,8 +202,8 @@
 ; ** HARDWARE BUG: This may still trigger if using
 ; DREQ, DMA or Watchdog, and/or pressing RESET so many times.
 ; (Found this on VRDX)
-; workaround: after jumping into the "No 32X detected" loop,
-; check for the checksum bit. and if it passes: Init as usual.
+; Workaround: after jumping to the "No 32X detected" loop,
+; test the checksum bit, and if it passes: Init as usual.
 ; ----------------------------------------------------------------
 
 MARS_Entry:
@@ -250,10 +251,8 @@ MARS_Entry:
 ; ----------------------------------------------------------------
 
 .no_mars:
-		btst	#5,d0			; If for some reason we got here...
-		bne.s	MD_Init			;
-
-	; And if 32X is not actually present...
+		btst	#5,d0				; If for some reason we got here...
+		bne.s	MD_Init				;
 		move.w	#$2700,sr			; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
 		move.w	#$0E00,(vdp_data).l		; Write blue
@@ -292,10 +291,10 @@ MD_Init:
 .wait_dma:	move.w	(a6),d7				; Check if our DMA is active.
 		btst	#1,d7
 		bne.s	.wait_dma
-; .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
-; 		bne.s	.wm
-; .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
-; 		bne.s	.ws
+.wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
+		bne.s	.wm
+.ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
+		bne.s	.ws
 ; 		moveq	#0,d0				; Reset comm values
 ; 		move.l	d0,comm0(a5)
 ; 		move.l	d0,comm4(a5)
@@ -318,5 +317,4 @@ MD_HotStart:
 		bcs.s	.loop_ram
 		move.l	#$80048104,(vdp_ctrl).l		; Default top VDP regs
 		movem.l	($FF0000),d0-a6			; Clear registers using zeros from RAM
-
 	; jump goes here...

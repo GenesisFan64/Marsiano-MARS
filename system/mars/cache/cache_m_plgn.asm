@@ -14,8 +14,6 @@ CACHE_MSTR_PLGN:
 ; Watchdog interrupt
 ; --------------------------------------------------------
 
-; 		mov	#$F0,r0
-; 		ldc	r0,sr
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0

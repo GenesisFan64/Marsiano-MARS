@@ -11,6 +11,41 @@ CACHE_SLAVE:
 
 ; ====================================================================
 ; --------------------------------------------------------
+; Watchdog interrupt
+; --------------------------------------------------------
+
+		mov	#_FRT,r1
+		mov.b	@(7,r1),r0
+		xor	#2,r0
+		mov.b	r0,@(7,r1)
+
+; wdg_pzfull:
+; 		mov.l   #$FFFFFE80,r1
+; 		mov.w   #$A518,r0		; OFF
+; 		mov.w   r0,@r1
+; 		or      #$20,r0			; ON
+; 		mov.w   r0,@r1
+; 		mov.w   #$5A10,r0		; Timer for the next WD
+; 		mov.w   r0,@r1
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
+; wdg_finish:
+; 		xor	r0,r0
+; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
+; 		add	#1,r0
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+		mov	#$FFFFFE80,r1			; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
+		rts
+		nop
+		align 4
+
+; ====================================================================
+; --------------------------------------------------------
 ; PWM Interrupt for playback
 ; --------------------------------------------------------
 
