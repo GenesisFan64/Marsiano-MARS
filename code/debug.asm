@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	2
+set_StartPage	equ	0
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -57,14 +57,14 @@ MD_DebugMenu:
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 
+		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
+		bsr	Video_Update
+
 		moveq	#0,d0
 		bsr	Sound_TrkStop
 		moveq	#1,d0
 		bsr	Sound_TrkStop
 		clr.w	(RAM_PaletteFd).w
-
-		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
-		bsr	Video_Update
 		move.w	#set_StartPage,(RAM_CurrPage).w
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		move.b	#%111,(RAM_VdpRegs+$B).l
@@ -80,6 +80,7 @@ MD_DebugMenu:
 		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.loop
+
 		move.w	(RAM_CurrPage).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -1318,7 +1319,7 @@ str_Cursor:	dc.b " ",$A
 		dc.b " ",0
 		align 2
 str_Title:
-		dc.b "Proyecto MARSIANO test menu",$A
+		dc.b "Project MARSIANO test menu",$A
 		dc.b $A
 		dc.b "  Screen test 01",$A
 		dc.b "  Screen test 02",$A

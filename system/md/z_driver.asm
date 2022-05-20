@@ -2665,6 +2665,10 @@ setupchip:
 
 gema_init:
 		call	dac_off
+		ld	b,0		; Reset bank
+		ld	hl,0
+		call	showRom
+		ld	(hl),a
 		ld	hl,dWaveBuff	; hl - Wave buffer START
 		ld	de,dWaveBuff+1	; de - Wave next byte
 		ld	bc,100h-1	; bc - length for copying

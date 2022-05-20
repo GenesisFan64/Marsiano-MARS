@@ -23,12 +23,6 @@ System_Init:
 		move.b	d0,(sys_ctrl_2).l	; Controller 2
 		move.b	d0,(sys_ctrl_3).l	; Modem
 		move.w	#0,(z80_bus).l		; Enable Z80
-		lea	(RAM_InputData),a0	; Clear input data buffer
-		move.w	#sizeof_input-1/2,d1
-		moveq	#0,d0
-.clrinput:
-		move.w	#0,(a0)+
-		dbf	d1,.clrinput
 		move.w	#$4EF9,d0		; Set JMP opcode for the Hblank/VBlank jumps
  		move.w	d0,(RAM_MdMarsVInt).l
 		move.w	d0,(RAM_MdMarsHInt).l
@@ -39,6 +33,13 @@ System_Init:
 		move.l	#VInt_Default,d0	; Set default ints
 		move.l	#Hint_Default,d1
 		bsr	System_SetInts
+
+		lea	(RAM_InputData),a0	; Clear input data buffer
+		move.w	#sizeof_input-1/2,d1
+		moveq	#0,d0
+.clrinput:
+		move.w	#0,(a0)+
+		dbf	d1,.clrinput
 		move.w	(sp)+,sr
 		rts
 
@@ -64,9 +65,8 @@ System_WaitFrame:
 		beq.s	.wait_in
 		bsr	System_Input		; Read inputs FIRST
 
-	; DMA'd Scroll and Palette
-		lea	(vdp_ctrl),a6
-		move.w	#$8100,d7			; DMA ON
+		lea	(vdp_ctrl),a6		; *** DMA'd Scroll and Palette
+		move.w	#$8100,d7		; DMA ON
 		move.b	(RAM_VdpRegs+1),d7
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a6)
@@ -154,21 +154,6 @@ System_MarsUpdate_Out:
 ; a0 - LONG | Source data to transfer
 ; d0 - WORD | Size (aligned by 8, MUST end with 0 or 8)
 ;
-; CALL THIS OUTSIDE OF VBLANK ONLY.
-;
-; NOTE: THIS CODE MUST BE LOCATED IN THE
-; $880000/$900000 AREAS.
-; --------------------------------------------------------
-
-; --------------------------------------------------------
-; System_SendDreq
-;
-; Send data to the 32X using DREQ and CMD interrupt
-;
-; Input:
-; a0 - LONG | Source data to transfer
-; d0 - WORD | Size (aligned by 8, MUST end with 0 or 8)
-;
 ; NOTE: THIS CODE ONLY WORKS PROPERLY ON THE
 ; $880000/$900000 AREAS. (FOR real hardware)
 ;
@@ -180,8 +165,10 @@ System_SendDreq:
 		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
 		lea	($A15112).l,a4
-.l1:		btst	#2,dreqctl+1(a5)	; 68S still active?
+.l1:		move.w	dreqctl(a5),d4		; 68S still active?
+		btst	#2,d4
 		bne.s	.l1
+		move.w	#%000,dreqctl(a5)	; Clear 68S first.
 		move.w	d0,d6			; Length in bytes
 		lsr.w	#1,d6			; d6 - (length/2)
 		move.w	d6,dreqlen(a5)		; Set transfer length (size/2)
@@ -189,16 +176,15 @@ System_SendDreq:
 		move.w	d6,d5			; d5 - (length/2)/4
 		lsr.w	#2,d5
 		sub.w	#1,d5
+		move.w	#%100,dreqctl(a5)	; Set 68S
 .wait_bit:	move.b	comm12(a5),d4		; Wait comm bit signal
 		btst	#6,d4
 		beq.s	.wait_bit
-		move.w	#%100,dreqctl(a5)	; Set 68S
 .l0:		move.w  (a0)+,(a4)		; *** CRITICAL PART***
 		move.w  (a0)+,(a4)
 		move.w  (a0)+,(a4)
 		move.w  (a0)+,(a4)
 		dbf	d5,.l0
-.bad_trnsfr:
 		move.w	d7,sr
 		rts
 
@@ -600,14 +586,13 @@ System_SramInit:
 ; --------------------------------------------------------
 
 Mode_Init:
-; 		bsr	Video_Clear
-; 		lea	(RAM_ModeBuff),a4
-; 		move.w	#(MAX_MDERAM/2)-1,d5
-; 		moveq	#0,d4
-; .clr:
-; 		move.w	d4,(a4)+
-; 		dbf	d5,.clr
-
+		bsr	Video_Clear
+		lea	(RAM_ModeBuff),a4
+		move.w	#(MAX_MDERAM/2)-1,d5
+		moveq	#0,d4
+.clr:
+		move.w	d4,(a4)+
+		dbf	d5,.clr
 		move.w	#0,d0
 		bsr	Video_Mars_GfxMode
 		rts

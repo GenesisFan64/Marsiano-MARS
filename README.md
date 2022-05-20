@@ -30,7 +30,7 @@ Sound, Genesis and 32X:
 - Music can be composed in any tracker that supports ImpulseTracker (.IT), then imported with a simple python3 script
 
 Notes/Current issues:
-- SOFT reseting too much times will freeze the entire 32X requiring to unplug it's power and plugging it again. (!!)
+- SOFT reseting too much will freeze the entire 32X requiring to unplug it's power and plugging it again. (!!)
 - (PWM, RV-backup) If Genesis' DMA takes too long to process (in the DMA BLAST list) it might play trash wave data.
 
 Planned:
@@ -49,14 +49,18 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS:
 -- 68000 --
 - Writing to the DREQ's FIFO only works properly on the $880000/$900000 areas. Doing the writes in the RAM area ($FF0000) will cause to miss some WORD writes during transfer.
 - RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers. (from $88xxxx/$9xxxxx to $0xxxxx, all 4MB view area) If you do any DMA-transfer without setting this bit it will read trash data. Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the and last VDP write on the RAM area. (Note: Transferring RAM data to VDP doesn't require the RV bit) For the SH2 side: If RV is set, any read from the ROM area will return trash data.
+- If 68S is set to 0 in the middle of the SH2's DMA transfer of DREQ, it will crash the ENTIRE 32X add-on.
+- On soft-reset, 68S bit MAY get stuck as "Active" it was in the middle of a DREQ transfer.
+- Checking for 68S bit to be 0 might not work.
 
 -- SH2---
 - The SDRAM, Framebuffer, ROM area and Cache run at different speeds for Reading/Writing and depending where the Program Counter (PC) is currently located. Cache being the fastest BUT with the lowest space to store code or data.
 - BUS fighting: If any of the SH2 CPUs READ/WRITE the same location at the same time it will crash the add-on. Only tested on the SDRAM area but I believe the video and audio registers are affected too. only the comm's are safe for both sides (and Genesis too.)
 - After writing _DMAOPERATION to 1 (Starting the DMA), it takes a little to start. add 5 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0)
 - After DMA (Channel 0) finishes: If at any part of the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
-- If 68S is set to 0 WHILE the SH2's DMA trasnfer is active, it will crash the ENTIRE 32X add-on (both SH2)
-- If the 68k or Z80 requested CMD interrupt in the middle of SOFT-reset, the bit will get stuck and any new CMD requests will no longer happen. The solution is to set intmask to 0 then set your bits again on your "HotStart" code.
+- If DREQLEN gets modified during the DREQ transfer it will corrupt the output and probably freeze the entire 32X
+- When setting your interrupt-enable bits, OR the bits instead of MOVing them
+- If the 68k or Z80 requested CMD interrupt in the middle of SOFT-reset, the bit will get stuck and any new CMD requests will no longer happen. The solution is to set intmask to 0 then set your bits again on your "HotStart" code. (TODO: maybe not, i'll keep checking)
 
 -- SuperVDP --
 - Writing pixels in to the framebuffer in BYTEs are slow. 6 NOPs aprox.

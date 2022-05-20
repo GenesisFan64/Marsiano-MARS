@@ -54,7 +54,7 @@ Video_Init:
 .clrram:
 		move.b	d6,(a6)+
 		dbf	d7,.clrram
-		lea	list_vdpregs(pc),a6	; Init registers
+		lea	list_vdpregs(pc),a6
 		lea	(RAM_VdpRegs).w,a5
 		lea	(vdp_ctrl),a4
 		move.w	#$8000,d6
@@ -66,16 +66,13 @@ Video_Init:
 		add.w	#$100,d6
 		dbf	d7,.loop
 .exit:
-	; DMA RV-bit safe code
-	; TODO: solo copiarme el write final en
-	; vez de todo el codigo.
-		lea	(dmacode_start),a1
+		lea	(dmacode_start),a1		; TODO: optimize this.
 		lea	(RAM_DmaCode).l,a0
 		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
 .copysafe:
 		move.l	(a1)+,(a0)+
 		dbf	d0,.copysafe
-		rts
+; 		rts
 
 ; --------------------------------------------------------
 ; Video_Update

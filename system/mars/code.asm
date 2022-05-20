@@ -9,9 +9,9 @@
 ; *************************************************
 ; communication setup:
 ;
-; comm0-comm7  - ** FREE to use ***
+; comm0-comm7  - ** FREE ***
 ; comm8-comm11 - Used to transfer data manually
-;                from Z80 to SH2 side, 68K uses DREQ.
+;                from Z80 to SH2 side, 68k uses DREQ.
 ; comm12       - Master CPU control
 ; comm14       - Slave CPU control
 ; *************************************************
@@ -38,22 +38,20 @@ marsGbl_PlyPzList_R	ds.l 1	; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
 marsGbl_PlyPzList_Start	ds.l 1	; Polygon pieces list Start point
 marsGbl_PlyPzList_End	ds.l 1	; Polygon pieces list End point
-marsGbl_CurrRdSpr	ds.l 1	; Current sprite to process
-marsGbl_CurrRdPlgn	ds.l 1	; Current polygon to slice
+marsGbl_CurrRdPlgn	ds.l 1	; Current polygon to read for slicing
+
 marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
-marsGbl_WdgBusy		ds.w 1
 marsGbl_WdgStatus	ds.w 1	; Watchdog exit status
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
 marsGbl_CntrRdSpr	ds.w 1	; Number of sprites to read
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: a HBlank list)
-marsGbl_RomBlkM		ds.w 1	; Flag to report that MASTER is reading from ROM area
-marsGbl_RomBlkS		ds.w 1	; Flag to report that SLAVE is reading from ROM area
-marsGbl_MdInitTmr	ds.w 1	; Redraw counter (Write $02)
+
+marsGbl_MdInitTmr	ds.w 1	; Screen init counter for redrawing the entire screen (Write $02)
 marsGbl_BgDrwR		ds.w 1	; Write 2 to redraw these offscreen sections
 marsGbl_BgDrwL		ds.w 1	; ***
 marsGbl_BgDrwU		ds.w 1	; ***
@@ -426,6 +424,7 @@ m_irq_cmd:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
+		mov.w	@r1,r0
 
 		mov	r2,@-r15
 		mov	r3,@-r15
@@ -517,39 +516,19 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-; 		mov	#_FRT,r1
-; 		mov.b	@(7,r1),r0
-; 		xor	#2,r0
-; 		mov.b	r0,@(7,r1)
-; 		mov.l	#$20004014,r1
-; 		mov.w	r0,@r1
-; 		mov.w	@r1,r0
-; 		mov	#$FFFFFE80,r1	; Disable Watchdog
-; 		mov.w	#$A518,r0
-; 		mov.w	r0,@r1
-; 		nop
-; 		nop
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
 		mov	#_sysreg,r1
 		mov	r1,r0
 		mov.w	r0,@(vresintclr,r1)
-		mov.b	@(dreqctl+1,r1),r0
-		tst	#%10,r0
+		mov.b	@(dreqctl,r1),r0
+		tst	#1,r0
 		bf	.rv_busy
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0		; Disable Watchdog
-		mov.w	r0,@r1
-; 		mov	#_DMASOURCE0,r1
-; 		mov	@($C,r1),r0
-; 		tst	#%01,r0
-; 		bt	.no_dma
-; .wait_dma:	mov	@($C,r1),r0
-; 		tst	#%10,r0
-; 		bt	.wait_dma
+		mov	#"M_OK",r0
+		mov	r0,@(comm0,r1)
+		mov	#(CS3|$40000)-8,r15
+		mov	#SH2_M_HotStart,r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -558,15 +537,6 @@ m_irq_vres:
 		mov	r0,@r1
 		mov	#$44E0,r1
 		mov	r0,@r1
-; .no_dma:
-		mov	#_sysreg,r1
-		mov	#"M_OK",r0
-		mov	r0,@(comm0,r1)
-		mov	#(CS3|$40000)-8,r15
-		mov	#SH2_M_HotStart,r0
-		mov	r0,@r15
-		mov.w   #$F0,r0
-		mov	r0,@(4,r15)
 		rte
 		nop
 		align 4
@@ -612,6 +582,7 @@ s_irq_cmd:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
+		mov.w	@r1,r0
 
 	; ---------------------------------
 		mov	#_sysreg+comm14,r1
@@ -964,32 +935,19 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-; 		mov	#_FRT,r1
-; 		mov.b	@(7,r1),r0
-; 		xor	#2,r0
-; 		mov.b	r0,@(7,r1)
-; 		mov.l	#$20004014,r1
-; 		mov.w	r0,@r1
-; 		mov.w	@r1,r0
-; 		mov	#$FFFFFE80,r1	; Disable Watchdog
-; 		mov.w	#$A518,r0
-; 		mov.w	r0,@r1
-; 		nop
-; 		nop
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
 		mov	#_sysreg,r1
 		mov	r1,r0
 		mov.w	r0,@(vresintclr,r1)
-		mov.b	@(dreqctl+1,r1),r0
-		tst	#%10,r0
+		mov.b	@(dreqctl,r1),r0
+		tst	#1,r0
 		bf	.rv_busy
-		mov	#$FFFFFE80,r1
-		mov.w	#$A518,r0		; Disable Watchdog
-		mov.w	r0,@r1
+		mov	#"S_OK",r0
+		mov	r0,@(comm4,r1)
+		mov	#(CS3|$3F000)-8,r15
+		mov	#SH2_S_HotStart,r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -998,14 +956,6 @@ s_irq_vres:
 		mov	r0,@r1
 		mov	#$44E0,r1
 		mov	r0,@r1
-		mov	#_sysreg,r1
-		mov	#"S_OK",r0
-		mov	r0,@(comm4,r1)
-		mov	#(CS3|$3F000)-8,r15
-		mov	#SH2_S_HotStart,r0
-		mov	r0,@r15
-		mov.w   #$F0,r0
-		mov	r0,@(4,r15)
 		rte
 		nop
 		align 4
@@ -1115,33 +1065,42 @@ Mars_LoadFastCode:
 
 		align 4
 SH2_M_Entry:
-		mov.l	#_FRT,r14
+		mov	#STACK_MSTR,r15			; Reset stack
+		mov	#SH2_Master,r0			; Reset vbr
+		ldc	r0,vbr
+		mov.l	#_FRT,r1
 		mov	#0,r0
-		mov.b	r0,@(0,r14)
+		mov.b	r0,@(0,r1)
 		mov	#$FFFFFFE2,r0
-		mov.b	r0,@(7,r14)
+		mov.b	r0,@(7,r1)
 		mov	#0,r0
-		mov.b	r0,@(4,r14)
+		mov.b	r0,@(4,r1)
 		mov	#1,r0
-		mov.b	r0,@(5,r14)
+		mov.b	r0,@(5,r1)
 		mov	#0,r0
-		mov.b	r0,@(6,r14)
+		mov.b	r0,@(6,r1)
 		mov	#1,r0
-		mov.b	r0,@(1,r14)
+		mov.b	r0,@(1,r1)
 		mov	#0,r0
-		mov.b	r0,@(3,r14)
-		mov.b	r0,@(2,r14)
-		mov	#$FFFFFFF2,r0
-		mov.b	r0,@(7,r14)
-		mov	#0,r0
-		mov.b	r0,@(4,r14)
-		mov	#1,r0
-		mov.b	r0,@(5,r14)
-		mov	#$FFFFFFE2,r0
-		mov.b	r0,@(7,r14)
-		mov	#STACK_MSTR,r15			; Set default Stack for Master
-		mov	#RAM_Mars_Global,r14		; GBR - Global values/variables go here.
-		ldc	r14,gbr
+		mov.b	r0,@(3,r1)
+		mov.b	r0,@(2,r1)
+; 		mov	#$FFFFFFF2,r0		; <-- not needed here
+; 		mov.b	r0,@(7,r1)
+; 		mov	#0,r0
+; 		mov.b	r0,@(4,r1)
+; 		mov	#1,r0
+; 		mov.b	r0,@(5,r1)
+; 		mov	#$FFFFFFE2,r0
+; 		mov.b	r0,@(7,r1)
+		mov	#_sysreg,r1
+    		mov	#0,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	r0,@(vintclr,r1)
+		mov.w	r0,@(hintclr,r1)
+		mov.w	r0,@(cmdintclr,r1)
+
+		mov	#RAM_Mars_Global,r1		; Reset gbr
+		ldc	r1,gbr
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1149,7 +1108,8 @@ SH2_M_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-
+		mov	#$F0,r0				; Interrupts OFF
+		ldc	r0,sr
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
@@ -1172,25 +1132,35 @@ SH2_M_Entry:
 
 SH2_M_HotStart:
 		mov	#_sysreg,r1
-		mov	#0,r0				; Reset interrupt mask
-    		mov.b	r0,@(intmask,r1)
-		mov	#$20004000,r14
-		mov	#0,r0
-		mov.w	r0,@($14,r14)
-		mov.w	r0,@($16,r14)
-		mov.w	r0,@($18,r14)
-		mov.w	r0,@($1A,r14)
-		mov	#RAM_Mars_DreqRead,r1		; Clear DREQ output
-		mov	#sizeof_dreq/4,r2		; NOTE: length as 4bytes
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
+		mov	#_CCR,r1		; Reset CACHE
+		mov	#$10,r0
+		mov.b	r0,@r1
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		mov	#9,r0
+		mov.b	r0,@r1
+		mov	#RAM_Mars_DreqRead,r1	; Clear DREQ output
+		mov	#sizeof_dreq/4,r2	; NOTE: length as 4bytes
 		mov	#0,r0
 .clrram:
 		mov	r0,@r1
 		dt	r2
 		bf/s	.clrram
 		add	#4,r1
+
 		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON,r0			; Enable usage of these interrupts
-    		mov.b	r0,@(intmask,r1)
+		mov.w	@r1,r0
+		or	#CMDIRQ_ON,r0
+		mov.w	r0,@r1
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	master_loop
@@ -1963,63 +1933,52 @@ mstr_gfx4_loop:
 
 		align 4
 SH2_S_Entry:
-		mov.l	#_FRT,r14
+		mov	#STACK_SLV,r15		; Reset stack
+		mov	#SH2_Slave,r0		; Reset vbr
+		ldc	r0,vbr
+		mov.l	#_FRT,r1
 		mov	#0,r0
-		mov.b	r0,@(0,r14)
+		mov.b	r0,@(0,r1)
 		mov	#$FFFFFFE2,r0
-		mov.b	r0,@(7,r14)
+		mov.b	r0,@(7,r1)
 		mov	#0,r0
-		mov.b	r0,@(4,r14)
+		mov.b	r0,@(4,r1)
 		mov	#1,r0
-		mov.b	r0,@(5,r14)
+		mov.b	r0,@(5,r1)
 		mov	#0,r0
-		mov.b	r0,@(6,r14)
+		mov.b	r0,@(6,r1)
 		mov	#1,r0
-		mov.b	r0,@(1,r14)
+		mov.b	r0,@(1,r1)
 		mov	#0,r0
-		mov.b	r0,@(3,r14)
-		mov.b	r0,@(2,r14)
-		mov	#$FFFFFFF2,r0
-		mov.b	r0,@(7,r14)
+		mov.b	r0,@(3,r1)
+		mov.b	r0,@(2,r1)
+		mov	#$FFFFFFF2,r0		; <-- PWM interrupt needs this
+		mov.b	r0,@(7,r1)		; or it will freeze for no reason.
 		mov	#0,r0
-		mov.b	r0,@(4,r14)
+		mov.b	r0,@(4,r1)
 		mov	#1,r0
-		mov.b	r0,@(5,r14)
+		mov.b	r0,@(5,r1)
 		mov	#$FFFFFFE2,r0
-		mov.b	r0,@(7,r14)
-; 		mov.l	#$FFFFFE10,r14
-; 		mov	#0,r0
-; 		mov.b	r0,@(0,r14)
-; 		mov	#$FFFFFFE2, r0
-; 		mov.b	r0,@(7,r14)
-; 		mov	#0,r0
-; 		mov.b	r0,@(4,r14)
-; 		mov	#1,r0
-; 		mov.b	r0,@(5,r14)
-; 		mov	#0,r0
-; 		mov.b	r0,@(6,r14)
-; 		mov	#1,r0
-; 		mov.b	r0,@(1,r14)
-; 		mov	#0,r0
-; 		mov.b	r0,@(3,r14)
-; 		mov.b	r0,@(2,r14)
-		mov	#STACK_SLV,r15			; Reset stack
-		mov	#RAM_Mars_Global,r14		; Reset gbr
-		ldc	r14,gbr
-		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
+		mov.b	r0,@(7,r1)		; <-- ***
+		mov	#_sysreg,r1
+    		mov	#0,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	r0,@(vintclr,r1)
+		mov.w	r0,@(hintclr,r1)
+		mov.w	r0,@(cmdintclr,r1)
+
+		mov	#RAM_Mars_Global,r1	; Reset gbr
+		ldc	r1,gbr
+		mov.l   #$FFFFFEE2,r0		; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
 		mov.l   #$FFFFFEE4,r0
-		mov     #$120/4,r1			; Watchdog: Set jump pointer (VBR + this/4) (WITV)
+		mov     #$120/4,r1		; Watchdog: Set jump pointer (VBR + this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-
-		mov	#CACHE_SLAVE,r1
-		mov	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r2
-		mov	#Mars_LoadFastCode,r0
-		jsr	@r0
-		nop
-		bsr	MarsSound_Init			; Init sound
+		mov	#$F0,r0			; Interrupts OFF
+		ldc	r0,sr
+		bsr	MarsSound_Init		; Init sound
 		nop
 
 ; ====================================================================
@@ -2028,16 +1987,29 @@ SH2_S_Entry:
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
-		mov	#_sysreg,r1
-		mov	#0,r0
-    		mov.b	r0,@(intmask,r1)
-		mov	#$20004000,r14
-		mov	#0,r0
-		mov.w	r0,@($14,r14)
-		mov.w	r0,@($16,r14)
-		mov.w	r0,@($18,r14)
-		mov.w	r0,@($1A,r14)
-		mov	#0,r0				; Stop ALL active PWM channels
+		mov	#$FFFFFE80,r1
+		mov.w	#$A518,r0		; Disable Watchdog
+		mov.w	r0,@r1
+		mov	#_CCR,r1		; Reset CACHE
+		mov	#$10,r0
+		mov.b	r0,@r1
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		nop
+		mov	#9,r0
+		mov.b	r0,@r1
+
+		mov	#CACHE_SLAVE,r1
+		mov	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r2
+		mov	#Mars_LoadFastCode,r0
+		jsr	@r0
+		nop
+		mov	#0,r0			; Stop ALL active PWM channels
 		mov	#MarsSnd_PwmChnls,r1
 		mov	#MAX_PWMCHNL,r2
 		mov	#sizeof_sndchn,r3
@@ -2046,9 +2018,11 @@ SH2_S_HotStart:
 		dt	r2
 		bf/s	.clr_enbl
 		add	r3,r1
+
 		mov	#_sysreg,r1
-		mov	#CMDIRQ_ON|PWMIRQ_ON,r0
-    		mov.b	r0,@(intmask,r1)
+		mov.w	@r1,r0
+		or	#CMDIRQ_ON|PWMIRQ_ON,r0
+		mov.w	r0,@r1
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	slave_loop

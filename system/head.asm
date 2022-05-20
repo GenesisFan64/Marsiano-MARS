@@ -207,41 +207,7 @@
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-		bcs	.no_mars
-		move.l	#0,(RAM_initflug).l	; Reset "INIT" flag
-		btst	#15,d0			; Soft reset?
-		beq	MD_Init
-		lea	(sysmars_reg).l,a5	; a5 - MARS register
-		btst.b	#0,1(a5)		; 32X enabled?
-		bne	.adapter_enbl		; If yes, start booting
-		lea	.ram_code(pc),a0	; Copy the adapter-retry code to RAM
-		lea	($FF0000).l,a1		; and jump there.
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		lea	($FF0000).l,a0
-		jmp	(a0)
-.ram_code:
-		move.b	#1,adapter(a5)		; Enable adapter.
-		lea	.restarticd(pc),a0	; JUMP to the following code in
-		adda.l	#$880000,a0		; the new 68k location
-		jmp	(a0)
-.restarticd:
-		lea	($A10000).l,a5		; a5 - MD's I/O area
-		move.l	#-64,a4			; a4 - $FFFFFF9C
-		move.w	#3900,d7		; d7 - loop this many times
-		lea	($880000+$6E4),a1	; Jump to ?res_wait (check ICD_MARS.PRG)
-		jmp	(a1)
-.adapter_enbl:
-		lea	(sysmars_reg),a5
-		btst.b	#1,1(a5)		; SH2 Reset request?
-		bne	MD_HotStart		; If not, we are on hotstart
-		bra.s	.restarticd
+		bcc	MD_Init			; Carry clear: pass
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -280,41 +246,32 @@ MD_ErrorTrap:
 		move.w	#$000E,(vdp_data).l		; Write red
 		bra.s	*
 
-; ------------------------------------------------
+; ====================================================================
+; ----------------------------------------------------------------
 ; Init
-; ------------------------------------------------
+; ----------------------------------------------------------------
 
 MD_Init:
 		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
-		lea	(vdp_ctrl).l,a6
-.wait_dma:	move.w	(a6),d7				; Check if our DMA is active.
-		btst	#1,d7
-		bne.s	.wait_dma
 .wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
 		bne.s	.wm
 .ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
 		bne.s	.ws
-; 		moveq	#0,d0				; Reset comm values
-; 		move.l	d0,comm0(a5)
-; 		move.l	d0,comm4(a5)
-; 		move.l	d0,comm8(a5)
-; 		move.l	d0,comm10(a5)
-; 		move.l	d0,comm12(a5)			; Clear last modes
-		move.l	#"INIT",(RAM_initflug).l	; Set "INIT" as our boot flag
-MD_HotStart:
-		cmp.l	#"INIT",(RAM_initflug).l
-		bne	MD_Init
+		move.w	#%000,dreqctl(a5)		; Clear 68S and RV
 		moveq	#0,d0				; Clear USP
 		movea.l	d0,a6
 		move.l	a6,usp
 		lea	($FFFF0000),a0			; Cleanup our RAM
 		move.l	#sizeof_mdram,d1
 		moveq	#0,d0
-.loop_ram:
-		move.w	d0,(a0)+
+.loop_ram:	move.w	d0,(a0)+
 		cmp.l	d1,a0
 		bcs.s	.loop_ram
+		lea	(vdp_ctrl).l,a6
+.wait_dma:	move.w	(a6),d7				; Check if our DMA is active.
+		btst	#1,d7
+		bne.s	.wait_dma
 		move.l	#$80048104,(vdp_ctrl).l		; Default top VDP regs
 		movem.l	($FF0000),d0-a6			; Clear registers using zeros from RAM
 	; jump goes here...
