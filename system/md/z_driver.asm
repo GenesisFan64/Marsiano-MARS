@@ -1012,7 +1012,6 @@ mars_scomm:
 		rst	8
 		xor	a
 		ld	(marsUpd),a
-
 .wait_enter:
 		nop
 		ld	a,(iy+comm14)	; check if 68k got first.
@@ -1025,11 +1024,11 @@ mars_scomm:
 		and	00001111b	; Did it write?
 		cp	1
 		jr	nz,.wait_enter
-		set	7,(iy+comm14)	; Set CMD as ours.
+		set	7,(iy+comm14)	; Set this as ours
 		set	1,(iy+standby)	; Request Slave CMD
 		rst	8
 .wait_cmd:
-; 		bit	1,(iy+standby)	; <-- required
+; 		bit	1,(iy+standby)
 ; 		jr	nz,.wait_cmd
 		ld	c,14		; c - 14 words
 .next_pass:

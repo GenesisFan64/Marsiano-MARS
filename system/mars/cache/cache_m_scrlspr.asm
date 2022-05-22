@@ -760,7 +760,6 @@ MarsVideo_DrawSuperSpr:
 	; r10 - Loop: Number of lines
 		align 4
 MarsVideo_DrawScaled:
-; 		mov	#RAM_Mars_BgBuffScale_M,r14
 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r14
 		mov	#_framebuffer+$200,r13	; r13 - Output
 		mov	@r14+,r7		; r7 - Input

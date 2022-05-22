@@ -46,12 +46,21 @@ GLBL_LASTORG	set *
 		endm
 		
 ; -------------------------------------
-; Finish
+; Finish struct
 ; -------------------------------------
 
 finish		macro				; Then finish custom struct.
 		!org GLBL_LASTORG
 		phase GLBL_LASTPC
+		endm
+
+; -------------------------------------
+; Color debug
+; -------------------------------------
+
+colorme		macro this
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#this,(vdp_data).l
 		endm
 
 ; -------------------------------------

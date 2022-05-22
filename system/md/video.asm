@@ -101,7 +101,7 @@ Video_Update:
 
 list_vdpregs:
 		dc.b $04			; HBlank int off, HV Counter on
-		dc.b $44			; Display ON, VBlank int off
+		dc.b $44			; Display ON, VBlank interrupt off
 		dc.b (($C000)>>10)		; ForeGrd at VRAM $C000 (%00xxx000)
 		dc.b (($D000)>>10)		; Window  at VRAM $D000 (%00xxxxy0)
 		dc.b (($E000)>>13)		; BackGrd at VRAM $E000 (%00000xxx)
@@ -133,10 +133,10 @@ ASCII_PAL_e:
 ; --------------------------------------------------------
 
 Video_Clear:
-		move.w	#0,d0			; Clears until $57F
-		move.w	#0,d1
-		move.w	#$57F*$20,d2
-		bsr	Video_Fill
+; 		move.w	#0,d0			; Clears until $57F
+; 		move.w	#0,d1
+; 		move.w	#$57F*$20,d2
+; 		bsr	Video_Fill
 
 Video_ClearScreen:
 		moveq	#0,d0
@@ -367,6 +367,8 @@ Video_LoadMap:
 ;
 ; Initializes the default Graphics and Palette
 ; for the font.
+;
+; *** ON VBLANK OR DISPLAY OFF ONLY ***
 ; --------------------------------------------------------
 
 Video_PrintInit:

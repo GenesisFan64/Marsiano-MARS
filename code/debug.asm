@@ -52,14 +52,11 @@ RAM_SprFrame	ds.w 1
 ; ------------------------------------------------------
 
 MD_DebugMenu:
-		move.w	#$2700,sr
-		bsr	Mode_FadeOut
-		bsr	Mode_Init
-		bsr	Video_PrintInit
-
+		or.w	#$700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-
+		bsr	Mode_Init
+		bsr	Video_PrintInit
 		moveq	#0,d0
 		bsr	Sound_TrkStop
 		moveq	#1,d0
@@ -67,7 +64,7 @@ MD_DebugMenu:
 		clr.w	(RAM_PaletteFd).w
 		move.w	#set_StartPage,(RAM_CurrPage).w
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
-		move.b	#%111,(RAM_VdpRegs+$B).l
+		move.b	#%000,(RAM_VdpRegs+$B).l
 		move.b	#0,(RAM_VdpRegs+7).l
 		bsr	Video_Update
 
@@ -80,7 +77,6 @@ MD_DebugMenu:
 		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.loop
-
 		move.w	(RAM_CurrPage).w,d0
 		and.w	#%11111,d0
 		add.w	d0,d0
@@ -132,7 +128,6 @@ MD_DebugMenu:
 		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
-
 		move.w	#0,d0
 		bsr	Video_Mars_GfxMode
 		lea	str_Title(pc),a0	; Print menu
@@ -230,9 +225,12 @@ MD_DebugMenu:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
+		lea	str_Page2(pc),a0
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
+
 	; SUPER SPRITES TEST
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
 		or.l	#TH,d1
@@ -302,7 +300,7 @@ MD_DebugMenu:
 		lea	(PalData_Mars_Test),a0
 		moveq	#0,d0
 		move.w	#256,d1
-		moveq	#1,d2
+		moveq	#0,d2
 		bsr	Video_FadePal_Mars
 ; 		lea	PAL_TESTBOARD(pc),a0
 ; 		moveq	#0,d0
@@ -336,6 +334,11 @@ MD_DebugMenu:
 .nou_m:
 		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w
 		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w
+		swap	d0
+		swap	d1
+		neg.w	d0
+		move.w	d0,(RAM_HorScroll).w
+		move.w	d1,(RAM_VerScroll).w
 
 		bsr	SuperSprite_Test
 		move.w	(Controller_1+on_press),d7
@@ -1340,9 +1343,9 @@ str_Title:
 str_Page1:
 		dc.b "GfxMode 01",0
 		align 2
-; str_Page2:
-; 		dc.b "GfxMode 02",0
-; 		align 2
+str_Page2:
+		dc.b "GfxMode 02",0
+		align 2
 str_Page3:
 		dc.b "GfxMode 03",0
 		align 2

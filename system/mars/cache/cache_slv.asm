@@ -58,6 +58,7 @@ s_irq_pwm:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+pwmintclr,r1
 		mov.w	r0,@r1
+		mov.w	@r1,r0
 
 ; ------------------------------------------------
 

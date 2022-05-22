@@ -207,7 +207,7 @@
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-		bcc	MD_Init			; Carry clear: pass
+		bcc	MD_Init				; Carry clear: pass
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -218,7 +218,7 @@ MARS_Entry:
 
 .no_mars:
 		btst	#5,d0				; If for some reason we got here...
-		bne.s	MD_Init				;
+		beq.s	MD_Init				;
 		move.w	#$2700,sr			; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
 		move.w	#$0E00,(vdp_data).l		; Write blue
@@ -253,25 +253,27 @@ MD_ErrorTrap:
 
 MD_Init:
 		move.w	#$2700,sr
+		tst.w	(vdp_ctrl).l
+		btst	#15,d0				; TODO: this seems to fail...
+		bne.s	.hotstart
 		lea	(sysmars_reg).l,a5
-.wm:		cmp.l	#"M_OK",comm0(a5)		; SH2 Master active?
+.wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master active?
 		bne.s	.wm
-.ws:		cmp.l	#"S_OK",comm4(a5)		; SH2 Slave active?
+.ws:		cmp.l	#"S_OK",comm4(a5)	; SH2 Slave active?
 		bne.s	.ws
-		move.w	#%000,dreqctl(a5)		; Clear 68S and RV
-		moveq	#0,d0				; Clear USP
-		movea.l	d0,a6
-		move.l	a6,usp
-		lea	($FFFF0000),a0			; Cleanup our RAM
+		lea	($FFFF0000),a0		; Cleanup our RAM
 		move.l	#sizeof_mdram,d1
 		moveq	#0,d0
 .loop_ram:	move.w	d0,(a0)+
 		cmp.l	d1,a0
 		bcs.s	.loop_ram
+		movem.l	($FF0000),d0-a6		; Clear registers using zeros from RAM
+.hotstart:
+		lea	(sysmars_reg).l,a5
 		lea	(vdp_ctrl).l,a6
-.wait_dma:	move.w	(a6),d7				; Check if our DMA is active.
+.wait_dma:	move.w	(a6),d7			; Check if our DMA is active.
 		btst	#1,d7
 		bne.s	.wait_dma
-		move.l	#$80048104,(vdp_ctrl).l		; Default top VDP regs
-		movem.l	($FF0000),d0-a6			; Clear registers using zeros from RAM
-	; jump goes here...
+		move.l	#$80048104,(a6)		; Default top VDP regs
+		moveq	#1,d0			; Flag to unlock both SH2
+		move.w	d0,comm8(a5)

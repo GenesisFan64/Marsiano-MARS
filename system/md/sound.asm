@@ -10,12 +10,10 @@
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-	; This align is for GEMS emulator only
-	; in case gets stuck in a black screen
-		align $80
+		align $80	; <-- needed because some stuff breaks....
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
-		move.b	#1,(z80_reset).l		; And reset
+		move.w	#$0100,(z80_reset).l		; Z80 reset
 .wait:
 		btst	#0,(z80_bus).l
 		bne.s	.wait
@@ -31,10 +29,12 @@ Sound_Init:
 .copy:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copy
-		move.b	#1,(z80_reset).l		; Reset again
+		move.w	#$0000,(z80_reset).l
 		nop
 		nop
 		nop
+		nop
+		move.w	#$0100,(z80_reset).l
 		move.w	#0,(z80_bus).l			; Start Z80
 		rts
 

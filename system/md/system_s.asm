@@ -46,8 +46,7 @@ System_Init:
 ; --------------------------------------------------------
 ; System_WaitFrame
 ;
-; Call this to wait and update next frame. DISPLAY MUST
-; BE ENABLED TO USE THIS.
+; Call this to wait and update next frame.
 ;
 ; This will also update the controllers, process DMA tasks
 ; from the BLAST list, and transfer the
@@ -57,15 +56,15 @@ System_Init:
 
 System_WaitFrame:
 		lea	(vdp_ctrl),a6
-.wait_lag:	move.w	(a6),d4
+.wait_lag:	move.w	(a6),d4			; LAG frame?
 		btst	#bitVBlk,d4
 		bne.s	.wait_lag
-		bsr	System_MarsUpdate
-		lea	(vdp_ctrl),a6
+		bsr	System_MarsUpdate_Out	; Process DREQ now.
 .wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
 		btst	#bitVBlk,d4
 		beq.s	.wait_in
 		bsr	System_Input		; Read inputs FIRST
+
 		lea	(vdp_ctrl),a6		; *** DMA'd Scroll and Palette
 		move.w	#$8100,d7		; DMA ON
 		move.b	(RAM_VdpRegs+1),d7
@@ -100,6 +99,10 @@ System_WaitFrame:
 		move.w	d7,(a6)
 		bsr	Video_DmaBlast		; Process DMA Blast list
 		add.l	#1,(RAM_Framecount).l
+; 		lea	(vdp_ctrl),a6
+; .wait_out:	move.w	(a6),d4
+; 		btst	#bitVBlk,d4
+; 		bne.s	.wait_out
 		rts
 
 ; --------------------------------------------------------
@@ -127,46 +130,61 @@ System_Dma_Exit:
 ; --------------------------------------------------------
 ; System_MarsUpdate
 ;
-; Send data to the 32X using DREQ and
-; the CMD interrupt
+; Call this on any change to the RAM_MdDreq area
+;
+; NOTE:
+; Call this OUTSIDE of VBlank only.
+; --------------------------------------------------------
+
+System_MarsUpdate:
+		move.w	(vdp_ctrl),d4		; Got on VBlank?
+		btst	#bitVBlk,d4
+		bne.s	System_MarsUpdate
+
+System_MarsUpdate_Out:
+		lea	(RAM_MdDreq),a0		; Send DREQ
+		move.w	#sizeof_dreq,d0
+
+; --------------------------------------------------------
+; System_SendDreq
+;
+; Send data to the 32X using DREQ and CMD interrupt
 ;
 ; Input:
 ; a0 - LONG | Source data to transfer
 ; d0 - WORD | Size (aligned by 8, MUST end with 0 or 8)
 ;
-; CALL THIS OUTSIDE OF VBLANK ONLY.
-;
 ; NOTE: THIS CODE ONLY WORKS PROPERLY ON THE
 ; $880000/$900000 AREAS. (FOR real hardware)
+;
+; CALL THIS OUTSIDE OF VBLANK ONLY.
 ; --------------------------------------------------------
 
-System_MarsUpdate:
-		lea	(RAM_MdDreq),a0		; Send DREQ
-		move.w	#sizeof_dreq,d0
-
-; System_SendDreq:
+System_SendDreq:
 		move.w	sr,d7
-		or.w	#$700,sr
+		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
 		lea	($A15112).l,a4
-		move.w	#%000,dreqctl(a5)	; Set 68S
+.l1:		move.w	dreqctl(a5),d4		; 68S still active?
+		btst	#2,d4
+		bne.s	.l1
+		move.w	#%000,dreqctl(a5)	; Clear 68S first.
 		move.w	d0,d6			; Length in bytes
 		lsr.w	#1,d6			; d6 - (length/2)
 		move.w	d6,dreqlen(a5)		; Set transfer length (size/2)
+		bset	#0,standby(a5)		; Request Master CMD
 		move.w	d6,d5			; d5 - (length/2)/4
 		lsr.w	#2,d5
 		sub.w	#1,d5
-		bset	#0,standby(a5)
-.wait_bit:	btst	#6,comm12(a5)
-		beq.s	.wait_bit
-		bclr	#6,comm12(a5)
 		move.w	#%100,dreqctl(a5)	; Set 68S
+.wait_bit:	move.b	comm12(a5),d4		; Wait comm bit signal
+		btst	#6,d4
+		beq.s	.wait_bit
 .l0:		move.w  (a0)+,(a4)		; *** CRITICAL PART***
 		move.w  (a0)+,(a4)
 		move.w  (a0)+,(a4)
 		move.w  (a0)+,(a4)
 		dbf	d5,.l0
-.bad:
 		move.w	d7,sr
 		rts
 
@@ -219,7 +237,7 @@ System_MarsUpdate:
 
 System_Input:
 ; 		move.w	#$0100,(z80_bus).l
-.wait:
+; .wait:
 ; 		btst	#0,(z80_bus).l
 ; 		bne.s	.wait
 		lea	(sys_data_1),a5		; a5 - BASE Genesis Input regs area
@@ -227,9 +245,9 @@ System_Input:
 		bsr.s	.this_one
 		adda	#2,a5
 		adda	#sizeof_input,a6
-; 		bsr.s	.this_one
-; ; 		move.w	#0,(z80_bus).l
-; 		rts
+		bsr.s	.this_one
+; 		move.w	#0,(z80_bus).l
+		rts
 
 ; --------------------------------------------------------	
 ; Read port
@@ -582,7 +600,6 @@ Mode_Init:
 ; --------------------------------------------------------
 
 Mode_FadeOut:
- rts
 		move.w	#2,(RAM_FadeMdReq).w
 		move.w	#2,(RAM_FadeMarsReq).w
 		move.w	#1,(RAM_FadeMdIncr).w
