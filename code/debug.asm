@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	0
+set_StartPage	equ	2
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -236,8 +236,8 @@ MD_DebugMenu:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#0,marsspr_x(a0)
-		move.w	#0,marsspr_y(a0)
+		move.w	#(320/2)-32,marsspr_x(a0)
+		move.w	#(224/2)-32,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
@@ -250,8 +250,8 @@ MD_DebugMenu:
 		adda	#sizeof_marsspr,a0
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#(320/2)-64,marsspr_x(a0)
-		move.w	#(224/2)-64,marsspr_y(a0)
+		move.w	#$20,marsspr_x(a0)
+		move.w	#$20,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
@@ -314,7 +314,7 @@ MD_DebugMenu:
 		bsr	.this_bg
 		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w,d0
 		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w,d1
-		move.l	#$20000,d5
+		move.l	#$40000,d5
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_m
@@ -1261,8 +1261,8 @@ SuperSprite_Test:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		move.w	marsspr_x(a0),d0
 		move.w	marsspr_y(a0),d1
-		moveq	#1,d2
-		moveq	#1,d3
+		moveq	#4,d2
+		moveq	#4,d3
 		move.w	(Controller_2+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_s

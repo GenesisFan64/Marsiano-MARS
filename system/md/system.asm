@@ -60,6 +60,7 @@ System_WaitFrame:
 .wait_lag:	move.w	(a6),d4
 		btst	#bitVBlk,d4
 		bne.s	.wait_lag
+		bsr	Video_Mars_WaitFrame
 		bsr	System_MarsUpdate
 		lea	(vdp_ctrl),a6
 .wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
@@ -149,6 +150,8 @@ System_MarsUpdate:
 		or.w	#$700,sr
 		lea	(sysmars_reg).l,a5
 		lea	($A15112).l,a4
+		btst	#7,dreqctl+1(a5)	; If FIFO got full, skip.
+		bne.s	.bad
 		move.w	#%000,dreqctl(a5)	; Set 68S
 		move.w	d0,d6			; Length in bytes
 		lsr.w	#1,d6			; d6 - (length/2)
@@ -166,7 +169,10 @@ System_MarsUpdate:
 		move.w  (a0)+,(a4)
 		move.w  (a0)+,(a4)
 		dbf	d5,.l0
+		move.w	d7,sr
+		rts
 .bad:
+		move.w	#%000,dreqctl(a5)
 		move.w	d7,sr
 		rts
 
@@ -582,7 +588,6 @@ Mode_Init:
 ; --------------------------------------------------------
 
 Mode_FadeOut:
- rts
 		move.w	#2,(RAM_FadeMdReq).w
 		move.w	#2,(RAM_FadeMarsReq).w
 		move.w	#1,(RAM_FadeMdIncr).w

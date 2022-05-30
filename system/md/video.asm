@@ -1245,9 +1245,13 @@ Video_Mars_WaitFrame:
 		bset	#6,d7
 		move.w	d7,(sysmars_reg+comm12).l
 .wait:
+		move.w	(vdp_ctrl),d7
+		btst	#bitVBlk,d7
+		bne.s	.late
 		move.w	(sysmars_reg+comm12).l,d7
 		btst	#6,d7
 		bne.s	.wait
+.late:
 		rts
 
 ; --------------------------------------------------------
