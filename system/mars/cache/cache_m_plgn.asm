@@ -536,7 +536,6 @@ MarsVideo_DrawPzPlgns:
 
 		mov	@(marsGbl_PlyPzList_R,gbr),r0
 		mov	r0,r9
-
 		mov	#Cach_PlgnPzCopy,r10
 		mov	r10,r14
 	rept sizeof_plypz/4
@@ -550,7 +549,7 @@ MarsVideo_DrawPzPlgns:
 		shlr16	r9
 		exts	r9,r9			;  r9 - Top
 		and	r0,r10			; r10 - Bottom
-		cmp/eq	r9,r0			; if Top==Bottom, exit
+		cmp/eq	r9,r10			; if Top==Bottom, exit
 		bt	.invld_y
 		mov	#SCREEN_HEIGHT,r0	; if Top > 224, skip
 		cmp/ge	r0,r9
@@ -570,12 +569,11 @@ MarsVideo_DrawPzPlgns:
 		nop
 		align 4
 		ltorg
-		align 4
 
 	; ------------------------------------
 	; If Y top / Y len are valid:
 	; ------------------------------------
-
+		align 4
 drwtsk1_vld_y:
 		mov	@(plypz_xl,r14),r1
 		mov	r1,r3

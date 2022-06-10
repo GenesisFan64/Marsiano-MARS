@@ -39,9 +39,9 @@ marsspr_data	ds.l 1		; Sprite pixel data (Cache'd or not), if 0 == end-of-list
 marsspr_dwidth	ds.w 1		; WIDTH size of the pixel data
 marsspr_indx	ds.w 1		; Palette index base
 marsspr_x	ds.w 1		; Screen X position
+marsspr_xs	ds.w 1		; Sprite X size
 marsspr_y	ds.w 1		; Screen Y position
-marsspr_xs	ds.w 1		; Sprite X size (Scrn Xpos + this)
-marsspr_ys	ds.w 1		; Sprite Y size (Scrn Ypos + this)
+marsspr_ys	ds.w 1		; Sprite Y size
 marsspr_xt	ds.b 1		; Texture X size
 marsspr_yt	ds.b 1		; Texture Y size
 marsspr_xfrm	ds.b 1		; Frame in X order

@@ -60,7 +60,7 @@ System_WaitFrame:
 .wait_lag:	move.w	(a6),d4
 		btst	#bitVBlk,d4
 		bne.s	.wait_lag
-		bsr	Video_Mars_WaitFrame
+; 		bsr	Video_Mars_WaitFrame
 		bsr	System_MarsUpdate
 		lea	(vdp_ctrl),a6
 .wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank

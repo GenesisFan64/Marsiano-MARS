@@ -19,7 +19,7 @@
 		phase CS3	; Now we are at SDRAM
 		cpu SH7600	; Should be SH7095 but this CPU mode works.
 
-; QUICK MACRO
+; CPU TEST MACRO
 testme macro miau
 		mov	#miau,r1
 		mov	#_vdpreg,r2
@@ -518,7 +518,6 @@ m_irq_v:
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
-		sts	pr,@-r15
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
 		mov	#_vdpreg+shift,r1		; For the indexed-scrolling mode.
 		and	#1,r0
@@ -540,17 +539,6 @@ m_irq_v:
 		and	#%10111111,r0
 		mov.b	r0,@r1
 
-		mov	#mstr_gfxlist_v,r1		; Point to VBLANK jumps
-		mov	#_sysreg+comm12,r2
-		mov.w	@r2,r0
-		and	#%0111,r0
-		shll2	r0
-		shll2	r0
-		mov	@(r1,r0),r1
-		jsr	@r1
-		nop
-
-		lds	@r15+,pr
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -570,13 +558,6 @@ m_irq_vres:
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
 		bf	.rv_busy
-		mov	#"M_OK",r0
-		mov	r0,@(comm0,r1)
-		mov	#(CS3|$40000)-8,r15
-		mov	#SH2_M_HotStart,r0
-		mov	r0,@r15
-		mov.w   #$F0,r0
-		mov	r0,@(4,r15)
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -585,6 +566,14 @@ m_irq_vres:
 		mov	r0,@r1
 		mov	#$44E0,r1
 		mov	r0,@r1
+		mov	#(CS3|$40000)-8,r15
+		mov	#SH2_M_HotStart,r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
+		mov	#_sysreg,r1
+		mov	#"M_OK",r0
+		mov	r0,@(comm0,r1)
 		rte
 		nop
 		align 4
@@ -989,13 +978,6 @@ s_irq_vres:
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
 		bf	.rv_busy
-		mov	#"S_OK",r0
-		mov	r0,@(comm4,r1)
-		mov	#(CS3|$3F000)-8,r15
-		mov	#SH2_S_HotStart,r0
-		mov	r0,@r15
-		mov.w   #$F0,r0
-		mov	r0,@(4,r15)
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -1004,6 +986,14 @@ s_irq_vres:
 		mov	r0,@r1
 		mov	#$44E0,r1
 		mov	r0,@r1
+		mov	#(CS3|$3F000)-8,r15
+		mov	#SH2_S_HotStart,r0
+		mov	r0,@r15
+		mov.w   #$F0,r0
+		mov	r0,@(4,r15)
+		mov	#_sysreg,r1
+		mov	#"S_OK",r0
+		mov	r0,@(comm4,r1)
 		rte
 		nop
 		align 4
@@ -1202,6 +1192,13 @@ SH2_M_HotStart:
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
+		mov	#_vdpreg,r1			; Wait a frame
+-		mov.b	@(vdpsts,r1),r0
+		tst	#VBLK,r0
+		bt	-
+-		mov.b	@(vdpsts,r1),r0
+		tst	#VBLK,r0
+		bf	-
 		mov	#_sysreg+comm8,r1
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
@@ -1253,10 +1250,10 @@ master_loop:
 	; Wait for VBlank
 	; ---------------------------------------
 
-		mov	#_vdpreg,r1			; r1 - SVDP area
-		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
-		xor	#1,r0
-		mov.b	r0,@(framectl,r1)
+; 		mov	#_vdpreg,r1			; r1 - SVDP area
+; 		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
+; 		xor	#1,r0
+; 		mov.b	r0,@(framectl,r1)
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_FrameReady,gbr)
 .wait_vblk:
@@ -1272,29 +1269,48 @@ master_loop:
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
-
-; ---------------------------------------
-; Pick graphics mode on comm12
-; ---------------------------------------
-
-		mov	#mstr_gfxlist,r3		; Default LOOP points
+		mov	#mstr_gfxlist_v,r1		; Point to VBLANK jumps
 		mov	#_sysreg+comm12,r2
-		mov.w	@r2,r0				; r0 - INIT bit
-		mov	r0,r1				; r1 - mode
-		tst	#$80,r0				; First time/Full redraw?
-		bt	.no_init
-		mov	#_sysreg+comm14,r4		; Wait slave first.
-.wait_slv:	mov.w	@r4,r0
+		mov.w	@r2,r0
+		and	#%0111,r0
+		shll2	r0
+		shll2	r0
+		mov	@(r1,r0),r1
+		jsr	@r1
+		nop
+
+; ---------------------------------------
+; Init/Loop the current mode
+;
+; Init uses 2 separate jumps in case
+; some routines need to be called twice.
+; (Framebuffer updates)
+;
+; NOTE:
+; The LOOP part starts very early at
+; VBlank, add some work to make sure it
+; exits on display.
+; ---------------------------------------
+
+		mov	#_sysreg+comm14,r1		; Wait Slave CPU
+.wait_slv:	mov.w	@r1,r0
 		and	#$FF,r0
 		tst	r0,r0
 		bf	.wait_slv
-		mov.w	@r2,r0
-		and	#$7F,r0				; Reset init bit
+
+		mov	#mstr_gfxlist,r3		; Default LOOP points
+		mov	#_sysreg+comm12,r2
+		mov.w	@r2,r0				; r0 - bit check
+		mov	r0,r1				; r1 - current mode
+		tst	#%10000000,r0			; First time flag?
+		bt	.no_init
+		mov.w	@r2,r0				; Reset init bit
+		and	#%01111111,r0
 		mov.w	r0,@r2
-		mov	#2,r0
+		mov	#2,r0				; Set Init timer.
 		mov.w	r0,@(marsGbl_MdInitTmr,gbr)
 .no_init:
-		mov.w	@(marsGbl_MdInitTmr,gbr),r0
+		mov.w	@(marsGbl_MdInitTmr,gbr),r0	; r2 - Add init timer
 		mov	r0,r2
 		tst	r0,r0
 		bt	.tmr_off
@@ -1317,14 +1333,6 @@ master_loop:
 ; jump lists
 
 		align 4
-mstr_gfxlist_h:	dc.l mstr_gfx0_hblk	; $00 ***placeholder list***
-		dc.l mstr_gfx1_hblk	; $01
-		dc.l mstr_gfx2_hblk	; $02
-		dc.l mstr_gfx3_hblk	; $03
-		dc.l mstr_gfx4_hblk	; $04
-		dc.l mstr_gfx0_hblk	; $05
-		dc.l mstr_gfx0_hblk	; $06
-		dc.l mstr_gfx0_hblk	; $07 ***
 mstr_gfxlist:	dc.l mstr_gfx0_loop	; $00
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
@@ -1357,13 +1365,21 @@ mstr_gfxlist_v:	dc.l mstr_gfx0_vblk
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
 		dc.l mstr_gfx0_vblk
+mstr_gfxlist_h:	dc.l mstr_gfx0_hblk	; $00
+		dc.l mstr_gfx1_hblk	; $01
+		dc.l mstr_gfx2_hblk	; $02
+		dc.l mstr_gfx3_hblk	; $03
+		dc.l mstr_gfx4_hblk	; $04
+		dc.l mstr_gfx0_hblk	; $05
+		dc.l mstr_gfx0_hblk	; $06
+		dc.l mstr_gfx0_hblk	; $07
 
 ; ============================================================
 ; ---------------------------------------
 ; Pseudo-screen mode $00: BLANK
 ;
 ; YOU must use set this mode if you are
-; doing using these VDP features
+; doing using these VDP settings
 ; on the Genesis side:
 ;
 ; - H32 mode
@@ -1419,8 +1435,8 @@ mstr_gfx0_loop:
 ; A Generic screen in any
 ; bitmap mode: Indexed, Direct or RLE
 ;
-; Note that DirectColors's HEIGHT
-; will be limited to 200 lines.
+; Watch out for the limited lines
+; available for DIRECT COLOR
 ; ---------------------------------------
 
 ; -------------------------------
@@ -1446,6 +1462,8 @@ mstr_gfx1_vblk:
 ; -------------------------------
 
 mstr_gfx1_init_2:
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
 		mov 	#_vdpreg,r1
 		mov	#2,r0
 		mov.b	r0,@(bitmapmd,r1)
@@ -1470,7 +1488,7 @@ mstr_gfx1_loop:
 		align 4
 .m1list:
 		dc.l mstr_ready
-		dc.l mstr_ready	; Indexed
+		dc.l mstr_ready		; Indexed
 		dc.l .direct		; Direct
 		dc.l mstr_ready
 
@@ -1497,6 +1515,12 @@ mstr_gfx1_loop:
 		mov	#MarsVideo_MakeNametbl,r0
 		jsr	@r0
 		mov	#12,r4
+
+		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
+
 		bra	mstr_ready
 		nop
 
@@ -1541,7 +1565,13 @@ mstr_gfx2_vblk:
 		mov	r1,@(mbg_xpos,r4)
 		mov	r2,@(mbg_ypos,r4)
 .mid_draw:
-		rts
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	@(mbg_xpos,r14),r1
+		mov	@(mbg_ypos,r14),r2
+		mov	r1,r0
+		shlr16	r0
+		mov.w	r0,@(marsGbl_XShift,gbr)
+		bra	MarsVideo_MoveBg
 		nop
 		align 4
 
@@ -1598,35 +1628,6 @@ mstr_gfx2_init_cont:
 
 mstr_gfx2_loop:
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	@(mbg_xpos,r14),r1
-		mov	@(mbg_ypos,r14),r2
-		mov	r1,r0
-		shlr16	r0
-		mov.w	r0,@(marsGbl_XShift,gbr)
-		bsr	MarsVideo_MoveBg
-		nop
-
-		mov	#MarsVideo_BldScrlLR,r0
-		jsr	@r0
-		nop
-		mov	#MarsVideo_BldScrlUD,r0
-		jsr	@r0
-		nop
-
-		mov	#RAM_Mars_SVdpDrwList,r0
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-		mov	r0,@(marsGbl_PlyPzList_Start,gbr)
-		mov	#RAM_Mars_SVdpDrwList_E,r0
-		mov	r0,@(marsGbl_PlyPzList_End,gbr)
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		mov	#1,r1
-		mov	#$10,r2
-		mov	#MarsVideo_SetWatchdog,r0
-		jsr	@r0
-		nop
-		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_fbdata,r14),r1
 		mov	@(mbg_fbpos,r14),r2
 		mov.w	@(mbg_fbpos_y,r14),r0
@@ -1636,36 +1637,32 @@ mstr_gfx2_loop:
 		mov.w	@(mbg_intrl_h,r14),r0
 		mov	r0,r5
 		mov	@(mbg_intrl_size,r14),r6
-		mov	#MarsVideo_SetSuperSpr,r0	; Setup sprite layer
-		jsr	@r0
-		nop
-		mov	#MarsVideo_MkSprPz,r0		; Build sprites into draw pieces
+		mov	#MarsVideo_SetSuperSpr,r0
 		jsr	@r0
 		nop
 
-	; ----------------------------------
-
-; 		testme	2
-		mov	#MarsVideo_SprBlkRefill,r0	; Draw refill blocks
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawScrlLR,r0
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawScrlUD,r0
-		jsr	@r0
-		nop
-; 		testme	1
-
-		mov	#MarsVideo_MarkSprBlocks,r0	; Stamp blocks to redraw on next frame
-		jsr	@r0
-		nop
-
+		mov	#_sysreg+comm14,r1		; Slave task $01:
+		mov.w	@r1,r0				; draw U/D/L/R scrolling sections
+		or	#$01,r0
+		mov.w	r0,@r1
+; 		mov	#_vdpreg,r1
+; -		mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	-
 	; ---------------------------------------
-	; Build linetable
+
+		mov	#MarsVideo_DrwSprBlk,r0			; Draw sprite-refill blocks
+		jsr	@r0
+		nop
+		testme 2
+		mov	#MarsVideo_DrawSuperSpr,r0		; Draw sprites graphics
+		jsr	@r0
+		nop
+		testme 1
+		mov	#MarsVideo_MarkSprBlocks,r0		; Stamp blocks to redraw on next frame
+		jsr	@r0
+		nop
+
 	; ---------------------------------------
 		mov	#RAM_Mars_BgBuffScrl,r1		; Visible section on screen
 		mov	#0,r2				; From 0 to 240
@@ -1676,7 +1673,16 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move
 		nop
-		testme	1
+
+		mov	#_sysreg+comm14,r1	; Wait Slave CPU
+.wait:		mov.w	@r1,r0
+		and	#$FF,r0
+		tst	r0,r0
+		bf	.wait
+		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
 
 		bra	mstr_ready
 		nop
@@ -1749,14 +1755,6 @@ mstr_gfx3_init_2:
 ; -------------------------------
 
 mstr_gfx3_loop:
-		mov	#2,r1
-		mov	#$20,r2
-		mov	#MarsVideo_SetWatchdog,r0
-		jsr	@r0
-		nop
-		mov	#MarsVideo_MkSprPz,r0
-		jsr	@r0
-		nop
 		mov	#$200,r1
 		mov	#0,r2
 		mov	#0,r3
@@ -1769,6 +1767,11 @@ mstr_gfx3_loop:
 		mov	#MarsVideo_DrawScaled,r0
 		jsr	@r0
 		nop
+		mov	#MarsVideo_DrawSuperSpr,r0		; Draw sprites graphics
+		jsr	@r0
+		nop
+
+
 		mov	#$200,r1
 		mov	#320,r2
 		mov	#240,r3
@@ -1776,22 +1779,16 @@ mstr_gfx3_loop:
 		jsr	@r0
 		mov	#0,r4
 
-	; Wait Slave to finish
-; 		mov	#_sysreg+comm14,r5
-; .wait_slv:	mov.w	@r5,r0
-; 		and	#%01111111,r0
+; .wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0
 ; 		tst	r0,r0
-; 		bf	.wait_slv
-; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-; 		tst	r0,r0
-; 		bt	.no_pz
-.wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0
-		tst	r0,r0
-		bt	.wait_wd
-		mov	#MarsVideo_DrawSuperSpr,r0
-		jsr	@r0
-		nop
-.no_pz:
+; 		bt	.wait_wd
+; 		mov	#MarsVideo_DrawSuperSpr,r0
+; 		jsr	@r0
+; 		nop
+		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
 
 		bra	mstr_ready
 		nop
@@ -1943,6 +1940,16 @@ mstr_gfx4_loop:
 		jsr	@r0
 		nop
 .no_swap:
+		mov	#_sysreg+comm14,r1	; Wait Slave CPU
+.wait:		mov.w	@r1,r0
+		and	#$FF,r0
+		tst	r0,r0
+		bf	.wait
+		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
+
 ; 		bra	mstr_ready
 ; 		nop
 ; 		align 4
@@ -2109,8 +2116,8 @@ slave_loop:
 		align 4
 .list:
 		dc.l slave_loop		; $00
-		dc.l .slv_task_1	; $01 - Build 3D models
-		dc.l slave_loop		; $02
+		dc.l .slv_task_1	; $01 - GFX2 helper
+		dc.l .slv_task_2	; $02 - Build 3D models (GFX4)
 		dc.l slave_loop		; $03
 		dc.l slave_loop		; $04
 		dc.l slave_loop		; $05
@@ -2128,12 +2135,34 @@ slave_loop:
 ; ============================================================
 ; ---------------------------------------
 ; Slave task $01
-;
-; Build 3D Models FOR THE NEXT FRAME
 ; ---------------------------------------
 
 		align 4
 .slv_task_1:
+		mov	#MarsVideo_BldScrlLR,r0		; Build L/R data
+		jsr	@r0
+		nop
+		mov	#MarsVideo_BldScrlUD,r0
+		jsr	@r0
+		nop
+
+		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data
+		jsr	@r0
+		nop
+		mov	#MarsVideo_DrawScrlUD,r0
+		jsr	@r0
+		nop
+
+		bra	.slv_exit
+		nop
+
+; ============================================================
+; ---------------------------------------
+; Slave task $02
+; ---------------------------------------
+
+		align 4
+.slv_task_2:
 		mov 	#RAM_Mars_Polygons_0,r1
 		mov	#RAM_Mars_PlgnList_0,r2
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
@@ -2234,6 +2263,8 @@ sizeof_marssnd		ds.l 0
 			struct MarsRam_Video
 RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
 RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
+RAM_Mars_SprPzList	ds.b sizeof_plypz*MAX_SUPERSPR
+RAM_Mars_SprPzList_e	ds.l 0
 RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF			; Single buffer for all screen modes
 sizeof_marsvid		ds.l 0
 			finish
@@ -2242,9 +2273,16 @@ sizeof_marsvid		ds.l 0
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
 RAM_Mars_BgBuffScrl	ds.w sizeof_marsbg
-RAM_Mars_RdrwBlocks	ds.b (512/4)*(512/4)		; <-- Block redraw byte-flags
-RAM_Mars_UD_Pixels	ds.b (320+64)*64		; RAM U/D pixels to draw, WIDTH $40 in Y ORDER
-RAM_Mars_LR_Pixels	ds.b 64*256			; RAM L/R pixels to draw, WIDTH $40
+RAM_Mars_RdrwBlocks	ds.b 512/4*512/4	; <-- Block redraw byte-flags
+RAM_Mars_UD_Pixels	ds.b (320+64)*64	; RAM U/D pixels to draw, WIDTH $40
+RAM_Mars_LR_Pixels	ds.b 64*256		; RAM L/R pixels to draw, WIDTH $40 (Y ORDER)
+; ** SHARED BOTH MASTER AND SLAVE
+Cach_XHead_L		ds.l 1		; ** Left draw beam
+Cach_XHead_R		ds.l 1		; ** Right draw beam
+Cach_YHead_U		ds.l 1		; ** Top draw beam
+Cach_YHead_D		ds.l 1		; ** Bottom draw beam
+Cach_BgFbPos_V		ds.l 1		; ** Framebuffer Y DIRECT position (then multiply with internal WIDTH)
+Cach_BgFbPos_H		ds.l 1		; ** Framebuffer TOPLEFT position
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

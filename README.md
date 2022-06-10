@@ -1,6 +1,6 @@
-Marsiano-MARS
+** Marsiano-MARS **
 
-A GameBase/Engine/Library for making Sega 32X Games in pure assembly on ALL CPUs *WORK IN PROGRESS*
+A GameBase/Engine/Library for making Sega 32X Games in pure assembly on ALL CPUs *CURRENTLY UNSTABLE, IN THE MIDDLE OF REWRITING/OPTIMIZING CODE AND CHECKING TIMINGS*
 
 I'm also using this to research those real-hardware bugs and limitations that current emulators ignore.
 
@@ -31,22 +31,22 @@ Sound, Genesis and 32X:
 
 Notes/Current issues:
 - DREQ might break on soft-reset
-- Psd-screen mode 02: Scrolling doesn't synchronize well with the Genesis side
-- Psd-screen mode 04: 3D performs worse than Shinrinx.
+- 3D rendering performs worse than project Shinrinx
 - (PWM RV-backup) If Genesis' DMA takes too long to process, specifically the DMA-BLAST list: it might play trash wave data.
 
 Planned:
 - Add map layout support on psd-Mode 2 (256-color scrolling background)
 - Same thing for the Genesis side.
 
-LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS, the ones marked with ** are probably wrong and need more testing
+LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS, the ones marked with ** are probably wrong and need more testing.
 
 -- General --
 - ALL Emulators doesn't trigger the SH2's Error handlers (Address Error, Zero Divide, etc.)
 - MOST Emulators doesn't SOFT reset like in hardware (only Picodrive does, and not even close): 68k resets like usual BUT the SH2 side it doesn't restart: it triggers the VRES interrupt and keep going on return. commonly the code used here is just a jump to go back to the "HotStart" code. ALL values will remain unmodified including comm's (unless 68k clears them first)
 - The actual purpose of Cache isn't emulated at all. so emulators just treat everything as "Cache-thru"
-- The 4-byte LONG alignment limitation is ignored: If you forget to align your code or an array of jumps it will trigger an Address Error on real hardware.
-- Fusion 3.64: vdpfill might randomly get stuck waiting for the framebuffer-busy bit.
+- The 4-byte LONG alignment limitation is ignored: If you forget to align your code or any array it will trigger an Address Error on real hardware.
+- Fusion 3.64: VDPFILL might randomly get stuck waiting for the framebuffer-busy bit.
+- Fusion 3.64: The mid-frame SuperVDP changes doesn't even work.
 
 -- 68000 --
 - Writing to the DREQ's FIFO only works properly on the $880000/$900000 areas. Doing the writes in the RAM area ($FF0000) will cause to miss some WORD writes during transfer.
@@ -59,9 +59,10 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS, the ones marked with 
 - After writing _DMAOPERATION to 1 (Starting the DMA), it takes a little to start. add 2 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0)
 - After DMA (Channel 0) finishes: If at any part of the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
 - If DREQLEN gets modified during the DREQ transfer it will corrupt the output and probably freeze the entire 32X **
+- A bug on the DREQ FIFO in the middle of soft-reset, needs testing.
 
 -- SuperVDP --
-- Writing pixels in to the framebuffer in BYTEs are slow. 6 NOPs aprox.
+- Writing pixels in to the framebuffer in BYTEs is slow. kinda adding 6 NOPs after every pixel.
 - If any entry of the linetable ends with $xxFF and the XShift video register is set to 1, that line will NOT get shifted.
 
 -- PWM --
