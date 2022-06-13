@@ -16,32 +16,87 @@
 ; Main
 ; ----------------------------------------------------------------
 
-		move.w	#$2700,sr
-		jsr	(Sound_init).l		; $880000+ jumps
+	; Transfer RAM-Common code
+		lea	(Md_TopCode+$880000),a0
+		lea	($FF0000),a1
+		move.w	#((Md_TopCode_e-Md_TopCode))-1,d0
+.copyme:
+		move.b	(a0)+,(a1)+
+		dbf	d0,.copyme
+		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		jmp	(MD_Mode0).l
+		move.l	#RamCode_Boot,d0
+		jmp	(System_JumpRamCode).l
 
 ; ====================================================================
 ; --------------------------------------------------------
-; Section stored at the $880000 area
+; All shared routines at the top of RAM
 ; --------------------------------------------------------
 
-		phase $880000+*
 Md_TopCode:
+		phase $FF0000
+minfo_ram_s:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
-		include "code/main.asm"
-		include "code/debug.asm"
-Md_TopCode_end:
+	if MOMPASS=6
+.here:
+		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
+	endif
+RAMCODE_USER:
 		dephase
+Md_TopCode_e:
 		align 2
 
+; ====================================================================
+; --------------------------------------------------------
+; RAM code sections for 68K
+; --------------------------------------------------------
+
+RamCode_Boot:
+		phase RAMCODE_USER
+		include "code/main.asm"
+		include "code/debug.asm"
+		dephase
+.here:
 	if MOMPASS=6
-.end:
-		message "Fixed 68K code ends at: \{Md_TopCode_end}"
+		message "THIS RAM-BANK uses: \{.here-RamCode_Boot} of \{MDRAM_START&$FFFF-RAMCODE_USER&$FFFF}"
 	endif
+;
+; ; ====================================================================
+; ; --------------------------------------------------------
+; ; Section stored at the $880000 area
+; ; --------------------------------------------------------
+;
+; 		phase $FF0000
+; Md_TopCode:
+; 		include	"system/md/sound.asm"
+; 		include	"system/md/video.asm"
+; 		include	"system/md/system.asm"
+; 		include "code/main.asm"
+; 		include "code/debug.asm"
+; Md_TopCode_e:
+; 		dephase
+; 		align 2
+;
+; 	if MOMPASS=6
+; .end:
+; 		message "Fixed 68K code ends at: \{Md_TopCode_end}"
+; 	endif
+
+; ====================================================================
+; --------------------------------------------------------
+; Stuff that needs to be stored on the $880000+ area
+; --------------------------------------------------------
+
+		align 4
+		phase $880000+*
+		include "system/md/sub_dreq.asm"
+Z80_CODE:	include "system/md/z_driver.asm"
+Z80_CODE_END:
+		dephase
+		align 2
 
 ; ====================================================================
 ; ----------------------------------------------------------------

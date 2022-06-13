@@ -12,44 +12,61 @@
 ;
 ; Do note that if the RV bit stays active too long it will ran out of
 ; backup data and the sample will play trash bytes.
+;
+; SAMPLE DATA IS 8-BIT WAV, THIS INCLUDES STEREO SAMPLES
 ; ====================================================================
 
-; Special sample data macro
-gPwm macro locate,loop
-.start
-	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
-	dc.b ((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
-	binclude locate,$2C	; actual data
-.end
-	align 4			; align 4 for pwm's
-	endm
-
-; --------------------------------------------------------
-	align 4			; FIRST ALIGN FOR PWMs
-
-; PwmIns_String_1:
-; 	gPwm "sound/instr/smpl/string_1.wav",0
-; PwmIns_Tropical:
-; 	gPwm "sound/instr/smpl/tropical.wav",0
-
-
+	align 4		; First align
 SmpIns_Bell_Ice:
-	gSmpl "sound/instr/smpl/bell_ice.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/bell_ice.wav",$2C
+	align 4
+.end:
+
 SmpIns_Brass1_Hi:
-	gSmpl "sound/instr/smpl/brass1_hi.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/brass1_hi.wav",$2C
+	align 4
+.end:
+
 SmpIns_Brass1_Low:
-	gSmpl "sound/instr/smpl/brass1_low.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/brass1_low.wav",$2C
+	align 4
+.end:
+
 SmpIns_Forest_1:
-	gSmpl "sound/instr/smpl/forest1.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/forest1.wav",$2C
+	align 4
+.end:
+
 SmpIns_Kick_jam:
-	gSmpl "sound/instr/smpl/kick_jam.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/kick_jam.wav",$2C
+	align 4
+.end:
+
 SmpIns_Snare_jam:
-	gSmpl "sound/instr/smpl/snare_jam.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snare_jam.wav",$2C
+	align 4
+.end:
+
 SmpIns_SnrTom_1:
-	gSmpl "sound/instr/smpl/snrtom_1.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snrtom_1.wav",$2C
+	align 4
+.end:
+
 SmpIns_PIANO_1:
-	gSmpl "sound/instr/smpl/PIANO__1.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/PIANO__1.wav",$2C
+	align 4
+.end:
+
 SmpIns_SSTR162A:
-	gSmpl "sound/instr/smpl/SSTR162A.wav",0
-
-
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/SSTR162A.wav",$2C
+	align 4
+.end:

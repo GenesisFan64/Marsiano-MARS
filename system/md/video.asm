@@ -66,12 +66,12 @@ Video_Init:
 		add.w	#$100,d6
 		dbf	d7,.loop
 .exit:
-		lea	(dmacode_start),a1		; TODO: optimize this.
-		lea	(RAM_DmaCode).l,a0
-		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
-.copysafe:
-		move.l	(a1)+,(a0)+
-		dbf	d0,.copysafe
+; 		lea	(dmacode_start),a1		; TODO: optimize this.
+; 		lea	(RAM_DmaCode).l,a0
+; 		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
+; .copysafe:
+; 		move.l	(a1)+,(a0)+
+; 		dbf	d0,.copysafe
 ; 		rts
 
 ; --------------------------------------------------------
@@ -1059,7 +1059,7 @@ Video_Copy:
 ; $40000080 (vdp destination + dma bit)
 
 Video_DmaBlast:
-		jmp	(RAMDMA_Blast+RAM_DmaCode).l
+		jmp	(RAMDMA_Blast).l
 
 ; --------------------------------------------------------
 ; Load graphics using DMA, direct
@@ -1075,17 +1075,9 @@ Video_DmaBlast:
 ; --------------------------------------------------------
 
 Video_LoadArt:
-		jmp	(RAMDMA_Load+RAM_DmaCode).l
+		jmp	(RAMDMA_Load).l
 
 ; ====================================================================
-; --------------------------------------------------------
-; Code stored on RAM, these use the RV bit
-; --------------------------------------------------------
-
-; *** RAM CODE ***
-
-dmacode_start:
-		phase 0
 
 ; Single DMA process
 RAMDMA_Load:
@@ -1189,9 +1181,6 @@ RAMDMA_Blast:
 		move.w	d7,(a4)
 .exit:
 		rts
-		dephase
-		phase $880000+*
-dmacode_end:
 
 ; ====================================================================
 ; ----------------------------------------------------------------

@@ -9,6 +9,7 @@
 
 MAX_PWMCHNL	equ	7	; MAXIMUM usable PWM channels (TODO: keep it like this, might break the Z80 side...)
 MAX_PWMBACKUP	equ	$80	; 1-bit sizes only. ($40,$80,$100...)
+SAMPLE_RATE	equ	22050
 
 ; --------------------------------------------------------
 ; Structs
@@ -51,7 +52,7 @@ MarsSound_Init:
 		ldc	r0,gbr
 		mov	#$0105,r0				; Timing interval $01, output L/R
 		mov.w	r0,@(timerctl,gbr)
-		mov	#((((23011361<<1)/22050+1)>>1)+1),r0	; Samplerate
+		mov	#((((23011361<<1)/SAMPLE_RATE+1)>>1)+1),r0	; Samplerate
 		mov.w	r0,@(cycle,gbr)
 		mov	#1,r0
 		mov.w	r0,@(monowidth,gbr)

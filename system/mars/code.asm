@@ -57,7 +57,8 @@ marsGbl_CurrRdPlgn	ds.l 1	; Current polygon to read for slicing
 marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
-marsGbl_FrameReady	ds.w 1
+marsGbl_FrameReady	ds.w 1	; Set to 1 to wait for VBlank interrupt.
+; marsGbl_FrameFlip	ds.w 1
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 marsGbl_WdgStatus	ds.w 1	; Watchdog exit status
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
@@ -439,6 +440,10 @@ m_irq_cmd:
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 		mov.w	@r1,r0
+		mov	#_vdpreg,r1		; <-- make sure we don't get
+-		mov.b	@(vdpsts,r1),r0		; mid VBlank
+		tst	#VBLK,r0
+		bf	-
 
 		mov	r2,@-r15
 		mov	r3,@-r15
@@ -512,9 +517,12 @@ m_irq_v:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+vintclr,r1
 		mov.w	r0,@r1
+		mov	#_vdpreg,r1			; Check if we got here
+-		mov.b	@(vdpsts,r1),r0			; too late.
+		tst	#VBLK,r0
+		bt	-
 		xor	r0,r0
 		mov.w	r0,@(marsGbl_FrameReady,gbr)
-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -527,7 +535,7 @@ m_irq_v:
  		mov	#(256/8),r3
 .copy_pal:
 	rept 4
-		mov	@r1+,r0			; Copy as LONGs, works on HW
+		mov	@r1+,r0				; Copy as LONGs, works on HW
 		mov	r0,@r2
 		add	#4,r2
 	endm
@@ -552,12 +560,6 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov	#_sysreg,r1
-		mov	r1,r0
-		mov.w	r0,@(vresintclr,r1)
-		mov.w	@(dreqctl,r1),r0
-		tst	#1,r0
-		bf	.rv_busy
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -566,6 +568,12 @@ m_irq_vres:
 		mov	r0,@r1
 		mov	#$44E0,r1
 		mov	r0,@r1
+; 		mov	#_sysreg,r1
+; 		mov	r1,r0
+; 		mov.w	r0,@(vresintclr,r1)
+; 		mov.w	@(dreqctl,r1),r0
+; 		tst	#1,r0
+; 		bf	.rv_busy
 		mov	#(CS3|$40000)-8,r15
 		mov	#SH2_M_HotStart,r0
 		mov	r0,@r15
@@ -972,12 +980,6 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov	#_sysreg,r1
-		mov	r1,r0
-		mov.w	r0,@(vresintclr,r1)
-		mov.w	@(dreqctl,r1),r0
-		tst	#1,r0
-		bf	.rv_busy
 		mov	#_DMAOPERATION,r1
 		mov     #0,r0
 		mov	r0,@r1
@@ -986,6 +988,12 @@ s_irq_vres:
 		mov	r0,@r1
 		mov	#$44E0,r1
 		mov	r0,@r1
+; 		mov	#_sysreg,r1
+; 		mov	r1,r0
+; 		mov.w	r0,@(vresintclr,r1)
+; 		mov.w	@(dreqctl,r1),r0
+; 		tst	#1,r0
+; 		bf	.rv_busy
 		mov	#(CS3|$3F000)-8,r15
 		mov	#SH2_S_HotStart,r0
 		mov	r0,@r15
@@ -1175,9 +1183,9 @@ SH2_M_HotStart:
 		mov	#_CCR,r1		; Reset CACHE
 		mov	#$10,r0
 		mov.b	r0,@r1
-		nop
-		nop
-		nop
+		xor	r0,r0
+		mov	#_sysreg+comm12,r1
+		mov.w	r0,@r1
 		nop
 		nop
 		nop
@@ -1203,10 +1211,10 @@ SH2_M_HotStart:
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
 		bf	.wait_md
-		mov	#_sysreg+dreqctl,r1
-.wait_rv:	mov.w	@r1,r0
-		tst	#1,r0
-		bf	.wait_rv
+; 		mov	#_sysreg+dreqctl,r1
+; .wait_rv:	mov.w	@r1,r0
+; 		tst	#1,r0
+; 		bf	.wait_rv
 		bra	master_loop
 		nop
 		align 4
@@ -1254,6 +1262,9 @@ master_loop:
 ; 		mov.b	@(framectl,r1),r0		; Framebuffer swap REQUEST
 ; 		xor	#1,r0
 ; 		mov.b	r0,@(framectl,r1)
+; 		mov.w	@(marsGbl_FrameFlip,gbr),r0
+; 		xor	#1,r0
+; 		mov.w	r0,@(marsGbl_FrameFlip,gbr)
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_FrameReady,gbr)
 .wait_vblk:
@@ -1593,11 +1604,11 @@ mstr_gfx2_init_1:
 		mov	#Mars_LoadFastCode,r0
 		jsr	@r0
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r1			; <-- TODO: make these configurable
-		mov	#$200,r2				; on Genesis side
-		mov	#16,r3					; block size
-		mov	#320,r4					; max width
-		mov	#240,r5					; max height
+		mov	#RAM_Mars_BgBuffScrl,r1		; <-- TODO: make these configurable
+		mov	#$200,r2			; on Genesis side
+		mov	#8,r3				; block size
+		mov	#320,r4				; max width
+		mov	#224,r5				; max height
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
 		xor	r0,r0
@@ -1619,7 +1630,8 @@ mstr_gfx2_init_2:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx2_init_cont:
-		bsr	MarsVideo_DrawAllBg	; Process FULL image
+		mov	#MarsVideo_DrawAllBg,r0
+		jsr	@r0				; Process FULL image
 		nop
 
 ; -------------------------------
@@ -1627,6 +1639,18 @@ mstr_gfx2_init_cont:
 ; -------------------------------
 
 mstr_gfx2_loop:
+		mov	#MarsVideo_BldScrlLR,r0		; Build L/R data
+		jsr	@r0
+		nop
+		mov	#MarsVideo_BldScrlUD,r0
+		jsr	@r0
+		nop
+		mov	#_sysreg+comm14,r4
+		mov.w	@r4,r0
+		or	#$01,r0				; Slave task $01
+		mov.w	r0,@r4
+
+		testme 2
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_fbdata,r14),r1
 		mov	@(mbg_fbpos,r14),r2
@@ -1640,46 +1664,26 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_SetSuperSpr,r0
 		jsr	@r0
 		nop
-
-		mov	#_sysreg+comm14,r1		; Slave task $01:
-		mov.w	@r1,r0				; draw U/D/L/R scrolling sections
-		or	#$01,r0
-		mov.w	r0,@r1
-; 		mov	#_vdpreg,r1
-; -		mov.b	@(vdpsts,r1),r0
-; 		tst	#VBLK,r0
-; 		bf	-
-	; ---------------------------------------
-
-		mov	#MarsVideo_DrwSprBlk,r0			; Draw sprite-refill blocks
+		mov	#RAM_Mars_RdrwBlocks_1,r14
+		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
 		jsr	@r0
 		nop
-		testme 2
-		mov	#MarsVideo_DrawSuperSpr,r0		; Draw sprites graphics
+		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
+		jsr	@r0
+		nop
+		mov	#MarsVideo_MarkSprBlocks,r0	; Stamp blocks to redraw on next frame
 		jsr	@r0
 		nop
 		testme 1
-		mov	#MarsVideo_MarkSprBlocks,r0		; Stamp blocks to redraw on next frame
-		jsr	@r0
-		nop
-
-	; ---------------------------------------
-		mov	#RAM_Mars_BgBuffScrl,r1		; Visible section on screen
-		mov	#0,r2				; From 0 to 240
-		mov	#240,r3
-		mov	#MarsVideo_ShowScrlBg,r0
-		jsr	@r0
-		nop
+		mov	#_sysreg+comm14,r1
+.wait_slv:	mov.w	@r1,r0
+		and	#$FF,r0
+		tst	r0,r0
+		bf	.wait_slv
 		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move
 		nop
-
-		mov	#_sysreg+comm14,r1	; Wait Slave CPU
-.wait:		mov.w	@r1,r0
-		and	#$FF,r0
-		tst	r0,r0
-		bf	.wait
-		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -2039,9 +2043,9 @@ SH2_S_HotStart:
 		mov	#_CCR,r1		; Reset CACHE
 		mov	#$10,r0
 		mov.b	r0,@r1
-		nop
-		nop
-		nop
+		xor	r0,r0
+		mov	#_sysreg+comm14,r1
+		mov.w	r0,@r1
 		nop
 		nop
 		nop
@@ -2071,14 +2075,14 @@ SH2_S_HotStart:
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 
-		mov	#_sysreg+comm8,r1
+		mov	#_sysreg+comm10,r1
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
 		bf	.wait_md
-		mov	#_sysreg+dreqctl,r1
-.wait_rv:	mov.w	@r1,r0
-		tst	#1,r0
-		bf	.wait_rv
+; 		mov	#_sysreg+dreqctl,r1
+; .wait_rv:	mov.w	@r1,r0
+; 		tst	#1,r0
+; 		bf	.wait_rv
 		bra	slave_loop
 		nop
 		align 4
@@ -2139,13 +2143,12 @@ slave_loop:
 
 		align 4
 .slv_task_1:
-		mov	#MarsVideo_BldScrlLR,r0		; Build L/R data
+		mov	#RAM_Mars_BgBuffScrl,r1		; Visible section on screen
+		mov	#0,r2				; From 0 to 240
+		mov	#240,r3
+		mov	#MarsVideo_ShowScrlBg,r0
 		jsr	@r0
 		nop
-		mov	#MarsVideo_BldScrlUD,r0
-		jsr	@r0
-		nop
-
 		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data
 		jsr	@r0
 		nop
@@ -2273,16 +2276,16 @@ sizeof_marsvid		ds.l 0
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
 RAM_Mars_BgBuffScrl	ds.w sizeof_marsbg
-RAM_Mars_RdrwBlocks	ds.b 512/4*512/4	; <-- Block redraw byte-flags
-RAM_Mars_UD_Pixels	ds.b (320+64)*64	; RAM U/D pixels to draw, WIDTH $40
-RAM_Mars_LR_Pixels	ds.b 64*256		; RAM L/R pixels to draw, WIDTH $40 (Y ORDER)
+RAM_Mars_RdrwBlocks_1	ds.l ((320+64)/4)*((240+64)/4)	; <-- Block redraw byte-flags
+RAM_Mars_UD_Pixels	ds.b (320+64)*64		; RAM U/D pixels to draw, WIDTH $40
+RAM_Mars_LR_Pixels	ds.b 64*256			; RAM L/R pixels to draw, WIDTH $40 (Y ORDER)
 ; ** SHARED BOTH MASTER AND SLAVE
-Cach_XHead_L		ds.l 1		; ** Left draw beam
-Cach_XHead_R		ds.l 1		; ** Right draw beam
-Cach_YHead_U		ds.l 1		; ** Top draw beam
-Cach_YHead_D		ds.l 1		; ** Bottom draw beam
-Cach_BgFbPos_V		ds.l 1		; ** Framebuffer Y DIRECT position (then multiply with internal WIDTH)
-Cach_BgFbPos_H		ds.l 1		; ** Framebuffer TOPLEFT position
+Cach_XHead_L		ds.l 1				; ** Left draw beam
+Cach_XHead_R		ds.l 1				; ** Right draw beam
+Cach_YHead_U		ds.l 1				; ** Top draw beam
+Cach_YHead_D		ds.l 1				; ** Bottom draw beam
+Cach_BgFbPos_V		ds.l 1				; ** Framebuffer Y DIRECT position (then multiply with internal WIDTH)
+Cach_BgFbPos_H		ds.l 1				; ** Framebuffer TOPLEFT position
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

@@ -239,27 +239,27 @@ MD_DebugMenu:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#8,marsspr_x(a0)
-		move.w	#8,marsspr_y(a0)
+		move.w	#$10,marsspr_x(a0)
+		move.w	#$10,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
 		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
 
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$20,marsspr_x(a0)
-; 		move.w	#$20,marsspr_y(a0)
-; 		move.w	#32,marsspr_xs(a0)
-; 		move.w	#48,marsspr_ys(a0)
-; 		move.b	#32,marsspr_xt(a0)
-; 		move.b	#48,marsspr_yt(a0)
-; 		move.w	#$80,marsspr_indx(a0)
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$40,marsspr_x(a0)
+		move.w	#$40,marsspr_y(a0)
+		move.w	#32,marsspr_xs(a0)
+		move.w	#48,marsspr_ys(a0)
+		move.b	#32,marsspr_xt(a0)
+		move.b	#48,marsspr_yt(a0)
+		move.w	#$80,marsspr_indx(a0)
 
 		adda	#sizeof_marsspr,a0
 		move.l	#0,marsspr_data(a0)
@@ -293,8 +293,8 @@ MD_DebugMenu:
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 		move.l	#TESTMARS_BG,Dreq_Scrn2_Data(a0)
-		move.l	#704,Dreq_Scrn2_W(a0)
-		move.l	#960,Dreq_Scrn2_H(a0)
+		move.l	#320,Dreq_Scrn2_W(a0)
+		move.l	#448,Dreq_Scrn2_H(a0)
 		move.l	#$00000000,Dreq_Scrn2_X(a0)
 		move.l	#$00000000,Dreq_Scrn2_Y(a0)
 		bsr	System_MarsUpdate

@@ -10,7 +10,7 @@
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-		align $80	; <-- needed because some stuff breaks....
+; 		align $80	; <-- needed because some stuff breaks....
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
 		move.w	#$0100,(z80_reset).l		; Z80 reset
@@ -23,7 +23,7 @@ Sound_Init:
 .cleanup:
 		move.b	d1,(a0)+
 		dbf	d0,.cleanup
-		lea	(Z80_CODE|$880000).l,a0		; a0 - Z80 code (on $880000 area)
+		lea	(Z80_CODE).l,a0			; a0 - Z80 code (on $880000 area)
 		lea	(z80_cpu).l,a1			; a1 - Z80 area
 		move.w	#(Z80_CODE_END-Z80_CODE)-1,d0	; d0 - Size
 .copy:
@@ -331,13 +331,13 @@ Sound_GlbBeats:
 
 ; --------------------------------------------------------
 
-		align 4
-Z80_CODE:
-		cpu Z80			; Set Z80 here
-		phase 0			; And set PC to 0
-		include "system/md/z_driver.asm"
-		cpu 68000
-		padding off
-		phase Z80_CODE+*
-Z80_CODE_END:
-		align 2
+; 		align 4
+; Z80_CODE:
+; 		cpu Z80			; Set Z80 here
+; 		phase 0			; And set PC to 0
+; 		include "system/md/z_driver.asm"
+; 		cpu 68000
+; 		padding off
+; 		phase Z80_CODE+*
+; Z80_CODE_END:
+; 		align 2

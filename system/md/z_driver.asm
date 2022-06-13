@@ -11,6 +11,10 @@
 ; 18000hz range
 ; --------------------------------------------------------
 
+Z80_TOP:
+		cpu Z80			; Enter Z80
+		phase 0			; And set PC to 0
+
 ; --------------------------------------------------------
 ; User settings
 ; --------------------------------------------------------
@@ -4106,3 +4110,8 @@ fmSpcMode	db 0
 trkHdOut	ds 6			; temporal Header for reading Track position/row count
 
 ; Stack area
+
+	; EXIT Z80
+		cpu 68000
+		padding off
+		phase Z80_TOP+*

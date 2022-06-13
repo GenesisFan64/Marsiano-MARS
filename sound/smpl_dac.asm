@@ -5,23 +5,32 @@
 ; ====================================================================
 
 ; Special sample data macro
-gSmpl macro locate,loop
-.start
-	dc.b ((.end-.start)&$FF),(((.end-.start)>>8)&$FF),(((.end-.start)>>16)&$FF)	; length
+gSmpHead macro len,loop
+	dc.b ((len)&$FF),(((len)>>8)&$FF),(((len)>>16)&$FF)	; length
 	dc.b ((loop)&$FF),(((loop)>>8)&$FF),(((loop)>>16)&$FF)
-	binclude locate,$2C	; actual data
-.end
 	endm
+
 	align $8000
-; DacIns_Test:
-; 	gSmpl "sound/instr/smpl/baila.wav",0
 DacIns_wegot_kick:
-	gSmpl "sound/instr/smpl/wegot_kick.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/wegot_kick.wav",$2C
+.end:
+
 DacIns_wegot_crash:
-	gSmpl "sound/instr/smpl/wegot_crash.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/wegot_crash.wav",$2C
+.end:
+
 DacIns_snare_lobo:
-	gSmpl "sound/instr/smpl/snare_lobo.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snare_lobo.wav",$2C
+.end:
+
 DacIns_snare_magn:
-	gSmpl "sound/instr/smpl/snare_magn.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snare_magn.wav",$2C
+.end:
 DacIns_kick:
-	gSmpl "sound/instr/smpl/stKick.wav",0
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/stKick.wav",$2C
+.end:
