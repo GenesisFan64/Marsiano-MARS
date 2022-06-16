@@ -323,33 +323,56 @@ MarsVideo_DrawAllBg:
 ;
 ; Draws the left and right sides of
 ; the scrolling background on movement
+;
+; Input:
+; r14 | Background buffer
+;
+; Uses external variables
 ; --------------------------------------------------------
 
 		align 4
 MarsVideo_DrawScrlLR:
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_LR_Pixels,r13
+		mov	#Cach_YHead_U,r9
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r5
 		mov	@(mbg_intrl_size,r14),r0
 		mov	r0,r6
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r7
 		mov.w	@(mbg_intrl_h,r14),r0
-		mov	r0,r8
+		mov	r0,r7
 		mov.w	@(mbg_intrl_w,r14),r0
-		mov	r0,r9
-		mov	@(mbg_fbdata,r14),r4
-		mov	#Cach_BgFbPos_V,r10
+		mov	r0,r8
+		mov	@r9,r9
+		mov	#Cach_BgFbPos_H,r10
 		mov	@r10,r10
-		mov	#Cach_BgFbPos_H,r11
-		mov	@r11,r11
-		mov	#_framebuffer,r12
-		add	r4,r12
-		mov	r9,r5
-		sub	r7,r5
+		mov	#_framebuffer,r1
+		mov.w	@(mbg_height,r14),r0
+		mov	r0,r11
+		mov.w	@(mbg_width,r14),r0
+		mov	r0,r12
+		mov	@(mbg_fbdata,r14),r3
+		add	r3,r1
+		mov	@(mbg_data,r14),r13
+		lds	r1,mach
+
+	; mach - Framebuffer+fbdata
+	;  r13 - Pixel data
+	;  r12 - Pixeldata Width
+	;  r11 - Pixeldata Height
+	;  r10 - Current X pos
+	;   r9 - Current Y pos
+	;   r8 - Internal scroll Width
+	;   r7 - Internal scroll Height
+	;   r6 - Internal scroll Full size (W*H)
+	;   r5 - Internal scroll Blocksize
+		mov	r8,r2
+		sub	r5,r2
 		mov.w	@(marsGbl_BgDrwR,gbr),r0
+		mov	#Cach_XHead_R,r1
 		tst	r0,r0
 		bf	.right
 		mov.w	@(marsGbl_BgDrwL,gbr),r0
+		mov	#Cach_XHead_L,r1
 		tst	r0,r0
 		bf	.left
 		rts
@@ -362,47 +385,60 @@ MarsVideo_DrawScrlLR:
 .right:
 		dt	r0
 		mov.w	r0,@(marsGbl_BgDrwR,gbr)
-		add	r5,r11
+		add	r2,r10
 .start:
-		mulu	r9,r10
+		mov	@r1,r0
+		add	r0,r13
+		mov	#Cach_BgFbPos_V,r0
+		mov	@r0,r0
+		mulu	r8,r0
 		sts	macl,r0
-		add	r0,r11
+		add	r0,r10
 .y_line:
-		cmp/ge	r6,r11
+		cmp/ge	r6,r10
 		bf	.x_max
-		sub	r6,r11
+		sub	r6,r10
 .x_max:
 		mov	r13,r1
-		mov	r11,r2
-		mov	r7,r3
+		mulu	r9,r12
+		sts	macl,r1
+		add	r13,r1
+
+		sts	mach,r2
+		add	r10,r2
+		mov	r5,r3
 		shlr2	r3
-		mov	r2,r4
-		mov	r3,r5
-		add	r12,r2
+		mov	r3,r4
 .x_line:
 		mov	@r1+,r0
 		mov	r0,@r2
 		dt	r3
 		bf/s	.x_line
 		add	#4,r2
-		mov	#320,r0	; extra line
-		cmp/ge	r0,r4
+		mov	#320,r0		; extra line
+		cmp/ge	r0,r10
 		bt	.no_ex
-		mov	r13,r1
-		add	r6,r4
-		add	r12,r4
-		nop
+		sts	macl,r1
+		add	r13,r1
+		sts	mach,r2
+		add	r10,r2
+		add	r6,r2
 .xlne_2:
 		mov	@r1+,r0
-		mov	r0,@r4
-		dt	r5
+		mov	r0,@r2
+		dt	r4
 		bf/s	.xlne_2
-		add	#4,r4
+		add	#4,r2
 .no_ex:
-		add	r9,r11
-		dt	r8
+		add	#1,r9
+		cmp/ge	r11,r9
+		bf	.h_low
+		sub	r11,r9
+.h_low:
+		dt	r7
 		bf/s	.y_line
-		add	#32,r13		; next RAM line
+		add	r8,r10
+
 .bad_size:
 		rts
 		nop
@@ -411,9 +447,17 @@ MarsVideo_DrawScrlLR:
 ; --------------------------------------------------------
 ; MarsVideo_DrawScrlUD
 ;
-; Draws the top and bottom sides of the background on
-; movement
+; Draws the left and right sides of
+; the scrolling background on movement
+;
+; Input:
+; r14 | Background buffer
+;
+; Uses external variables
 ; --------------------------------------------------------
+
+; TODO: TEMPORAL, REWRITE THIS INTO
+; DIRECT-READ LATER.
 
 		align 4
 MarsVideo_DrawScrlUD:
@@ -465,6 +509,7 @@ MarsVideo_DrawScrlUD:
 		lds	r5,mach
 		mov	r8,r6
 		mov	#320,r5
+
 .y_line:
 		mov	r13,r1
 		mov	r10,r4
@@ -494,7 +539,7 @@ MarsVideo_DrawScrlUD:
 		add	r9,r10
 		dt	r6
 		bf/s	.y_line
-		add	#32,r13
+		add	#16,r13
 		sts	mach,r5
 		add	r8,r5
 		cmp/ge	r9,r5
@@ -513,12 +558,19 @@ MarsVideo_DrawScrlUD:
 ; --------------------------------------------------------
 ; MarsVideo_DrwSprBlk
 ;
+; Redraw the background sections overwriten by the Super
+; Sprites.
+;
+; Call this BEFORE updating the X/Y background positions
+; and then CALL MarsVideo_MarkSprBlocks AFTER drawing
+; the sprites on the current framebuffer.
+;
+; Input:
 ; r14 - List of sprite-redraw pieces
 ; r13 - Background buffer to use
 ;
-; - Call this BEFORE updating the X/Y background positions
-; - Then CALL MarsVideo_MarkSprBlocks AFTER drawing
-;   the sprites on the current framebuffer.
+; Note:
+; CPU-intensive
 ; --------------------------------------------------------
 
 		align 4
@@ -526,29 +578,29 @@ MarsVideo_DrwSprBlk:
 		sts	pr,@-r15
 
 		mov	#_framebuffer,r12
-		mov	@(mbg_fbdata,r13),r0
+		mov	@(mbg_fbdata,r14),r0
 		add	r0,r12
-		mov	@(mbg_data,r13),r0
+		mov	@(mbg_data,r14),r0
 		lds	r0,mach
-		mov.w	@(mbg_intrl_blk,r13),r0
+		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r11
-		mov	@(mbg_intrl_size,r13),r0
+		mov	@(mbg_intrl_size,r14),r0
 		mov	r0,r10
-		mov.w	@(mbg_intrl_h,r13),r0
+		mov.w	@(mbg_intrl_h,r14),r0
 		mov	r0,r9
-		mov.w	@(mbg_intrl_w,r13),r0
+		mov.w	@(mbg_intrl_w,r14),r0
 		mov	r0,r8
-		mov.w	@(mbg_height,r13),r0
+		mov.w	@(mbg_height,r14),r0
 		mov	r0,r7
-		mov.w	@(mbg_width,r13),r0
+		mov.w	@(mbg_width,r14),r0
 		mov	r0,r6
-		mov	@(mbg_fbpos,r13),r5
+		mov	@(mbg_fbpos,r14),r5
 		neg	r11,r1
-		mov.w	@(mbg_ypos_old,r13),r0	; <-- use OLD position
+		mov.w	@(mbg_ypos_old,r14),r0	; <-- use OLD position
 		exts.w	r0,r4
-		mov.w	@(mbg_xpos_old,r13),r0	; <-- use OLD position
+		mov.w	@(mbg_xpos_old,r14),r0	; <-- use OLD position
 		exts.w	r0,r3
-		mov.w	@(mbg_fbpos_y,r13),r0
+		mov.w	@(mbg_fbpos_y,r14),r0
 		mov	r0,r2
 		exts.w	r4,r4
 		exts.w	r3,r3
@@ -573,7 +625,6 @@ MarsVideo_DrwSprBlk:
 		bra	.yp_t
 		sub	r7,r4
 .yp_b:
-
 		and	r1,r2
 		and	r1,r5
 		mulu	r8,r2
@@ -608,15 +659,15 @@ MarsVideo_DrwSprBlk:
 	;     y_pos/4  x_pos/4  width/4 height/4
 
 .indx_read:
-		mov	@r14,r0
+		mov	@r13,r0
 		cmp/pz	r0
 		bt	.end
 		bsr	.mk_block
 		mov	r0,r1
 		xor	r0,r0
-		mov	r0,@r14
+		mov	r0,@r13
 		bra	.indx_read
-		add	#4,r14
+		add	#4,r13
 .end:
 		lds	@r15+,pr
 		rts
@@ -690,7 +741,7 @@ MarsVideo_DrwSprBlk:
 		add	r0,r4
 		add	r3,r4
 		mov	@r4,r0
-		or	r4,r0	; TEST DOTS
+; 		or	r4,r0	; TEST DOTS
 		mov	r5,r4
 		add	r12,r4
 		mov	r0,@r4

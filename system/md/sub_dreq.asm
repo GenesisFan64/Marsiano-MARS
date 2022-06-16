@@ -16,11 +16,11 @@
 
 System_RomSendDreq:
 		move.w	sr,d7
-		or.w	#$700,sr
+		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
 		lea	($A15112).l,a4
-; 		btst	#7,dreqctl+1(a5)	; If FIFO got full, skip.
-; 		bne.s	.bad
+		btst	#7,dreqctl+1(a5)	; If FIFO got full, skip.
+		bne.s	.bad
 		move.w	#%000,dreqctl(a5)	; Set 68S
 		move.w	d0,d6			; Length in bytes
 		lsr.w	#1,d6			; d6 - (length/2)
@@ -41,7 +41,7 @@ System_RomSendDreq:
 		move.w	d7,sr
 		rts
 .bad:
-		move.w	#%000,dreqctl(a5)
+; 		move.w	#%000,dreqctl(a5)
 		move.w	d7,sr
 		rts
 

@@ -33,7 +33,6 @@ System_Init:
 		move.l	#VInt_Default,d0	; Set default ints
 		move.l	#Hint_Default,d1
 		bsr	System_SetInts
-
 		lea	(RAM_InputData),a0	; Clear input data buffer
 		move.w	#sizeof_input-1/2,d1
 		moveq	#0,d0
@@ -41,7 +40,15 @@ System_Init:
 		move.w	#0,(a0)+
 		dbf	d1,.clrinput
 		move.w	(sp)+,sr
-		rts
+
+		lea	(vdp_ctrl),a6
+.wait_in:	move.w	(a6),d4
+		btst	#bitVBlk,d4
+		beq.s	.wait_in
+.wait_out:	move.w	(a6),d4
+		btst	#bitVBlk,d4
+		bne.s	.wait_out
+		bra	System_MarsUpdate
 
 ; --------------------------------------------------------
 ; System_WaitFrame

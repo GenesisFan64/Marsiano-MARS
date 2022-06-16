@@ -840,85 +840,11 @@ MarsVideo_MoveBg:
 .indxmode:
 		mov	r7,@r6
 .dont_snap:
-
 		rts
 		nop
 		align 4
 		ltorg
-
-; --------------------------------------------------------
-; MarsVideo_BldScrlLR
 ;
-; Reads background data for Up/Down scrolling into a
-; section of SDRAM, then call MarsVideo_DrwScrlLR
-; after this.
-;
-; Input:
-; r14 | Background buffer
-; --------------------------------------------------------
-
-		align 4
-MarsVideo_BldScrlLR:
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	@(mbg_data,r14),r0
-		tst	r0,r0
-		bt	.exit
-		mov	r0,r13
-		mov	#RAM_Mars_LR_Pixels,r12
-		mov.w	@(mbg_width,r14),r0
-		mov	r0,r11
-		mov.w	@(mbg_height,r14),r0
-		mov	r0,r10
-		mov.w	@(mbg_intrl_h,r14),r0
-		mov	r0,r9
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r8
-		mov	#Cach_YHead_U,r7
-		mov	@r7,r7
-		mov	#Cach_XHead_R,r6
-		mov.w	@(marsGbl_BgDrwR,gbr),r0
-		tst	r0,r0
-		bf	.cont
-		mov	#Cach_XHead_L,r6
-		mov.w	@(marsGbl_BgDrwL,gbr),r0
-		tst	r0,r0
-		bf	.cont
-.exit:
-		rts
-		nop
-		align 4
-.cont:
-		mov	@r6,r6
-.y_line:
-		mov	r13,r1
-		mulu	r7,r11		; Y add
-		sts	macl,r0
-		add	r0,r1
-		mov	r12,r2
-		mov	r8,r3
-		add	r6,r1
-		shlr2	r3
-		nop
-.x_line:
-		mov	@r1+,r0
-		mov	r0,@r2
-		dt	r3
-		bf/s	.x_line
-		add	#4,r2
-
-		add	#1,r7
-		cmp/ge	r10,r7
-		bf	.mxwdth
-		sub	r10,r7
-.mxwdth:
-		mov	#32,r0
-		dt	r9
-		bf/s	.y_line
-		add	r0,r12
-		rts
-		nop
-		align 4
-
 ; --------------------------------------------------------
 ; MarsVideo_BldScrlUD
 ;
@@ -929,6 +855,8 @@ MarsVideo_BldScrlLR:
 ; Input:
 ; r14 | Background buffer
 ; --------------------------------------------------------
+
+; TODO: TEMPORAL
 
 		align 4
 MarsVideo_BldScrlUD:
@@ -981,7 +909,7 @@ MarsVideo_BldScrlUD:
 		dt	r3
 		bf/s	.x_line
 		add	#4,r2
-		add	#32,r12
+		add	#16,r12
 		dt	r4
 		bf/s	.y_line
 		add 	r11,r6
@@ -1071,7 +999,7 @@ MarsVideo_SetSprFill:
 		shlr16	r7
 		add	r1,r3
 		add	r2,r4
- ;384 * 304
+
 		mov	r5,r0	; Extra size add
 		shlr	r0
 		sub	r0,r1

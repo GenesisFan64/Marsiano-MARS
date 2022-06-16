@@ -1606,7 +1606,7 @@ mstr_gfx2_init_1:
 		mov	#$200,r2			; on Genesis side
 		mov	#16,r3				; block size
 		mov	#320,r4				; max width
-		mov	#224,r5				; max height
+		mov	#240,r5				; max height
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
 		xor	r0,r0
@@ -1637,8 +1637,8 @@ mstr_gfx2_init_cont:
 ; -------------------------------
 
 mstr_gfx2_loop:
-		mov	#RAM_Mars_RdrwBlocks_1,r14
-		mov	#RAM_Mars_BgBuffScrl,r13
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	#RAM_Mars_RdrwBlocks,r13
 		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
 		jsr	@r0				; BEFORE Updating X/Y scroll position
 		nop
@@ -1649,10 +1649,8 @@ mstr_gfx2_loop:
 		shlr16	r0
 		bsr	MarsVideo_MoveBg
 		mov.w	r0,@(marsGbl_XShift,gbr)	; Update X/Y, including XShift bit
-		mov	#MarsVideo_BldScrlLR,r0		; Build L/R data
-		jsr	@r0
-		nop
-		mov	#MarsVideo_BldScrlUD,r0		; Build U/D data
+; 	testme 2
+		mov	#MarsVideo_BldScrlUD,r0		; First pass for U/D data
 		jsr	@r0
 		nop
 		mov	#RAM_Mars_BgBuffScrl,r14	; Set SuperSprite settings for this screen
@@ -1670,21 +1668,20 @@ mstr_gfx2_loop:
 		nop
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
-		mov	#RAM_Mars_RdrwBlocks_1,r12
+		mov	#RAM_Mars_RdrwBlocks,r12
 		mov	#MarsVideo_SetSprFill,r0	; Stamp blocks to redraw on next frame
 		jsr	@r0
 		nop
-
 		mov	#RAM_Mars_BgBuffScrl,r1		; Make a visible background section
 		mov	#0,r2				; on screen from lines 0 to 240
 		mov	#240,r3
 		mov	#MarsVideo_ShowScrlBg,r0
 		jsr	@r0
 		nop
-		mov	#MarsVideo_DrawScrlLR,r0	; Draw U/D/L/R data we just recieved,
-		jsr	@r0				; this also decrements timers
+		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data we just recieved
+		jsr	@r0				; this also decrements timers.
 		nop
-		mov	#MarsVideo_DrawScrlUD,r0
+		mov	#MarsVideo_DrawScrlUD,r0	; Second pass for U/D data
 		jsr	@r0
 		nop
 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
@@ -1693,6 +1690,7 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move
 		nop
+; 	testme 1
 		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
@@ -2267,22 +2265,19 @@ sizeof_marssnd		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
+RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF			; Single buffer for all screen modes
 RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
 RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
-RAM_Mars_SprPzList	ds.b sizeof_plypz*MAX_SUPERSPR
-RAM_Mars_SprPzList_e	ds.l 0
-RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF			; Single buffer for all screen modes
 sizeof_marsvid		ds.l 0
 			finish
 
 ; --------------------------------------------------------
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
-RAM_Mars_RdrwBlocks_1	ds.l MAX_SUPERSPR	; <-- Block redraw byte-flags
+RAM_Mars_RdrwBlocks	ds.l MAX_SUPERSPR	; <-- Block redraw byte-flags
 RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
-RAM_Mars_PixelData	ds.b (320+16)*(240+16)
-RAM_Mars_UD_Pixels	ds.b (320+32)*32	; RAM U/D pixels to draw, WIDTH $40
-RAM_Mars_LR_Pixels	ds.b 32*256		; RAM L/R pixels to draw, WIDTH $40 (Y ORDER)
+RAM_Mars_PixelData	ds.b (320+32)*(240+32)
+RAM_Mars_UD_Pixels	ds.b (320+16)*16	; RAM U/D pixels to draw, WIDTH $40
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff
