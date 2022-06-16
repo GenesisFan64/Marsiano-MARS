@@ -55,29 +55,29 @@ sizeof_marsspr	ds.l 0
 ; Read these as:
 ; RAM_MdDreq+Dreq_ScrnBuff
 
-		struct 0
-Dreq_Scrn1_Data	ds.l 1		; Screen mode 1: Source image (SH2's area)
-Dreq_Scrn1_Type	ds.l 1		; Source format: 0-NULL 1-Indexed 2-Direct 3-RLE
-		finish
+			struct 0
+Dreq_Scrn1_Data		ds.l 1		; Screen mode 1: Source image (SH2's area)
+Dreq_Scrn1_Type		ds.l 1		; Source format: 0-NULL 1-Indexed 2-Direct 3-RLE
+			finish
 
-		struct 0
-Dreq_Scrn2_Data	ds.l 1		; Screen mode 2: Source image (SH2's area)
-Dreq_Scrn2_X	ds.l 1		; X pos 0000.0000
-Dreq_Scrn2_Y	ds.l 1		; Y pos 0000.0000
-Dreq_Scrn2_W	ds.l 1		; Width
-Dreq_Scrn2_H	ds.l 1		; Height
-		finish
+			struct 0
+Dreq_ScrlBg_Data	ds.l 1		; Screen mode 2: Source image (SH2's area)
+Dreq_ScrlBg_X		ds.l 1		; X pos 0000.0000
+Dreq_ScrlBg_Y		ds.l 1		; Y pos 0000.0000
+Dreq_ScrlBg_W		ds.l 1		; Width
+Dreq_ScrlBg_H		ds.l 1		; Height
+			finish
 
-		struct 0
-Dreq_SclData	ds.l 1		; Screen mode 3: Source data (SH2's area)
-Dreq_SclX	ds.l 1		; X pos 0000.0000
-Dreq_SclY	ds.l 1		; Y pos 0000.0000
-Dreq_SclWidth	ds.l 1		; Width
-Dreq_SclHeight	ds.l 1		; Height
-Dreq_SclDX	ds.l 1		; DX 0000.0000
-Dreq_SclDY	ds.l 1		; DY 0000.0000
-Dreq_SclMode	ds.l 1
-		finish
+			struct 0
+Dreq_SclData		ds.l 1		; Screen mode 3: Source data (SH2's area)
+Dreq_SclX		ds.l 1		; X pos 0000.0000
+Dreq_SclY		ds.l 1		; Y pos 0000.0000
+Dreq_SclWidth		ds.l 1		; Width
+Dreq_SclHeight		ds.l 1		; Height
+Dreq_SclDX		ds.l 1		; DX 0000.0000
+Dreq_SclDY		ds.l 1		; DY 0000.0000
+Dreq_SclMode		ds.l 1
+			finish
 
 ; ====================================================================
 ; ----------------------------------------------------------------

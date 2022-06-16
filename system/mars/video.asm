@@ -10,16 +10,12 @@
 ; Settings
 ; --------------------------------------------------------
 
-MAX_SCRNBUFF	equ $12800	; MAX storage for each screen mode
+MAX_SCRNBUFF	equ $1A000	; MAX SDRAM for each fake-screen mode
 FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
-
-; Screen mode 02
-FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines
-
-; Screen mode 04
-MAX_FACES	equ 256
-MAX_SVDP_PZ	equ 256+64
-MAX_ZDIST	equ -$C00	; Max 3D drawing distance (-Z)
+FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines (Screen mode 2)
+MAX_FACES	equ 256		; Max polygon faces (Screen mode 4)
+MAX_SVDP_PZ	equ 256+64	; Max polygon pieces to draw (Screen mode 4)
+MAX_ZDIST	equ -$C00	; Max 3D drawing distance (-Z) (Screen mode 4)
 
 ; --------------------------------------------------------
 ; Variables
@@ -85,7 +81,7 @@ sizeof_camera	ds.l 0
 		struct 0
 plypz_type	ds.l 1		; Type + Material settings (width + index add)
 plypz_mtrl	ds.l 1		; Material data (ROM or SDRAM)
-plypz_ytb	ds.l 1		; Ytop | Ybottom (0-slot is free)
+plypz_ytb	ds.l 1		; Ytop | Ybottom
 plypz_xl	ds.l 1		;  Screen X-Left | X-Right  16-bit
 plypz_src_xl	ds.l 1		; Texture X-Left | X-Right  16-bit
 plypz_src_yl	ds.l 1		; Texture Y-Top  | Y-Bottom 16-bit
@@ -116,12 +112,12 @@ sizeof_polygn	ds.l 0
 MarsVideo_Init:
 		sts	pr,@-r15
 		mov	#_sysreg,r1
-		mov 	#FM,r0				; Set SVDP permission to SH2. (but the Genesis
-  		mov.b	r0,@(adapter,r1)		; will control the pallete using DREQ)
-		mov 	#_vdpreg,r1
-		mov	#0,r0				; Start at blank
+		mov 	#FM,r0			; Set SVDP permission to SH2.
+  		mov.b	r0,@(adapter,r1)	; * The Genesis side will still control the
+		mov 	#_vdpreg,r1		; 256-color palette using DREQ *
+		mov	#0,r0			; Start at BLANK
 		mov.b	r0,@(bitmapmd,r1)
-		mov	#_framebuffer,r2		; Make default nametables
+		mov	#_framebuffer,r2	; Make default nametables
 		bsr	.def_fb
 		nop
 		bsr	.def_fb
@@ -130,29 +126,26 @@ MarsVideo_Init:
 		rts
 		nop
 		align 4
-
-; Make default linetable, waits for frameswap.
 .def_fb:
 		mov	r2,r3
-		mov	#FBVRAM_LAST/2,r0		; very last usable (blank) line
+		mov	#FBVRAM_LAST/2,r0	; The very last usable (blank) line.
 		mov	#240,r4
 .nxt_lne:
 		mov.w	r0,@r3
 		dt	r4
 		bf/s	.nxt_lne
 		add	#2,r3
-		mov.b	@(framectl,r1),r0		; Frameswap & wait
+		mov.b	@(framectl,r1),r0	; Frameswap request
 		xor	#1,r0
 		mov	r0,r3
 		mov.b	r0,@(framectl,r1)
-.wait_frm:	mov.b	@(framectl,r1),r0
+.wait_frm:	mov.b	@(framectl,r1),r0	; And wait until it flips
 		cmp/eq	r0,r3
 		bf	.wait_frm
 		rts
 		nop
 		align 4
 		ltorg
-		align 4
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -165,24 +158,28 @@ MarsVideo_Init:
 ; Clears screen using VDPFILL
 ;
 ; Input:
-; r1 - VRAM location
-; r2 - Width
-; r3 - height
-; r4 - Pixel(s) to write
+; r1 | Framebuffer VRAM location
+; r2 | Width / 2
+; r3 | Height
+; r4 | Pixel(s) to write
+;
+; Uses:
+; r5-r6
 ; --------------------------------------------------------
 
+		align 4
 MarsVideo_ClearScreen:
 		shlr	r1
 		mov	r1,r5
-		mov	#_vdpreg,r8
+		mov	#_vdpreg,r6
 .fb_loop:
 		mov	r2,r0
-		mov.w	r0,@(filllength,r8)
+		mov.w	r0,@(filllength,r6)
 		mov	r1,r0
-		mov.w	r0,@(fillstart,r8)
+		mov.w	r0,@(fillstart,r6)
 		mov	r4,r0
-		mov.w	r0,@(filldata,r8)
-.wait_fb2:	mov.w	@(vdpsts,r8),r0
+		mov.w	r0,@(filldata,r6)
+.wait_fb2:	mov.w	@(vdpsts,r6),r0
 		tst	#%10,r0
 		bf	.wait_fb2
 		dt	r3
@@ -196,8 +193,7 @@ MarsVideo_ClearScreen:
 ; --------------------------------------------------------
 ; MarsVideo_ResetNameTbl
 ;
-; Reset the nametable, makes all the lines point to
-; a blank line.
+; Reset the nametable, all lines point to a BLANK line
 ; --------------------------------------------------------
 
 MarsVideo_ResetNameTbl:
@@ -221,14 +217,13 @@ MarsVideo_ResetNameTbl:
 ; wave effect to the linetable (in WORDS)
 ;
 ; Input:
-; r1 | Background buffer
+; r1 | Framebuffer position
 ; r2 | Width (Width*2 for Direct color)
 ; r3 | Height
 ; r4 | Y line position
 ;
-; NOTE: after finishing, for Indexed mode
-; call MarsVideo_FixTblShift before swapping the
-; framebuffer.
+; Uses:
+; r5-r11
 ; --------------------------------------------------------
 
 MarsVideo_MakeNameTbl:
@@ -301,7 +296,8 @@ MarsVideo_MakeNameTbl:
 ; --------------------------------------------------------
 ; MarsVideo_FixTblShift
 ;
-; Call this before swaping the framebuffer
+; If your current screen mode manipulates the linetable
+; for scrolling, call this BEFORE swaping the framebuffer
 ; to solve a HARDWARE BUG that causes
 ; Xshift not to work with lines that end with $xxFF
 ;
@@ -354,58 +350,10 @@ MarsVideo_FixTblShift:
 		nop
 		align 4
 		ltorg
-		align 4
-
-; --------------------------------------------------------
-; MarsVideo_SetWatchdog
-;
-; Prepares watchdog interrupt for Master
-;
-; Input:
-; r1 - Watchdog CPU clock divider
-; r2 - Watchdog Pre-timer
-; --------------------------------------------------------
-
-MarsVideo_SetWatchdog:
-		mov	#RAM_Mars_SVdpDrwList,r0		; Reset DDA pieces Read/Write points
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)		; And counter
-		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-		mov	r0,@(marsGbl_PlyPzList_Start,gbr)
-		mov	#RAM_Mars_SVdpDrwList_E,r0
-		mov	r0,@(marsGbl_PlyPzList_End,gbr)
-
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		mov.w	r0,@(marsGbl_WdgStatus,gbr)
-		stc	sr,r4
-		mov	#$F0,r0
-		ldc 	r0,sr
-		mov.l	#_CCR,r3				; Refresh Cache
-		mov	#%00001000,r0				; Two-way mode
-		mov.w	r0,@r3
-		mov	#%00011001,r0				; Cache purge / Two-way mode / Cache ON
-		mov.w	r0,@r3
-		mov	#$FFFFFE80,r3
-		mov.w	#$5A00,r0				; Watchdog pre-timer
-		or	r2,r0
-		mov.w	r0,@r3
-		mov.w	#$A538,r0				; Enable Watchdog
-		or	r1,r0
-		mov.w	r0,@r3
-		ldc	r4,sr
-		rts
-		nop
-		align 4
-		ltorg
-		align 4
-
-; 256-color Palette routines were here...
-; but the 68k controls the pallete now.
-; (Don't forget to transfer your changes using DREQ)
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Screen mode $02
+; 2D Section
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -418,7 +366,7 @@ MarsVideo_SetWatchdog:
 ; source image and it's size.
 ;
 ; Input:
-; r1 | Background buffer to setup
+; r1 | Background buffer to initialize
 ; r2 | Output framebuffer data
 ; r3 | Scroll block size (MINIMUM: 4 pixels)
 ; r4 | Scroll visible width
@@ -432,15 +380,14 @@ MarsVideo_SetWatchdog:
 ; --------------------------------------------------------
 
 ; VALID BLOCK SIZES:
-; 4,8,16,32(224 height)
+; 4,8,16,32(224 height max)
 ;
 ; BROKEN:
 ; 64
 ;
-; MAX Scrolling speed: (size/2), because
-; it needs to draw the changes TWICE to
-; apply both framebuffers
+; MAX Scrolling speed: (size/2)
 
+		align 4
 MarsVideo_MkScrlField:
 		mov	r6,r0
 		and	#1,r0
@@ -482,7 +429,7 @@ MarsVideo_MkScrlField:
 ;
 ; Input:
 ; r1 | Background buffer
-; r2 | Source image location (ROM or RAM)
+; r2 | Source image location (ROM or SDRAM)
 ; r3 | Source image Width
 ; r4 | Source image Height
 ;
@@ -522,8 +469,9 @@ MarsVideo_SetScrlBg:
 ; r2 | Top Y
 ; r3 | Bottom Y
 ;
-; NOTE: after finishing all your screens
-; call MarsVideo_FixTblShift before doing frameswap
+; NOTE:
+; After finishing all your screens call
+; MarsVideo_FixTblShift before doing frameswap
 ; --------------------------------------------------------
 
 MarsVideo_ShowScrlBg:
@@ -625,12 +573,16 @@ MarsVideo_ShowScrlBg:
 ; --------------------------------------------------------
 ; MarsVideo_MoveBg
 ;
-; This updates the background's X/Y position
+; This updates the background's X/Y position and
+; all it's internal variables, this includes
+; some shared variables
+;
+; Input:
+; r14 | Background buffer
 ; --------------------------------------------------------
 
 		align 4
 MarsVideo_MoveBg:
-		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_data,r14),r0
 		cmp/eq	#0,r0
 		bf	.has_scrldata
@@ -799,8 +751,6 @@ MarsVideo_MoveBg:
 
 	; ---------------------------------------
 
-; 		mov	#Cach_Drw_U,r8
-; 		mov	#Cach_Drw_D,r9
 		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r3
 		and	r0,r3			; r3 - block size to check
@@ -812,24 +762,12 @@ MarsVideo_MoveBg:
 		bt	.ydr_busy
 		cmp/pl	r2
 		bf	.reqd_b
-; 		mov.w	@(marsGbl_BgDrwU,gbr),r0
-; 		mov	r0,r4
-; 		mov.w	@(marsGbl_BgDrwD,gbr),r0
-; 		or	r4,r0
-; 		cmp/eq	#0,r0
-; 		bf	.ydr_busy
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwD,gbr)
 		add	#$01,r5
 .reqd_b:
 		cmp/pz	r2
 		bt	.ydr_busy
-; 		mov.w	@(marsGbl_BgDrwU,gbr),r0
-; 		mov	r0,r4
-; 		mov.w	@(marsGbl_BgDrwD,gbr),r0
-; 		or	r4,r0
-; 		cmp/eq	#0,r0
-; 		bf	.ydr_busy
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwU,gbr)
 		add	#$01,r5
@@ -847,24 +785,12 @@ MarsVideo_MoveBg:
 		bt	.ydl_busy
 		cmp/pl	r1
 		bf	.reqr_b
-; 		mov.w	@(marsGbl_BgDrwL,gbr),r0
-; 		mov	r0,r4
-; 		mov.w	@(marsGbl_BgDrwR,gbr),r0
-; 		or	r4,r0
-; 		cmp/eq	#0,r0
-; 		bf	.ydl_busy
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwR,gbr)
 		add	#$02,r5
 .reqr_b:
 		cmp/pz	r1
 		bt	.ydl_busy
-; 		mov.w	@(marsGbl_BgDrwL,gbr),r0
-; 		mov	r0,r4
-; 		mov.w	@(marsGbl_BgDrwR,gbr),r0
-; 		or	r4,r0
-; 		cmp/eq	#0,r0
-; 		bf	.ydl_busy
 		mov	#2,r0
 		mov.w	r0,@(marsGbl_BgDrwL,gbr)
 		add	#$02,r5
@@ -921,17 +847,91 @@ MarsVideo_MoveBg:
 		ltorg
 
 ; --------------------------------------------------------
+; MarsVideo_BldScrlLR
+;
+; Reads background data for Up/Down scrolling into a
+; section of SDRAM, then call MarsVideo_DrwScrlLR
+; after this.
+;
+; Input:
+; r14 | Background buffer
+; --------------------------------------------------------
+
+		align 4
+MarsVideo_BldScrlLR:
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	@(mbg_data,r14),r0
+		tst	r0,r0
+		bt	.exit
+		mov	r0,r13
+		mov	#RAM_Mars_LR_Pixels,r12
+		mov.w	@(mbg_width,r14),r0
+		mov	r0,r11
+		mov.w	@(mbg_height,r14),r0
+		mov	r0,r10
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r9
+		mov.w	@(mbg_intrl_blk,r14),r0
+		mov	r0,r8
+		mov	#Cach_YHead_U,r7
+		mov	@r7,r7
+		mov	#Cach_XHead_R,r6
+		mov.w	@(marsGbl_BgDrwR,gbr),r0
+		tst	r0,r0
+		bf	.cont
+		mov	#Cach_XHead_L,r6
+		mov.w	@(marsGbl_BgDrwL,gbr),r0
+		tst	r0,r0
+		bf	.cont
+.exit:
+		rts
+		nop
+		align 4
+.cont:
+		mov	@r6,r6
+.y_line:
+		mov	r13,r1
+		mulu	r7,r11		; Y add
+		sts	macl,r0
+		add	r0,r1
+		mov	r12,r2
+		mov	r8,r3
+		add	r6,r1
+		shlr2	r3
+		nop
+.x_line:
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.x_line
+		add	#4,r2
+
+		add	#1,r7
+		cmp/ge	r10,r7
+		bf	.mxwdth
+		sub	r10,r7
+.mxwdth:
+		mov	#32,r0
+		dt	r9
+		bf/s	.y_line
+		add	r0,r12
+		rts
+		nop
+		align 4
+
+; --------------------------------------------------------
 ; MarsVideo_BldScrlUD
 ;
-; Reads background data and writes pixels into
-; a section of RAM
+; Reads background data for Up/Down scrolling into a
+; section of SDRAM, then call MarsVideo_DrwScrlUD
+; after this.
 ;
-; then call MarsVideo_DrwScrlUD after this.
+; Input:
+; r14 | Background buffer
 ; --------------------------------------------------------
 
 		align 4
 MarsVideo_BldScrlUD:
-		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	@(mbg_data,r14),r0
 		tst	r0,r0
 		bt	.exit
@@ -981,7 +981,7 @@ MarsVideo_BldScrlUD:
 		dt	r3
 		bf/s	.x_line
 		add	#4,r2
-		add	#64,r12
+		add	#32,r12
 		dt	r4
 		bf/s	.y_line
 		add 	r11,r6
@@ -1010,7 +1010,8 @@ MarsVideo_BldScrlUD:
 ; --------------------------------------------------------
 ; MarsVideo_SetSuperSpr
 ;
-; Sets screen variables drawing the Super Sprites
+; Sets screen variables for drawing the Super Sprites
+; (Cache'd variables)
 ;
 ; Input:
 ; r1 - VRAM base
@@ -1036,19 +1037,20 @@ MarsVideo_SetSuperSpr:
 		ltorg
 
 ; --------------------------------------------------------
-; MarsVideo_MarkSprBlocks
+; MarsVideo_SetSprFill
 ;
-; Set which blocks need redrawing for the next frame
-; after drawing the Super Sprites.
+; Call this AFTER drawing the Super Sprites.
 ;
+; Input:
 ; r14 - Background buffer to use
+; r13 - Super sprites list
+; r12 - Block refill list
 ; --------------------------------------------------------
 
 		align 4
-MarsVideo_MarkSprBlocks:
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
-		mov	#RAM_Mars_RdrwBlocks_1,r12
+MarsVideo_SetSprFill:
+		mov	#$80000000,r11
+		mov	#$7FFFFFFF,r10
 .next_one:
 		mov	@(marsspr_data,r13),r0
 		tst	r0,r0
@@ -1062,38 +1064,41 @@ MarsVideo_MarkSprBlocks:
 		mov.w	@(marsspr_ys,r13),r0		; r4 - YS (bottom)
 		mov	r0,r4
 		mov.w	@(mbg_intrl_blk,r14),r0		; r5 - block size
-		neg	r0,r5
+		mov	r0,r5
 		mov	@(mbg_xpos,r14),r6
 		shlr16	r6
 		mov	@(mbg_ypos,r14),r7
 		shlr16	r7
-		mov	r0,r5
-		mov	r5,r8
-		dt	r8
-		and	r8,r6
-		and	r8,r7
-
+		add	r1,r3
+		add	r2,r4
+ ;384 * 304
+		mov	r5,r0	; Extra size add
 		shlr	r0
 		sub	r0,r1
 		sub	r0,r2
-		shll	r0
-		add	r1,r3
-		add	r2,r4
 		add	r0,r3
 		add	r0,r4
-		sub	r6,r1
+
+		mov	r5,r0	; BG X/Y add
+		dt	r0
+		and	r0,r6
+		and	r0,r7
+		add	r6,r1
 		add	r6,r3
-		sub	r7,r2
+		add	r7,r2
 		add	r7,r4
+; 		neg	r5,r0	; Fix into blocks
+; 		and	r0,r1
+; 		and	r0,r2
+; 		and	r0,r3
+; 		and	r0,r4
 
-	; REVERSE AND OFFSCREEN
-	; CHECKS GO HERE
-
+	; TODO: X/Y REVERSE CHECK
 		mov	#320,r8
 		mov	#224,r9
 		add	r5,r8
 		add	r5,r9
-		cmp/pz	r1
+		cmp/pl	r1
 		bt	.xl_l
 		xor	r1,r1
 .xl_l:
@@ -1101,7 +1106,7 @@ MarsVideo_MarkSprBlocks:
 		bf	.xl_r
 		mov	r8,r1
 .xl_r:
-		cmp/pz	r3
+		cmp/pl	r3
 		bt	.xr_l
 		xor	r3,r3
 .xr_l:
@@ -1110,7 +1115,7 @@ MarsVideo_MarkSprBlocks:
 		mov	r8,r3
 .xr_r:
 
-		cmp/pz	r2
+		cmp/pl	r2
 		bt	.yt_l
 		xor	r2,r2
 .yt_l:
@@ -1118,7 +1123,7 @@ MarsVideo_MarkSprBlocks:
 		bf	.yt_r
 		mov	r9,r2
 .yt_r:
-		cmp/pz	r4
+		cmp/pl	r4
 		bt	.yb_l
 		xor	r4,r4
 .yb_l:
@@ -1135,43 +1140,23 @@ MarsVideo_MarkSprBlocks:
 		cmp/eq	r2,r4
 		bt	.bad_xy
 
-; 		cmp/pz	r2
-; 		bt	.xr_t
-; 		xor	r2,r2
-; .xr_t:
-; 		cmp/ge	r8,r1
-; 		bf	.xl_b
-; 		mov	r8,r1
-; .xl_b:
-; 		cmp/ge	r8,r2
-; 		bf	.xr_b
-; 		mov	r8,r2
-; .xr_b:
-; 		cmp/pz	r3
-; 		bt	.yl_t
-; 		xor	r3,r3
-; .yl_t:
-; 		cmp/pz	r4
-; 		bt	.yr_t
-; 		xor	r4,r4
-; .yr_t:
-
 	; Set coords
-		mov	#$8000,r7
 		mov	r1,r0
 		and	#$FF,r0
 		mov	r2,r6
 		shll8	r6
 		or	r6,r0
-		or	r7,r0
 		shll8	r4
 		shll16	r0
 		or	r4,r0
 		or	r3,r0
-		mov	@r12,r7
-		cmp/eq	r7,r0
-		bt	.bad_xy
+		mov	@r12,r9
+		and	r10,r9		; Filter draw bits
+		cmp/eq	r9,r0
+		bt	.same_en
+		or	r11,r0		; Add draw bits
 		mov	r0,@r12
+.same_en:
 		add	#4,r12
 
 .bad_xy:
@@ -1185,6 +1170,10 @@ MarsVideo_MarkSprBlocks:
 
 
 ; ====================================================================
+; ----------------------------------------------------------------
+; 3D Section
+; ----------------------------------------------------------------
+
 ; --------------------------------------------------------
 ; MarsMdl_MdlLoop
 ;
@@ -1794,3 +1783,50 @@ mdlrd_rotate:
 		align 4
 		ltorg
 
+; ====================================================================
+; ----------------------------------------------------------------
+; Other
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; MarsVideo_SetWatchdog
+;
+; Prepares watchdog interrupt for Master
+;
+; Input:
+; r1 - Watchdog CPU clock divider
+; r2 - Watchdog Pre-timer
+; --------------------------------------------------------
+
+		align 4
+MarsVideo_SetWatchdog:
+		mov	#RAM_Mars_SVdpDrwList,r0		; Reset DDA pieces Read/Write points
+		mov	r0,@(marsGbl_PlyPzList_R,gbr)		; And counter
+		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+		mov	r0,@(marsGbl_PlyPzList_Start,gbr)
+		mov	#RAM_Mars_SVdpDrwList_E,r0
+		mov	r0,@(marsGbl_PlyPzList_End,gbr)
+
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
+		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+		stc	sr,r4
+		mov	#$F0,r0
+		ldc 	r0,sr
+		mov.l	#_CCR,r3				; Refresh Cache
+		mov	#%00001000,r0				; Two-way mode
+		mov.w	r0,@r3
+		mov	#%00011001,r0				; Cache purge / Two-way mode / Cache ON
+		mov.w	r0,@r3
+		mov	#$FFFFFE80,r3
+		mov.w	#$5A00,r0				; Watchdog pre-timer
+		or	r2,r0
+		mov.w	r0,@r3
+		mov.w	#$A538,r0				; Enable Watchdog
+		or	r1,r0
+		mov.w	r0,@r3
+		ldc	r4,sr
+		rts
+		nop
+		align 4
+		ltorg

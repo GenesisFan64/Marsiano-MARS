@@ -3,8 +3,8 @@
 ; Default gamemode
 ; ----------------------------------------------------------------
 
-TEST_SPEED	equ	$40000
-TEST_SPRSPD	equ	4
+TEST_SPEED	equ	$04<<16
+TEST_SPRSPD	equ	$04
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -228,9 +228,9 @@ MD_DebugMenu:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
-		lea	str_Page2(pc),a0
-		move.l	#locate(0,2,2),d0
-		bsr	Video_Print
+; 		lea	str_Page2(pc),a0
+; 		move.l	#locate(0,10,2),d0
+; 		bsr	Video_Print
 
 	; SUPER SPRITES TEST
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
@@ -239,8 +239,8 @@ MD_DebugMenu:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$10,marsspr_x(a0)
-		move.w	#$10,marsspr_y(a0)
+		move.w	#$110,marsspr_x(a0)
+		move.w	#$60,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
@@ -253,8 +253,8 @@ MD_DebugMenu:
 		adda	#sizeof_marsspr,a0
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$40,marsspr_x(a0)
-		move.w	#$40,marsspr_y(a0)
+		move.w	#$10,marsspr_x(a0)
+		move.w	#$30,marsspr_y(a0)
 		move.w	#32,marsspr_xs(a0)
 		move.w	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
@@ -263,6 +263,10 @@ MD_DebugMenu:
 
 		adda	#sizeof_marsspr,a0
 		move.l	#0,marsspr_data(a0)
+
+		lea	str_Page2_bg(pc),a0
+		move.l	#locate(1,8,8),d0
+		bsr	Video_Print
 
 ; 		move.w	#$100,marsspr_dx(a0)
 ; 		move.w	#$100,marsspr_dy(a0)
@@ -292,11 +296,11 @@ MD_DebugMenu:
 ; 		bsr	Video_LoadMap
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG,Dreq_Scrn2_Data(a0)
-		move.l	#320,Dreq_Scrn2_W(a0)
-		move.l	#448,Dreq_Scrn2_H(a0)
-		move.l	#$00000000,Dreq_Scrn2_X(a0)
-		move.l	#$00000000,Dreq_Scrn2_Y(a0)
+		move.l	#TESTMARS_BG,Dreq_ScrlBg_Data(a0)
+		move.l	#320,Dreq_ScrlBg_W(a0)
+		move.l	#448,Dreq_ScrlBg_H(a0)
+		move.l	#$00000000,Dreq_ScrlBg_X(a0)
+		move.l	#$00000000,Dreq_ScrlBg_Y(a0)
 		bsr	System_MarsUpdate
 		move.w	#2,d0
 		bsr	Video_Mars_GfxMode
@@ -314,13 +318,16 @@ MD_DebugMenu:
 		bsr	.this_bg
 		bsr	.fade_in
 .page2:
+		lea	str_Page2(pc),a0
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
 		bsr	.this_bg
 
 		move.w	(Controller_1+on_hold),d7
 		and.w	#JoyB+JoyA,d7
 		bne.s	.stayoff
-		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w,d0
-		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w,d1
+		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_X).w,d0
+		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_Y).w,d1
 		move.l	#TEST_SPEED,d5
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -339,13 +346,13 @@ MD_DebugMenu:
 		beq.s	.nou_m
 		sub.l	d5,d1
 .nou_m:
-		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_X).w
-		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_Scrn2_Y).w
+		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_X).w
+		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_Y).w
 		swap	d0
 		swap	d1
 		neg.w	d0
-		move.w	d0,(RAM_HorScroll).w
-		move.w	d1,(RAM_VerScroll).w
+		move.w	d0,(RAM_HorScroll+2).w
+		move.w	d1,(RAM_VerScroll+2).w
 .stayoff:
 
 		bsr	SuperSprite_Test
@@ -358,7 +365,7 @@ MD_DebugMenu:
 		rts
 
 .this_bg:
-; 		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
+; 		move.l	(RAM_MdDreq+Dreq_ScrlBg_X).w,d0
 ; 		move.l	d0,d1
 ; 		swap	d0
 ; 		swap	d1
@@ -862,8 +869,8 @@ MD_DebugMenu:
 ; 		bsr	PlayThisSfx
 ; .noah:
 ;
-; 		move.l	(RAM_MdDreq+Dreq_Scrn2_X).w,d0
-; 		move.l	(RAM_MdDreq+Dreq_Scrn2_Y).w,d1
+; 		move.l	(RAM_MdDreq+Dreq_ScrlBg_X).w,d0
+; 		move.l	(RAM_MdDreq+Dreq_ScrlBg_Y).w,d1
 ; 		move.l	#$10000,d5
 ; 		move.l	#1,d6
 ; 		move.w	(Controller_1+on_hold),d7
@@ -887,8 +894,8 @@ MD_DebugMenu:
 ; 		sub.l	d5,d1
 ; 		sub.w	d6,d3
 ; .nou_m:
-; 		move.l	d0,(RAM_MdDreq+Dreq_Scrn2_X).w
-; 		move.l	d1,(RAM_MdDreq+Dreq_Scrn2_Y).w
+; 		move.l	d0,(RAM_MdDreq+Dreq_ScrlBg_X).w
+; 		move.l	d1,(RAM_MdDreq+Dreq_ScrlBg_Y).w
 ;
 ; 		move.l	#0,d0
 ; 		move.l	#0,d1
@@ -1362,16 +1369,24 @@ str_Title:
 ; 		align 2
 ; str_Page1_l:
 ; 		dc.b "\\l \\l",0
-; 		dc.l RAM_MdDreq+Dreq_Scrn2_X
-; 		dc.l RAM_MdDreq+Dreq_Scrn2_Y
+; 		dc.l RAM_MdDreq+Dreq_ScrlBg_X
+; 		dc.l RAM_MdDreq+Dreq_ScrlBg_Y
 ; 		align 2
 
 str_Page1:
 		dc.b "GfxMode 01",0
 		align 2
-str_Page2:
-		dc.b "GfxMode 02",0
+
+str_Page2_bg:
+		dc.b "*** GfxMode 02, LAYER B ***",0
 		align 2
+str_Page2:
+		dc.b "*** GfxMode 02, LAYER A ***",$A,$A
+		dc.b "X/Y: \\l \\l",0
+		dc.l RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_X
+		dc.l RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_Y
+		align 2
+
 str_Page3:
 		dc.b "GfxMode 03",0
 		align 2
