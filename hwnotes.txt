@@ -18,8 +18,9 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS, the ones marked with 
 - BUS fighting: If any of the SH2 CPUs READ/WRITE the same location at the same time it will crash the add-on. Only tested on the SDRAM area but I believe the video and audio registers are affected too. only the comm's are safe for both sides (and Genesis too.) **
 - After writing _DMAOPERATION to 1 (Starting the DMA), it takes a little to start. add 2 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0)
 - After DMA (Channel 0) finishes: If at any part of the DESTINATION data gets read or rewritten, the next DMA transfer will stop early when it reaches the last part that got modified.
+- If you try to transfer DREQ data "on the background" using DMA the FIFO port will break if the SH2 reads a specific place (Probably _sysreg or _vdpreg), but no clue what's causing it. the solution is to wait for DMA until the transfer finishes. **
 - If DREQLEN gets modified during the DREQ transfer it will corrupt the output and probably freeze the entire 32X **
-- A bug on the DREQ FIFO in the middle of soft-reset, needs testing.
+
 
 -- SuperVDP --
 - Writing pixels in to the framebuffer in BYTEs is slow. kinda adding 6 NOPs after every pixel.

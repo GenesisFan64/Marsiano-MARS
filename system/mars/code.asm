@@ -67,10 +67,6 @@ marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
 marsGbl_CntrRdSpr	ds.w 1	; Number of sprites to read
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: a HBlank list)
 marsGbl_MdInitTmr	ds.w 1	; Screen init counter for redrawing the entire screen (Write $02)
-marsGbl_BgDrwR		ds.w 1	; Write 2 to redraw these offscreen sections
-marsGbl_BgDrwL		ds.w 1	; ***
-marsGbl_BgDrwU		ds.w 1	; ***
-marsGbl_BgDrwD		ds.w 1	; ***
 marsGbl_WaveEnable	ds.w 1	; General linetable wave effect: Disable/Enable
 marsGbl_WaveSpd		ds.w 1	; Linetable wave speed
 marsGbl_WaveMax		ds.w 1	; Maximum wave
@@ -452,13 +448,15 @@ m_irq_cmd:
 		mov	#_DMASOURCE0,r3		; r3 - DMA base register
 		mov	#_sysreg+comm12,r2	; r2 - comm to write the signal
 		mov	#_sysreg+dreqfifo,r1	; r1 - Source point: DREQ FIFO
+		mov	#%0100010011100000,r0	; Transfer mode + DMA enable bit OFF
+		mov	r0,@($C,r3)
 		mov	#RAM_Mars_DreqDma,r0
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0	; TODO: a check if this gets Zero'd
 		extu.w	r0,r0
 		mov	r0,@(8,r3)		; Length (set by 68k)
 		mov	r1,@r3			; Source
-		mov	#%0100010011100001,r0	; Transfer mode + DMA enable bit
+		mov	#%0100010011100001,r0	; Transfer mode + DMA enable bit ON
 		mov	r0,@($C,r3)		; Dest:Incr(01) Src:Keep(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
@@ -474,13 +472,9 @@ m_irq_cmd:
 		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
 		mov	r0,@($C,r3)
-		mov.b	@r2,r0			; Clear comm bit signal
-		and	#%10111111,r0
-		mov.b	r0,@r2
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
-		nop
 		rts
 		nop
 		align 4
@@ -1428,10 +1422,6 @@ mstr_gfx0_init_1:
 		mov 	#_vdpreg,r1
 		mov	#0,r0
 		mov.b	r0,@(bitmapmd,r1)
-		mov.w	r0,@(marsGbl_BgDrwR,gbr)
-		mov.w	r0,@(marsGbl_BgDrwL,gbr)
-		mov.w	r0,@(marsGbl_BgDrwD,gbr)
-		mov.w	r0,@(marsGbl_BgDrwU,gbr)
 mstr_gfx0_init_2:
 
 ; -------------------------------
@@ -1589,7 +1579,7 @@ mstr_gfx2_vblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
-		xor	r0,r0
+		xor	r0,r0				; Cleanup our screen RAM
 		mov	#RAM_Mars_ScrnBuff,r1
 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
 .clr_scrn:
@@ -1597,23 +1587,19 @@ mstr_gfx2_init_1:
 		dt	r2
 		bf/s	.clr_scrn
 		add	#4,r1
-		mov	#CACHE_MSTR_SCRL,r1
+
+		mov	#CACHE_MSTR_SCRL,r1		; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadFastCode,r0
 		jsr	@r0
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r1		; <-- TODO: make these configurable
-		mov	#$200,r2			; on Genesis side
-		mov	#16,r3				; block size
-		mov	#320,r4				; max width
-		mov	#240,r5				; max height
+		mov	#RAM_Mars_BgBuffScrl,r1		; Make a scrolling layer
+		mov	#$200,r2
+		mov	#8,r3
+		mov	#320,r4
+		mov	#224,r5
 		bsr	MarsVideo_MkScrlField
 		mov	#0,r6
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_BgDrwR,gbr)		; Reset
-		mov.w	r0,@(marsGbl_BgDrwL,gbr)		; all
-		mov.w	r0,@(marsGbl_BgDrwU,gbr)		; these
-		mov.w	r0,@(marsGbl_BgDrwD,gbr)		; draw requests
 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r0	; Set scrolling source data
 		mov	#RAM_Mars_BgBuffScrl,r1
 		mov	@(Dreq_ScrlBg_Data,r0),r2
@@ -1642,6 +1628,10 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
 		jsr	@r0				; BEFORE Updating X/Y scroll position
 		nop
+		mov	#_vdpreg,r1			; In case we are still on VBlank...
+-		mov.b	@(vdpsts,r1),r0
+		tst	#VBLK,r0
+		bf	-
 		mov	#RAM_Mars_BgBuffScrl,r14	; r14 - Background to read
 		mov	@(mbg_xpos,r14),r1
 		mov	@(mbg_ypos,r14),r2
@@ -1650,9 +1640,6 @@ mstr_gfx2_loop:
 		bsr	MarsVideo_MoveBg
 		mov.w	r0,@(marsGbl_XShift,gbr)	; Update X/Y, including XShift bit
 ; 	testme 2
-		mov	#MarsVideo_BldScrlUD,r0		; First pass for U/D data
-		jsr	@r0
-		nop
 		mov	#RAM_Mars_BgBuffScrl,r14	; Set SuperSprite settings for this screen
 		mov	@(mbg_fbdata,r14),r1
 		mov	@(mbg_fbpos,r14),r2
@@ -1666,18 +1653,6 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_SetSuperSpr,r0
 		jsr	@r0
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
-		mov	#RAM_Mars_RdrwBlocks,r12
-		mov	#MarsVideo_SetSprFill,r0	; Stamp blocks to redraw on next frame
-		jsr	@r0
-		nop
-		mov	#RAM_Mars_BgBuffScrl,r1		; Make a visible background section
-		mov	#0,r2				; on screen from lines 0 to 240
-		mov	#240,r3
-		mov	#MarsVideo_ShowScrlBg,r0
-		jsr	@r0
-		nop
 		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data we just recieved
 		jsr	@r0				; this also decrements timers.
 		nop
@@ -1687,8 +1662,20 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
 		jsr	@r0
 		nop
+		mov	#RAM_Mars_BgBuffScrl,r1		; Make a visible background section
+		mov	#0,r2				; on screen from lines 0 to 240
+		mov	#240,r3
+		mov	#MarsVideo_ShowScrlBg,r0
+		jsr	@r0
+		nop
 		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move
+		nop
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
+		mov	#RAM_Mars_RdrwBlocks,r12
+		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
+		jsr	@r0
 		nop
 ; 	testme 1
 		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
@@ -1733,11 +1720,6 @@ mstr_gfx3_vblk:
 		dt	r4
 		bf/s	.copy_me
 		add	#4,r3
-
-; 		mov	#_sysreg+comm14,r4
-; 		mov.w	@r4,r0
-; 		or	#$01,r0					; Slave task $01
-; 		mov.w	r0,@r4
 		rts
 		nop
 		align 4
@@ -1779,28 +1761,19 @@ mstr_gfx3_loop:
 		mov	#MarsVideo_DrawScaled,r0
 		jsr	@r0
 		nop
-		mov	#MarsVideo_DrawSuperSpr,r0		; Draw sprites graphics
+		mov	#MarsVideo_DrawSuperSpr,r0	; Draw Super Sprites
 		jsr	@r0
 		nop
-
 		mov	#$200,r1
 		mov	#320,r2
 		mov	#240,r3
 		mov	#MarsVideo_MakeNametbl,r0
 		jsr	@r0
 		mov	#0,r4
-
-; .wait_wd:	mov.w	@(marsGbl_WdgStatus,gbr),r0
-; 		tst	r0,r0
-; 		bt	.wait_wd
-; 		mov	#MarsVideo_DrawSuperSpr,r0
-; 		jsr	@r0
-; 		nop
 		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
-
 		bra	mstr_ready
 		nop
 		align 4
@@ -1854,7 +1827,7 @@ mstr_gfx4_vblk:
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
 		mov.w	@r4,r0
-		or	#$01,r0
+		or	#$02,r0
 		mov.w	r0,@r4
 .slv_busy:
 		rts
@@ -2150,13 +2123,6 @@ slave_loop:
 
 		align 4
 .slv_task_1:
-		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawScrlUD,r0
-		jsr	@r0
-		nop
-
 		bra	.slv_exit
 		nop
 
@@ -2277,7 +2243,6 @@ sizeof_marsvid		ds.l 0
 RAM_Mars_RdrwBlocks	ds.l MAX_SUPERSPR	; <-- Block redraw byte-flags
 RAM_Mars_BgBuffScrl	ds.b sizeof_marsbg
 RAM_Mars_PixelData	ds.b (320+32)*(240+32)
-RAM_Mars_UD_Pixels	ds.b (320+16)*16	; RAM U/D pixels to draw, WIDTH $40
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

@@ -326,14 +326,14 @@ MarsVideo_DrawAllBg:
 ;
 ; Input:
 ; r14 | Background buffer
-;
-; Uses external variables
 ; --------------------------------------------------------
 
 		align 4
 MarsVideo_DrawScrlLR:
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#Cach_YHead_U,r9
+		mov	#_framebuffer,r1
+		mov.w	@(mbg_fbpos_y,r14),r0
+		mov	r0,r4
 		mov.w	@(mbg_intrl_blk,r14),r0
 		mov	r0,r5
 		mov	@(mbg_intrl_size,r14),r0
@@ -342,37 +342,49 @@ MarsVideo_DrawScrlLR:
 		mov	r0,r7
 		mov.w	@(mbg_intrl_w,r14),r0
 		mov	r0,r8
-		mov	@r9,r9
-		mov	#Cach_BgFbPos_H,r10
-		mov	@r10,r10
-		mov	#_framebuffer,r1
+		mov.w	@(mbg_yinc_u,r14),r0
+		mov	r0,r9
+		mov	@(mbg_fbpos,r14),r10
+		neg	r5,r2
 		mov.w	@(mbg_height,r14),r0
 		mov	r0,r11
 		mov.w	@(mbg_width,r14),r0
 		mov	r0,r12
-		mov	@(mbg_fbdata,r14),r3
-		add	r3,r1
 		mov	@(mbg_data,r14),r13
+		and	r2,r4
+		mov	@(mbg_fbdata,r14),r3
+		and	r2,r10
+		add	r3,r1
+		and	r2,r9
+		mov	r0,r2
 		lds	r1,mach
 
 	; mach - Framebuffer+fbdata
 	;  r13 - Pixel data
 	;  r12 - Pixeldata Width
 	;  r11 - Pixeldata Height
-	;  r10 - Current X pos
-	;   r9 - Current Y pos
+	;  r10 - Current FB X pos
+	;   r9 - Source data Y pos
 	;   r8 - Internal scroll Width
 	;   r7 - Internal scroll Height
 	;   r6 - Internal scroll Full size (W*H)
 	;   r5 - Internal scroll Blocksize
-		mov	r8,r2
-		sub	r5,r2
-		mov.w	@(marsGbl_BgDrwR,gbr),r0
-		mov	#Cach_XHead_R,r1
+	;   r4 - Current FB TOP Y pos
+	;   r3 - X increment for FB topleft
+	;   r2 - Source data Right X pos
+	;   r1 - Source data Left X pos
+
+		mov	r8,r3
+		sub	r5,r3
+		mov.w	@(mbg_xinc_l,r14),r0
+		mov	r0,r1
+		mov.w	@(mbg_xinc_r,r14),r0
+		mov	r0,r2
+		mov.b	@(mbg_xdrw_r,r14),r0
 		tst	r0,r0
 		bf	.right
-		mov.w	@(marsGbl_BgDrwL,gbr),r0
-		mov	#Cach_XHead_L,r1
+		mov	r1,r2
+		mov.b	@(mbg_xdrw_l,r14),r0
 		tst	r0,r0
 		bf	.left
 		rts
@@ -381,17 +393,16 @@ MarsVideo_DrawScrlLR:
 .left:
 		dt	r0
 		bra	.start
-		mov.w	r0,@(marsGbl_BgDrwL,gbr)
+		mov.b	r0,@(mbg_xdrw_l,r14)
 .right:
 		dt	r0
-		mov.w	r0,@(marsGbl_BgDrwR,gbr)
-		add	r2,r10
+		add	r3,r10
+		mov.b	r0,@(mbg_xdrw_r,r14)
 .start:
-		mov	@r1,r0
-		add	r0,r13
-		mov	#Cach_BgFbPos_V,r0
-		mov	@r0,r0
-		mulu	r8,r0
+		neg	r5,r0
+		and	r0,r2
+		add	r2,r13
+		mulu	r8,r4
 		sts	macl,r0
 		add	r0,r10
 .y_line:
@@ -403,7 +414,6 @@ MarsVideo_DrawScrlLR:
 		mulu	r9,r12
 		sts	macl,r1
 		add	r13,r1
-
 		sts	mach,r2
 		add	r10,r2
 		mov	r5,r3
@@ -438,8 +448,6 @@ MarsVideo_DrawScrlLR:
 		dt	r7
 		bf/s	.y_line
 		add	r8,r10
-
-.bad_size:
 		rts
 		nop
 		align 4
@@ -456,34 +464,63 @@ MarsVideo_DrawScrlLR:
 ; Uses external variables
 ; --------------------------------------------------------
 
-; TODO: TEMPORAL, REWRITE THIS INTO
-; DIRECT-READ LATER.
-
 		align 4
 MarsVideo_DrawScrlUD:
 		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_UD_Pixels,r13
-		mov.w	@(mbg_intrl_h,r14),r0
-		mov	r0,r6
-		mov	@(mbg_intrl_size,r14),r0
-		mov	r0,r7
+		mov	#_framebuffer,r1
+		mov.w	@(mbg_fbpos_y,r14),r0
+		mov	r0,r4
 		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r8
+		mov	r0,r5
+		mov	@(mbg_intrl_size,r14),r0
+		mov	r0,r6
+		mov.w	@(mbg_intrl_h,r14),r0
+		mov	r0,r7
 		mov.w	@(mbg_intrl_w,r14),r0
+		mov	r0,r8
+		mov.w	@(mbg_xinc_l,r14),r0
 		mov	r0,r9
-		mov	@(mbg_fbdata,r14),r4
-		mov	#Cach_BgFbPos_V,r10
-		mov	@r10,r10
-		mov	#Cach_BgFbPos_H,r11
-		mov	@r11,r11
-		mov	#_framebuffer,r12
-		add	r4,r12
-		mov	r6,r5
-		sub	r8,r5
-		mov.w	@(marsGbl_BgDrwD,gbr),r0
+		mov	@(mbg_fbpos,r14),r10
+		neg	r5,r2
+; 		mov.w	@(mbg_height,r14),r0
+; 		mov	r0,r11
+		mov.w	@(mbg_width,r14),r0
+		mov	r0,r12
+		mov	@(mbg_data,r14),r13
+		and	r2,r4
+		mov	@(mbg_fbdata,r14),r3
+		and	r2,r10
+		add	r3,r1
+		and	r2,r9
+		mov	r0,r2
+		lds	r1,mach
+
+	; mach - Framebuffer+fbdata
+	;  r13 - Pixel data
+	;  r12 - Pixeldata Width
+	;  r11 - Pixeldata Height
+	;  r10 - Current FB X pos
+	;   r9 - Source data X pos
+	;   r8 - Internal scroll Width
+	;   r7 - Internal scroll Height
+	;   r6 - Internal scroll Full size (W*H)
+	;   r5 - Internal scroll Blocksize
+	;   r4 - Current FB TOP Y pos
+	;   r3 - X increment for FB topleft
+	;   r2 - Source data Bottom Y pos
+	;   r1 - Source data Top Y pos
+
+		mov	r7,r3
+		sub	r5,r3
+		mov.w	@(mbg_yinc_u,r14),r0
+		mov	r0,r1
+		mov.w	@(mbg_yinc_d,r14),r0
+		mov	r0,r2
+		mov.b	@(mbg_ydrw_d,r14),r0
 		tst	r0,r0
 		bf	.right
-		mov.w	@(marsGbl_BgDrwU,gbr),r0
+		mov	r1,r2
+		mov.b	@(mbg_ydrw_u,r14),r0
 		tst	r0,r0
 		bf	.left
 		rts
@@ -492,63 +529,159 @@ MarsVideo_DrawScrlUD:
 .left:
 		dt	r0
 		bra	.start
-		mov.w	r0,@(marsGbl_BgDrwU,gbr)
+		mov.b	r0,@(mbg_ydrw_u,r14)
 .right:
 		dt	r0
-		mov.w	r0,@(marsGbl_BgDrwD,gbr)
-		add	r5,r10
+		add	r3,r4
+		mov.b	r0,@(mbg_ydrw_d,r14)
 .start:
-		cmp/ge	r6,r10
-		bf	.x_max2
-		sub	r6,r10
-.x_max2:
-		mulu	r9,r10		; macl - FB topleft
-		xor	r5,r5		; r5 - counter
-.nxt_blk:
-		sts	macl,r10
-		lds	r5,mach
-		mov	r8,r6
-		mov	#320,r5
-
-.y_line:
-		mov	r13,r1
-		mov	r10,r4
-		add	r11,r4
-		mov	r8,r3
-		shlr2	r3
-.x_line:
-		mov	@r1+,r0
 		cmp/ge	r7,r4
-		bf	.x_max
+		bf	.h_low
 		sub	r7,r4
-.x_max:
-		cmp/ge	r5,r4
-		bt	.x_hdn
-		mov	r4,r2
-		add	r12,r2
-		add	r7,r2
-		mov	r0,@r2
-.x_hdn:
-		mov	r4,r2
-		add	r12,r2
-		mov	r0,@r2
-		dt	r3
-		bf/s	.x_line
-		add	#4,r4
+.h_low:
+		mulu	r8,r4
+		sts	macl,r4
+		add	r4,r10
 
-		add	r9,r10
-		dt	r6
-		bf/s	.y_line
-		add	#16,r13
-		sts	mach,r5
-		add	r8,r5
-		cmp/ge	r9,r5
-		bf/s	.nxt_blk
-		add	r8,r11
+		neg	r5,r0
+		and	r0,r2
+		mulu	r2,r12
+		sts	macl,r0
+		add	r0,r13
+.y_next:
+		mov	r9,r1
+		mov	r10,r2
+		mov	r8,r4
+		shlr2	r4
+.x_line:
+		cmp/ge	r12,r1
+		bf	.xs_lrg
+		sub	r12,r1
+.xs_lrg:
+		cmp/ge	r6,r2
+		bf	.xd_lrg
+		sub	r6,r2
+.xd_lrg:
+		mov	r13,r3
+		add	r1,r3
+		mov	@r3,r0
+		sts	mach,r3
+		add	r2,r3
+		mov	r0,@r3
+		mov	#320,r0
+		cmp/ge	r0,r2
+		bt	.x_ex
+		mov	r13,r3
+		add	r1,r3
+		mov	@r3,r0
+		sts	mach,r3
+		add	r2,r3
+		add	r6,r3
+		mov	r0,@r3
+.x_ex:
+		add	#4,r1
+		dt	r4
+		bf/s	.x_line
+		add	#4,r2
+		add	r12,r13
+		dt	r5
+		bf/s	.y_next
+		add	r8,r10
+
 		rts
 		nop
 		align 4
 		ltorg
+
+
+; 		mov	#RAM_Mars_BgBuffScrl,r14
+; 		mov	#RAM_Mars_UD_Pixels,r13
+; 		mov.w	@(mbg_intrl_h,r14),r0
+; 		mov	r0,r6
+; 		mov	@(mbg_intrl_size,r14),r0
+; 		mov	r0,r7
+; 		mov.w	@(mbg_intrl_blk,r14),r0
+; 		mov	r0,r8
+; 		mov.w	@(mbg_intrl_w,r14),r0
+; 		mov	r0,r9
+; 		mov	@(mbg_fbdata,r14),r4
+; 		mov	#Cach_BgFbPos_V,r10
+; 		mov	@r10,r10
+; 		mov	#Cach_BgFbPos_H,r11
+; 		mov	@r11,r11
+; 		mov	#_framebuffer,r12
+; 		add	r4,r12
+; 		mov	r6,r5
+; 		sub	r8,r5
+; 		mov.w	@(marsGbl_BgDrwD,gbr),r0
+; 		tst	r0,r0
+; 		bf	.right
+; 		mov.w	@(marsGbl_BgDrwU,gbr),r0
+; 		tst	r0,r0
+; 		bf	.left
+; 		rts
+; 		nop
+; 		align 4
+; .left:
+; 		dt	r0
+; 		bra	.start
+; 		mov.w	r0,@(marsGbl_BgDrwU,gbr)
+; .right:
+; 		dt	r0
+; 		mov.w	r0,@(marsGbl_BgDrwD,gbr)
+; 		add	r5,r10
+; .start:
+; 		cmp/ge	r6,r10
+; 		bf	.x_max2
+; 		sub	r6,r10
+; .x_max2:
+; 		mulu	r9,r10		; macl - FB topleft
+; 		xor	r5,r5		; r5 - counter
+; .nxt_blk:
+; 		sts	macl,r10
+; 		lds	r5,mach
+; 		mov	r8,r6
+; 		mov	#320,r5
+;
+; .y_line:
+; 		mov	r13,r1
+; 		mov	r10,r4
+; 		add	r11,r4
+; 		mov	r8,r3
+; 		shlr2	r3
+; .x_line:
+; 		mov	@r1+,r0
+; 		cmp/ge	r7,r4
+; 		bf	.x_max
+; 		sub	r7,r4
+; .x_max:
+; 		cmp/ge	r5,r4
+; 		bt	.x_hdn
+; 		mov	r4,r2
+; 		add	r12,r2
+; 		add	r7,r2
+; 		mov	r0,@r2
+; .x_hdn:
+; 		mov	r4,r2
+; 		add	r12,r2
+; 		mov	r0,@r2
+; 		dt	r3
+; 		bf/s	.x_line
+; 		add	#4,r4
+;
+; 		add	r9,r10
+; 		dt	r6
+; 		bf/s	.y_line
+; 		add	#16,r13
+; 		sts	mach,r5
+; 		add	r8,r5
+; 		cmp/ge	r9,r5
+; 		bf/s	.nxt_blk
+; 		add	r8,r11
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1363,13 +1496,6 @@ MarsVideo_DrawScaled:
 ; ------------------------------------------------
 
 		align 4
-Cach_XHead_L	ds.l 1		; ** Left draw beam
-Cach_XHead_R	ds.l 1		; ** Right draw beam
-Cach_YHead_U	ds.l 1		; ** Top draw beam
-Cach_YHead_D	ds.l 1		; ** Bottom draw beam
-Cach_BgFbPos_V	ds.l 1		; ** Framebuffer Y DIRECT position (then multiply with internal WIDTH)
-Cach_BgFbPos_H	ds.l 1		; ** Framebuffer TOPLEFT position
-
 Cach_FbData	ds.l 1		; *** KEEP THIS IN THIS ORDER
 Cach_FbPos	ds.l 1
 Cach_FbPos_Y	ds.l 1

@@ -39,25 +39,28 @@ mbg_flags	ds.b 1		; Current type of pixel-data: Indexed or Direct
 mbg_mapblk	ds.b 1		; Map block size: 8, 16, 32...
 mbg_xset	ds.b 1		; X-counter
 mbg_yset	ds.b 1		; Y-counter
-mbg_xpos_old	ds.w 1
-mbg_ypos_old	ds.w 1
-mbg_xinc_l	ds.w 1
+mbg_xdrw_l	ds.b 1		; Off-screen draw requests,
+mbg_xdrw_r	ds.b 1		; write $02 to them.
+mbg_ydrw_u	ds.b 1		;
+mbg_ydrw_d	ds.b 1		; ***
+mbg_xpos_old	ds.w 1		; OLD Xpos/Ypos positions
+mbg_ypos_old	ds.w 1		;
+mbg_xinc_l	ds.w 1		; Source data increment-beams
 mbg_xinc_r	ds.w 1
-mbg_yinc_u	ds.w 1
+mbg_yinc_u	ds.w 1		; <-- Y are direct, requires external mulitply
 mbg_yinc_d	ds.w 1
-mbg_width	ds.w 1
-mbg_height	ds.w 1
-mbg_fbpos_y	ds.w 1		; TOP Y position, multiply by WIDTH externally
-mbg_intrl_blk	ds.w 1		; Scrolling Block size
+mbg_fbpos_y	ds.w 1		; Map's Y position, multiply by WIDTH externally
+mbg_intrl_blk	ds.w 1		; Scrolling block size
 mbg_intrl_w	ds.w 1		; Internal scrolling Width (MUST be larger than 320)
 mbg_intrl_h	ds.w 1		; Internal scrolling Height
+mbg_width	ds.w 1		; Source image's Width
+mbg_height	ds.w 1		; Source image's Height
+mbg_indxinc	ds.l 1		; Index increment (full 4 bytes)
 mbg_intrl_size	ds.l 1		;
 mbg_data	ds.l 1		; Bitmap data or tiles
 mbg_map		ds.l 1
-mbg_fbpos	ds.l 1		; Framebuffer currrent TOPLEFT position
-mbg_fbdata	ds.l 1		; Pixeldata located on Framebuffer
-mbg_rfill	ds.l 1		; Refill buffer
-mbg_indxinc	ds.l 1		; Index increment (NOTE: for all 4 pixels)
+mbg_fbpos	ds.l 1		; Map's currrent TopLeft position
+mbg_fbdata	ds.l 1		; Framebuffer location of the playfield
 mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
 sizeof_marsbg	ds.l 0
@@ -579,6 +582,8 @@ MarsVideo_ShowScrlBg:
 ;
 ; Input:
 ; r14 | Background buffer
+;
+; NOTE: Doesn't have any sort of overflow protection.
 ; --------------------------------------------------------
 
 		align 4
@@ -763,13 +768,13 @@ MarsVideo_MoveBg:
 		cmp/pl	r2
 		bf	.reqd_b
 		mov	#2,r0
-		mov.w	r0,@(marsGbl_BgDrwD,gbr)
+		mov.b	r0,@(mbg_ydrw_d,r14)
 		add	#$01,r5
 .reqd_b:
 		cmp/pz	r2
 		bt	.ydr_busy
 		mov	#2,r0
-		mov.w	r0,@(marsGbl_BgDrwU,gbr)
+		mov.b	r0,@(mbg_ydrw_u,r14)
 		add	#$01,r5
 .ydr_busy:
 		mov.w	@(mbg_intrl_blk,r14),r0
@@ -786,13 +791,13 @@ MarsVideo_MoveBg:
 		cmp/pl	r1
 		bf	.reqr_b
 		mov	#2,r0
-		mov.w	r0,@(marsGbl_BgDrwR,gbr)
+		mov.b	r0,@(mbg_xdrw_r,r14)
 		add	#$02,r5
 .reqr_b:
 		cmp/pz	r1
 		bt	.ydl_busy
 		mov	#2,r0
-		mov.w	r0,@(marsGbl_BgDrwL,gbr)
+		mov.b	r0,@(mbg_xdrw_l,r14)
 		add	#$02,r5
 .ydl_busy:
 		mov.w	@(mbg_intrl_blk,r14),r0
@@ -801,139 +806,19 @@ MarsVideo_MoveBg:
 		dt	r4
 		and	r4,r0
 		mov.b	r0,@(mbg_xset,r14)
-
-	; Make snapshot of scroll variables for drawing
-		cmp/pl	r5
-		bf	.dont_snap
-		mov.w	@(mbg_intrl_blk,r14),r0
-		neg	r0,r0
-		mov	r0,r7
-		mov	#Cach_XHead_L,r1
-		mov	#Cach_XHead_R,r2
-		mov	#Cach_YHead_U,r3
-		mov	#Cach_YHead_D,r4
-		mov	#Cach_BgFbPos_V,r5
-		mov	#Cach_BgFbPos_H,r6
-		mov.w	@(mbg_xinc_l,r14),r0
-		and	r7,r0
-		mov	r0,@r1
-		mov.w	@(mbg_xinc_r,r14),r0
-		and	r7,r0
-		mov	r0,@r2
-		mov.w	@(mbg_yinc_u,r14),r0
-		and	r7,r0
-		mov	r0,@r3
-		mov.w	@(mbg_yinc_d,r14),r0
-		and	r7,r0
-		mov	r0,@r4
-		mov.w	@(mbg_fbpos_y,r14),r0
-		and	r7,r0
-		mov	r0,@r5
-		mov	@(mbg_fbpos,r14),r0
-		and	r7,r0
-		mov	r0,r7
-		mov.b	@(mbg_flags,r14),r0
-		and	#%10,r0
-		tst	r0,r0
-		bt	.indxmode
-		shll	r7
-.indxmode:
-		mov	r7,@r6
-.dont_snap:
 		rts
 		nop
 		align 4
 		ltorg
-;
-; --------------------------------------------------------
-; MarsVideo_BldScrlUD
-;
-; Reads background data for Up/Down scrolling into a
-; section of SDRAM, then call MarsVideo_DrwScrlUD
-; after this.
-;
-; Input:
-; r14 | Background buffer
-; --------------------------------------------------------
 
-; TODO: TEMPORAL
-
-		align 4
-MarsVideo_BldScrlUD:
-		mov	@(mbg_data,r14),r0
-		tst	r0,r0
-		bt	.exit
-		mov	r0,r13
-		mov	#RAM_Mars_UD_Pixels,r12
-		mov.w	@(mbg_width,r14),r0
-		mov	r0,r11
-		mov.w	@(mbg_height,r14),r0
-		mov	r0,r10
-		mov.w	@(mbg_intrl_blk,r14),r0
-		mov	r0,r9
-		mov.w	@(mbg_intrl_w,r14),r0
-		mov	r0,r8
-		mov	#Cach_XHead_L,r7
-		mov	@r7,r7
-		mov	#Cach_YHead_D,r6
-		mov.w	@(marsGbl_BgDrwD,gbr),r0
-		tst	r0,r0
-		bf	.cont
-		mov	#Cach_YHead_U,r6
-		mov.w	@(marsGbl_BgDrwU,gbr),r0
-		tst	r0,r0
-		bf	.cont
-.exit:
-		rts
-		nop
-		align 4
-.cont:
-		mov	@r6,r0
-		mulu	r0,r11
-		sts	macl,r0
-		add	r0,r13
-
-		mov	#4,r5
-.nxt_blk:
-		mov	r13,r6
-		add	r7,r6
-		mov	r9,r4
-.y_line:
-		mov	r6,r1
-		mov	r12,r2
-		mov	r9,r3
-		shlr2	r3
-.x_line:
-		mov	@r1+,r0
-		mov	r0,@r2
-		dt	r3
-		bf/s	.x_line
-		add	#4,r2
-		add	#16,r12
-		dt	r4
-		bf/s	.y_line
-		add 	r11,r6
-
-		add	r9,r7
-		cmp/ge	r11,r7
-		bf	.x_wdth
-		sub	r11,r7
-.x_wdth:
-		cmp/ge	r8,r5
-		bf/s	.nxt_blk
-		add	r9,r5
-
-		rts
-		nop
-		align 4
-		ltorg
+; ******************************
+; MarsVideo_DrawScrlLR and MarsVideo_DrawScrlUD
+; are located on cache_m_scrlspr.asm
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Super sprites
 ; ----------------------------------------------------------------
-
-; NOTE: MarsVideo_DrawSuperSpr is located on cache_m_scrlspr.asm
 
 ; --------------------------------------------------------
 ; MarsVideo_SetSuperSpr
@@ -1000,14 +885,13 @@ MarsVideo_SetSprFill:
 		add	r1,r3
 		add	r2,r4
 
-		mov	r5,r0	; Extra size add
-		shlr	r0
-		sub	r0,r1
+		mov	r5,r0			; Extra size add
+		shlr	r0			; <-- TODO: the lower, the better.
 		sub	r0,r2
-		add	r0,r3
 		add	r0,r4
-
-		mov	r5,r0	; BG X/Y add
+		sub	r0,r1
+		add	r0,r3
+		mov	r5,r0			; BG X/Y add
 		dt	r0
 		and	r0,r6
 		and	r0,r7
@@ -1015,11 +899,6 @@ MarsVideo_SetSprFill:
 		add	r6,r3
 		add	r7,r2
 		add	r7,r4
-; 		neg	r5,r0	; Fix into blocks
-; 		and	r0,r1
-; 		and	r0,r2
-; 		and	r0,r3
-; 		and	r0,r4
 
 	; TODO: X/Y REVERSE CHECK
 		mov	#320,r8
@@ -1096,6 +975,9 @@ MarsVideo_SetSprFill:
 		align 4
 		ltorg
 
+; ******************************
+; MarsVideo_DrawSuperSpr
+; is located on cache_m_scrlspr.asm
 
 ; ====================================================================
 ; ----------------------------------------------------------------

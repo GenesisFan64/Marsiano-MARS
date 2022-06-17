@@ -254,13 +254,14 @@ MD_ErrorTrap:
 MD_Init:
 		move.w	#$2700,sr
 		tst.w	(vdp_ctrl).l
-		btst	#15,d0				; TODO: this seems to fail...
+		btst	#15,d0			; TODO: this seems to fail...
 		bne.s	.hotstart
 		lea	(sysmars_reg).l,a5
 .wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master active?
 		bne.s	.wm
 .ws:		cmp.l	#"S_OK",comm4(a5)	; SH2 Slave active?
 		bne.s	.ws
+.hotstart:
 		lea	($FFFF0000),a0		; Cleanup our RAM
 		move.l	#sizeof_mdram,d1
 		moveq	#0,d0
@@ -268,7 +269,6 @@ MD_Init:
 		cmp.l	d1,a0
 		bcs.s	.loop_ram
 		movem.l	($FF0000),d0-a6		; Clear registers using zeros from RAM
-.hotstart:
 		lea	(sysmars_reg).l,a5
 		lea	(vdp_ctrl).l,a6
 .wait_dma:	move.w	(a6),d7			; Check if our DMA is active.
