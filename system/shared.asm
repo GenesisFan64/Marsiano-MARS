@@ -18,34 +18,32 @@ MAX_SUPERSPR	equ 32		; Number of Super Sprites
 ; --------------------------------------------------------
 
 		struct 0
-mdl_data	ds.l 1			; Model data pointer, if zero: no model
-mdl_option	ds.l 1			; Model options: pixelvalue add
-mdl_x_pos	ds.l 1			; X position $000000.00
-mdl_y_pos	ds.l 1			; Y position $000000.00
-mdl_z_pos	ds.l 1			; Z position $000000.00
-mdl_x_rot	ds.l 1			; X rotation $000000.00
-mdl_y_rot	ds.l 1			; Y rotation $000000.00
-mdl_z_rot	ds.l 1			; Z rotation $000000.00
-; mdl_animdata	ds.l 1			; Model animation data pointer, zero: no animation
-; mdl_animframe	ds.l 1			; Current frame in animation
-; mdl_animtimer	ds.l 1			; Animation timer
-; mdl_animspd	ds.l 1			; Animation USER speed setting
+mdl_data	ds.l 1		; Model data pointer, if zero: no model
+mdl_option	ds.l 1		; Model options: pixelvalue add
+mdl_x_pos	ds.l 1		; X position $000000.00
+mdl_y_pos	ds.l 1		; Y position $000000.00
+mdl_z_pos	ds.l 1		; Z position $000000.00
+mdl_x_rot	ds.l 1		; X rotation $000000.00
+mdl_y_rot	ds.l 1		; Y rotation $000000.00
+mdl_z_rot	ds.l 1		; Z rotation $000000.00
 sizeof_mdlobj	ds.l 0
 		finish
 
 ; "Super" sprite
+; RAM_MdDreq+Dreq_SuperSpr
 		struct 0
-marsspr_data	ds.l 1		; Sprite pixel data (Cache'd or not), if 0 == end-of-list
-marsspr_dwidth	ds.w 1		; WIDTH size of the pixel data
-marsspr_indx	ds.w 1		; Palette index base
-marsspr_x	ds.w 1		; Screen X position
-marsspr_xs	ds.w 1		; Sprite X size
-marsspr_y	ds.w 1		; Screen Y position
-marsspr_ys	ds.w 1		; Sprite Y size
-marsspr_xt	ds.b 1		; Texture X size
-marsspr_yt	ds.b 1		; Texture Y size
-marsspr_xfrm	ds.b 1		; Frame in X order
-marsspr_yfrm	ds.b 1		; Frame in Y order
+marsspr_data	ds.l 1	; Spritesheet DATA location in SH2 area (MANUALLY ADD |TH IF NEEDED), 0 == end-of-spritelist
+marsspr_dwidth	ds.w 1	; Spritesheet WIDTH
+marsspr_indx	ds.w 1	; Palette index base
+marsspr_flags	ds.w 1	; Sprite flags: %VH
+marsspr_x	ds.w 1	; Screen X position
+marsspr_y	ds.w 1	; Screen Y position
+marsspr_xs	ds.b 1	; Sprite X size
+marsspr_ys	ds.b 1	; Sprite Y size
+marsspr_xt	ds.b 1	; Texture X size
+marsspr_yt	ds.b 1	; Texture Y size
+marsspr_xfrm	ds.b 1	; Animation X frame pos
+marsspr_yfrm	ds.b 1	; Animation Y frame pos
 sizeof_marsspr	ds.l 0
 		finish
 

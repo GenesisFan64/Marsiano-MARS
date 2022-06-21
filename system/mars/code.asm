@@ -554,20 +554,11 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov	#_DMAOPERATION,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#_DMACHANNEL0,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#$44E0,r1
-		mov	r0,@r1
-; 		mov	#_sysreg,r1
-; 		mov	r1,r0
-; 		mov.w	r0,@(vresintclr,r1)
-; 		mov.w	@(dreqctl,r1),r0
-; 		tst	#1,r0
-; 		bf	.rv_busy
+		mov	#_sysreg,r1
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	@(dreqctl,r1),r0
+		tst	#1,r0
+		bf	.rv_busy
 		mov	#(CS3|$40000)-8,r15
 		mov	#SH2_M_HotStart,r0
 		mov	r0,@r15
@@ -576,6 +567,15 @@ m_irq_vres:
 		mov	#_sysreg,r1
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r1)
+
+		mov	#_DMAOPERATION,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#_DMACHANNEL0,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#$44E0,r1
+		mov	r0,@r1
 		rte
 		nop
 		align 4
@@ -974,20 +974,11 @@ s_irq_v:
 ; ------------------------------------------------
 
 s_irq_vres:
-		mov	#_DMAOPERATION,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#_DMACHANNEL0,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#$44E0,r1
-		mov	r0,@r1
-; 		mov	#_sysreg,r1
-; 		mov	r1,r0
-; 		mov.w	r0,@(vresintclr,r1)
-; 		mov.w	@(dreqctl,r1),r0
-; 		tst	#1,r0
-; 		bf	.rv_busy
+		mov	#_sysreg,r1
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	@(dreqctl,r1),r0
+		tst	#1,r0
+		bf	.rv_busy
 		mov	#(CS3|$3F000)-8,r15
 		mov	#SH2_S_HotStart,r0
 		mov	r0,@r15
@@ -996,6 +987,15 @@ s_irq_vres:
 		mov	#_sysreg,r1
 		mov	#"S_OK",r0
 		mov	r0,@(comm4,r1)
+
+		mov	#_DMAOPERATION,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#_DMACHANNEL0,r1
+		mov     #0,r0
+		mov	r0,@r1
+		mov	#$44E0,r1
+		mov	r0,@r1
 		rte
 		nop
 		align 4
@@ -1124,7 +1124,7 @@ SH2_M_Entry:
 		mov	#0,r0
 		mov.b	r0,@(3,r1)
 		mov.b	r0,@(2,r1)
-; 		mov	#$FFFFFFF2,r0		; <-- not needed here
+; 		mov	#$FFFFFFF2,r0			; <-- not needed here
 ; 		mov.b	r0,@(7,r1)
 ; 		mov	#0,r0
 ; 		mov.b	r0,@(4,r1)
@@ -1132,8 +1132,6 @@ SH2_M_Entry:
 ; 		mov.b	r0,@(5,r1)
 ; 		mov	#$FFFFFFE2,r0
 ; 		mov.b	r0,@(7,r1)
-		mov	#RAM_Mars_Global,r1		; Reset gbr
-		ldc	r1,gbr
 		mov.l   #$FFFFFEE2,r0			; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1141,8 +1139,8 @@ SH2_M_Entry:
 		mov     #$120/4,r1			; Watchdog: Set jump pointer: VBR + (this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-		mov	#$F0,r0				; Interrupts OFF
-		ldc	r0,sr
+		mov	#RAM_Mars_Global,r0		; Reset gbr
+		ldc	r0,gbr
 		mov	#MarsVideo_Init,r0		; Init Video
 		jsr	@r0
 		nop
@@ -1164,51 +1162,38 @@ SH2_M_Entry:
 ; (this applies for BOTH SH2)
 
 SH2_M_HotStart:
-		mov	#_sysreg,r1
-    		mov	#0,r0
-		mov.w	r0,@(vresintclr,r1)
-		mov.w	r0,@(vintclr,r1)
-		mov.w	r0,@(hintclr,r1)
-		mov.w	r0,@(cmdintclr,r1)
-		mov.w	r0,@(pwmintclr,r1)
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0		; Disable Watchdog
 		mov.w	r0,@r1
 		mov	#_CCR,r1		; Reset CACHE
 		mov	#$10,r0
 		mov.b	r0,@r1
+		nop
+		nop
+		nop
+		nop
+		nop
 		xor	r0,r0
-		mov	#_sysreg+comm12,r1
-		mov.w	r0,@r1
-		nop
-		nop
-		nop
-		nop
-		nop
+		mov	#_sysreg+comm12,r2
+		mov.w	r0,@r2
 		mov	#9,r0
 		mov.b	r0,@r1
 		mov	#_sysreg,r1
 		mov.w	@r1,r0
 		or	#CMDIRQ_ON|VIRQ_ON,r0
 		mov.w	r0,@r1
-		mov	#$20,r0				; Interrupts ON
-		ldc	r0,sr
-
-		mov	#_vdpreg,r1			; Wait a frame
--		mov.b	@(vdpsts,r1),r0
-		tst	#VBLK,r0
-		bt	-
--		mov.b	@(vdpsts,r1),r0
-		tst	#VBLK,r0
-		bf	-
+    		mov	#0,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	r0,@(vintclr,r1)
+		mov.w	r0,@(hintclr,r1)
+		mov.w	r0,@(cmdintclr,r1)
+		mov.w	r0,@(pwmintclr,r1)
 		mov	#_sysreg+comm8,r1
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
 		bf	.wait_md
-; 		mov	#_sysreg+dreqctl,r1
-; .wait_rv:	mov.w	@r1,r0
-; 		tst	#1,r0
-; 		bf	.wait_rv
+		mov	#$20,r0				; Interrupts ON
+		ldc	r0,sr
 		bra	master_loop
 		nop
 		align 4
@@ -1983,15 +1968,6 @@ SH2_S_Entry:
 		mov.b	r0,@(5,r1)
 		mov	#$FFFFFFE2,r0
 		mov.b	r0,@(7,r1)		; <-- ***
-		mov	#_sysreg,r1
-    		mov	#0,r0
-		mov.w	r0,@(vresintclr,r1)
-		mov.w	r0,@(vintclr,r1)
-		mov.w	r0,@(hintclr,r1)
-		mov.w	r0,@(cmdintclr,r1)
-
-		mov	#RAM_Mars_Global,r1	; Reset gbr
-		ldc	r1,gbr
 		mov.l   #$FFFFFEE2,r0		; Watchdog: Set interrupt priority bits (IPRA)
 		mov     #%0101<<4,r1
 		mov.w   r1,@r0
@@ -1999,8 +1975,8 @@ SH2_S_Entry:
 		mov     #$120/4,r1		; Watchdog: Set jump pointer (VBR + this/4) (WITV)
 		shll8   r1
 		mov.w   r1,@r0
-		mov	#$F0,r0			; Interrupts OFF
-		ldc	r0,sr
+		mov	#RAM_Mars_Global,r0	; Reset gbr
+		ldc	r0,gbr
 		bsr	MarsSound_Init		; Init sound
 		nop
 
@@ -2010,30 +1986,22 @@ SH2_S_Entry:
 ; ----------------------------------------------------------------
 
 SH2_S_HotStart:
-		mov	#_sysreg,r1
-    		mov	#0,r0
-		mov.w	r0,@(vresintclr,r1)
-		mov.w	r0,@(vintclr,r1)
-		mov.w	r0,@(hintclr,r1)
-		mov.w	r0,@(cmdintclr,r1)
-		mov.w	r0,@(pwmintclr,r1)
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0		; Disable Watchdog
 		mov.w	r0,@r1
 		mov	#_CCR,r1		; Reset CACHE
 		mov	#$10,r0
 		mov.b	r0,@r1
+		nop
+		nop
+		nop
+		nop
+		nop
 		xor	r0,r0
-		mov	#_sysreg+comm14,r1
-		mov.w	r0,@r1
-		nop
-		nop
-		nop
-		nop
-		nop
+		mov	#_sysreg+comm14,r2
+		mov.w	r0,@r2
 		mov	#9,r0
 		mov.b	r0,@r1
-
 		mov	#CACHE_SLAVE,r1
 		mov	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r2
 		mov	#Mars_LoadFastCode,r0
@@ -2052,17 +2020,18 @@ SH2_S_HotStart:
 		mov.w	@r1,r0
 		or	#CMDIRQ_ON|PWMIRQ_ON,r0
 		mov.w	r0,@r1
-		mov	#$20,r0				; Interrupts ON
-		ldc	r0,sr
-
+    		mov	#0,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	r0,@(vintclr,r1)
+		mov.w	r0,@(hintclr,r1)
+		mov.w	r0,@(cmdintclr,r1)
+		mov.w	r0,@(pwmintclr,r1)
 		mov	#_sysreg+comm10,r1
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
 		bf	.wait_md
-; 		mov	#_sysreg+dreqctl,r1
-; .wait_rv:	mov.w	@r1,r0
-; 		tst	#1,r0
-; 		bf	.wait_rv
+		mov	#$20,r0				; Interrupts ON
+		ldc	r0,sr
 		bra	slave_loop
 		nop
 		align 4

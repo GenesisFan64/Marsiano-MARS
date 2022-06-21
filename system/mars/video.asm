@@ -68,16 +68,12 @@ sizeof_marsbg	ds.l 0
 
 ; Current camera view values
 		struct 0
-cam_x_pos	ds.l 1			; X position $000000.00
-cam_y_pos	ds.l 1			; Y position $000000.00
-cam_z_pos	ds.l 1			; Z position $000000.00
-cam_x_rot	ds.l 1			; X rotation $000000.00
-cam_y_rot	ds.l 1			; Y rotation $000000.00
-cam_z_rot	ds.l 1			; Z rotation $000000.00
-; cam_animdata	ds.l 1			; Model animation data pointer, zero: no animation
-; cam_animframe	ds.l 1			; Current frame in animation
-; cam_animtimer	ds.l 1			; Animation timer
-; cam_animspd	ds.l 1			; Animation speed
+cam_x_pos	ds.l 1		; X position $000000.00
+cam_y_pos	ds.l 1		; Y position $000000.00
+cam_z_pos	ds.l 1		; Z position $000000.00
+cam_x_rot	ds.l 1		; X rotation $000000.00
+cam_y_rot	ds.l 1		; Y rotation $000000.00
+cam_z_rot	ds.l 1		; Z rotation $000000.00
 sizeof_camera	ds.l 0
 		finish
 
@@ -582,8 +578,6 @@ MarsVideo_ShowScrlBg:
 ;
 ; Input:
 ; r14 | Background buffer
-;
-; NOTE: Doesn't have any sort of overflow protection.
 ; --------------------------------------------------------
 
 		align 4
@@ -620,14 +614,17 @@ MarsVideo_MoveBg:
 .yequ:
 		mov	r3,r0
 		mov.w	r0,@(mbg_ypos_old,r14)
-		cmp/pz	r1
-		bt	.x_stend
-		exts	r1,r1
-.x_stend:
-		cmp/pz	r2
-		bt	.y_stend
-		exts	r2,r2
-.y_stend:
+		exts.w	r1,r1
+		exts.w	r2,r2
+
+; 		cmp/pz	r1
+; 		bt	.x_stend
+; 		exts	r1,r1
+; .x_stend:
+; 		cmp/pz	r2
+; 		bt	.y_stend
+; 		exts	r2,r2
+; .y_stend:
 
 	; ---------------------------------------
 	; Y Framebuffer position
@@ -823,8 +820,8 @@ MarsVideo_MoveBg:
 ; --------------------------------------------------------
 ; MarsVideo_SetSuperSpr
 ;
-; Sets screen variables for drawing the Super Sprites
-; (Cache'd variables)
+; Sets external screen variables for drawing the
+; Super Sprites (Cache'd variables)
 ;
 ; Input:
 ; r1 - VRAM base
@@ -852,7 +849,8 @@ MarsVideo_SetSuperSpr:
 ; --------------------------------------------------------
 ; MarsVideo_SetSprFill
 ;
-; Call this AFTER drawing the Super Sprites.
+; Makes the redraw-boxes for Screen Mode 2
+; call this AFTER drawing the Super Sprites.
 ;
 ; Input:
 ; r14 - Background buffer to use
@@ -860,11 +858,16 @@ MarsVideo_SetSuperSpr:
 ; r12 - Block refill list
 ; --------------------------------------------------------
 
+; TODO: make a duplicate-block check.
+
 		align 4
 MarsVideo_SetSprFill:
 		mov	#$80000000,r11
 		mov	#$7FFFFFFF,r10
+		mov	#MAX_SUPERSPR,r9
 .next_one:
+		cmp/pl	r9
+		bf	.exit
 		mov	@(marsspr_data,r13),r0
 		tst	r0,r0
 		bt	.exit
@@ -872,10 +875,10 @@ MarsVideo_SetSprFill:
 		mov	r0,r1
 		mov.w	@(marsspr_y,r13),r0		; r2 - Y pos (top)
 		mov	r0,r2
-		mov.w	@(marsspr_xs,r13),r0		; r3 - XS (right)
-		mov	r0,r3
-		mov.w	@(marsspr_ys,r13),r0		; r4 - YS (bottom)
-		mov	r0,r4
+		mov.b	@(marsspr_xs,r13),r0		; r3 - XS (right)
+		extu.b	r0,r3
+		mov.b	@(marsspr_ys,r13),r0		; r4 - YS (bottom)
+		extu.b	r0,r4
 		mov.w	@(mbg_intrl_blk,r14),r0		; r5 - block size
 		mov	r0,r5
 		mov	@(mbg_xpos,r14),r6
@@ -885,13 +888,13 @@ MarsVideo_SetSprFill:
 		add	r1,r3
 		add	r2,r4
 
-		mov	r5,r0			; Extra size add
-		shlr	r0			; <-- TODO: the lower, the better.
+		mov	r5,r0		; Extra size add
+		shlr	r0		; <-- TODO: lower = faster
 		sub	r0,r2
 		add	r0,r4
 		sub	r0,r1
 		add	r0,r3
-		mov	r5,r0			; BG X/Y add
+		mov	r5,r0		; BG X/Y add
 		dt	r0
 		and	r0,r6
 		and	r0,r7
@@ -901,42 +904,42 @@ MarsVideo_SetSprFill:
 		add	r7,r4
 
 	; TODO: X/Y REVERSE CHECK
-		mov	#320,r8
-		mov	#224,r9
-		add	r5,r8
-		add	r5,r9
+		mov	#320,r6
+		mov	#224,r7
+		add	r5,r6
+		add	r5,r7
 		cmp/pl	r1
 		bt	.xl_l
 		xor	r1,r1
 .xl_l:
-		cmp/ge	r8,r1
+		cmp/ge	r6,r1
 		bf	.xl_r
-		mov	r8,r1
+		mov	r6,r1
 .xl_r:
 		cmp/pl	r3
 		bt	.xr_l
 		xor	r3,r3
 .xr_l:
-		cmp/ge	r8,r3
+		cmp/ge	r6,r3
 		bf	.xr_r
-		mov	r8,r3
+		mov	r6,r3
 .xr_r:
 
 		cmp/pl	r2
 		bt	.yt_l
 		xor	r2,r2
 .yt_l:
-		cmp/ge	r9,r2
+		cmp/ge	r7,r2
 		bf	.yt_r
-		mov	r9,r2
+		mov	r7,r2
 .yt_r:
 		cmp/pl	r4
 		bt	.yb_l
 		xor	r4,r4
 .yb_l:
-		cmp/ge	r9,r4
+		cmp/ge	r7,r4
 		bf	.yb_r
-		mov	r9,r4
+		mov	r7,r4
 .yb_r:
 		shlr2	r1
 		shlr2	r2
@@ -957,15 +960,15 @@ MarsVideo_SetSprFill:
 		shll16	r0
 		or	r4,r0
 		or	r3,r0
-		mov	@r12,r9
-		and	r10,r9		; Filter draw bits
-		cmp/eq	r9,r0
+		mov	@r12,r5
+		and	r10,r5		; Filter draw bits
+		cmp/eq	r5,r0
 		bt	.same_en
 		or	r11,r0		; Add draw bits
 		mov	r0,@r12
 .same_en:
 		add	#4,r12
-
+		dt	r9
 .bad_xy:
 		bra	.next_one
 		add	#sizeof_marsspr,r13

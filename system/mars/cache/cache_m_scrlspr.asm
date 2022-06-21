@@ -56,7 +56,7 @@ CACHE_MSTR_SCRL:
 		align 4
 		ltorg
 
-; 	; NEXT
+; 	; NEXT ENTER
 ; 		mov.l   #$FFFFFE80,r1
 ; 		mov.w   #$A518,r0		; OFF
 ; 		mov.w   r0,@r1
@@ -70,7 +70,7 @@ CACHE_MSTR_SCRL:
 ; .finish_now:
 ; 		mov	#1,r0
 ; 		mov.w	r0,@(marsGbl_WdgStatus,gbr)
-; 		mov	#$FFFFFE80,r1			; Stop watchdog
+; 		mov	#$FFFFFE80,r1		; Stop watchdog
 ; 		mov.w   #$A518,r0
 ; 		mov.w   r0,@r1
 ; 		rts
@@ -593,96 +593,6 @@ MarsVideo_DrawScrlUD:
 		align 4
 		ltorg
 
-
-; 		mov	#RAM_Mars_BgBuffScrl,r14
-; 		mov	#RAM_Mars_UD_Pixels,r13
-; 		mov.w	@(mbg_intrl_h,r14),r0
-; 		mov	r0,r6
-; 		mov	@(mbg_intrl_size,r14),r0
-; 		mov	r0,r7
-; 		mov.w	@(mbg_intrl_blk,r14),r0
-; 		mov	r0,r8
-; 		mov.w	@(mbg_intrl_w,r14),r0
-; 		mov	r0,r9
-; 		mov	@(mbg_fbdata,r14),r4
-; 		mov	#Cach_BgFbPos_V,r10
-; 		mov	@r10,r10
-; 		mov	#Cach_BgFbPos_H,r11
-; 		mov	@r11,r11
-; 		mov	#_framebuffer,r12
-; 		add	r4,r12
-; 		mov	r6,r5
-; 		sub	r8,r5
-; 		mov.w	@(marsGbl_BgDrwD,gbr),r0
-; 		tst	r0,r0
-; 		bf	.right
-; 		mov.w	@(marsGbl_BgDrwU,gbr),r0
-; 		tst	r0,r0
-; 		bf	.left
-; 		rts
-; 		nop
-; 		align 4
-; .left:
-; 		dt	r0
-; 		bra	.start
-; 		mov.w	r0,@(marsGbl_BgDrwU,gbr)
-; .right:
-; 		dt	r0
-; 		mov.w	r0,@(marsGbl_BgDrwD,gbr)
-; 		add	r5,r10
-; .start:
-; 		cmp/ge	r6,r10
-; 		bf	.x_max2
-; 		sub	r6,r10
-; .x_max2:
-; 		mulu	r9,r10		; macl - FB topleft
-; 		xor	r5,r5		; r5 - counter
-; .nxt_blk:
-; 		sts	macl,r10
-; 		lds	r5,mach
-; 		mov	r8,r6
-; 		mov	#320,r5
-;
-; .y_line:
-; 		mov	r13,r1
-; 		mov	r10,r4
-; 		add	r11,r4
-; 		mov	r8,r3
-; 		shlr2	r3
-; .x_line:
-; 		mov	@r1+,r0
-; 		cmp/ge	r7,r4
-; 		bf	.x_max
-; 		sub	r7,r4
-; .x_max:
-; 		cmp/ge	r5,r4
-; 		bt	.x_hdn
-; 		mov	r4,r2
-; 		add	r12,r2
-; 		add	r7,r2
-; 		mov	r0,@r2
-; .x_hdn:
-; 		mov	r4,r2
-; 		add	r12,r2
-; 		mov	r0,@r2
-; 		dt	r3
-; 		bf/s	.x_line
-; 		add	#4,r4
-;
-; 		add	r9,r10
-; 		dt	r6
-; 		bf/s	.y_line
-; 		add	#16,r13
-; 		sts	mach,r5
-; 		add	r8,r5
-; 		cmp/ge	r9,r5
-; 		bf/s	.nxt_blk
-; 		add	r8,r11
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Super sprites
@@ -691,19 +601,19 @@ MarsVideo_DrawScrlUD:
 ; --------------------------------------------------------
 ; MarsVideo_DrwSprBlk
 ;
-; Redraw the background sections overwriten by the Super
-; Sprites.
+; Redraws the background sections overwriten
+; by the Super Sprites using the list generated
+; by MarsVideo_SetSprFill
 ;
-; Call this BEFORE updating the X/Y background positions
-; and then CALL MarsVideo_MarkSprBlocks AFTER drawing
-; the sprites on the current framebuffer.
+; Call this BEFORE updating the X/Y background positions.
 ;
 ; Input:
 ; r14 - List of sprite-redraw pieces
 ; r13 - Background buffer to use
 ;
 ; Note:
-; CPU-intensive
+; CPU-intensive, and doesn't have any
+; overflow protection.
 ; --------------------------------------------------------
 
 		align 4
@@ -790,7 +700,6 @@ MarsVideo_DrwSprBlk:
 	;   Index format:
 	;   %EEyyyyyy xxxxxxxx wwwwwwww hhhhhhhh
 	;     y_pos/4  x_pos/4  width/4 height/4
-
 .indx_read:
 		mov	@r13,r0
 		cmp/pz	r0
@@ -939,28 +848,16 @@ MarsVideo_NxtSuprSpr:
 		nop
 		align 4
 .valid:
-		mov	r14,@-r15
-
-		mov	r14,r1		; Copy sprite to CACHE
-		mov	#Cach_SprCopy,r14
-		mov	r14,r2
-	rept sizeof_marsspr/4
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
-; 		nop
-	endm
-		nop
 		mov.w	@(marsspr_indx,r14),r0
 		mov	r0,r12
 		mov.w	@(marsspr_x,r14),r0
 		exts.w	r0,r5
 		mov.w	@(marsspr_y,r14),r0
 		exts.w	r0,r6
-		mov.w	@(marsspr_xs,r14),r0
-		exts.w	r0,r7
-		mov.w	@(marsspr_ys,r14),r0
-		exts.w	r0,r8
+		mov.b	@(marsspr_xs,r14),r0
+		exts.b	r0,r7
+		mov.b	@(marsspr_ys,r14),r0
+		exts.b	r0,r8
 		mov	r7,r3			; Copy old XS / YS
 		mov	r8,r4
 		add	r5,r7
@@ -973,50 +870,87 @@ MarsVideo_NxtSuprSpr:
 		bt	.spr_out
 		cmp/ge	r10,r6
 		bt	.spr_out
-
 		mov.w	@(marsspr_dwidth,r14),r0
 		mov	r0,r1
 		mov.w	@(marsspr_xfrm,r14),r0	; X frame
 		mov	r0,r2
 		mov	@(marsspr_data,r14),r13
+		mulu	r1,r4
+		sts	macl,r4
+		and	#$FF,r0
+		mulu	r4,r0
+		sts	macl,r0
+		add	r0,r13
+
+		mov	r2,r0
 		shlr8	r0
 		and	#$FF,r0
 		mulu	r3,r0
 		sts	macl,r0
 		add	r0,r13
-		mov	r2,r0			; Y frame
-		and	#$FF,r0
-		mulu	r4,r0
-		sts	macl,r0
-		mulu	r1,r0
-		sts	macl,r0
-		add	r0,r13
+
+	; XR / YB
+		mov	#320,r0
+		cmp/ge	r0,r7
+		bf	.xb_e
+		mov	r0,r7
+.xb_e:
+		mov	#224,r0
+		cmp/ge	r0,r8
+		bf	.yb_e
+		mov	r0,r8
+.yb_e:
+
+		mov	#Cach_FbData,r2
+		mov	@r2,r2
+		mov	#_framebuffer,r0
+		add	r2,r0
+		lds	r0,mach
+		mov.w	@(marsspr_dwidth,r14),r0
+		extu.w	r0,r2
+		mov.w	@(marsspr_flags,r14),r0
+		tst	#%10,r0		; Y flip?
+		bt	.flp_v
+		add	r4,r13
+		sub	r2,r13
+		neg	r2,r2
+.flp_v:
+		mov	#1,r4
+		tst	#%01,r0		; X flip?
+		bt	.flp_h
+		add	r3,r13		; move beam
+		mov	#-1,r4		; decrement line
+.flp_h:
+
 		cmp/pz	r6
 		bt	.yt_e
 		neg	r6,r0
 		xor	r6,r6
 		muls	r0,r1
 		sts	macl,r0
+		cmp/pz	r2
+		bt	.yfinc
+		neg	r0,r0
+.yfinc:
 		add	r0,r13
 .yt_e:
+
 		cmp/pz	r5
 		bt	.xt_e
-		sub	r5,r13
+		mov	r5,r0
+		cmp/pz	r4
+		bt	.xfinc
+		neg	r0,r0
+.xfinc:
+		sub	r0,r13
 		xor	r5,r5
 .xt_e:
-		mov	#320,r0
-		cmp/ge	r0,r7
-		bf	.xb_e
-		mov	r0,r7
-.xb_e:
-; 		mov	#240,r0
-		mov	#224,r0
-		cmp/ge	r0,r8
-		bf	.yb_e
-		mov	r0,r8
-.yb_e:
+
+		extu.w	r4,r0
+		shll16	r2
+		or	r2,r0
 		mov	#Cach_FbPos_Y,r4
-		mov	#Cach_FbPos,r3
+		mov	#Cach_FbPos,r2
 		mov	@r4,r4
 		add	r6,r4
 		cmp/ge	r10,r4
@@ -1024,16 +958,12 @@ MarsVideo_NxtSuprSpr:
 		sub	r10,r4
 .y_snap:
 		mulu	r11,r4
-		mov	@r3,r3
+		mov	@r2,r2
 		sts	macl,r4
-		add	r3,r4
-		mov	#Cach_FbData,r1
-		mov	@r1,r1
-		mov	#_framebuffer,r0
-		add	r1,r0
-		lds	r0,mach
-		nop
+		add	r2,r4
+		lds	r0,macl
 
+	; macl - Spritesheet WIDTH | line drawing direction
 	; mach - _framebuffer + base
 	;  r14 - Sprite data
 	;  r13 - Texture data
@@ -1045,6 +975,7 @@ MarsVideo_NxtSuprSpr:
 	;   r7 - X End
 	;   r6 - Y Start
 	;   r5 - X Start
+	;   r4 - FB output
 	;
 	; *** start ***
 .y_loop:
@@ -1079,18 +1010,22 @@ MarsVideo_NxtSuprSpr:
 		mov.b	r0,@r3
 .ex_line:
 		add	#1,r2			; Increment X pos
+		sts	macl,r0
+		exts.w	r0,r0
 		cmp/ge	r7,r2
 		bf/s	.x_loop
-		add	#1,r1			; Increment texture pos
+		add	r0,r1			; Increment texture pos
 
-		mov.w	@(marsspr_dwidth,r14),r0
+		sts	macl,r0
+		shlr16	r0
+		exts.w	r0,r0
 		add	r0,r13			; Next texture line
 		add	#1,r6			; Increment loop Y
 		cmp/ge	r8,r6			; Y start > Y end?
 		bf/s	.y_loop
 		add	r11,r4			; Next FB top-left line
 .spr_out:
-		mov	@r15+,r14
+; 		mov	@r15+,r14
 		bra	MarsVideo_NxtSuprSpr
 		add 	#sizeof_marsspr,r14
 		align 4

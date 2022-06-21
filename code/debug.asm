@@ -239,10 +239,11 @@ MD_DebugMenu:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$110,marsspr_x(a0)
+		move.w	#$B0,marsspr_x(a0)
 		move.w	#$60,marsspr_y(a0)
-		move.w	#32,marsspr_xs(a0)
-		move.w	#48,marsspr_ys(a0)
+
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
 		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
@@ -253,10 +254,10 @@ MD_DebugMenu:
 		adda	#sizeof_marsspr,a0
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$10,marsspr_x(a0)
-		move.w	#$30,marsspr_y(a0)
-		move.w	#32,marsspr_xs(a0)
-		move.w	#48,marsspr_ys(a0)
+		move.w	#$60,marsspr_x(a0)
+		move.w	#$50,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
 		move.b	#32,marsspr_xt(a0)
 		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
@@ -1271,6 +1272,20 @@ SuperSprite_Test:
 		and.w	#%11,d0
 		move.b	d0,marsspr_yfrm(a0)
 .wspr:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyX,d7
+		beq	.not_hold3
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		add.w	#1,marsspr_flags(a0)
+		and.w	#%11,marsspr_flags(a0)
+.not_hold3:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyY,d7
+		beq	.not_hold4
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		add.b	#1,marsspr_yfrm(a0)
+		and.b	#%11,marsspr_yfrm(a0)
+.not_hold4:
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyB,d7
@@ -1328,7 +1343,6 @@ SuperSprite_Test:
 .nou_s2:
 		move.w	d0,marsspr_xs(a0)
 		move.w	d1,marsspr_ys(a0)
-
 .not_hold:
 
 		add.w	#1,(RAM_SprFrame).w
