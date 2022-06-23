@@ -40,10 +40,9 @@ marsspr_x	ds.w 1	; Screen X position
 marsspr_y	ds.w 1	; Screen Y position
 marsspr_xs	ds.b 1	; Sprite X size
 marsspr_ys	ds.b 1	; Sprite Y size
-marsspr_xt	ds.b 1	; Texture X size
-marsspr_yt	ds.b 1	; Texture Y size
 marsspr_xfrm	ds.b 1	; Animation X frame pos
 marsspr_yfrm	ds.b 1	; Animation Y frame pos
+marsspr_fill	ds.w 1	; <-- free to use (fill)
 sizeof_marsspr	ds.l 0
 		finish
 

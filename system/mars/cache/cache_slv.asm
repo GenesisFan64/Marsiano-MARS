@@ -248,6 +248,8 @@ s_irq_pwm:
 ; ------------------------------------------------
 
 			align 4
+MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+MarsSnd_PwmControl	ds.b $38		; 7 bytes per channel.
 MarsSnd_RvMode		ds.l 1
 MarsSnd_Active		ds.l 1
 Cach_BkupPnt_L		ds.l 8			;
@@ -255,8 +257,7 @@ Cach_BkupPnt_S		ds.l 0			; <-- Reads backwards
 Cach_BkupS_L		ds.l 5			;
 Cach_BkupS_S		ds.l 0
 Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
-MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38		; 7 bytes per channel.
+
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

@@ -276,4 +276,7 @@ MD_Init:
 		bne.s	.wait_dma
 		move.l	#$80048104,(a6)		; Default top VDP regs
 		moveq	#0,d0			; Flag to unlock both SH2
+		move.l	d0,comm0(a5)
+		move.l	d0,comm4(a5)
 		move.l	d0,comm8(a5)
+; 		move.l	d0,comm12(a5)

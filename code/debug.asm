@@ -11,7 +11,7 @@ TEST_SPRSPD	equ	$04
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	2
+set_StartPage	equ	4
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -241,13 +241,9 @@ MD_DebugMenu:
 		move.w	#64,marsspr_dwidth(a0)
 		move.w	#$B0,marsspr_x(a0)
 		move.w	#$60,marsspr_y(a0)
-
 		move.b	#32,marsspr_xs(a0)
 		move.b	#48,marsspr_ys(a0)
-		move.b	#32,marsspr_xt(a0)
-		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
-
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
 		or.l	#TH,d1
@@ -258,13 +254,9 @@ MD_DebugMenu:
 		move.w	#$50,marsspr_y(a0)
 		move.b	#32,marsspr_xs(a0)
 		move.b	#48,marsspr_ys(a0)
-		move.b	#32,marsspr_xt(a0)
-		move.b	#48,marsspr_yt(a0)
 		move.w	#$80,marsspr_indx(a0)
-
 		adda	#sizeof_marsspr,a0
 		move.l	#0,marsspr_data(a0)
-
 		lea	str_Page2_bg(pc),a0
 		move.l	#locate(1,8,8),d0
 		bsr	Video_Print

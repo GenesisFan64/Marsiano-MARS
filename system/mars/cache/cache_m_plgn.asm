@@ -18,24 +18,533 @@ CACHE_MSTR_PLGN:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-
-		mov.w	@(marsGbl_CntrRdPlgn,gbr),r0
+		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($08)?
 		cmp/eq	#0,r0
-		bf	.has_plgn
-		bra	wdg_finish
-		nop
-		align 4
-.wdg_pzfull:
-		bra	wdg_pzfull
-		nop
-		align 4
-.has_plgn:
-		mov.w	@(marsGbl_CntrRdPlgn,gbr),r0
+		bf	maindrw_tasks
+
+; ------------------------------------------------
+; First task: clear Framebuffer
+; ------------------------------------------------
+
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w   @($A,r1),r0			; Framebuffer free?
+		tst     #2,r0
+		bf      .wait_fb
+		mov.w   @(6,r1),r0			; SVDP-fill address
+		add     #$5B,r0				; pre-increment
+		mov.w   r0,@(6,r1)
+		mov.w   #328/2,r0			; SVDP-fill size (320 pixels)
+		mov.w   r0,@(4,r1)
+		mov.w	#$0000,r0			; SVDP-fill pixel data
+		mov.w   r0,@(8,r1)			; now SVDP-fill is now busy.
+		mov	#$FFFFFE80,r1
+		mov.w   #$A518,r0			; OFF
+		mov.w   r0,@r1
+		or      #$20,r0				; ON
+		mov.w   r0,@r1
+		mov.w   #$5A10,r0			; Timer before next watchdog
+		mov.w   r0,@r1
+		mov	#Cach_ClrLines,r1		; Decrement a line to progress
+		mov	@r1,r0
 		dt	r0
-		mov.w	r0,@(marsGbl_CntrRdPlgn,gbr)
-		mov	@(marsGbl_CurrRdPlgn,gbr),r0
-		mov	@(4,r0),r14
+		bf/s	.on_clr
+		mov	r0,@r1
+		mov	#1,r0				; If finished: set task $01
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+.on_clr:
+		rts
+		nop
+		align 4
+		ltorg
+
+; ------------------------------------------------
+; Main drawing routines
+; ------------------------------------------------
+
+		align 4
+maindrw_tasks:
+		shll2	r0
+		mov	#.list,r1
+		mov	@(r1,r0),r0
+		jmp	@r0
+		nop
+		align 4
+.list:
+		dc.l slvplgn_01		;
+		dc.l slvplgn_01		; Main drawing routine
+		dc.l slvplgn_02		; Resume from solid color
+
+; --------------------------------
+; Task $02
+; --------------------------------
+
+; TODO: currently it only resumes
+; from solid_color
+
+slvplgn_02:
+		mov	r2,@-r15
+		mov.w	@(marsGbl_DrwPause,gbr),r0
+		cmp/eq	#1,r0
+		bt	.exit
+		mov	r3,@-r15
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+		mov	r9,@-r15
+		mov	r10,@-r15
+		mov	r11,@-r15
+		mov	r12,@-r15
+		mov	r13,@-r15
+		mov	r14,@-r15
+		sts	macl,@-r15
+		sts	mach,@-r15
+		mov	#Cach_LnDrw_L,r0
+		mov	@r0+,r14
+		mov	@r0+,r13
+		mov	@r0+,r12
+		mov	@r0+,r11
+		mov	@r0+,r10
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r6
+		mov	@r0+,r5
+		mov	@r0+,r4
+		mov	@r0+,r3
+		mov	@r0+,r2
+		mov	@r0+,r1
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		bra	drwsld_updline
+		nop
+.exit:		bra	drwtask_exit
+		mov	#$10,r2
+		align 4
+
+; --------------------------------
+; Task $01
+; --------------------------------
+
+slvplgn_01:
+		mov	r2,@-r15
+		mov.w	@(marsGbl_DivStop_M,gbr),r0
+		cmp/eq	#1,r0
+		bt	.exit
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces to draw?
+		cmp/pl	r0
+		bt	.has_pz
+		mov	#1,r0				; If none, just end quickly.
+		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+.exit:		bra	drwtask_exit
+		mov	#$10,r2
+.has_pz:
+		mov	r3,@-r15			; Save all these regs
+		mov	r4,@-r15
+		mov	r5,@-r15
+		mov	r6,@-r15
+		mov	r7,@-r15
+		mov	r8,@-r15
+		mov	r9,@-r15
+		mov	r10,@-r15
+		mov	r11,@-r15
+		mov	r12,@-r15
+		mov	r13,@-r15
+		mov	r14,@-r15
+		sts	macl,@-r15
+		sts	mach,@-r15
+
+drwtsk1_newpz:
+		mov	@(marsGbl_PlyPzList_R,gbr),r0
+		mov	r0,r14
+
+		mov	@(plypz_ytb,r14),r9	; Start grabbing StartY/EndY positions
+		exts.w	r9,r10			; r10 - Bottom
+		shlr16	r9
+		exts.w	r9,r9			;  r9 - Top
+
+		cmp/eq	r9,r10			; if Top==Bottom, exit
+		bt	.invld_y
+		mov	#SCREEN_HEIGHT,r0	; if Top > 224, skip
+		cmp/ge	r0,r9
+		bt	.invld_y		; if Bottom > 224, add max limit
+		cmp/gt	r0,r10
+		bf	.len_max
+		mov	r0,r10
+.len_max:
+		sub	r9,r10			; Turn r10 into line lenght (Bottom - Top)
+		cmp/pl	r10
+		bt	drwtsk1_vld_y
+.invld_y:
+		bra	drwsld_nextpz		; if LEN < 0 then check next one instead.
+		nop
+.no_pz:
+		bra	drwtask_exit
+		nop
+		align 4
+		ltorg
+
+	; ------------------------------------
+	; If Y top / Y len are valid:
+	; ------------------------------------
+		align 4
+drwtsk1_vld_y:
+		mov	@(plypz_xl,r14),r1
+		mov	r1,r3
+		shlr16	r1
+		mov	@(plypz_xl_dx,r14),r2		; r2 - DX left
+		shll16	r1
+		mov	@(plypz_xr_dx,r14),r4		; r4 - DX right
+		shll16	r3
+		mov	@(plypz_type,r14),r0		; Check material options
+		shlr16	r0
+		shlr8	r0
+ 		tst	#PLGN_TEXURE,r0			; Texture mode?
+ 		bf	drwtsk_texmode
+		bra	drwtsk_solidmode
+		nop
+		align 4
+
+; ------------------------------------
+; Texture mode
+;
+; r1  - XL
+; r2  - XL DX
+; r3  - XR
+; r4  - XR DX
+; r5  - SRC XL
+; r6  - SRC XR
+; r7  - SRC YL
+; r8  - SRC YR
+; r9  - Y current
+; r10  - Number of lines
+; ------------------------------------
+
+go_drwsld_updline_tex:
+		bra	drwsld_updline_tex
+		nop
+go_drwtex_gonxtpz:
+		bra	drwsld_nextpz
+		nop
+drwtsk_texmode:
+		mov	@(plypz_src_xl,r14),r5		; Texture X left/right
+		mov	r5,r6
+		shlr16	r5
+		mov	@(plypz_src_yl,r14),r7		; Texture Y up/down
+		mov	r7,r8
+		shlr16	r7
+
+		shll16	r5
+		shll16	r6
+		shll16	r7
+		shll16	r8
+drwsld_nxtline_tex:
+		cmp/pz	r9				; Y Start below 0?
+		bf	go_drwsld_updline_tex
+		mov	tag_yhght,r0			; Y Start after 224?
+		cmp/ge	r0,r9
+		bt	go_drwtex_gonxtpz
+
 		mov	#Cach_Bkup_S,r0
+		mov	r1,@-r0
+		mov	r2,@-r0
+		mov	r3,@-r0
+		mov	r4,@-r0
+		mov	r5,@-r0
+		mov	r6,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r10,@-r0
+		mov	r11,@-r0
+
+	; r11-r12 are free now.
+		shlr16	r1
+		shlr16	r3
+		exts	r1,r1
+		exts	r3,r3
+		mov	r3,r0			; r0: X Right - X Left
+		sub	r1,r0
+		cmp/pl	r0			; Line reversed?
+		bt	.txrevers
+		mov	r3,r0			; Swap XL and XR values
+		mov	r1,r3
+		mov	r0,r1
+		mov	r5,r0
+		mov	r6,r5
+		mov	r0,r6
+		mov	r7,r0
+		mov	r8,r7
+		mov	r0,r8
+.txrevers:
+		cmp/eq	r1,r3				; Same X position?
+		bt	.tex_skip_line
+		mov	tag_width,r0			; X right < 0?
+		cmp/pz	r3
+		bf	.tex_skip_line
+		cmp/gt	r0,r1				; X left > 320?
+		bt	.tex_skip_line
+		mov	r3,r2
+		mov 	r1,r0
+		sub 	r0,r2
+		sub	r5,r6
+		sub	r7,r8
+
+	; Calculate new DX values
+	; make sure DIV is available
+	; (marsGbl_DivStop_M == 0)
+		mov	tag_JR,r0			; r6 / r2
+		mov	r2,@r0
+		mov	r6,@(4,r0)
+		nop
+		mov	@(4,r0),r6			; r8 / r2
+		mov	r2,@r0
+		mov	r8,@(4,r0)
+		nop
+		mov	@(4,r0),r8
+
+	; Limit X destination points
+	; and correct the texture's X positions
+		mov	tag_width,r0		; XR point > 320?
+		cmp/gt	r0,r3
+		bf	.tr_fix
+		mov	r0,r3				; Force XR to 320
+.tr_fix:
+		cmp/pz	r1				; XL point < 0?
+		bt	.tl_fix
+		neg	r1,r2				; Fix texture positions
+		dmuls	r6,r2
+		sts	macl,r0
+		add	r0,r5
+		dmuls	r8,r2
+		sts	macl,r0
+		add	r0,r7
+		xor	r1,r1				; And reset XL to 0
+.tl_fix:
+
+	; start
+		mov	#-2,r0
+		and	r0,r1
+		add	#1,r3			; XR add
+		and	r0,r3
+		sub 	r1,r3
+		shar	r3
+		cmp/pl	r3
+		bf	.tex_skip_line
+		mov	#_overwrite+$200,r10
+		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
+		mov	r4,r13
+		shlr16	r4
+		mov	#$FF,r0
+		mov	#$3FFF,r2
+		and	r2,r4
+		and	r0,r13
+		mov 	r9,r0			; Y position * $200
+		shll8	r0
+		shll	r0
+		add 	r0,r10			; Add Y
+		add 	r1,r10			; Add X
+		mov	@(plypz_mtrl,r14),r1
+.tex_xloop:
+		mov	r7,r2
+		shlr16	r2
+		mulu	r2,r4
+		mov	r5,r2	   		; Build column index
+		sts	macl,r0
+		shlr16	r2
+		add	r2,r0
+		mov.b	@(r0,r1),r0		; Read left pixel
+		add	r13,r0			; color-index increment
+		and	#$FF,r0
+		shll8	r0
+		lds	r0,mach			; Save left pixel
+
+		add	r6,r5			; Update X
+		add	r8,r7			; Update Y
+		mov	r7,r2
+		shlr16	r2
+		mulu	r2,r4
+		mov	r5,r2	   		; Build column index
+		sts	macl,r0
+		shlr16	r2
+		add	r2,r0
+		mov.b	@(r0,r1),r0		; Read right pixel
+		add	r13,r0			; color-index increment
+		and	#$FF,r0
+
+		sts	mach,r2
+		or	r2,r0
+		mov.w	r0,@r10
+		add	#2,r10
+		add	r6,r5			; Update X
+		dt	r3
+		bf/s	.tex_xloop
+		add	r8,r7			; Update Y
+.tex_skip_line:
+		mov	#Cach_Bkup_LB,r0
+		mov	@r0+,r11
+		mov	@r0+,r10
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r6
+		mov	@r0+,r5
+		mov	@r0+,r4
+		mov	@r0+,r3
+		mov	@r0+,r2
+		mov	@r0+,r1
+drwsld_updline_tex:
+		mov	@(plypz_src_xl_dx,r14),r0	; Update DX postions
+		add	r0,r5
+		mov	@(plypz_src_xr_dx,r14),r0
+		add	r0,r6
+		mov	@(plypz_src_yl_dx,r14),r0
+		add	r0,r7
+		mov	@(plypz_src_yr_dx,r14),r0
+		add	r0,r8
+		add	r2,r1				; Update X postions
+		dt	r10
+		bt/s	drwtex_nextpz
+		add	r4,r3
+		bra	drwsld_nxtline_tex
+		add	#1,r9
+drwtex_nextpz:
+		mov	@(marsGbl_PlyPzList_End,gbr),r0
+		mov	r0,r14
+		mov	@(marsGbl_PlyPzList_R,gbr),r0
+		add	#sizeof_plypz,r0		; And set new point
+		cmp/ge	r14,r0
+		bf	.reset_rd
+		mov	@(marsGbl_PlyPzList_Start,gbr),r0
+.reset_rd:
+		mov	r0,@(marsGbl_PlyPzList_R,gbr)
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
+		add	#-1,r0
+		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
+		bra	drwtask_return
+		mov	#$10,r2				; Timer for next watchdog
+
+; 	; Exit interrupt
+; 		add	#sizeof_plypz,r14		; And set new point
+; 		mov	r14,r0
+; 		mov	#RAM_Mars_VdpDrwList_e,r14	; End-of-list?
+; 		cmp/ge	r14,r0
+; 		bf	.reset_rd
+; 		mov	#RAM_Mars_VdpDrwList,r0
+; .reset_rd:
+; 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
+; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
+; 		add	#-1,r0
+; 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
+; 		bra	drwtask_return
+; 		mov	#$10,r2				; Timer for next watchdog
+		align 4
+tag_JR:		dc.l _JR
+tag_width:	dc.l	SCREEN_WIDTH
+tag_yhght:	dc.l	SCREEN_HEIGHT
+
+; ------------------------------------
+; Solid Color
+;
+; r1  - XL
+; r2  - XL DX
+; r3  - XR
+; r4  - XR DX
+; r9  - Y current
+; r10  - Number of lines
+; ------------------------------------
+
+drwtsk_solidmode:
+		mov	#$FF,r0
+		mov	@(plypz_mtrl,r14),r6
+		mov	@(plypz_type,r14),r5
+		and	r0,r5
+		and	r0,r6
+		add	r5,r6
+		mov	#_vdpreg,r13
+.wait:		mov.w	@(10,r13),r0
+		tst	#2,r0
+		bf	.wait
+drwsld_nxtline:
+		mov	r9,r0
+		add	r10,r0
+		cmp/pl	r0
+		bf	drwsld_nextpz
+		cmp/pz	r9
+		bf	drwsld_updline
+		mov	#SCREEN_HEIGHT,r0
+		cmp/gt	r0,r9
+		bt	drwsld_nextpz
+
+		mov	r1,r11
+		mov	r3,r12
+		shlr16	r11
+		shlr16	r12
+		exts.w	r11,r11
+		exts.w	r12,r12
+		mov	r12,r0
+		sub	r11,r0
+		cmp/pz	r0
+		bt	.revers
+		mov	r12,r0
+		mov	r11,r12
+		mov	r0,r11
+.revers:
+		mov	#SCREEN_WIDTH-2,r0
+		cmp/pl	r12
+		bf	drwsld_updline
+		cmp/gt	r0,r11
+		bt	drwsld_updline
+		cmp/gt	r0,r12
+		bf	.r_fix
+		mov	r0,r12
+.r_fix:
+		cmp/pl	r11
+		bt	.l_fix
+		xor	r11,r11
+.l_fix:
+		mov	#-2,r0
+		and	r0,r11
+		and	r0,r12
+		mov	r12,r0
+		sub	r11,r0
+		cmp/pl	r0
+		bf	drwsld_updline
+
+.wait:		mov.w	@(10,r13),r0
+		tst	#2,r0
+		bf	.wait
+		mov	r12,r0
+		sub	r11,r0
+		mov	r0,r12
+		shlr	r0
+		mov.w	r0,@(4,r13)	; length
+		mov	r11,r0
+		shlr	r0
+		mov	r9,r5
+		add	#1,r5
+		shll8	r5
+		add	r5,r0
+		mov.w	r0,@(6,r13)	; address
+		mov	r6,r0
+		shll8	r0
+		or	r6,r0
+		mov.w	r0,@(8,r13)	; Set data
+; .wait:	mov.w	@(10,r13),r0
+; 		tst	#2,r0
+; 		bf	.wait
+
+; 	If the line is too large, leave it to VDP
+; 	and exit watchdog, we will come back on
+; 	next trigger.
+		mov	#$28,r0
+		cmp/gt	r0,r12
+		bf	drwsld_updline
+		mov	#2,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		mov	#Cach_LnDrw_S,r0
+		mov	r1,@-r0
 		mov	r2,@-r0
 		mov	r3,@-r0
 		mov	r4,@-r0
@@ -49,9 +558,99 @@ CACHE_MSTR_PLGN:
 		mov	r12,@-r0
 		mov	r13,@-r0
 		mov	r14,@-r0
-		sts	macl,@-r0
-		sts	mach,@-r0
-		sts	pr,@-r0
+		bra	drwtask_return
+		mov	#$10,r2			; Exit and re-enter
+drwsld_updline:
+		add	r2,r1
+		add	r4,r3
+		dt	r10
+		bf/s	drwsld_nxtline
+		add	#1,r9
+
+; ------------------------------------
+
+drwsld_nextpz:
+		mov	@(marsGbl_PlyPzList_End,gbr),r0
+		mov	r0,r14
+		mov	@(marsGbl_PlyPzList_R,gbr),r0
+		add	#sizeof_plypz,r0		; And set new point
+		cmp/ge	r14,r0
+		bf	.reset_rd
+		mov	@(marsGbl_PlyPzList_Start,gbr),r0
+.reset_rd:
+		mov	r0,@(marsGbl_PlyPzList_R,gbr)
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
+		add	#-1,r0
+		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
+		cmp/pl	r0
+		bf	.finish_it
+		bra	drwtsk1_newpz
+		nop
+.finish_it:
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+		bra	drwtask_return
+		mov	#$10,r2			; Timer for next watchdog
+
+; --------------------------------
+; Task $00
+; --------------------------------
+
+slvplgn_00:
+		mov	r2,@-r15
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		bra	drwtask_exit
+		mov	#$10,r2
+
+drwtask_return:
+		lds	@r15+,mach
+		lds	@r15+,macl
+		mov	@r15+,r14
+		mov	@r15+,r13
+		mov	@r15+,r12
+		mov	@r15+,r11
+		mov	@r15+,r10
+		mov	@r15+,r9
+		mov	@r15+,r8
+		mov	@r15+,r7
+		mov	@r15+,r6
+		mov	@r15+,r5
+		mov	@r15+,r4
+		mov	@r15+,r3
+drwtask_exit:
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0	; OFF
+		mov.w   r0,@r1
+		or      #$20,r0		; ON
+		mov.w   r0,@r1
+		mov.w   #$5A00,r0	; r2 - Timer
+		or	r2,r0
+		mov.w   r0,@r1
+		mov	@r15+,r2
+		rts
+		nop
+		align 4
+		ltorg
+
+; ====================================================================
+; ----------------------------------------------------------------
+; 3D Rendering routines
+; ----------------------------------------------------------------
+
+; ------------------------------------------------
+; MarsVideo_SlicePlgn
+;
+; This slices polygons into pieces.
+;
+; Input:
+; r14 | Polygon data
+; ------------------------------------------------
+
+MarsVideo_SlicePlgn:
+		sts	pr,@-r15
 		mov	#Cach_DDA_Last,r13		; r13 - DDA last point
 		mov	#Cach_DDA_Top,r12		; r12 - DDA first point
 		mov	@(polygn_type,r14),r0		; Read type settings
@@ -155,15 +754,9 @@ CACHE_MSTR_PLGN:
 		bt	.exit
 		cmp/ge	r11,r10				; Y top => Y bottom?
 		bt	.exit
+
 		mov	@(marsGbl_PlyPzList_W,gbr),r0	; r1 - Current piece to WRITE
 		mov	r0,r1
-; 		mov	#RAM_Mars_SVdpDrwList_e,r0	; pointer reached end of the list?
-; 		cmp/ge	r0,r1
-; 		bf	.dontreset
-; 		mov	#RAM_Mars_SVdpDrwList,r0	; Return WRITE pointer to the top of the list
-; 		mov	r0,r1
-; 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-; .dontreset:
 		mov	@(4,r2),r8
 		mov	@(4,r3),r9
 		sub	r10,r8
@@ -204,59 +797,16 @@ CACHE_MSTR_PLGN:
 		bra	.next_pz
 		nop
 .exit:
-		mov	#Cach_Bkup_LT,r0
-		lds	@r0+,pr
-		lds	@r0+,mach
-		lds	@r0+,macl
-		mov	@r0+,r14
-		mov	@r0+,r13
-		mov	@r0+,r12
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		mov	@r0+,r4
-		mov	@r0+,r3
-		mov	@r0+,r2
-		mov	@(marsGbl_CurrRdPlgn,gbr),r0
-		add	#8,r0
-		mov	r0,@(marsGbl_CurrRdPlgn,gbr)
-; wdm_next:
-
-wdg_pzfull:
-		mov.l   #$FFFFFE80,r1
-		mov.w   #$A518,r0		; OFF
-		mov.w   r0,@r1
-		or      #$20,r0			; ON
-		mov.w   r0,@r1
-		mov.w   #$5A10,r0		; Timer for the next WD
-		mov.w   r0,@r1
+		lds	@r15+,pr
 		rts
 		nop
 		align 4
 		ltorg
-wdg_finish:
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-; 		add	#1,r0
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgStatus,gbr)
-		mov	#$FFFFFE80,r1			; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		rts
-		nop
-		align 4
-
-; --------------------------------------------------------
 
 		align 4
 set_left:
-		mov	r2,r8			; Get a copy of Xleft pointer
-		add	#$20,r8			; To read Texture SRC points
+		mov	r2,r8				; Get a copy of Xleft pointer
+		add	#$20,r8				; To read Texture SRC points
 		mov	@r8,r4
 		mov	@(4,r8),r5
 		mov	#Cach_DDA_Src_L,r8
@@ -290,6 +840,9 @@ set_left:
 		mov	r0,r5
 		shll8	r4
 		shll8	r5
+
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)
 		sts	mach,r8
 		mov	#_JR,r0
 		mov	r8,@r0
@@ -318,6 +871,8 @@ set_left:
 		nop
 		mov	@(4,r0),r5
 		shll8	r5
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)
 .lft_skip:
 		rts
 		nop
@@ -361,6 +916,9 @@ set_right:
 		mov	r0,r7
 		shll8	r6
 		shll8	r7
+
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)
 		sts	mach,r9
 		mov	#_JR,r0
 		mov	r9,@r0
@@ -389,6 +947,8 @@ set_right:
 		nop
 		mov	@(4,r0),r7
 		shll8	r7
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_DivStop_M,gbr)
 .rgt_skip:
 		rts
 		nop
@@ -521,417 +1081,18 @@ put_piece:
 		ltorg
 		align 4
 
-; ====================================================================
-; --------------------------------------------------------
-; MarsVideo_DrawPzPlgns
-;
-; Draws polygons on framebuffer using the pieces list
-; --------------------------------------------------------
-
-		align 4
-MarsVideo_DrawPzPlgns:
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
-		cmp/pl	r0
-		bf	.no_pz
-
-		mov	@(marsGbl_PlyPzList_R,gbr),r0
-		mov	r0,r9
-		mov	#Cach_PlgnPzCopy,r10
-		mov	r10,r14
-	rept sizeof_plypz/4
-		mov	@r9+,r0
-		mov	r0,@r10
-		add	#4,r10
-	endm
-		mov	@(plypz_ytb,r14),r9		; Start grabbing StartY/EndY positions
-		mov	r9,r10
-		mov	#$FFFF,r0
-		shlr16	r9
-		exts	r9,r9			;  r9 - Top
-		and	r0,r10			; r10 - Bottom
-		cmp/eq	r9,r10			; if Top==Bottom, exit
-		bt	.invld_y
-		mov	#SCREEN_HEIGHT,r0	; if Top > 224, skip
-		cmp/ge	r0,r9
-		bt	.invld_y		; if Bottom > 224, add max limit
-		cmp/gt	r0,r10
-		bf	.len_max
-		mov	r0,r10
-.len_max:
-		sub	r9,r10			; Turn r10 into line lenght (Bottom - Top)
-		cmp/pl	r10
-		bt	drwtsk1_vld_y
-.invld_y:
-		bra	drwsld_nextpz		; if LEN < 0 then check next one instead.
-		nop
-.no_pz:
-		bra	drwtask_exit
-		nop
-		align 4
-		ltorg
-
-	; ------------------------------------
-	; If Y top / Y len are valid:
-	; ------------------------------------
-		align 4
-drwtsk1_vld_y:
-		mov	@(plypz_xl,r14),r1
-		mov	r1,r3
-		shlr16	r1
-		mov	@(plypz_xl_dx,r14),r2		; r2 - DX left
-		shll16	r1
-		mov	@(plypz_xr_dx,r14),r4		; r4 - DX right
-		shll16	r3
-		mov	@(plypz_type,r14),r0		; Check material options
-		shlr16	r0
-		shlr8	r0
- 		tst	#PLGN_TEXURE,r0			; Texture mode?
- 		bf	drwtsk_texmode
-		bra	drwtsk_solidmode
-		nop
-		align 4
-
-; ------------------------------------
-; Texture mode
-;
-; r1  - XL
-; r2  - XL DX
-; r3  - XR
-; r4  - XR DX
-; r5  - SRC XL
-; r6  - SRC XR
-; r7  - SRC YL
-; r8  - SRC YR
-; r9  - Y current
-; r10  - Number of lines
-; ------------------------------------
-
-go_drwsld_updline_tex:
-		bra	drwsld_updline_tex
-		nop
-go_drwtex_gonxtpz:
-		bra	drwsld_nextpz
-		nop
-drwtsk_texmode:
-		mov	@(plypz_src_xl,r14),r5		; Texture X left/right
-		mov	r5,r6
-		shlr16	r5
-		mov	@(plypz_src_yl,r14),r7		; Texture Y up/down
-		mov	r7,r8
-		shlr16	r7
-
-		shll16	r5
-		shll16	r6
-		shll16	r7
-		shll16	r8
-drwsld_nxtline_tex:
-		cmp/pz	r9				; Y Start below 0?
-		bf	go_drwsld_updline_tex
-		mov	tag_yhght,r0			; Y Start after 224?
-		cmp/ge	r0,r9
-		bt	go_drwtex_gonxtpz
-
-		mov	#Cach_Bkup_S,r0
-		mov	r1,@-r0
-		mov	r2,@-r0
-		mov	r3,@-r0
-		mov	r4,@-r0
-		mov	r5,@-r0
-		mov	r6,@-r0
-		mov	r7,@-r0
-		mov	r8,@-r0
-		mov	r9,@-r0
-		mov	r10,@-r0
-		mov	r11,@-r0
-
-	; r11-r12 are free now.
-		shlr16	r1
-		shlr16	r3
-		exts	r1,r1
-		exts	r3,r3
-		mov	r3,r0			; r0: X Right - X Left
-		sub	r1,r0
-		cmp/pl	r0			; Line reversed?
-		bt	.txrevers
-		mov	r3,r0			; Swap XL and XR values
-		mov	r1,r3
-		mov	r0,r1
-		mov	r5,r0
-		mov	r6,r5
-		mov	r0,r6
-		mov	r7,r0
-		mov	r8,r7
-		mov	r0,r8
-.txrevers:
-		cmp/eq	r1,r3				; Same X position?
-		bt	.tex_skip_line
-		mov	tag_width,r0			; X right < 0?
-		cmp/pl	r3
-		bf	.tex_skip_line
-		cmp/gt	r0,r1				; X left > 320?
-		bt	.tex_skip_line
-		mov	r3,r2
-		mov 	r1,r0
-		sub 	r0,r2
-		sub	r5,r6
-		sub	r7,r8
-
-	; Calculate new DX values
-	; make sure DIV is available
-	; (marsGbl_DivStop_M == 0)
-		mov	tag_JR,r0			; r6 / r2
-		mov	r2,@r0
-		mov	r6,@(4,r0)
-		nop
-		mov	@(4,r0),r6			; r8 / r2
-		mov	r2,@r0
-		mov	r8,@(4,r0)
-		nop
-		mov	@(4,r0),r8
-
-	; Limit X destination points
-	; and correct the texture's X positions
-		mov	tag_width,r0		; XR point > 320?
-		cmp/gt	r0,r3
-		bf	.tr_fix
-		mov	r0,r3				; Force XR to 320
-.tr_fix:
-		cmp/pz	r1				; XL point < 0?
-		bt	.tl_fix
-		neg	r1,r2				; Fix texture positions
-		dmuls	r6,r2
-		sts	macl,r0
-		add	r0,r5
-		dmuls	r8,r2
-		sts	macl,r0
-		add	r0,r7
-		xor	r1,r1				; And reset XL to 0
-.tl_fix:
-	; start
-		mov	#-2,r0
-		and	r0,r1
-		and	r0,r3
-		sub 	r1,r3
-		shar	r3
-		cmp/pl	r3
-		bf	.tex_skip_line
-		mov	#_overwrite+$200,r10
-		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
-		mov	r4,r13
-		shlr16	r4
-		mov	#$FF,r0
-		mov	#$3FFF,r2
-		and	r2,r4
-		and	r0,r13
-		mov 	r9,r0			; Y position * $200
-		shll8	r0
-		shll	r0
-		add 	r0,r10			; Add Y
-		add 	r1,r10			; Add X
-		mov	@(plypz_mtrl,r14),r1
-.tex_xloop:
-		mov	r7,r2
-		shlr16	r2
-		mulu	r2,r4
-		mov	r5,r2	   		; Build column index
-		sts	macl,r0
-		shlr16	r2
-		add	r2,r0
-		mov.b	@(r0,r1),r0		; Read left pixel
-		add	r13,r0			; color-index increment
-		and	#$FF,r0
-		shll8	r0
-		lds	r0,mach			; Save left pixel
-
-		add	r6,r5			; Update X
-		add	r8,r7			; Update Y
-		mov	r7,r2
-		shlr16	r2
-		mulu	r2,r4
-		mov	r5,r2	   		; Build column index
-		sts	macl,r0
-		shlr16	r2
-		add	r2,r0
-		mov.b	@(r0,r1),r0		; Read right pixel
-		add	r13,r0			; color-index increment
-		and	#$FF,r0
-
-		sts	mach,r2
-		or	r2,r0
-		mov.w	r0,@r10
-		add	#2,r10
-		add	r6,r5			; Update X
-		dt	r3
-		bf/s	.tex_xloop
-		add	r8,r7			; Update Y
-.tex_skip_line:
-		mov	#Cach_Bkup_LB,r0
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		mov	@r0+,r4
-		mov	@r0+,r3
-		mov	@r0+,r2
-		mov	@r0+,r1
-drwsld_updline_tex:
-		mov	@(plypz_src_xl_dx,r14),r0	; Update DX postions
-		add	r0,r5
-		mov	@(plypz_src_xr_dx,r14),r0
-		add	r0,r6
-		mov	@(plypz_src_yl_dx,r14),r0
-		add	r0,r7
-		mov	@(plypz_src_yr_dx,r14),r0
-		add	r0,r8
-		add	r2,r1				; Update X postions
-		dt	r10
-		bt/s	drwsld_nextpz
-		add	r4,r3
-		bra	drwsld_nxtline_tex
-		add	#1,r9
-; drwtex_gonxtpz:
-		bra	drwsld_nextpz
-		nop
-		align 4
-tag_JR:		dc.l _JR
-tag_width:	dc.l SCREEN_WIDTH
-tag_yhght:	dc.l SCREEN_HEIGHT
-
-; ------------------------------------
-; Solid Color
-;
-; r1  - XL
-; r2  - XL DX
-; r3  - XR
-; r4  - XR DX
-; r9  - Y current
-; r10  - Number of lines
-; ------------------------------------
-
-drwtsk_solidmode:
-		mov	#$FF,r0
-		mov	@(plypz_mtrl,r14),r6
-		and	r0,r6
-		mov	@(plypz_type,r14),r5
-		and	r0,r5
-		add	r5,r6
-		mov	#_vdpreg,r13
-.wait:		mov.w	@(10,r13),r0
-		tst	#2,r0
-		bf	.wait
-drwsld_nxtline:
-		mov	r9,r0
-		add	r10,r0
-		cmp/pl	r0
-		bf	drwsld_nextpz
-		cmp/pz	r9
-		bf	drwsld_updline
-		mov	#SCREEN_HEIGHT,r0
-		cmp/gt	r0,r9
-		bt	drwsld_nextpz
-
-		mov	r1,r11
-		mov	r3,r12
-		shlr16	r11
-		shlr16	r12
-		exts	r11,r11
-		exts	r12,r12
-		mov	r12,r0
-		sub	r11,r0
-		cmp/pz	r0
-		bt	.revers
-		mov	r12,r0
-		mov	r11,r12
-		mov	r0,r11
-.revers:
-		mov	#SCREEN_WIDTH-2,r0
-		cmp/pl	r12
-		bf	drwsld_updline
-		cmp/gt	r0,r11
-		bt	drwsld_updline
-		cmp/gt	r0,r12
-		bf	.r_fix
-		mov	r0,r12
-.r_fix:
-		cmp/pl	r11
-		bt	.l_fix
-		xor	r11,r11
-.l_fix:
-		mov	#-2,r0
-		and	r0,r11
-		and	r0,r12
-		mov	r12,r0
-		sub	r11,r0
-		cmp/pl	r0
-		bf	drwsld_updline
-
-.wait:		mov.w	@(10,r13),r0
-		tst	#2,r0
-		bf	.wait
-		mov	r12,r0
-		sub	r11,r0
-		mov	r0,r12
-		shlr	r0
-		mov.w	r0,@(4,r13)	; length
-		mov	r11,r0
-		shlr	r0
-		mov	r9,r5
-		add	#1,r5
-		shll8	r5
-		add	r5,r0
-		mov.w	r0,@(6,r13)	; address
-		mov	r6,r0
-		shll8	r0
-		or	r6,r0
-		mov.w	r0,@(8,r13)	; Set data
-drwsld_updline:
-		add	r2,r1
-		add	r4,r3
-		dt	r10
-		bf/s	drwsld_nxtline
-		add	#1,r9
-
-; ------------------------------------
-
-drwsld_nextpz:
-		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		mov	r0,r14
-		mov	@(marsGbl_PlyPzList_R,gbr),r0
-		add	#sizeof_plypz,r0		; And set new point
-		cmp/ge	r14,r0
-		bf	.reset_rd
-; .wait_too:	mov	@(marsGbl_PlyPzList_W,gbr),r0
-; 		cmp/eq	r14,r0
-; 		bf	.wait_too
-		mov	@(marsGbl_PlyPzList_Start,gbr),r0
-.reset_rd:
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
-		add	#-1,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		cmp/pl	r0
-		bf	drwtask_exit
-		bra	MarsVideo_DrawPzPlgns
-		nop
-drwtask_exit:
-		rts
-		nop
-		align 4
-		ltorg
-
 ; ------------------------------------------------
 
 		align 4
-Cach_PlgnPzCopy	ds.l sizeof_plypz
+Cach_ClrLines	ds.l 1		; Current lines to clear
 Cach_DDA_Top	ds.l 2*2	; First 2 points
 Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2
 Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
 Cach_DDA_Src_R	ds.l 4
-Cach_Bkup_LT	ds.l 5		;
+Cach_LnDrw_L	ds.l 14		;
+Cach_LnDrw_S	ds.l 0		; <-- Reads backwards
+Cach_Bkup_LT	ds.l 5
 Cach_Bkup_LB	ds.l 11
 Cach_Bkup_S	ds.l 0		; <-- Reads backwards
 Cach_Bkup_LPZ	ds.l 7

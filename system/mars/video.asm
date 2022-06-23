@@ -14,8 +14,8 @@ MAX_SCRNBUFF	equ $1A000	; MAX SDRAM for each fake-screen mode
 FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
 FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines (Screen mode 2)
 MAX_FACES	equ 256		; Max polygon faces (Screen mode 4)
-MAX_SVDP_PZ	equ 256+64	; Max polygon pieces to draw (Screen mode 4)
-MAX_ZDIST	equ -$C00	; Max 3D drawing distance (-Z) (Screen mode 4)
+MAX_SVDP_PZ	equ 256+96	; Max polygon pieces to draw (Screen mode 4)
+MAX_ZDIST	equ -$1000	; Max 3D drawing distance (-Z) (Screen mode 4)
 
 ; --------------------------------------------------------
 ; Variables
@@ -353,6 +353,8 @@ MarsVideo_FixTblShift:
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 2D Section
+;
+; SOME routines are located on cache_m_scrlbg.asm
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -808,10 +810,6 @@ MarsVideo_MoveBg:
 		align 4
 		ltorg
 
-; ******************************
-; MarsVideo_DrawScrlLR and MarsVideo_DrawScrlUD
-; are located on cache_m_scrlspr.asm
-
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Super sprites
@@ -980,7 +978,7 @@ MarsVideo_SetSprFill:
 
 ; ******************************
 ; MarsVideo_DrawSuperSpr
-; is located on cache_m_scrlspr.asm
+; is located on cache_m_scrlbg.asm
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1016,15 +1014,6 @@ MarsMdl_MdlLoop:
 		bf/s	.loop
 		add	#sizeof_mdlobj,r14
 .skip:
-		mov 	#RAM_Mars_PlgnNum_0,r1
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bf	.page_2
-		mov 	#RAM_Mars_PlgnNum_1,r1
-.page_2:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
-		mov	r0,@r1
-
 		lds	@r15+,pr
 		rts
 		nop
@@ -1311,15 +1300,8 @@ MarsMdl_ReadModel:
 		bt	.first_face
 		mov	r8,r7
 		add	#-8,r7
-; 		mov	@(marsGbl_CurrZList,gbr),r0
-; 		mov	r0,r6
 		mov	@(marsGbl_CurrZTop,gbr),r0
 		mov	r0,r6
-; 		mov	#RAM_Mars_PlgnList_0,r6
-; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-; 		tst     #1,r0
-; 		bf	.page_2
-; 		mov	#RAM_Mars_PlgnList_1,r6
 .page_2:
 		cmp/ge	r6,r7
 		bf	.first_face
@@ -1613,15 +1595,7 @@ mdlrd_rotate:
 
 		align 4
 MarsVideo_SetWatchdog:
-		mov	#RAM_Mars_SVdpDrwList,r0		; Reset DDA pieces Read/Write points
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)		; And counter
-		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-		mov	r0,@(marsGbl_PlyPzList_Start,gbr)
-		mov	#RAM_Mars_SVdpDrwList_E,r0
-		mov	r0,@(marsGbl_PlyPzList_End,gbr)
-
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		mov.w	r0,@(marsGbl_WdgStatus,gbr)
 		stc	sr,r4
 		mov	#$F0,r0

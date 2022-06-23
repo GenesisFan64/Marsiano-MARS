@@ -1,5 +1,4 @@
 ** Marsiano-MARS **
-*CURRENTLY UNSTABLE, IN THE MIDDLE OF REWRITING/OPTIMIZING CODE AND CHECKING TIMINGS*
 
 A GameBase/Engine/Library for making Sega 32X Games in assembly using all CPUs: 68k for the game logic, Z80 for the sound (including PWM) and SH2 for the 2D+3D visuals and extra sound channels.
 
