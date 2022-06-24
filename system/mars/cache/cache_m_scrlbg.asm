@@ -46,8 +46,6 @@ CACHE_MSTR_SCRL:
 ; 		mov	@r0+,r4
 ; 		mov	@r0+,r3
 ; 		mov	@r0+,r2
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgStatus,gbr)
 		mov	#$FFFFFE80,r1			; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1

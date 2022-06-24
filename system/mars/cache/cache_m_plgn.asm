@@ -19,7 +19,7 @@ CACHE_MSTR_PLGN:
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($08)?
-		cmp/eq	#0,r0
+		cmp/eq	#7,r0
 		bf	maindrw_tasks
 
 ; ------------------------------------------------
@@ -70,7 +70,7 @@ maindrw_tasks:
 		nop
 		align 4
 .list:
-		dc.l slvplgn_01		;
+		dc.l slvplgn_00		;
 		dc.l slvplgn_01		; Main drawing routine
 		dc.l slvplgn_02		; Resume from solid color
 
@@ -125,18 +125,18 @@ slvplgn_02:
 
 ; --------------------------------
 ; Task $01
-; --------------------------------
+; ------------------------------f--
 
 slvplgn_01:
 		mov	r2,@-r15
-		mov.w	@(marsGbl_DivStop_M,gbr),r0
+		mov.w	@(marsGbl_DrwPause,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
-		mov	#1,r0				; If none, just end quickly.
-		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
@@ -228,6 +228,13 @@ go_drwtex_gonxtpz:
 		bra	drwsld_nextpz
 		nop
 drwtsk_texmode:
+		mov.w	@(marsGbl_DivStop_M,gbr),r0	; Waste interrupt if MarsVideo_MakePolygon is in the
+		cmp/eq	#1,r0				; middle of HW-division
+		bf	.texvalid
+		bra	drwtask_return
+		nop
+		align 4
+.texvalid:
 		mov	@(plypz_src_xl,r14),r5		; Texture X left/right
 		mov	r5,r6
 		shlr16	r5
@@ -410,35 +417,19 @@ drwsld_updline_tex:
 		bra	drwsld_nxtline_tex
 		add	#1,r9
 drwtex_nextpz:
+		add	#sizeof_plypz,r14		; And set new point
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		mov	r0,r14
-		mov	@(marsGbl_PlyPzList_R,gbr),r0
-		add	#sizeof_plypz,r0		; And set new point
-		cmp/ge	r14,r0
+		cmp/ge	r0,r14
 		bf	.reset_rd
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 .reset_rd:
+		mov	r14,r0
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		bra	drwtask_return
 		mov	#$10,r2				; Timer for next watchdog
-
-; 	; Exit interrupt
-; 		add	#sizeof_plypz,r14		; And set new point
-; 		mov	r14,r0
-; 		mov	#RAM_Mars_VdpDrwList_e,r14	; End-of-list?
-; 		cmp/ge	r14,r0
-; 		bf	.reset_rd
-; 		mov	#RAM_Mars_VdpDrwList,r0
-; .reset_rd:
-; 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-; 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
-; 		add	#-1,r0
-; 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-; 		bra	drwtask_return
-; 		mov	#$10,r2				; Timer for next watchdog
 		align 4
 tag_JR:		dc.l _JR
 tag_width:	dc.l	SCREEN_WIDTH
@@ -559,7 +550,7 @@ drwsld_nxtline:
 		mov	r13,@-r0
 		mov	r14,@-r0
 		bra	drwtask_return
-		mov	#$10,r2			; Exit and re-enter
+		mov	#$08,r2			; Exit and re-enter
 drwsld_updline:
 		add	r2,r1
 		add	r4,r3
@@ -571,26 +562,23 @@ drwsld_updline:
 
 drwsld_nextpz:
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		mov	r0,r14
-		mov	@(marsGbl_PlyPzList_R,gbr),r0
-		add	#sizeof_plypz,r0		; And set new point
-		cmp/ge	r14,r0
+		add	#sizeof_plypz,r14		; And set new point
+		cmp/ge	r0,r14
 		bf	.reset_rd
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 .reset_rd:
+		mov	r14,r0
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		cmp/pl	r0
-		bf	.finish_it
-		bra	drwtsk1_newpz
-		nop
-.finish_it:
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_WdgMode,gbr)
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgStatus,gbr)
+; 		cmp/pl	r0
+; 		bf	.finish_it
+; 		bra	drwtsk1_newpz
+; 		nop
+; .finish_it:
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 		bra	drwtask_return
 		mov	#$10,r2			; Timer for next watchdog
 
@@ -649,6 +637,7 @@ drwtask_exit:
 ; r14 | Polygon data
 ; ------------------------------------------------
 
+		align 4
 MarsVideo_SlicePlgn:
 		sts	pr,@-r15
 		mov	#Cach_DDA_Last,r13		; r13 - DDA last point
@@ -774,8 +763,12 @@ MarsVideo_SlicePlgn:
 		mov	r8,@-r0
 		mov	r9,@-r0
 		mov	r11,@-r0
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Tell watchdog we are mid-write
 		bsr	put_piece
 		nop
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Unlock.
 		mov	#Cach_Bkup_LPZ,r0
 		mov	@r0+,r11
 		mov	@r0+,r9
@@ -1063,14 +1056,14 @@ put_piece:
 	; next piece
 		add	#sizeof_plypz,r1
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		mov	r0,r8				; r8 - end point
-		mov	r1,r0
-		cmp/ge	r8,r1
-		bf	.dontreset_pz
+		cmp/ge	r0,r1
+		bf	.dontres
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r1
-.dontreset_pz:
+.dontres:
+		mov	r1,r0
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
+
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		add	#1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)

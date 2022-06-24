@@ -16,7 +16,7 @@ _sysreg		equ	$00004000|TH	; MARS System registers (Genesis side: sysmars_reg)
 _vdpreg		equ	$00004100|TH	; SuperVDP registers
 _palette	equ	$00004200|TH	; Palette RAM for Pixel-Packed or RLE mode
 _framebuffer:	equ	CS2|TH		; Framebuffer, first 240 are for the linetable
-_overwrite:	equ	CS2|TH+$20000	; Overwrite, $00-byte writes are ignored
+_overwrite:	equ	CS2|TH+$20000	; Overwrite, $00 writes are ignored
 
 ; --------------------------------------------------------
 ; Variables

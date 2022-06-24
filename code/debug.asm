@@ -11,7 +11,7 @@ TEST_SPRSPD	equ	$04
 ; Variables
 ; ------------------------------------------------------
 
-set_StartPage	equ	4
+set_StartPage	equ	0
 MAX_PAGE0_EN	equ	4
 MAX_GEMAENTRY	equ	4
 SCN0_TIMER	equ	8
@@ -503,7 +503,7 @@ MD_DebugMenu:
 		move.l	#locate(0,2,4),d0
 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
-		add.l	#$3000,mdl_x_rot(a0)
+		add.l	#$2000,mdl_x_rot(a0)
 ; 		add.l	#$2000,mdl_y_rot(a0)
 ; 		add.l	#$2000,mdl_z_rot(a0)
 

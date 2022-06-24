@@ -46,6 +46,7 @@ sizeof_sndchn	ds.l 0
 ; NOTE: The CLICK sound after calling this is normal.
 ; --------------------------------------------------------
 
+		align 4
 MarsSound_Init:
 		stc	gbr,@-r15
 		mov	#_sysreg,r0

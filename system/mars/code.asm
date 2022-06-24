@@ -58,7 +58,7 @@ marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1
-marsGbl_WdgStatus	ds.w 1	; Watchdog exit status
+marsGbl_WdgStop		ds.w 1
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
@@ -438,7 +438,6 @@ m_irq_cmd:
 -		mov.b	@(vdpsts,r1),r0		; mid VBlank
 		tst	#VBLK,r0
 		bf	-
-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -470,6 +469,7 @@ m_irq_cmd:
 		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
 		mov	r0,@($C,r3)
+
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -1215,6 +1215,10 @@ SH2_M_HotStart:
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
 		bf	.wait_md
+		mov	#_sysreg+comm14,r1
+.wait_slv:	mov.w	@r1,r0
+		tst	r0,r0
+		bf	.wait_slv
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	master_loop
@@ -1299,15 +1303,7 @@ master_loop:
 		add	#4,r2
 		ldc	@r15+,sr
 
-		mov	#mstr_gfxlist_v,r1	; Point to VBLANK jumps
-		mov	#_sysreg+comm12,r2
-		mov.w	@r2,r0
-		and	#%0111,r0
-		shll2	r0
-		shll2	r0
-		mov	@(r1,r0),r1
-		jsr	@r1
-		nop
+
 
 ; ---------------------------------------
 ; Init/Loop the current mode
@@ -1322,6 +1318,15 @@ master_loop:
 ; exits on display.
 ; ---------------------------------------
 
+		mov	#mstr_gfxlist_v,r1		; VBlank jump
+		mov	#_sysreg+comm12,r2
+		mov.w	@r2,r0
+		and	#%0111,r0
+		shll2	r0
+		shll2	r0
+		mov	@(r1,r0),r1
+		jsr	@r1
+		nop
 		mov	#mstr_gfxlist,r3		; Default LOOP points
 		mov	#_sysreg+comm12,r2
 		mov.w	@r2,r0				; r0 - bit check
@@ -1433,11 +1438,26 @@ mstr_gfx0_vblk:
 ; Init
 ; -------------------------------
 
-mstr_gfx0_init_1:
+mstr_gfx0_init_2:
 		mov 	#_vdpreg,r1
 		mov	#0,r0
 		mov.b	r0,@(bitmapmd,r1)
-mstr_gfx0_init_2:
+mstr_gfx0_init_1:
+		mov	#$200,r1		; *** This also counts as a delay for Watchdog ***
+		mov	#(511)/2,r2
+		mov	#240,r3
+		mov	#0,r4
+		mov	#MarsVideo_ClearScreen,r0
+		jsr	@r0
+		nop
+		mov	#_vdpreg,r1			; In case we are still on VBlank...
+-		mov.b	@(vdpsts,r1),r0
+		tst	#VBLK,r0
+		bf	-
+		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
 
 ; -------------------------------
 ; Loop
@@ -1833,6 +1853,11 @@ mstr_gfx4_vblk:
 ; -------------------------------
 
 mstr_gfx4_init_1:
+		mov	#_sysreg+comm14,r1
+.slv_init:	mov.w	@r1,r0
+		and	#%01111111,r0
+		tst	r0,r0
+		bf	.slv_init
 		mov	#CACHE_MSTR_PLGN,r1
 		mov	#(CACHE_MSTR_PLGN_E-CACHE_MSTR_PLGN)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -1847,23 +1872,16 @@ mstr_gfx4_init_2:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx4_init_cont:
-		mov	#$200,r1
-		mov	#512,r2			; <-- fixed WIDTH
-		mov	#240,r3
-		mov	#MarsVideo_MakeNametbl,r0
-		jsr	@r0
-		mov	#0,r4
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
+		tst	#2,r0
+		bf	.wait_fb
 
 ; -------------------------------
 ; Loop
 ; -------------------------------
 
 mstr_gfx4_loop:
-		mov	#_sysreg+comm14,r4
-		mov.w	@r4,r0
-		and	#%01111111,r0
-		tst	r0,r0
-		bf	mstr_ready				; If Slave is busy, framedrop.
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models into a safe place
 		mov	#RAM_Mars_Objects,r2			; to prevent BUS problems.
 		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3	; <-- LONG size
@@ -1879,22 +1897,13 @@ mstr_gfx4_loop:
 		mov.w	@r4,r0
 		or	#$01,r0
 		mov.w	r0,@r4
-.slv_busy:
 
-
-; 		mov	#$200,r1		; <-- later...
-; 		mov	#0,r2
-; 		mov	#0,r3
-; 		mov	#320,r4
-; 		mov	#240,r5
-; 		mov	#320*240,r6
-; 		mov	#MarsVideo_SetSuperSpr,r0
-; 		jsr	@r0
-; 		nop
-; 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw Super Sprites
-; 		jsr	@r0
-; 		nop
-
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w	@(vdpsts,r1),r0		; Wait until framebuffer is unlocked
+		tst	#2,r0
+		bf	.wait_fb
+		mov	#$A5,r0			; VDPFILL: Pre-start at $A5
+		mov.w	r0,@(6,r1)
 		mov	#RAM_Mars_SVdpDrwList,r0	; Reset DDA Start/End/Read/Write points
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
@@ -1903,17 +1912,21 @@ mstr_gfx4_loop:
 		mov	r0,@(marsGbl_PlyPzList_End,gbr)
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)	; And pieces counter
-		mov	#0,r0				; Start on last mode
+		mov	#7,r0				; Start on last mode
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-		mov	#224,r0				; Lines to clear (WdgMode $00)
+		mov	#224,r0				; Lines to clear (WdgMode $07)
 		mov	#Cach_ClrLines,r1
 		mov	r0,@r1
-		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@($A,r1),r0			; Wait until framebuffer is unlocked
-		tst	#2,r0
-		bf	.wait_fb
-		mov	#$A5,r0				; ClearOnly: Pre-start at $A1
-		mov.w	r0,@(6,r1)
+		mov	#$200,r1
+		mov	#512,r2			; <-- fixed WIDTH
+		mov	#240,r3
+		mov	#MarsVideo_MakeNametbl,r0
+		jsr	@r0
+		mov	#0,r4
+; 		mov	#_vdpreg,r1		; Wait framebuffer and request swap
+; .waitv:	mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	.waitv
 		mov	#0,r1
 		mov	#$10,r2
 		mov	#MarsVideo_SetWatchdog,r0
@@ -1941,38 +1954,51 @@ mstr_gfx4_loop:
 		cmp/pl	r13
 		bf	.skip
 .loop:
+		mov	@(4,r14),r0			; Get location of the polygon
+		cmp/pl	r0				; Zero?
+		bf	.invalid			; if yes, skip
 		mov	r14,@-r15
 		mov	r13,@-r15
-		mov	@(4,r14),r14			; Get location of the polygon
-		cmp/pl	r14				; Zero?
-		bf	.invalid			; if yes, skip
+		mov	r0,r14
 		mov 	#MarsVideo_SlicePlgn,r0
 		jsr	@r0
 		nop
-.invalid:
 		mov	@r15+,r13
 		mov	@r15+,r14
+.invalid:
 		dt	r13				; Decrement numof_polygons
 		bf/s	.loop
 		add	#8,r14				; Move to next entry
 .skip:
 
-.wait_pz: 	mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces remaining on Watchdog?
+.wait_pz: 	mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces remaining?
 		tst	r0,r0
 		bf	.wait_pz
-.wait_wdg:	mov.w	@(marsGbl_WdgStatus,gbr),r0
+.wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Watchdog finished?
 		tst	r0,r0
-		bt	.wait_wdg
+		bf	.wait_wdg
 		mov.l   #$FFFFFE80,r1
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
-		mov	#_vdpreg,r1		; Wait framebuffer and request swap
+		mov	#_vdpreg,r1		; Wait framebuffer
 .wait:		mov.w	@(vdpsts,r1),r0
-		tst	#2,r0
+		tst	#%10,r0
 		bf	.wait
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
+
+		mov	#_sysreg+comm12,r1
+		mov	#_sysreg+comm14,r4
+.slv_busy2:
+		mov.w	@r1,r0
+		cmp/eq	#4,r0
+		bf	.got_out
+		mov.w	@r4,r0
+		and	#%01111111,r0
+		tst	r0,r0
+		bf	.slv_busy2
+.got_out:
 
 ; ============================================================
 
@@ -2158,6 +2184,10 @@ SH2_S_HotStart:
 		mov.w	@r1,r0
 .wait_md:	tst	r0,r0
 		bf	.wait_md
+		mov	#_sysreg+comm12,r1
+.wait_mst:	mov.w	@r1,r0
+		tst	r0,r0
+		bf	.wait_mst
 		mov	#$20,r0				; Interrupts ON
 		ldc	r0,sr
 		bra	slave_loop
@@ -2220,33 +2250,11 @@ slave_loop:
 
 		align 4
 .slv_task_1:
-		mov 	#RAM_Mars_Polygons_0,r1
-		mov	#RAM_Mars_PlgnList_0,r2
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.go_mdl
-		mov 	#RAM_Mars_Polygons_1,r1
-		mov	#RAM_Mars_PlgnList_1,r2
-.go_mdl:
-		mov	r1,r0
-		mov	r0,@(marsGbl_CurrFacePos,gbr)
-		mov	r2,r0
-		mov	r0,@(marsGbl_CurrZList,gbr)
-		mov	r0,@(marsGbl_CurrZTop,gbr)
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
 		nop
-		mov 	#RAM_Mars_PlgnNum_0,r1
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.page_2
-		mov 	#RAM_Mars_PlgnNum_1,r1
-.page_2:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
 		bra	.slv_exit
-		mov	r0,@r1
+		nop
 		align 4
 
 ; ============================================================
@@ -2340,8 +2348,6 @@ sizeof_marssnd		ds.l 0
 
 			struct MarsRam_Video
 RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF			; Single buffer for all screen modes
-RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
-RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
 sizeof_marsvid		ds.l 0
 			finish
 
@@ -2356,6 +2362,8 @@ RAM_SCRN03_FILLER	ds.l 1
 sizeof_scrn03		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff
+RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
+RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
