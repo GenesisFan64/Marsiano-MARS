@@ -32,17 +32,17 @@ sizeof_mdlobj	ds.l 0
 ; "Super" sprite
 ; RAM_MdDreq+Dreq_SuperSpr
 		struct 0
-marsspr_data	ds.l 1	; Spritesheet DATA location in SH2 area (MANUALLY ADD |TH IF NEEDED), 0 == end-of-spritelist
-marsspr_dwidth	ds.w 1	; Spritesheet WIDTH
-marsspr_indx	ds.w 1	; Palette index base
-marsspr_flags	ds.w 1	; Sprite flags: %VH
-marsspr_x	ds.w 1	; Screen X position
-marsspr_y	ds.w 1	; Screen Y position
-marsspr_xs	ds.b 1	; Sprite X size
-marsspr_ys	ds.b 1	; Sprite Y size
-marsspr_xfrm	ds.b 1	; Animation X frame pos
-marsspr_yfrm	ds.b 1	; Animation Y frame pos
-marsspr_fill	ds.w 1	; <-- free to use (fill)
+marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (MANUALLY ADD |TH IF NEEDED), 0 == end-of-spritelist
+marsspr_dwidth	ds.w 1		; Spritesheet WIDTH
+marsspr_indx	ds.w 1		; Palette index base
+marsspr_flags	ds.w 1		; Sprite flags: %VH
+marsspr_x	ds.w 1		; Screen X position
+marsspr_y	ds.w 1		; Screen Y position
+marsspr_xs	ds.b 1		; Sprite X size
+marsspr_ys	ds.b 1		; Sprite Y size
+marsspr_xfrm	ds.b 1		; Animation X frame pos
+marsspr_yfrm	ds.b 1		; Animation Y frame pos
+marsspr_fill	ds.w 1		; <-- 2 bytes free to use (filler)
 sizeof_marsspr	ds.l 0
 		finish
 
@@ -53,8 +53,8 @@ sizeof_marsspr	ds.l 0
 ; RAM_MdDreq+Dreq_ScrnBuff
 
 			struct 0
-Dreq_Scrn1_Data		ds.l 1		; Screen mode 1: Source image (SH2's area)
-Dreq_Scrn1_Type		ds.l 1		; Source format: 0-NULL 1-Indexed 2-Direct 3-RLE
+Dreq_Scrn_Data		ds.l 1		; Screen mode 1: Source image (SH2's area)
+Dreq_Scrn_Type		ds.l 1		; Source format: 0-NULL 1-Indexed 2-Direct 3-RLE
 			finish
 
 			struct 0

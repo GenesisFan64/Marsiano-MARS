@@ -18,6 +18,9 @@ CACHE_MSTR_PLGN:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
+		mov.w	@(marsGbl_WdgHold,gbr),r0
+		cmp/eq	#1,r0
+		bt	.exit
 		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($08)?
 		cmp/eq	#7,r0
 		bf	maindrw_tasks
@@ -55,6 +58,10 @@ CACHE_MSTR_PLGN:
 		rts
 		nop
 		align 4
+.exit:		mov	r2,@-r15
+		bra	drwtask_exit
+		mov	#$10,r2
+		align 4
 		ltorg
 
 ; ------------------------------------------------
@@ -83,7 +90,7 @@ maindrw_tasks:
 
 slvplgn_02:
 		mov	r2,@-r15
-		mov.w	@(marsGbl_DrwPause,gbr),r0
+		mov.w	@(marsGbl_WdgHold,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
 		mov	r3,@-r15
@@ -129,9 +136,6 @@ slvplgn_02:
 
 slvplgn_01:
 		mov	r2,@-r15
-		mov.w	@(marsGbl_DrwPause,gbr),r0
-		cmp/eq	#1,r0
-		bt	.exit
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
@@ -154,16 +158,13 @@ slvplgn_01:
 		mov	r14,@-r15
 		sts	macl,@-r15
 		sts	mach,@-r15
-
 drwtsk1_newpz:
 		mov	@(marsGbl_PlyPzList_R,gbr),r0
 		mov	r0,r14
-
 		mov	@(plypz_ytb,r14),r9	; Start grabbing StartY/EndY positions
 		exts.w	r9,r10			; r10 - Bottom
 		shlr16	r9
 		exts.w	r9,r9			;  r9 - Top
-
 		cmp/eq	r9,r10			; if Top==Bottom, exit
 		bt	.invld_y
 		mov	#SCREEN_HEIGHT,r0	; if Top > 224, skip
@@ -175,7 +176,7 @@ drwtsk1_newpz:
 .len_max:
 		sub	r9,r10			; Turn r10 into line lenght (Bottom - Top)
 		cmp/pl	r10
-		bt	drwtsk1_vld_y
+		bt	.valid_y
 .invld_y:
 		bra	drwsld_nextpz		; if LEN < 0 then check next one instead.
 		nop
@@ -183,21 +184,15 @@ drwtsk1_newpz:
 		bra	drwtask_exit
 		nop
 		align 4
-		ltorg
-
-	; ------------------------------------
-	; If Y top / Y len are valid:
-	; ------------------------------------
-		align 4
-drwtsk1_vld_y:
+.valid_y:
 		mov	@(plypz_xl,r14),r1
 		mov	r1,r3
-		shlr16	r1
 		mov	@(plypz_xl_dx,r14),r2		; r2 - DX left
-		shll16	r1
+		shlr16	r1
 		mov	@(plypz_xr_dx,r14),r4		; r4 - DX right
-		shll16	r3
+		shll16	r1
 		mov	@(plypz_type,r14),r0		; Check material options
+		shll16	r3
 		shlr16	r0
 		shlr8	r0
  		tst	#PLGN_TEXURE,r0			; Texture mode?
@@ -205,6 +200,7 @@ drwtsk1_vld_y:
 		bra	drwtsk_solidmode
 		nop
 		align 4
+		ltorg
 
 ; ------------------------------------
 ; Texture mode
@@ -227,6 +223,7 @@ go_drwsld_updline_tex:
 go_drwtex_gonxtpz:
 		bra	drwsld_nextpz
 		nop
+		align 4
 drwtsk_texmode:
 		mov.w	@(marsGbl_DivStop_M,gbr),r0	; Waste interrupt if MarsVideo_MakePolygon is in the
 		cmp/eq	#1,r0				; middle of HW-division
@@ -237,8 +234,8 @@ drwtsk_texmode:
 .texvalid:
 		mov	@(plypz_src_xl,r14),r5		; Texture X left/right
 		mov	r5,r6
-		shlr16	r5
 		mov	@(plypz_src_yl,r14),r7		; Texture Y up/down
+		shlr16	r5
 		mov	r7,r8
 		shlr16	r7
 
@@ -299,8 +296,9 @@ drwsld_nxtline_tex:
 		sub	r7,r8
 
 	; Calculate new DX values
-	; make sure DIV is available
-	; (marsGbl_DivStop_M == 0)
+	; make sure DIV is not in use
+	; before getting here.
+	; (set marsGbl_DivStop_M to 1)
 		mov	tag_JR,r0			; r6 / r2
 		mov	r2,@r0
 		mov	r6,@(4,r0)
@@ -401,6 +399,7 @@ drwsld_nxtline_tex:
 		mov	@r0+,r3
 		mov	@r0+,r2
 		mov	@r0+,r1
+		nop
 drwsld_updline_tex:
 		mov	@(plypz_src_xl_dx,r14),r0	; Update DX postions
 		add	r0,r5
@@ -417,19 +416,8 @@ drwsld_updline_tex:
 		bra	drwsld_nxtline_tex
 		add	#1,r9
 drwtex_nextpz:
-		add	#sizeof_plypz,r14		; And set new point
-		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		cmp/ge	r0,r14
-		bf	.reset_rd
-		mov	@(marsGbl_PlyPzList_Start,gbr),r0
-.reset_rd:
-		mov	r14,r0
-		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
-		add	#-1,r0
-		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-		bra	drwtask_return
-		mov	#$10,r2				; Timer for next watchdog
+		bra	drwsld_nextpz
+		nop
 		align 4
 tag_JR:		dc.l _JR
 tag_width:	dc.l	SCREEN_WIDTH
@@ -572,13 +560,6 @@ drwsld_nextpz:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
-; 		cmp/pl	r0
-; 		bf	.finish_it
-; 		bra	drwtsk1_newpz
-; 		nop
-; .finish_it:
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 		bra	drwtask_return
 		mov	#$10,r2			; Timer for next watchdog
 
@@ -658,7 +639,7 @@ MarsVideo_SlicePlgn:
 	; Polygon points
 	; ----------------------------------------
 
-	; TODO: maka these w/h halfs customizable
+	; TODO: make these w/h halfs customizable
 		mov	#4,r8			; Copy polygon points Cache's DDA
 		mov	#SCREEN_WIDTH/2,r6
 		mov	#SCREEN_HEIGHT/2,r7
@@ -764,11 +745,11 @@ MarsVideo_SlicePlgn:
 		mov	r9,@-r0
 		mov	r11,@-r0
 		mov	#1,r0
-		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Tell watchdog we are mid-write
+		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
 		bsr	put_piece
 		nop
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DrwPause,gbr)	; Unlock.
+		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
 		mov	#Cach_Bkup_LPZ,r0
 		mov	@r0+,r11
 		mov	@r0+,r9

@@ -18,24 +18,7 @@ CACHE_SLAVE:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-
-; wdg_pzfull:
-; 		mov.l   #$FFFFFE80,r1
-; 		mov.w   #$A518,r0		; OFF
-; 		mov.w   r0,@r1
-; 		or      #$20,r0			; ON
-; 		mov.w   r0,@r1
-; 		mov.w   #$5A10,r0		; Timer for the next WD
-; 		mov.w   r0,@r1
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-; wdg_finish:
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-; 		add	#1,r0
-		mov	#$FFFFFE80,r1			; Stop watchdog
+		mov	#$FFFFFE80,r1	; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
 		rts
@@ -870,15 +853,13 @@ mdlrd_rotate:
 
 			align 4
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38		; 7 bytes per channel.
-MarsSnd_RvMode		ds.l 1
-MarsSnd_Active		ds.l 1
-Cach_BkupPnt_L		ds.l 8			;
+MarsSnd_PwmControl	ds.b $38		; 8 bytes per channel.
+MarsSnd_RvMode		ds.l 1			; ROM RV protection flag
+Cach_BkupPnt_L		ds.l 8			; **
 Cach_BkupPnt_S		ds.l 0			; <-- Reads backwards
-Cach_BkupS_L		ds.l 5			;
-Cach_BkupS_S		ds.l 0
-Cach_CurrPlygn		ds.b sizeof_polygn	; Current polygon in modelread
-
+Cach_BkupS_L		ds.l 5			; **
+Cach_BkupS_S		ds.l 0			; <-- Reads backwards
+Cach_CurrPlygn		ds.b sizeof_polygn	; Current reading polygon
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

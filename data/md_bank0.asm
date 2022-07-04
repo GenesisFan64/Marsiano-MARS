@@ -11,7 +11,23 @@
 
 		include "data/mars/palettes.asm"	; All 32X palettes will be here.
 
-; MAP_FGTEST:	binclude "data/md/bg/fg_map.bin"
-; 		align 2
-; MAP_BGTEST:	binclude "data/md/bg/bg_map.bin"
-; 		align 2
+		align 2
+Pal_level0:
+		binclude "data/md/maps/level0/pal.bin"
+		align 2
+; ----------------------------------------------------------------
+
+		align 2
+MapHead_0:	binclude "data/md/maps/level0/head.bin"
+MapBlk_0:	binclude "data/md/maps/level0/blocks.bin"
+		align 2
+MapFgL_0:	binclude "data/md/maps/level0/fg_low.bin"
+		align 2
+MapFgH_0:	binclude "data/md/maps/level0/fg_hi.bin"
+		align 2
+MapFgC_0:	binclude "data/md/maps/level0/fg_col.bin"
+		align 2
+MapBgL_0:	binclude "data/md/maps/level0/bg_low.bin"
+		align 2
+MapBgH_0:	binclude "data/md/maps/level0/bg_hi.bin"
+		align 2

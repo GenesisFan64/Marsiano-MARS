@@ -4,6 +4,25 @@
 ; ----------------------------------------------------------------
 
 ; ====================================================================
+; ----------------------------------------------------------------
+; RAM section
+; ----------------------------------------------------------------
+
+		struct RAM_MdSystem
+RAM_InputData	ds.b sizeof_input*4		; Input data section
+RAM_SaveData	ds.b $200			; SRAM data cache
+RAM_DmaCode	ds.b $200
+RAM_SysRandVal	ds.l 1				; Random value
+RAM_SysRandSeed	ds.l 1				; Randomness seed
+RAM_initflug	ds.l 1				; "INIT" flag
+RAM_MdMarsVInt	ds.w 3				; VBlank jump (JMP xxxx xxxx)
+RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
+RAM_MdVBlkWait	ds.w 1
+RAM_SysFlags	ds.w 1				; Game engine flags (note: it's a byte)
+sizeof_mdsys	ds.l 0
+		finish
+
+; ====================================================================
 ; --------------------------------------------------------
 ; Init System
 ; 
@@ -40,26 +59,31 @@ System_Init:
 		move.w	#0,(a0)+
 		dbf	d1,.clrinput
 		move.w	(sp)+,sr
+		rts
 
-		lea	(vdp_ctrl),a6
-.wait_in:	move.w	(a6),d4
-		btst	#bitVBlk,d4
-		beq.s	.wait_in
-.wait_out:	move.w	(a6),d4
-		btst	#bitVBlk,d4
-		bne.s	.wait_out
-		bra	System_MarsUpdate
+; 		lea	(vdp_ctrl),a6
+; .wait_in:	move.w	(a6),d4
+; 		btst	#bitVBlk,d4
+; 		beq.s	.wait_in
+; .wait_out:	move.w	(a6),d4
+; 		btst	#bitVBlk,d4
+; 		bne.s	.wait_out
+; 		bra	System_MarsUpdate
 
 ; --------------------------------------------------------
 ; System_WaitFrame
 ;
-; Call this to wait and update next frame. DISPLAY MUST
-; BE ENABLED TO USE THIS.
+; Call this to wait and update next frame.
+; ***DISPLAY MUST BE ENABLED TO USE THIS.***
 ;
-; This will also update the controllers, process DMA tasks
-; from the BLAST list, and transfer the
-; Genesis palette, sprites and the scrolling lines/2cells
-; from RAM to VDP (Doesn't require RV bit)
+; Before getting on VBlank: the RAM section reserved
+; for the 32X will be transfered using DREQ
+;
+; On VBlank, it will:
+; - Update the controllers
+; - Transfer the Genesis palette, sprites and scroll
+;   data from from RAM to VDP (Doesn't require RV bit)
+; - Process DMA tasks from the BLAST list
 ; --------------------------------------------------------
 
 System_WaitFrame:
@@ -114,9 +138,9 @@ System_WaitFrame:
 ; System_Dma_Enter, System_Dma_Exit
 ;
 ; Call these before entering or exiting any
-; DMA ROM-to-VDP transfers
+; DMA ROM-to-VDP transfer
 ;
-; Your Sound driver's z80 pause calls go here
+; Your Sound driver's Z80 pause calls go here
 ; --------------------------------------------------------
 
 System_Dma_Enter:

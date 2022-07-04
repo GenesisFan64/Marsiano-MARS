@@ -86,69 +86,10 @@ bitClickS	equ 3
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; System RAM
-; ----------------------------------------------------------------
-
-		struct RAM_MdSystem
-RAM_InputData	ds.b sizeof_input*4		; Input data section
-RAM_SaveData	ds.b $200			; SRAM data cache
-RAM_DmaCode	ds.b $200
-RAM_SysRandVal	ds.l 1				; Random value
-RAM_SysRandSeed	ds.l 1				; Randomness seed
-RAM_initflug	ds.l 1				; "INIT" flag
-RAM_MdMarsVInt	ds.w 3				; VBlank jump (JMP xxxx xxxx)
-RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
-RAM_MdVBlkWait	ds.w 1
-RAM_SysFlags	ds.w 1				; Game engine flags (note: it's a byte)
-sizeof_mdsys	ds.l 0
-		finish
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Sound 68k RAM
-; ----------------------------------------------------------------
-
-		struct RAM_MdSound
-RAM_SndSaveReg	ds.l 8			; Backup registers here instead of stack (TODO)
-sizeof_mdsnd	ds.l 0
-		finish
-		
-; ====================================================================
-; ----------------------------------------------------------------
-; Video RAM
-; ----------------------------------------------------------------
-
-			struct RAM_MdVideo
-RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
-RAM_VerScroll		ds.l 320/16		; DMA Vertical scroll data (TODO: check if this is the correct size)
-RAM_Sprites		ds.w 8*70		; DMA Sprites
-RAM_Palette		ds.w 64			; DMA palette
-RAM_PaletteFd		ds.w 64			; Target MD palette for FadeIn/Out
-RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out
-RAM_VdpDmaList		ds.w 7*MAX_MDDMATSK	; DMA BLAST Transfer list for VBlank
-RAM_VidPrntList		ds.w 3*64		; Video_Print list: Address, Type
-RAM_VdpDmaIndx		ds.w 1			; Current index in DMA BLAST list
-RAM_VdpDmaMod		ds.w 1			; Mid-write flag (just to be safe)
-RAM_VidPrntVram		ds.w 1			; Default VRAM location for ASCII text used by Video_Print
-RAM_FadeMdReq		ds.w 1			; FadeIn/Out request for Genesis palette (01-FadeIn 02-FadeOut)
-RAM_FadeMdIncr		ds.w 1			; Fading increment count
-RAM_FadeMdDelay		ds.w 1			; Fading delay
-RAM_FadeMdTmr		ds.w 1			; Fading delay timer (Write to both FadeMdDel and here)
-RAM_FadeMarsReq		ds.w 1			; Same thing but for 32X's 256-color (01-FadeIn 02-FadeOut)
-RAM_FadeMarsIncr	ds.w 1			; (Hint: Set to 4 to syncronize Genesis FadeIn/Out)
-RAM_FadeMarsDelay	ds.w 1
-RAM_FadeMarsTmr		ds.w 1
-RAM_FrameCount		ds.l 1			; Frames counter
-RAM_VdpRegs		ds.b 24			; VDP Register cache
-sizeof_mdvid		ds.l 0
-			finish
-
-; ====================================================================
-; ----------------------------------------------------------------
 ; MD RAM
 ;
 ; NOTE for porting this to Sega CD (or SegaCD+32X):
-; $FFFD00 to $FFFDFF is reserved for the MAIN-CPU's vectors
+; From $FFFD00 to $FFFDFF is reserved for the MAIN-CPU's vectors
 ; ----------------------------------------------------------------
 
 		struct MDRAM_START
@@ -174,3 +115,4 @@ sizeof_mdram	ds.l 0
 		message "MD RAM: \{(MDRAM_START)&$FFFFFF}-\{(sizeof_mdram)&$FFFFFF}"
 	endif
 		finish
+

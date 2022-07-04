@@ -58,7 +58,7 @@ marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1
-marsGbl_WdgStop		ds.w 1
+marsGbl_WdgHold		ds.w 1
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
@@ -1228,11 +1228,11 @@ SH2_M_HotStart:
 
 ; 		mov	#1,r0
 ; 		mov.w	r0,@(marsGbl_WaveEnable,gbr)	; *** TEMPORAL
-; 		mov	#8,r0
+; 		mov	#16,r0
 ; 		mov.w	r0,@(marsGbl_WaveSpd,gbr)	; ***
 ; 		mov	#8,r0
 ; 		mov.w	r0,@(marsGbl_WaveMax,gbr)	; ***
-; 		mov	#32,r0
+; 		mov	#16,r0
 ; 		mov.w	r0,@(marsGbl_WaveDeform,gbr)	; ***
 
 ; ----------------------------------------------------------------
@@ -1241,14 +1241,13 @@ SH2_M_HotStart:
 ; comm12:
 ; bssscccc ir000lll
 ;
-; b - busy bit, this CPU can't be interrupted by request.
-; s - status bits for some CMD interrupt tasks
-; c - command number for CMD interrupt
-; i - Initialitation bit
-; r - Clears on exit, set this bit on 68k side to wait for the
-;     current screen to finish.
-; l - MAIN LOOP command/task, inlcude the i bit to properly
-;     (re)start
+; b - Busy bit, this CPU can't be interrupted by request.
+; s - Status bits for some CMD interrupt tasks
+; c - Command number for CMD interrupt
+; i - Screen mode-initialization bit
+; r - 68K writes this bit to wait for the next frame, SH2 clears
+;     when the frame is ready.
+; l - MAIN LOOP command/task. for any mode change add $80 (i bit)
 ; ----------------------------------------------------------------
 
 		align 4
@@ -1318,15 +1317,15 @@ master_loop:
 ; exits on display.
 ; ---------------------------------------
 
-		mov	#mstr_gfxlist_v,r1		; VBlank jump
-		mov	#_sysreg+comm12,r2
-		mov.w	@r2,r0
-		and	#%0111,r0
-		shll2	r0
-		shll2	r0
-		mov	@(r1,r0),r1
-		jsr	@r1
-		nop
+; 		mov	#mstr_gfxlist_v,r1		; VBlank jump
+; 		mov	#_sysreg+comm12,r2
+; 		mov.w	@r2,r0
+; 		and	#%0111,r0
+; 		shll2	r0
+; 		shll2	r0
+; 		mov	@(r1,r0),r1
+; 		jsr	@r1
+; 		nop
 		mov	#mstr_gfxlist,r3		; Default LOOP points
 		mov	#_sysreg+comm12,r2
 		mov.w	@r2,r0				; r0 - bit check
@@ -1360,48 +1359,43 @@ master_loop:
 
 ; ---------------------------------------
 ; jump lists
+;
+; NOTE: the LOOP parts starts at
+; very top of VBlank.
 
 		align 4
 mstr_gfxlist:	dc.l mstr_gfx0_loop	; $00
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
-mstr_gfxlist_v:	dc.l mstr_gfx0_vblk
+mstr_gfxlist_h:	dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx1_loop	; $01
 		dc.l mstr_gfx1_init_2
 		dc.l mstr_gfx1_init_1
-		dc.l mstr_gfx1_vblk
+		dc.l mstr_gfx1_hblk
 		dc.l mstr_gfx2_loop	; $02
 		dc.l mstr_gfx2_init_2
 		dc.l mstr_gfx2_init_1
-		dc.l mstr_gfx2_vblk
+		dc.l mstr_gfx2_hblk
 		dc.l mstr_gfx3_loop	; $03
 		dc.l mstr_gfx3_init_2
 		dc.l mstr_gfx3_init_1
-		dc.l mstr_gfx3_vblk
+		dc.l mstr_gfx3_hblk
 		dc.l mstr_gfx4_loop	; $04
 		dc.l mstr_gfx4_init_2
 		dc.l mstr_gfx4_init_1
-		dc.l mstr_gfx4_vblk
+		dc.l mstr_gfx4_hblk
 		dc.l mstr_gfx0_loop	; $05
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_vblk
+		dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx0_loop	; $06
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_vblk
+		dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx0_loop	; $07
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_vblk
-mstr_gfxlist_h:	dc.l mstr_gfx0_hblk	; $00
-		dc.l mstr_gfx1_hblk	; $01
-		dc.l mstr_gfx2_hblk	; $02
-		dc.l mstr_gfx3_hblk	; $03
-		dc.l mstr_gfx4_hblk	; $04
-		dc.l mstr_gfx0_hblk	; $05
-		dc.l mstr_gfx0_hblk	; $06
-		dc.l mstr_gfx0_hblk	; $07
+		dc.l mstr_gfx0_hblk
 
 ; ============================================================
 ; ---------------------------------------
@@ -1426,15 +1420,6 @@ mstr_gfx0_hblk:
 		align 4
 
 ; -------------------------------
-; VBlank
-; -------------------------------
-
-mstr_gfx0_vblk:
-		rts
-		nop
-		align 4
-
-; -------------------------------
 ; Init
 ; -------------------------------
 
@@ -1450,7 +1435,7 @@ mstr_gfx0_init_1:
 		mov	#MarsVideo_ClearScreen,r0
 		jsr	@r0
 		nop
-		mov	#_vdpreg,r1			; In case we are still on VBlank...
+		mov	#_vdpreg,r1		; In case we are still on VBlank...
 -		mov.b	@(vdpsts,r1),r0
 		tst	#VBLK,r0
 		bf	-
@@ -1489,15 +1474,6 @@ mstr_gfx1_hblk:
 		align 4
 
 ; -------------------------------
-; VBlank
-; -------------------------------
-
-mstr_gfx1_vblk:
-		rts
-		nop
-		align 4
-
-; -------------------------------
 ; Init
 ; -------------------------------
 
@@ -1518,7 +1494,7 @@ mstr_gfx1_init_1:
 
 mstr_gfx1_loop:
 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1
-		mov	@(Dreq_Scrn1_Type,r1),r0
+		mov	@(Dreq_Scrn_Type,r1),r0
 		and	#%11,r0
 		shll2	r0
 		mov	#.m1list,r2
@@ -1536,9 +1512,9 @@ mstr_gfx1_loop:
 ; Direct color
 ; currently 320x200 (DOS-style)
 .direct:
-		mov	@(Dreq_Scrn1_Data,r1),r1
+		mov	@(Dreq_Scrn_Data,r1),r1
 		mov	#_framebuffer+$200,r2
-		mov	#(320*200/2)/2,r3
+		mov	#(320*200/2)/2,r3	; <- fixed size
 .copy_me:
 		mov	@r1+,r0
 		mov	r0,@r2
@@ -1555,7 +1531,10 @@ mstr_gfx1_loop:
 		mov	#MarsVideo_MakeNametbl,r0
 		jsr	@r0
 		mov	#12,r4
-
+		mov	#_vdpreg,r1		; In case we are still on VBlank...
+-		mov.b	@(vdpsts,r1),r0
+		tst	#VBLK,r0
+		bf	-
 		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
@@ -1586,25 +1565,6 @@ mstr_gfx1_loop:
 ; -------------------------------
 
 mstr_gfx2_hblk:
-		rts
-		nop
-		align 4
-
-; -------------------------------
-; VBlank
-; -------------------------------
-
-mstr_gfx2_vblk:
-		mov.w	@(marsGbl_MdInitTmr,gbr),r0
-		tst	r0,r0
-		bf	.mid_draw
-		mov	#RAM_Mars_BgBuffScrl,r4
-		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r3
-		mov	@(Dreq_ScrlBg_X,r3),r1
-		mov	@(Dreq_ScrlBg_Y,r3),r2
-		mov	r1,@(mbg_xpos,r4)
-		mov	r2,@(mbg_ypos,r4)
-.mid_draw:
 		rts
 		nop
 		align 4
@@ -1658,6 +1618,16 @@ mstr_gfx2_init_cont:
 ; -------------------------------
 
 mstr_gfx2_loop:
+		mov.w	@(marsGbl_MdInitTmr,gbr),r0
+		tst	r0,r0
+		bf	.mid_draw
+		mov	#RAM_Mars_BgBuffScrl,r4
+		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r3
+		mov	@(Dreq_ScrlBg_X,r3),r1
+		mov	@(Dreq_ScrlBg_Y,r3),r2
+		mov	r1,@(mbg_xpos,r4)
+		mov	r2,@(mbg_ypos,r4)
+.mid_draw:
 		mov	#RAM_Mars_BgBuffScrl,r14
 		mov	#RAM_Mars_RdrwBlocks,r13
 		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
@@ -1736,25 +1706,6 @@ mstr_gfx2_loop:
 ; -------------------------------
 
 mstr_gfx3_hblk:
-		rts
-		nop
-		align 4
-
-; -------------------------------
-; VBlank
-; -------------------------------
-
-mstr_gfx3_vblk:
-; 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1	; Copy-paste scale buffer
-; 		mov	#RAM_Mars_BgBuffScale_S,r2
-; 		mov	#8,r4
-; .copy_me:
-; 		mov	@r1+,r0
-; 		mov	r0,@r2
-; 		add	#4,r2
-; 		dt	r4
-; 		bf/s	.copy_me
-; 		add	#4,r3
 		rts
 		nop
 		align 4
@@ -1840,15 +1791,6 @@ mstr_gfx4_hblk:
 		align 4
 
 ; -------------------------------
-; VBlank
-; -------------------------------
-
-mstr_gfx4_vblk:
-		rts
-		nop
-		align 4
-
-; -------------------------------
 ; Init
 ; -------------------------------
 
@@ -1882,6 +1824,18 @@ mstr_gfx4_init_cont:
 ; -------------------------------
 
 mstr_gfx4_loop:
+		mov	#_sysreg+comm12,r1
+		mov	#_sysreg+comm14,r4
+.slv_busy2:
+		mov.w	@r1,r0
+		and	#%1111,r0
+		cmp/eq	#4,r0
+		bf	.got_out
+		mov.w	@r4,r0
+		and	#%01111111,r0
+		tst	r0,r0
+		bf	.got_out
+
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models into a safe place
 		mov	#RAM_Mars_Objects,r2			; to prevent BUS problems.
 		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3	; <-- LONG size
@@ -1899,10 +1853,10 @@ mstr_gfx4_loop:
 		mov.w	r0,@r4
 
 		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@(vdpsts,r1),r0		; Wait until framebuffer is unlocked
+.wait_fb:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
 		tst	#2,r0
 		bf	.wait_fb
-		mov	#$A5,r0			; VDPFILL: Pre-start at $A5
+		mov	#$A5,r0				; VDPFILL: Pre-start at $A5
 		mov.w	r0,@(6,r1)
 		mov	#RAM_Mars_SVdpDrwList,r0	; Reset DDA Start/End/Read/Write points
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
@@ -1988,16 +1942,16 @@ mstr_gfx4_loop:
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
 
-		mov	#_sysreg+comm12,r1
-		mov	#_sysreg+comm14,r4
-.slv_busy2:
-		mov.w	@r1,r0
-		cmp/eq	#4,r0
-		bf	.got_out
-		mov.w	@r4,r0
-		and	#%01111111,r0
-		tst	r0,r0
-		bf	.slv_busy2
+; 		mov	#_sysreg+comm12,r1
+; 		mov	#_sysreg+comm14,r4
+; .slv_busy2:
+; 		mov.w	@r1,r0
+; 		cmp/eq	#4,r0
+; 		bf	.got_out
+; 		mov.w	@r4,r0
+; 		and	#%01111111,r0
+; 		tst	r0,r0
+; 		bf	.slv_busy2
 .got_out:
 
 ; ============================================================

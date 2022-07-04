@@ -140,9 +140,9 @@ MD_DebugMenu:
 		bsr	.fade_in
 
 .page0:
-		lea	str_StatsPage0(pc),a0
-		move.l	#locate(0,2,10),d0
-		bsr	Video_Print
+; 		lea	str_Stats(pc),a0
+; 		move.l	#locate(0,2,10),d0
+; 		bsr	Video_Print
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
@@ -173,7 +173,7 @@ MD_DebugMenu:
 		bsr.s	.make_frame
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
-		move.l	#2,Dreq_Scrn1_Type(a1)
+		move.l	#2,Dreq_Scrn_Type(a1)
 		bsr	System_MarsUpdate
 
 		lea	str_Page1(pc),a0
@@ -209,7 +209,7 @@ MD_DebugMenu:
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
 		move.l	(a0,d0.w),d0
 		add.l	#TH,d0
-		move.l	d0,Dreq_Scrn1_Data(a1)
+		move.l	d0,Dreq_Scrn_Data(a1)
 		rts
 .frames:
 		dc.l TESTMARS_DIRECT_1
@@ -499,7 +499,7 @@ MD_DebugMenu:
 
 		bsr	.fade_in
 .page4:
-		lea	str_StatsPage0(pc),a0
+		lea	str_Stats(pc),a0
 		move.l	#locate(0,2,4),d0
 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
@@ -1361,7 +1361,7 @@ str_Cursor:	dc.b " ",$A
 		dc.b " ",0
 		align 2
 str_Title:
-		dc.b "Project MARSIANO test menu",$A
+		dc.b "Project MARSIANO tester",$A
 		dc.b $A
 		dc.b "  Screen test 01",$A
 		dc.b "  Screen test 02",$A
@@ -1476,7 +1476,7 @@ str_GemaPwm:
 		dc.l RAM_GemaListPWM+12
 		align 2
 
-str_StatsPage0:
+str_Stats:
 		dc.b "\\w \\w \\w \\w",$A
 		dc.b "\\w \\w \\w \\w",$A,$A
 		dc.b "\\l",0

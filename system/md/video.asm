@@ -3,6 +3,7 @@
 ; Genesis Video
 ; ----------------------------------------------------------------
 
+; ====================================================================
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
@@ -43,6 +44,75 @@ bitDma		equ 1		; Only works for FILL and COPY
 bitPal		equ 0
 
 ; ====================================================================
+; ----------------------------------------------------------------
+; Structs
+; ----------------------------------------------------------------
+
+; SIZE: $
+		struct 0
+md_bg_low	ds.l 1		; MAIN layout data
+md_bg_hi	ds.l 1		; HI layout data
+md_bg_blk	ds.l 1		; Block data
+md_bg_col	ds.l 1		; Collision data
+md_bg_size	ds.l 1		; Scroll size(s) for this layer X|Y
+md_bg_x		ds.l 1		; X pos 0000.0000
+md_bg_y		ds.l 1		; Y pos 0000.0000
+md_bg_vbl_vlr	ds.w 1		; VRAM precalc'd location for L/R drawing
+md_bg_vbl_vud	ds.w 1		; VRAM precalc'd location for U/D drawing
+md_bg_vpos	ds.w 1		; VRAM output for map
+md_bg_vram	ds.w 1		; VRAM start for cells
+md_bg_w		ds.w 1		; Width in blocks
+md_bg_h		ds.w 1		; Height in blocks
+md_bg_wf	ds.w 1		; FULL Width in pixels
+md_bg_hf	ds.w 1		; FULL Height in pixels
+md_bg_iw	ds.w 1		; Special Width
+md_bg_lw	ds.w 1		; ** bitshift LSL value (lsl by 2 later)
+md_bg_x_old	ds.b 1
+md_bg_y_old	ds.b 1
+md_bg_bw	ds.b 1
+md_bg_bh	ds.b 1
+md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
+md_bg_flags	ds.b 1		; Drawing flags: %MUDLR
+sizeof_mdbg	ds.l 0
+		finish
+
+; md_bg_flags: %EM.. UDLR
+; UDLR - off-screen update bits
+;    M - Map belongs to: Genesis or 32X
+;    E - Enable this map
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Video RAM
+; ----------------------------------------------------------------
+
+			struct RAM_MdVideo
+RAM_BgBuffer		ds.b sizeof_mdbg*4	; Map backgrounds, back to front.
+RAM_FrameCount		ds.l 1			; Frames counter
+RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
+RAM_VerScroll		ds.l 320/16		; DMA Vertical scroll data
+RAM_Sprites		ds.w 8*70		; DMA Sprites
+RAM_Palette		ds.w 64			; DMA palette
+RAM_PaletteFd		ds.w 64			; Target MD palette for FadeIn/Out
+RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out (NOTE: it's slow)
+RAM_VdpDmaList		ds.w 7*MAX_MDDMATSK	; DMA BLAST list for VBlank
+RAM_VidPrntList		ds.w 3*64		; Video_Print list: Address, Type
+RAM_VdpDmaIndx		ds.w 1			; Current index in DMA BLAST list
+RAM_VdpDmaMod		ds.w 1			; Mid-write flag (just to be safe)
+RAM_VidPrntVram		ds.w 1			; Default VRAM location for ASCII text used by Video_Print
+RAM_FadeMdReq		ds.w 1			; FadeIn/Out request for Genesis palette (01-FadeIn 02-FadeOut)
+RAM_FadeMdIncr		ds.w 1			; Fading increment count
+RAM_FadeMdDelay		ds.w 1			; Fading delay
+RAM_FadeMdTmr		ds.w 1			; Fading delay timer
+RAM_FadeMarsReq		ds.w 1			; Same thing but for 32X's 256-color (01-FadeIn 02-FadeOut)
+RAM_FadeMarsIncr	ds.w 1			; (Hint: Set to 4 to syncronize with Genesis' FadeIn/Out)
+RAM_FadeMarsDelay	ds.w 1
+RAM_FadeMarsTmr		ds.w 1
+RAM_VdpRegs		ds.b 24			; VDP Register cache
+sizeof_mdvid		ds.l 0
+			finish
+
+; ====================================================================
 ; --------------------------------------------------------
 ; Init Genesis video
 ; --------------------------------------------------------
@@ -66,13 +136,6 @@ Video_Init:
 		add.w	#$100,d6
 		dbf	d7,.loop
 .exit:
-; 		lea	(dmacode_start),a1		; TODO: optimize this.
-; 		lea	(RAM_DmaCode).l,a0
-; 		move.w	#((dmacode_end-dmacode_start)/4)-1,d0
-; .copysafe:
-; 		move.l	(a1)+,(a0)+
-; 		dbf	d0,.copysafe
-; 		rts
 
 ; --------------------------------------------------------
 ; Video_Update
@@ -101,7 +164,7 @@ Video_Update:
 
 list_vdpregs:
 		dc.b $04			; HBlank int off, HV Counter on
-		dc.b $44			; Display ON, VBlank interrupt off
+		dc.b $04			; Display ON, VBlank interrupt off
 		dc.b (($C000)>>10)		; ForeGrd at VRAM $C000 (%00xxx000)
 		dc.b (($D000)>>10)		; Window  at VRAM $D000 (%00xxxxy0)
 		dc.b (($E000)>>13)		; BackGrd at VRAM $E000 (%00000xxx)
@@ -198,7 +261,7 @@ Video_ClearScreen:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Layer screens
+; Generic screen-drawing routines
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -208,7 +271,9 @@ Video_ClearScreen:
 ; Can autodetect layer width, height and
 ; double interlace mode
 ;
-; a0 | DATA - Map data
+; Input:
+; a0 - Map data
+;
 ; d0 | LONG - locate(lyr,x,y) / 00|Layer|X|Y
 ; d1 | LONG - mapsize(x,y) / Width|Height (in cells)
 ; d2 | WORD - VRAM
@@ -1045,23 +1110,6 @@ Video_Copy:
 		rts
 
 ; --------------------------------------------------------
-; Video_DmaBlast
-;
-; Process DMA tasks from a predefined list in RAM
-; **CALL THIS DURING VBLANK ONLY**
-;
-; Breaks:
-; d5-d7,a3-a4
-; --------------------------------------------------------
-
-; Entry format:
-; $94xx,$93xx,$96xx,$95xx,$97xx (SIZE,SOURCE)
-; $40000080 (vdp destination + dma bit)
-
-Video_DmaBlast:
-		jmp	(RAMDMA_Blast).l
-
-; --------------------------------------------------------
 ; Load graphics using DMA, direct
 ;
 ; d0 | LONG - Art data
@@ -1075,12 +1123,6 @@ Video_DmaBlast:
 ; --------------------------------------------------------
 
 Video_LoadArt:
-		jmp	(RAMDMA_Load).l
-
-; ====================================================================
-
-; Single DMA process
-RAMDMA_Load:
 		move.w	sr,-(sp)
 		or	#$700,sr
 		lea	(vdp_ctrl),a4
@@ -1126,7 +1168,7 @@ RAMDMA_Load:
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
  		move.w	d5,-(sp)
 		move.w	d6,(a4)				; d6 - First word
-		move.w	(sp)+,(a4)			; *** Second write, CPU freezes until DMA ends
+		move.w	(sp)+,(a4)			; *** Second write, 68k freezes until DMA ends
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
 		move.w	#$8100,d6			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d6
@@ -1143,8 +1185,21 @@ RAMDMA_Load:
 		move.w	(sp)+,sr
 		rts
 
-; DMA blast process
-RAMDMA_Blast:
+; --------------------------------------------------------
+; Video_DmaBlast
+;
+; Process DMA tasks from a predefined list in RAM
+; **CALL THIS DURING VBLANK ONLY**
+;
+; Breaks:
+; d5-d7,a3-a4
+; --------------------------------------------------------
+
+; Entry format:
+; $94xx,$93xx,$96xx,$95xx,$97xx (SIZE,SOURCE)
+; $40000080 (vdp destination + dma bit)
+
+Video_DmaBlast:
 		tst.w	(RAM_VdpDmaMod).w		; Got mid-write?
 		bne.s	.exit
 		tst.w	(RAM_VdpDmaIndx).w		; Any requests?
@@ -1451,4 +1506,284 @@ Video_MarsPalFade:
 		bne.s	.no_move_o
 		clr.w	(RAM_FadeMarsReq).w
 .no_move_o:
+		rts
+
+; ====================================================================
+; ----------------------------------------------------------------
+; MAP layout system
+;
+; Note: uses some RAM'd video registers.
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; MdMap_Init
+;
+; Initializes all BG buffers
+; --------------------------------------------------------
+
+MdMap_Init:
+		lea	(RAM_BgBuffer),a0
+		move.w	#((sizeof_mdbg*4)/4)-1,d1
+		moveq	#0,d0
+.clr:
+		move.l	d0,(a0)+
+		dbf	d1,.clr
+		rts
+
+; --------------------------------------------------------
+; MdMap_Set
+;
+; Adds a new scrolling map.
+;
+; Input:
+; d0 | WORD - BG internal slot
+; d1 | WORD - VRAM location for map data
+; d2 | WORD - VRAM add + palette
+; d3 | LONG - X size | Y size
+;
+; a0 - Level header:
+; 	dc.w width,height,blkwidth,blkheight,lslwidth
+;
+; a1 - Block data
+; a2 - LOW Priority layout data
+; a3 - HI Priority layout data
+; --------------------------------------------------------
+
+MdMap_Set:
+		lea	(RAM_BgBuffer),a6
+		mulu.w	#sizeof_mdbg,d0
+		add.w	d0,a6
+		move.w	d1,md_bg_vpos(a6)
+		move.w	d2,md_bg_vram(a6)
+		move.l	d3,md_bg_size(a6)
+		move.l	a1,md_bg_blk(a6)
+		move.l	a2,md_bg_low(a6)
+		move.l	a3,md_bg_hi(a6)
+		move.l	a4,md_bg_col(a6)
+		move.l	a0,a5
+		move.w	(a5)+,md_bg_w(a6)	; Layout Width (blocks)
+		move.w	(a5)+,md_bg_h(a6)	; Layout Height (blocks)
+		move.b	(a5)+,md_bg_bw(a6)	; BLOCK width
+		move.b	(a5)+,md_bg_bh(a6)	; BLOCK height
+		move.w	(a5)+,md_bg_iw(a6)	; Layout aligned-width (blocks)
+		move.w	(a5)+,md_bg_lw(a6)	; LSL value
+		bset	#7,md_bg_flags(a6)	; Enable this BG
+		rts
+
+; --------------------------------------------------------
+; MdMap_Run
+;
+; Updates backgrounds internally, CALL MdMap_Draw during
+; VBlank to reflect the changes.
+; --------------------------------------------------------
+
+MdMap_Run:
+		rts
+
+; --------------------------------------------------------
+; MdMap_DrawAll
+;
+; Call this only if DISPLAY is OFF or in VBlank
+;
+; THIS SKIPS $00-id BLOCKS
+; --------------------------------------------------------
+
+MdMap_DrawAll:
+		lea	(RAM_BgBuffer),a6
+		bsr	.this_bg
+		adda	#sizeof_mdbg,a6
+
+.this_bg:
+		btst	#7,md_bg_flags(a6)
+		beq	.no_bg
+
+		move.l	md_bg_blk(a6),a5
+		move.l	md_bg_low(a6),a4
+		move.l	md_bg_hi(a6),a3
+		move.w	md_bg_x(a6),d0		; X start
+		move.w	md_bg_y(a6),d1		; Y start
+		move.b	md_bg_bw(a6),d2
+		move.b	md_bg_bh(a6),d3
+		move.w	md_bg_iw(a6),d4
+		move.w	#$FF,d5
+		and.w	d5,d2
+		mulu.w	d2,d0
+		lsr.w	#8,d0
+		and.w	d5,d3
+		mulu.w	d3,d1
+		lsr.w	#8,d1
+		mulu.w	d4,d1
+		add.l	d1,d0
+		add.l	d0,a4
+		add.l	d0,a3
+		move.w	#$80,d1
+		move.w	d1,d3
+		swap	d1
+		sub.w	#1,d3
+		moveq	#0,d2
+		move.w	md_bg_vram(a6),d2	; d2 - VRAM cell pos
+		swap	d3
+		move.w	#4,d3			; d3 - X wrap | X next block
+		move.w	#$3FFF,d4		; d4 - Y wrap | Y next block + bits
+		swap	d4
+		move.w	#$100,d4
+		moveq	#0,d5			; d5 - temporal | X-add read
+		move.w	md_bg_vpos(a6),d6
+		move.w	d6,d0
+		rol.w	#2,d6
+		and.w	#%11,d6
+		swap	d6
+		move.w	d0,d6			; d6 - VDP 2nd|1st writes
+		move.w	#(512/16)-1,d7		; d7 - X cells | Y cells
+		swap	d7
+		move.w	#(256/16)-1,d7
+
+	; a6 - Current BG buffer
+	; a5 - Block-data base
+	; a4 - LOW layout data Y
+	; a3 - HI layout data Y
+	; a2 - a4 current
+	; a1 - a3 current
+	; a0 - Block-data read
+
+	; d7 - X loop        | Y loop
+	; d6 - VDP 2nd Write | VDP 1st Write
+	; d5 - X loop-save   | X VDP current
+	; d4 - Y wrap        | Y next block pos
+	; d3 - X wrap        | X next block pos
+	; d2 - Y block size  | VRAM-cell base
+	; d1 - Y-next line   | VRAM-cell read + prio
+	; d0 -    ---        | ---
+
+.y_loop:
+		swap	d7
+		move.l	a4,a2		; a2 - LOW line
+		move.l	a3,a1		; a1 - HI line
+		move.w	d7,d5
+.x_loop:
+		swap	d5
+		move.w	d2,d1
+		move.b	(a2),d0		; HI block?
+		bne.s	.got_blk
+		add.w	#$8000,d1
+		move.b	(a1),d0
+		beq.s	.blank
+.got_blk:
+		bsr	.mk_block
+.blank:
+		move.l	d3,d0
+		swap	d0
+		add.w	d3,d5		; next VDP X pos
+		and.w	d0,d5
+		adda	#1,a2
+		adda	#1,a1
+		swap	d5
+		dbf	d5,.x_loop
+		move.l	d4,d0
+		swap	d0
+		add.w	d4,d6		; <-- next VDP Y block
+		and.w	d0,d6
+		move.w	md_bg_iw(a6),d0 ; ***
+		adda	d0,a4
+		adda	d0,a3
+		swap	d7
+		dbf	d7,.y_loop
+.no_bg:
+		rts
+
+; this got very tough.
+; barely got free regs without using stack
+.mk_block:
+		move.l	a5,a0
+		and.w	#$FF,d0
+		lsl.w	#3,d0		; * 8 bytes
+		adda	d0,a0		; a0 - cell word data
+		move.w	d6,d0
+		add.w	d5,d0
+		or.w	#$4000,d0
+		swap	d2
+		swap	d6
+
+	; d0 - topleft VDP write | $4000
+	; d6 - right VDP write
+
+	; blk width/height jumps go here
+	; currently working: 16x16
+	; d2 is free
+
+		bsr.s	.drwy_16	; x16
+		add.w	#2,d0
+		bsr.s	.drwy_16
+
+		swap	d6
+		swap	d2
+		rts
+
+; d0 - left vdp
+; d6 - right vdp
+.drwy_16:
+		move.w	d0,d2
+		swap	d0
+		move.w	(a0)+,d0
+		add.w	d1,d0
+		move.w	d2,(vdp_ctrl).l
+		move.w	d6,(vdp_ctrl).l
+		move.w	d0,(vdp_data).l
+		swap	d1
+		add.w	d1,d2		; Next line
+		swap	d1
+		move.w	(a0)+,d0
+		add.w	d1,d0
+		move.w	d2,(vdp_ctrl).l
+		move.w	d6,(vdp_ctrl).l
+		move.w	d0,(vdp_data).l
+		swap	d0
+		rts
+
+	; Block: 16x16 as 13
+	;                 24
+	; d0 - block ID
+	; d1 - VRAM-add base
+	; d6 - VDP out R | VDP out L
+; 		and.w	#$FF,d0
+; 		lsl.w	#3,d0		; * 8 bytes
+; 		move.l	(a5,d0.w),d2
+; 		add.l	d1,d2
+; 		swap	d2
+; 		move.l	4(a5,d0.w),d3
+; 		add.l	d1,d3
+; 		swap	d3
+; 		move.w	d6,d0
+; 		swap	d5
+; 		add.w	d5,d0
+; 		or.w	#$4000,d0
+; 		swap	d5
+; 		move.l	a0,d1
+; 		and.w	d1,d5
+; 		add.w	d5,d0
+; 		swap	d6
+; 		move.w	d0,(vdp_ctrl).l
+; 		move.w	d6,(vdp_ctrl).l
+; 		move.w	d2,(vdp_data).l
+; 		move.w	d3,(vdp_data).l
+; 		swap	d2
+; 		swap	d3
+; 		add.w	#$80,d0		; line add
+; 		move.w	d0,(vdp_ctrl).l
+; 		move.w	d6,(vdp_ctrl).l
+; 		move.w	d2,(vdp_data).l
+; 		move.w	d3,(vdp_data).l
+
+		swap	d6
+		rts
+
+; --------------------------------------------------------
+; MdMap_DrawOff
+;
+; Draw off-screen changes
+;
+; CALL THIS ON VBLANK ONLY.
+; --------------------------------------------------------
+
+MdMap_DrawOff:
 		rts
