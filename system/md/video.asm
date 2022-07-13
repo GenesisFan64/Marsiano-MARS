@@ -43,6 +43,13 @@ bitHBlk		equ 2		; Inside HBlank
 bitDma		equ 1		; Only works for FILL and COPY
 bitPal		equ 0
 
+; md_bg_flags
+bitDrwR		equ 0
+bitDrwL		equ 1
+bitDrwD		equ 2
+bitDrwU		equ 3
+bitBgOn		equ 7
+
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Structs
@@ -65,14 +72,14 @@ md_bg_w		ds.w 1		; Width in blocks
 md_bg_h		ds.w 1		; Height in blocks
 md_bg_wf	ds.w 1		; FULL Width in pixels
 md_bg_hf	ds.w 1		; FULL Height in pixels
-md_bg_iw	ds.w 1		; Special Width
-md_bg_lw	ds.w 1		; ** bitshift LSL value (lsl by 2 later)
-md_bg_x_old	ds.b 1
-md_bg_y_old	ds.b 1
-md_bg_bw	ds.b 1
-md_bg_bh	ds.b 1
+md_bg_x_old	ds.w 1		; OLD X position
+md_bg_y_old	ds.w 1		; OLD Y position
+md_bg_bw	ds.b 1		; Block Width
+md_bg_bh	ds.b 1		; Block Height
 md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
 md_bg_flags	ds.b 1		; Drawing flags: %MUDLR
+md_bg_xset	ds.b 1		; X-counter
+md_bg_yset	ds.b 1		; Y-counter
 sizeof_mdbg	ds.l 0
 		finish
 
@@ -140,8 +147,9 @@ Video_Init:
 ; --------------------------------------------------------
 ; Video_Update
 ;
-; Refreshes register data stored in RAM
-; to VDP, from Registers $80 to $90
+; Writes register data stored in RAM to VDP
+; from Registers $80 to $90, WINDOW registers
+; $91 and $92 can be written manually.
 ;
 ; Breaks:
 ; d6-d7,a5-a6
@@ -163,11 +171,11 @@ Video_Update:
 ; --------------------------------------------------------
 
 list_vdpregs:
-		dc.b $04			; HBlank int off, HV Counter on
-		dc.b $04			; Display ON, VBlank interrupt off
-		dc.b (($C000)>>10)		; ForeGrd at VRAM $C000 (%00xxx000)
+		dc.b $04			; No HBlank interrupt, HV Counter on
+		dc.b $04			; Display ON, No VBlank interrupt
+		dc.b (($C000)>>10)		; Layer A at VRAM $C000 (%00xxx000)
 		dc.b (($D000)>>10)		; Window  at VRAM $D000 (%00xxxxy0)
-		dc.b (($E000)>>13)		; BackGrd at VRAM $E000 (%00000xxx)
+		dc.b (($E000)>>13)		; Layer B at VRAM $E000 (%00000xxx)
 		dc.b (($F800)>>9)		; Sprites at VRAM $F800 (%0xxxxxxy)
 		dc.b $00			; Unused
 		dc.b $00			; Background color: 0
@@ -178,7 +186,7 @@ list_vdpregs:
 		dc.b $81			; H40, No shadow mode, Normal resolution
 		dc.b (($FC00)>>10)		; HScroll at VRAM $FC00 (%00xxxxxx)
 		dc.b $00			; Unused
-		dc.b $02			; VDP Auto increment by $02
+		dc.b $02			; VDP Auto increment: $02
 		dc.b (%00<<4)|%01		; Layer size: V32 H64
 		dc.b $00
 		dc.b $00
@@ -209,20 +217,17 @@ Video_ClearScreen:
 		lsl.w	#8,d1
 		lsl.w	#2,d1
 		bsr	Video_Fill
-
 		move.b	(RAM_VdpRegs+4).l,d1	; BG
 		andi.w	#%000111,d1
 		lsl.w	#8,d1
 		lsl.w	#5,d1
 		bsr	Video_Fill
-
 		move.w	#$FFF,d2		; WD Size
 		move.b	(RAM_VdpRegs+3).l,d1	; Window
 		andi.w	#%111110,d1
 		lsl.w	#8,d1
 		lsl.w	#2,d1
 		bsr	Video_Fill
-
 		lea	(RAM_HorScroll),a0
 		move.w	#240-1,d7
 		moveq	#0,d0
@@ -1552,7 +1557,7 @@ MdMap_Init:
 MdMap_Set:
 		lea	(RAM_BgBuffer),a6
 		mulu.w	#sizeof_mdbg,d0
-		add.w	d0,a6
+		adda	d0,a6
 		move.w	d1,md_bg_vpos(a6)
 		move.w	d2,md_bg_vram(a6)
 		move.l	d3,md_bg_size(a6)
@@ -1561,23 +1566,93 @@ MdMap_Set:
 		move.l	a3,md_bg_hi(a6)
 		move.l	a4,md_bg_col(a6)
 		move.l	a0,a5
-		move.w	(a5)+,md_bg_w(a6)	; Layout Width (blocks)
-		move.w	(a5)+,md_bg_h(a6)	; Layout Height (blocks)
-		move.b	(a5)+,md_bg_bw(a6)	; BLOCK width
-		move.b	(a5)+,md_bg_bh(a6)	; BLOCK height
-		move.w	(a5)+,md_bg_iw(a6)	; Layout aligned-width (blocks)
-		move.w	(a5)+,md_bg_lw(a6)	; LSL value
-		bset	#7,md_bg_flags(a6)	; Enable this BG
+		move.w	(a5)+,d7	; Layout Width (blocks)
+		move.w	(a5)+,d6	; Layout Height (blocks)
+		move.b	(a5)+,d5	; BLOCK width
+		move.b	(a5)+,d4	; BLOCK height
+		and.w	#$FF,d5
+		and.w	#$FF,d4
+		move.w	d7,md_bg_w(a6)
+		move.w	d6,md_bg_h(a6)
+		move.b	d5,md_bg_bw(a6)
+		move.b	d4,md_bg_bh(a6)
+		mulu.w	d5,d7
+		mulu.w	d4,d6
+		move.w	d7,md_bg_wf(a6)
+		move.w	d6,md_bg_hf(a6)
+		bset	#bitBgOn,md_bg_flags(a6)	; Enable this BG
 		rts
 
 ; --------------------------------------------------------
-; MdMap_Run
+; MdMap_Update
 ;
-; Updates backgrounds internally, CALL MdMap_Draw during
-; VBlank to reflect the changes.
+; Updates backgrounds internally
+; CALL MdMap_Draw during VBlank to draw the changes.
 ; --------------------------------------------------------
 
-MdMap_Run:
+MdMap_Update:
+		lea	(RAM_BgBuffer),a6
+		bsr.s	.this_bg
+		adda	#sizeof_mdbg,a6
+.this_bg:
+		btst	#bitBgOn,md_bg_flags(a6)
+		beq	.no_bg
+		moveq	#0,d1
+		moveq	#0,d2
+		move.w	md_bg_x(a6),d3
+		move.w	md_bg_x_old(a6),d0
+		cmp.w	d0,d3
+		beq.s	.xequ
+		move.w	d3,d1
+		sub.w	d0,d1
+		move.w	d3,md_bg_x_old(a6)
+.xequ:
+		move.w	md_bg_y(a6),d3
+		move.w	md_bg_y_old(a6),d0
+		cmp.w	d0,d3
+		beq.s	.yequ
+		move.w	d3,d2
+		sub.w	d0,d2
+		move.w	d3,md_bg_y_old(a6)
+.yequ:
+	; Increment draw beams
+	; ...
+
+	; Update internal counters
+		moveq	#0,d3
+		move.b	md_bg_bw(a6),d3		; X set
+		move.b	md_bg_xset(a6),d0
+		add.b	d1,d0
+		move.b	d0,d4
+		and.w	d3,d4
+		beq.s	.x_k
+		moveq	#bitDrwR,d4
+		tst.w	d1
+		bpl.s	.x_r
+		moveq	#bitDrwL,d4
+.x_r:
+		bset	d4,md_bg_flags(a6)
+.x_k:
+		sub.w	#1,d3
+		and.b	d3,d0
+		move.b	d0,md_bg_xset(a6)
+		move.b	md_bg_bh(a6),d3		; Y set
+		move.b	md_bg_yset(a6),d0
+		add.b	d2,d0
+		move.b	d0,d4
+		and.w	d3,d4
+		beq.s	.y_k
+		moveq	#bitDrwD,d4
+		tst.w	d2
+		bpl.s	.y_d
+		moveq	#bitDrwU,d4
+.y_d:
+		bset	d4,md_bg_flags(a6)
+.y_k:
+		sub.w	#1,d3
+		and.b	d3,d0
+		move.b	d0,md_bg_yset(a6)
+.no_bg:
 		rts
 
 ; --------------------------------------------------------
@@ -1585,18 +1660,18 @@ MdMap_Run:
 ;
 ; Call this only if DISPLAY is OFF or in VBlank
 ;
-; THIS SKIPS $00-id BLOCKS
+; Notes:
+; - Does NOT check for off-bounds blocks
+; - Blocks with ID $00 are skipped.
 ; --------------------------------------------------------
 
 MdMap_DrawAll:
 		lea	(RAM_BgBuffer),a6
 		bsr	.this_bg
 		adda	#sizeof_mdbg,a6
-
 .this_bg:
-		btst	#7,md_bg_flags(a6)
+		btst	#bitBgOn,md_bg_flags(a6)
 		beq	.no_bg
-
 		move.l	md_bg_blk(a6),a5
 		move.l	md_bg_low(a6),a4
 		move.l	md_bg_hi(a6),a3
@@ -1604,7 +1679,7 @@ MdMap_DrawAll:
 		move.w	md_bg_y(a6),d1		; Y start
 		move.b	md_bg_bw(a6),d2
 		move.b	md_bg_bh(a6),d3
-		move.w	md_bg_iw(a6),d4
+		move.w	md_bg_w(a6),d4
 		move.w	#$FF,d5
 		and.w	d5,d2
 		mulu.w	d2,d0
@@ -1683,7 +1758,7 @@ MdMap_DrawAll:
 		swap	d0
 		add.w	d4,d6		; <-- next VDP Y block
 		and.w	d0,d6
-		move.w	md_bg_iw(a6),d0 ; ***
+		move.w	md_bg_w(a6),d0 ; ***
 		adda	d0,a4
 		adda	d0,a3
 		swap	d7
@@ -1694,6 +1769,7 @@ MdMap_DrawAll:
 ; this got very tough.
 ; barely got free regs without using stack
 .mk_block:
+		swap	d2
 		move.l	a5,a0
 		and.w	#$FF,d0
 		lsl.w	#3,d0		; * 8 bytes
@@ -1701,15 +1777,15 @@ MdMap_DrawAll:
 		move.w	d6,d0
 		add.w	d5,d0
 		or.w	#$4000,d0
-		swap	d2
 		swap	d6
 
 	; d0 - topleft VDP write | $4000
 	; d6 - right VDP write
-
-	; blk width/height jumps go here
-	; currently working: 16x16
 	; d2 is free
+	;
+	; currently working: 16x16
+	; blk width/height jumps
+	; will go here
 
 		bsr.s	.drwy_16	; x16
 		add.w	#2,d0
@@ -1773,17 +1849,242 @@ MdMap_DrawAll:
 ; 		move.w	d6,(vdp_ctrl).l
 ; 		move.w	d2,(vdp_data).l
 ; 		move.w	d3,(vdp_data).l
-
-		swap	d6
-		rts
+; 		swap	d6
+; 		rts
 
 ; --------------------------------------------------------
-; MdMap_DrawOff
+; MdMap_DrawScrl
 ;
 ; Draw off-screen changes
 ;
-; CALL THIS ON VBLANK ONLY.
+; CALL THIS ON VBLANK ONLY, MUST BE QUICK.
 ; --------------------------------------------------------
 
-MdMap_DrawOff:
+MdMap_DrawScrl:
+		lea	(RAM_BgBuffer),a6
+		lea	(vdp_data),a5
+		bsr.s	.this_bg
+		adda	#sizeof_mdbg,a6
+.this_bg:
+		move.b	md_bg_flags(a6),d7
+		btst	#bitBgOn,d7
+		beq	.no_bg
+		move.l	md_bg_blk(a6),a4
+		move.l	md_bg_low(a6),a3
+		move.l	md_bg_hi(a6),a2
+		move.w	md_bg_x(a6),d0		; X start
+		move.w	md_bg_y(a6),d1		; Y start
+		bclr	#bitDrwL,d7
+		beq.s	.no_l
+		bsr.s	.mk_clmn
+.no_l:
+		bclr	#bitDrwR,d7
+		beq.s	.no_r
+		add.w	#320,d0		; X add
+		bsr.s	.mk_clmn
+.no_r:
+		move.b	d7,md_bg_flags(a6)
+.no_bg:
+		rts
+
+; Make X column
+; d0 - X
+; d1 - Y
+;
+.mk_clmn:
+		swap	d7
+		and.w	#-$10,d0		; block X/Y limit
+		and.w	#-$10,d1
+		move.w	d0,d7
+		swap	d0
+		move.w	d7,d0
+		move.w	d1,d7
+		swap	d1
+		move.w	d7,d1
+		move.w	md_bg_vram(a6),d2
+		swap	d2
+		move.b	md_bg_bh(a6),d3
+		move.b	md_bg_bw(a6),d2
+		move.w	md_bg_w(a6),d4
+		moveq	#0,d5
+		moveq	#0,d6
+		move.w	d0,d5
+		move.w	d1,d6
+		and.w	#$FF,d2
+		mulu.w	d2,d5
+		lsr.w	#8,d5
+		and.w	#$FF,d3
+		mulu.w	d3,d6
+		lsr.w	#8,d6
+		mulu.w	d4,d6
+		add.l	d6,d5
+		add.l	d5,a3
+		add.l	d5,a2
+		lsr.w	#2,d1			; Y >> 2
+		lsl.w	#6,d1			; Y * $40
+		lsr.w	#2,d0			; X >> 2
+		and.w	#$FFF,d1
+		and.w	#$7C,d0
+		add.w	d1,d0
+		move.w	md_bg_vpos(a6),d1
+		move.w	d1,d2
+		and.w	#$3FFF,d1
+		rol.w	#2,d2
+		and.w	#%11,d2
+		move.w	#$FFF,d3
+		swap	d3
+		move.w	#$100,d3
+
+		move.w	md_bg_wf(a6),d4	; Set X minus flag
+		moveq	#1,d6
+		move.l	d0,d5
+		swap	d5
+		cmp.w	d4,d5
+		bge.s	.x_plus
+		tst.w	d5
+		bmi.s	.x_plus
+		moveq	#0,d6
+.x_plus:
+		swap	d6
+
+	; d0 -    X curr | Current cell X/Y (1st)
+	; d1 -    Y curr | VDP 1st write
+	; d2 - Cell VRAM | VDP 2nd write
+	; d3 -    Y wrap | Y add
+	; d4 -         *****
+	; d5 -         *****
+	; d6 - loopflags | *****
+	; d7 - lastflags | loop blocks
+
+		move.w	#(256/16)-1,d7
+.y_blk:
+
+		move.l	d6,d4
+		swap	d4
+		tst.w	d4
+		bne.s	.blnk
+		moveq	#0,d4
+		moveq	#0,d5
+
+	; Y pos goes here
+		move.b	(a3),d6
+		bne.s	.vld
+		move.b	(a2),d6
+		bne.s	.prio
+.blnk:
+		moveq	#0,d4
+		moveq	#0,d5
+		bra.s	.frce
+.prio:
+		move.l	#$80008000,d4
+		move.l	#$80008000,d5
+.vld:
+		move.l	a4,a0
+		and.w	#$FF,d6
+		lsl.w	#3,d6
+		adda	d6,a0
+		swap	d2
+		add.w	(a0)+,d4
+		add.w	(a0)+,d5
+		add.w	d2,d4
+		add.w	d2,d5
+		swap	d4
+		swap	d5
+		add.w	(a0)+,d4
+		add.w	(a0)+,d5
+		add.w	d2,d4
+		add.w	d2,d5
+		swap	d2
+.frce:
+		move.w	d0,d6
+		add.w	d1,d6
+		or.w	#$4000,d6
+		move.w	d6,4(a5)
+		move.w	d2,4(a5)
+		move.l	d4,(a5)
+		add.w	#$80,d6
+		move.w	d6,4(a5)
+		move.w	d2,4(a5)
+		move.l	d5,(a5)
+		move.l	d3,d4	; Next Y block
+		swap	d4
+		add.w	d3,d0
+		and.w	d4,d0
+		move.w	md_bg_w(a6),d6
+		adda	d6,a3
+		adda	d6,a2
+; .f_blk:
+		dbf	d7,.y_blk
+
+; 		swap	d1
+; 		moveq	#0,d0
+; 		move.b	(a2),d1
+; 		bne.s	.vld
+; 		move.b	(a1),d1
+; 		bne.s	.vld
+; .blnk:
+; 		move.w	d6,d1
+; 		add.w	d4,d1
+; 		or.w	#$4000,d1
+; 		move.w	d1,(a5)
+; 		move.w	d5,(a5)
+; 		move.l	d0,(a4)
+; 		add.w	#$80,d1
+; 		move.w	d1,(a5)
+; 		move.w	d5,(a5)
+; 		move.l	d0,(a4)
+; 		bra.s	.nxt
+; .vld:
+; 		and.w	#$FF,d1
+; 		lsl.w	#3,d1
+; 		move.l	a3,a0
+; 		adda	d1,a0
+; 		move.l	(a0)+,d0
+; 		swap	d0
+; 		move.w	d6,d1
+; 		add.w	d4,d1
+; 		swap	d4
+; 		or.w	#$4000,d1
+; 		move.w	d1,(a5)
+; 		move.w	d5,(a5)
+; 		add.w	d4,d0
+; 		move.w	d0,(a4)
+; 		swap	d0
+; 		add.w	#$80,d1
+; 		move.w	d1,(a5)
+; 		move.w	d5,(a5)
+; 		add.w	d4,d0
+; 		move.w	d0,(a4)
+; 		swap	d4
+;
+; 		move.l	(a0)+,d0
+; 		swap	d0
+; 		move.w	d6,d1
+; 		add.w	#2,d1
+; 		add.w	d4,d1
+; 		swap	d4
+; 		or.w	#$4000,d1
+; 		move.w	d1,(a5)
+; 		move.w	d5,(a5)
+; 		add.w	d4,d0
+; 		move.w	d0,(a4)
+; 		swap	d0
+; 		add.w	#$80,d1
+; 		move.w	d1,(a5)
+; 		move.w	d5,(a5)
+; 		add.w	d4,d0
+; 		move.w	d0,(a4)
+; 		swap	d4
+;
+; .nxt:
+; 		add.w	d2,d6
+; 		and.w	d3,d6
+; 		move.l	d6,d0
+; 		swap	d0
+; 		adda.w	d0,a2
+; 		adda.w	d0,a1
+; 		swap	d1
+; 		dbf	d7,.y_blk
+
+		swap	d7
 		rts

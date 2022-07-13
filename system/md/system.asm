@@ -73,13 +73,14 @@ System_Init:
 ; --------------------------------------------------------
 ; System_WaitFrame
 ;
-; Call this to wait and update next frame.
-; ***DISPLAY MUST BE ENABLED TO USE THIS.***
+; Call this to wait for a frame and process changes.
+; ***DISPLAY MUST BE ENABLED TO USE THIS***
 ;
-; Before getting on VBlank: the RAM section reserved
-; for the 32X will be transfered using DREQ
+; Before getting on VBlank:
+; The DREQ section from here will be transfered
+; to the 32X side
 ;
-; On VBlank, it will:
+; Call this it will:
 ; - Update the controllers
 ; - Transfer the Genesis palette, sprites and scroll
 ;   data from from RAM to VDP (Doesn't require RV bit)
@@ -131,6 +132,7 @@ System_WaitFrame:
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
 		jsr	(Video_DmaBlast).l		; Process DMA Blast list
+		bsr	MdMap_DrawScrl
 		add.l	#1,(RAM_Framecount).l
 		rts
 
@@ -169,7 +171,8 @@ System_MarsUpdate:
 ; --------------------------------------------------------
 ; System_JumpRamCode
 ;
-; Transfer user code to RAM and jump to it.
+; Send new code to the USER side of RAM and
+; jump into it.
 ;
 ; Input:
 ; d0 - Location of the RAM code
@@ -179,7 +182,7 @@ System_JumpRamCode:
 		or.l	#$880000,d0
 		move.l	d0,a0
 		lea	(RAMCODE_USER),a1
-		move.w	#$5000-1,d7
+		move.w	#$5000-1,d7	; TODO: make custom sizes.
 .copyme2:
 		move.b	(a0)+,(a1)+
 		dbf	d7,.copyme2

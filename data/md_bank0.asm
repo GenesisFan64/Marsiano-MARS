@@ -12,8 +12,7 @@
 		include "data/mars/palettes.asm"	; All 32X palettes will be here.
 
 		align 2
-Pal_level0:
-		binclude "data/md/maps/level0/pal.bin"
+Pal_level0:	binclude "data/md/maps/level0/pal.bin"
 		align 2
 ; ----------------------------------------------------------------
 

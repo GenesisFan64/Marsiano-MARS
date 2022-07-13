@@ -55,7 +55,7 @@ RAM_SprFrame	ds.w 1
 ; ------------------------------------------------------
 
 MD_DebugMenu:
-		or.w	#$700,sr
+		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
 		bsr	Mode_Init
@@ -127,6 +127,9 @@ MD_DebugMenu:
 .page0_ret:
 		rts
 .page0_init:
+		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
+		bsr	Video_Update
+
 		bsr	Video_ClearScreen
 		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
@@ -139,6 +142,10 @@ MD_DebugMenu:
 		bsr	.page0_cursor
 		bsr	.fade_in
 
+		move.b	#$81,(RAM_VdpRegs+$C).l
+		move.b	#0,(RAM_VdpRegs+7).l
+		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
+		bsr	Video_Update
 .page0:
 ; 		lea	str_Stats(pc),a0
 ; 		move.l	#locate(0,2,10),d0
@@ -162,7 +169,7 @@ MD_DebugMenu:
 
 ; ====================================================================
 ; --------------------------------------------------
-; Page 1
+; Page 1, Screen 00
 ; --------------------------------------------------
 
 .page1_init:
@@ -170,30 +177,27 @@ MD_DebugMenu:
 		bsr	Video_PrintPal
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
-		bsr.s	.make_frame
-
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
-		move.l	#2,Dreq_Scrn_Type(a1)
-		bsr	System_MarsUpdate
-
+		move.w	#0,d0
+		bsr	Video_Mars_GfxMode
 		lea	str_Page1(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
-		move.w	#1,d0
-		bsr	Video_Mars_GfxMode
+		move.b	#0,(RAM_VdpRegs+$C).l
+		bsr	Video_Update
+
+		lea	(PalData_Mars_Test2),a0
+		moveq	#0,d0
+		move.w	#256,d1
+		moveq	#0,d2
+		bsr	Video_FadePal_Mars
+		clr.w	(RAM_MdMarsPalFd).w
+		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.fade_in
+
 .page1:
-		sub.w	#1,(RAM_Scrn0_Timer).w
-		bpl.s	.keep
-		move.w	#SCN0_TIMER,(RAM_Scrn0_Timer).w
-		bsr.s	.make_frame
-		bsr	Video_Mars_WaitFrame
-		add.w	#1,(RAM_Scrn0_Frame).w
-		and.w	#%11,(RAM_Scrn0_Frame).w
-.keep:
-		lea	str_Page1_info(pc),a0
-		move.l	#locate(0,2,4),d0
-		bsr	Video_Print
+
+		bsr	SuperSprite_Test
+	; Start-button exit
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq.s	.page1_ret
@@ -202,20 +206,57 @@ MD_DebugMenu:
 .page1_ret:
 		rts
 
-.make_frame:
-		move.w	(RAM_Scrn0_Frame).w,d0
-		lsl.w	#2,d0
-		lea	.frames(pc),a0
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
-		move.l	(a0,d0.w),d0
-		add.l	#TH,d0
-		move.l	d0,Dreq_Scrn_Data(a1)
-		rts
-.frames:
-		dc.l TESTMARS_DIRECT_1
-		dc.l TESTMARS_DIRECT_2
-		dc.l TESTMARS_DIRECT_3
-		dc.l TESTMARS_DIRECT_2
+; .page1_init:
+; 		bsr	Video_ClearScreen
+; 		bsr	Video_PrintPal
+; 		or.w	#$8000,(RAM_CurrPage).w
+; 		clr.w	(RAM_CurrSelc).w
+; 		bsr.s	.make_frame
+;
+; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
+; 		move.l	#2,Dreq_Scrn_Type(a1)
+; 		bsr	System_MarsUpdate
+;
+; 		lea	str_Page1(pc),a0
+; 		move.l	#locate(0,2,2),d0
+; 		bsr	Video_Print
+; 		move.w	#1,d0
+; 		bsr	Video_Mars_GfxMode
+; 		bsr	.fade_in
+; .page1:
+; 		sub.w	#1,(RAM_Scrn0_Timer).w
+; 		bpl.s	.keep
+; 		move.w	#SCN0_TIMER,(RAM_Scrn0_Timer).w
+; 		bsr.s	.make_frame
+; 		bsr	Video_Mars_WaitFrame
+; 		add.w	#1,(RAM_Scrn0_Frame).w
+; 		and.w	#%11,(RAM_Scrn0_Frame).w
+; .keep:
+; 		lea	str_Page1_info(pc),a0
+; 		move.l	#locate(0,2,4),d0
+; 		bsr	Video_Print
+; 		move.w	(Controller_1+on_press),d7
+; 		btst	#bitJoyStart,d7
+; 		beq.s	.page1_ret
+; 		move.w	#0,(RAM_CurrPage).w
+; 		bsr	.fade_out
+; .page1_ret:
+; 		rts
+;
+; .make_frame:
+; 		move.w	(RAM_Scrn0_Frame).w,d0
+; 		lsl.w	#2,d0
+; 		lea	.frames(pc),a0
+; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
+; 		move.l	(a0,d0.w),d0
+; 		add.l	#TH,d0
+; 		move.l	d0,Dreq_Scrn_Data(a1)
+; 		rts
+; .frames:
+; 		dc.l TESTMARS_DIRECT_1
+; 		dc.l TESTMARS_DIRECT_2
+; 		dc.l TESTMARS_DIRECT_3
+; 		dc.l TESTMARS_DIRECT_2
 
 ; ====================================================================
 ; --------------------------------------------------
@@ -228,36 +269,63 @@ MD_DebugMenu:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
+; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
+; 		move.l	#TESTMARS_BG2|TH,Dreq_SclData(a0)
+; 		move.l	#$00000000,Dreq_SclX(a0)	; X pos
+; 		move.l	#$00000000,Dreq_SclY(a0)	; Y pos
+; 		move.l	#$00010000,Dreq_SclDX(a0)	; DX
+; 		move.l	#$00010000,Dreq_SclDY(a0)	; DY
+; 		move.l	#320,Dreq_SclWidth(a0)
+; 		move.l	#224,Dreq_SclHeight(a0)
+; 		move.l	#1,Dreq_SclMode(a0)		;
+; 		bsr	System_MarsUpdate
+
+		bsr	SuperSprite_Test_init
+		bsr	System_MarsUpdate
+		bsr	SuperSprite_Test
+
+		lea	str_Page2(pc),a0	; Print text
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
+		move.w	#1,d0
+		bsr	Video_Mars_GfxMode
+		lea	(PalData_Mars_Test),a0
+		moveq	#0,d0
+		move.w	#256,d1
+		moveq	#0,d2
+		bsr	Video_FadePal_Mars
+		clr.w	(RAM_MdMarsPalFd).w
+		clr.w	(RAM_MdDreq+Dreq_Palette).w
+		bsr	.fade_in
+.page2:
+
+		bsr	SuperSprite_Test
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyStart,d7
+		beq.s	.page2_ret
+		move.w	#0,(RAM_CurrPage).w
+		bsr	.fade_out
+.page2_ret:
+		rts
+
+; ====================================================================
+; --------------------------------------------------
+; Page 3
+; --------------------------------------------------
+
+.page3_init:
+		bsr	Video_ClearScreen
+		bsr	Video_PrintPal
+		or.w	#$8000,(RAM_CurrPage).w
+		clr.w	(RAM_CurrSelc).w
+
 ; 		lea	str_Page2(pc),a0
 ; 		move.l	#locate(0,10,2),d0
 ; 		bsr	Video_Print
 
-	; SUPER SPRITES TEST
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$B0,marsspr_x(a0)
-		move.w	#$60,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		adda	#sizeof_marsspr,a0
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$60,marsspr_x(a0)
-		move.w	#$50,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-		adda	#sizeof_marsspr,a0
-		move.l	#0,marsspr_data(a0)
-		lea	str_Page2_bg(pc),a0
+		bsr	SuperSprite_Test_init
+
+		lea	str_Page3_bg(pc),a0
 		move.l	#locate(1,8,8),d0
 		bsr	Video_Print
 
@@ -289,11 +357,11 @@ MD_DebugMenu:
 ; 		bsr	Video_LoadMap
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG,Dreq_ScrlBg_Data(a0)
-		move.l	#320,Dreq_ScrlBg_W(a0)
-		move.l	#448,Dreq_ScrlBg_H(a0)
-		move.l	#$00000000,Dreq_ScrlBg_X(a0)
-		move.l	#$00000000,Dreq_ScrlBg_Y(a0)
+		move.l	#TESTMARS_BG,scrlbg_Data(a0)
+		move.l	#320,scrlbg_W(a0)
+		move.l	#448,scrlbg_H(a0)
+		move.l	#$00000000,scrlbg_X(a0)
+		move.l	#$00000000,scrlbg_Y(a0)
 		bsr	System_MarsUpdate
 		move.w	#2,d0
 		bsr	Video_Mars_GfxMode
@@ -310,8 +378,8 @@ MD_DebugMenu:
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.this_bg
 		bsr	.fade_in
-.page2:
-		lea	str_Page2(pc),a0
+.page3:
+		lea	str_Page3(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
 		bsr	.this_bg
@@ -319,8 +387,8 @@ MD_DebugMenu:
 		move.w	(Controller_1+on_hold),d7
 		and.w	#JoyB+JoyA,d7
 		bne.s	.stayoff
-		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_X).w,d0
-		move.l	(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_Y).w,d1
+		move.l	(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X).w,d0
+		move.l	(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y).w,d1
 		move.l	#TEST_SPEED,d5
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
@@ -339,8 +407,8 @@ MD_DebugMenu:
 		beq.s	.nou_m
 		sub.l	d5,d1
 .nou_m:
-		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_X).w
-		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_Y).w
+		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X).w
+		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y).w
 		swap	d0
 		swap	d1
 		neg.w	d0
@@ -351,14 +419,14 @@ MD_DebugMenu:
 		bsr	SuperSprite_Test
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
-		beq.s	.page2_ret
+		beq.s	.page3_ret
 		move.w	#0,(RAM_CurrPage).w
 		bsr	.fade_out
-.page2_ret:
+.page3_ret:
 		rts
 
 .this_bg:
-; 		move.l	(RAM_MdDreq+Dreq_ScrlBg_X).w,d0
+; 		move.l	(RAM_MdDreq+scrlbg_X).w,d0
 ; 		move.l	d0,d1
 ; 		swap	d0
 ; 		swap	d1
@@ -374,99 +442,6 @@ MD_DebugMenu:
 ; 		move.w	d0,(a0)+
 ; 		move.w	d1,(a0)+
 ; 		dbf	d7,.next
-		rts
-
-; ====================================================================
-; --------------------------------------------------
-; Page 3
-; --------------------------------------------------
-
-.page3_init:
-		bsr	Video_ClearScreen
-		bsr	Video_PrintPal
-		or.w	#$8000,(RAM_CurrPage).w
-		clr.w	(RAM_CurrSelc).w
-
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG2|TH,Dreq_SclData(a0)
-		move.l	#$00000000,Dreq_SclX(a0)	; X pos
-		move.l	#$00000000,Dreq_SclY(a0)	; Y pos
-		move.l	#$00010000,Dreq_SclDX(a0)	; DX
-		move.l	#$00010000,Dreq_SclDY(a0)	; DY
-		move.l	#320,Dreq_SclWidth(a0)
-		move.l	#224,Dreq_SclHeight(a0)
-		move.l	#1,Dreq_SclMode(a0)		;
-		bsr	System_MarsUpdate
-
-		lea	str_Page3(pc),a0	; Print text
-		move.l	#locate(0,2,2),d0
-		bsr	Video_Print
-		move.w	#3,d0
-		bsr	Video_Mars_GfxMode
-		lea	(PalData_Mars_Test2),a0
-		moveq	#0,d0
-		move.w	#256,d1
-		moveq	#0,d2
-		bsr	Video_FadePal_Mars
-		clr.w	(RAM_MdMarsPalFd).w
-		clr.w	(RAM_MdDreq+Dreq_Palette).w
-		bsr	.fade_in
-.page3:
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	Dreq_SclX(a0),d0
-		move.l	Dreq_SclY(a0),d1
-		move.l	Dreq_SclDX(a0),d2
-		move.l	Dreq_SclDY(a0),d3
-		move.l	#$400,d4
-		move.l	#$400*2,d5
-
-		move.w	(Controller_1+on_hold),d7
-		move.w	d7,d6
-		btst	#bitJoyDown,d7
-		beq.s	.noz_down
-		add.l	d4,d1
-		sub.l	d5,d3
-.noz_down:
-		move.w	d7,d6
-		btst	#bitJoyUp,d6
-		beq.s	.noz_up
-		sub.l	d4,d1
-		add.l	d5,d3
-.noz_up:
-		move.w	d7,d6
-		btst	#bitJoyRight,d6
-		beq.s	.noz_r
-		add.l	d4,d0
-		sub.l	d5,d2
-.noz_r:
-		move.w	d7,d6
-		btst	#bitJoyLeft,d6
-		beq.s	.noz_l
-		sub.l	d4,d0
-		add.l	d5,d2
-.noz_l:
-		move.l	d0,Dreq_SclX(a0)
-		move.l	d1,Dreq_SclY(a0)
-		move.l	d2,Dreq_SclDX(a0)
-		move.l	d3,Dreq_SclDY(a0)
-
-		move.w	d7,d6
-		btst	#bitJoyX,d6
-		beq.s	.nox_x
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#$00000000,Dreq_SclX(a0)	; X pos
-		move.l	#$00000000,Dreq_SclY(a0)	; Y pos
-		move.l	#$00010000,Dreq_SclDX(a0)	; DX
-		move.l	#$00010000,Dreq_SclDY(a0)	; DY
-.nox_x:
-
-		bsr	SuperSprite_Test
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyStart,d7
-		beq.s	.page3_ret
-		move.w	#0,(RAM_CurrPage).w
-		bsr	.fade_out
-.page3_ret:
 		rts
 
 ; ====================================================================
@@ -489,7 +464,7 @@ MD_DebugMenu:
 		bsr	Video_Print
 
 		bsr	System_MarsUpdate
-		move.w	#4,d0
+		move.w	#3,d0
 		bsr	Video_Mars_GfxMode
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
@@ -862,8 +837,8 @@ MD_DebugMenu:
 ; 		bsr	PlayThisSfx
 ; .noah:
 ;
-; 		move.l	(RAM_MdDreq+Dreq_ScrlBg_X).w,d0
-; 		move.l	(RAM_MdDreq+Dreq_ScrlBg_Y).w,d1
+; 		move.l	(RAM_MdDreq+scrlbg_X).w,d0
+; 		move.l	(RAM_MdDreq+scrlbg_Y).w,d1
 ; 		move.l	#$10000,d5
 ; 		move.l	#1,d6
 ; 		move.w	(Controller_1+on_hold),d7
@@ -887,8 +862,8 @@ MD_DebugMenu:
 ; 		sub.l	d5,d1
 ; 		sub.w	d6,d3
 ; .nou_m:
-; 		move.l	d0,(RAM_MdDreq+Dreq_ScrlBg_X).w
-; 		move.l	d1,(RAM_MdDreq+Dreq_ScrlBg_Y).w
+; 		move.l	d0,(RAM_MdDreq+scrlbg_X).w
+; 		move.l	d1,(RAM_MdDreq+scrlbg_Y).w
 ;
 ; 		move.l	#0,d0
 ; 		move.l	#0,d1
@@ -1247,6 +1222,32 @@ MasterTrkList:
 ; Subroutines
 ; ------------------------------------------------------
 
+SuperSprite_Test_init:
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+		or.l	#TH,d1
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$B0,marsspr_x(a0)
+		move.w	#$60,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$60,marsspr_x(a0)
+		move.w	#$50,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+		adda	#sizeof_marsspr,a0
+		move.l	#0,marsspr_data(a0)
+
 SuperSprite_Test:
 	; SUPER SPRITE MOVE
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
@@ -1361,13 +1362,13 @@ str_Cursor:	dc.b " ",$A
 		dc.b " ",0
 		align 2
 str_Title:
-		dc.b "Project MARSIANO tester",$A
+		dc.b "Project MARSIANO test menu",$A
 		dc.b $A
-		dc.b "  Screen test 01",$A
-		dc.b "  Screen test 02",$A
-		dc.b "  Screen test 03",$A
-		dc.b "  Screen test 04",$A
-		dc.b "  GEMA sound player",0
+		dc.b "  Screen 00 BLANK",$A
+		dc.b "  Screen 01 256-SuperSprites w/scale",$A
+		dc.b "  Screen 02 256-Scroll+SuperSprites",$A
+		dc.b "  Screen 03 3D objects",$A
+		dc.b "  GEMA sound test",0
 		align 2
 
 ; str_Page1:
@@ -1375,29 +1376,30 @@ str_Title:
 ; 		align 2
 ; str_Page1_l:
 ; 		dc.b "\\l \\l",0
-; 		dc.l RAM_MdDreq+Dreq_ScrlBg_X
-; 		dc.l RAM_MdDreq+Dreq_ScrlBg_Y
+; 		dc.l RAM_MdDreq+scrlbg_X
+; 		dc.l RAM_MdDreq+scrlbg_Y
 ; 		align 2
 
 str_Page1:
-		dc.b "GfxMode 01",0
-		align 2
-
-str_Page2_bg:
-		dc.b "*** GfxMode 02, LAYER B ***",0
+		dc.b "GfxMode 00 - BLANK",$A
+		dc.b $A
+		dc.b "Testing MD's H32 resolution",0
 		align 2
 str_Page2:
-		dc.b "*** GfxMode 02, LAYER A ***",$A,$A
-		dc.b "X/Y: \\l \\l",0
-		dc.l RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_X
-		dc.l RAM_MdDreq+Dreq_ScrnBuff+Dreq_ScrlBg_Y
+		dc.b "GfxMode 01 - Super Sprites only",0
 		align 2
 
+str_Page3_bg:
+		dc.b "*** GfxMode 02, LAYER B ***",0
+		align 2
 str_Page3:
-		dc.b "GfxMode 03",0
+		dc.b "*** GfxMode 02, LAYER A ***",$A,$A
+		dc.b "X/Y: \\l \\l",0
+		dc.l RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X
+		dc.l RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y
 		align 2
 str_Page4:
-		dc.b "GfxMode 04",0
+		dc.b "GfxMode 03",0
 		align 2
 str_Page1_info:
 		dc.b "\\w \\w",0
@@ -1415,7 +1417,7 @@ str_Status:
 		dc.l RAM_CurrTempo
 		align 2
 str_Gema:
-		dc.b "GEMA SOUND DRIVER TESTER",$A
+		dc.b "GEMA SOUND DRIVER MD+32X",$A
 		dc.b $A
 		dc.b "Track index -----",$A,$A
 		dc.b "  Sound_TrkPlay",$A

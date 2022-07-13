@@ -49,32 +49,16 @@ sizeof_marsspr	ds.l 0
 ; ------------------------------------------------
 ; Structs for each pseudo-Screen, max $20 bytes
 ;
-; Read these as:
-; RAM_MdDreq+Dreq_ScrnBuff
+; Read these as: RAM_MdDreq+Dreq_ScrnBuff
+; then read these as indirect(aX)
 
-			struct 0
-Dreq_Scrn_Data		ds.l 1		; Screen mode 1: Source image (SH2's area)
-Dreq_Scrn_Type		ds.l 1		; Source format: 0-NULL 1-Indexed 2-Direct 3-RLE
-			finish
-
-			struct 0
-Dreq_ScrlBg_Data	ds.l 1		; Screen mode 2: Source image (SH2's area)
-Dreq_ScrlBg_X		ds.l 1		; X pos 0000.0000
-Dreq_ScrlBg_Y		ds.l 1		; Y pos 0000.0000
-Dreq_ScrlBg_W		ds.l 1		; Width
-Dreq_ScrlBg_H		ds.l 1		; Height
-			finish
-
-			struct 0
-Dreq_SclData		ds.l 1		; Screen mode 3: Source data (SH2's area)
-Dreq_SclX		ds.l 1		; X pos 0000.0000
-Dreq_SclY		ds.l 1		; Y pos 0000.0000
-Dreq_SclWidth		ds.l 1		; Width
-Dreq_SclHeight		ds.l 1		; Height
-Dreq_SclDX		ds.l 1		; DX 0000.0000
-Dreq_SclDY		ds.l 1		; DY 0000.0000
-Dreq_SclMode		ds.l 1
-			finish
+		struct 0
+scrlbg_data	ds.l 1		; Screen mode 2: Source image (SH2's area)
+scrlbg_x	ds.l 1		; X pos 0000.0000
+scrlbg_y	ds.l 1		; Y pos 0000.0000
+scrlbg_w	ds.l 1		; Width
+scrlbg_h	ds.l 1		; Height
+		finish
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -89,13 +73,13 @@ Dreq_SclMode		ds.l 1
 ; 	mov	#RAM_Mars_DreqRead+DREQ_LABEL,r1
 ; ----------------------------------------------------------------
 
-; *** List MUST be aligned by 8bytes (end with 0 or 8) ***
+; *** List MUST be aligned in 8bytes (end with 0 or 8) ***
 
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
 Dreq_ScrnBuff	ds.b $20				; Buffer for the current screen mode
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
-Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; SuperVDP sprites
+Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0
 		finish
 

@@ -1380,10 +1380,10 @@ mstr_gfxlist_h:	dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx3_init_2
 		dc.l mstr_gfx3_init_1
 		dc.l mstr_gfx3_hblk
-		dc.l mstr_gfx4_loop	; $04
-		dc.l mstr_gfx4_init_2
-		dc.l mstr_gfx4_init_1
-		dc.l mstr_gfx4_hblk
+		dc.l mstr_gfx0_loop	; $04
+		dc.l mstr_gfx0_init_2
+		dc.l mstr_gfx0_init_1
+		dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx0_loop	; $05
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
@@ -1428,13 +1428,13 @@ mstr_gfx0_init_2:
 		mov	#0,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx0_init_1:
-		mov	#$200,r1		; *** This also counts as a delay for Watchdog ***
-		mov	#(511)/2,r2
-		mov	#240,r3
-		mov	#0,r4
-		mov	#MarsVideo_ClearScreen,r0
-		jsr	@r0
-		nop
+; 		mov	#$200,r1
+; 		mov	#511,r2
+; 		mov	#240,r3
+; 		mov	#0,r4
+; 		mov	#MarsVideo_ClearScreen,r0
+; 		jsr	@r0
+; 		nop
 		mov	#_vdpreg,r1		; In case we are still on VBlank...
 -		mov.b	@(vdpsts,r1),r0
 		tst	#VBLK,r0
@@ -1457,11 +1457,8 @@ mstr_gfx0_loop:
 ; ---------------------------------------
 ; Pseudo-screen mode $01:
 ;
-; A Generic screen in any
-; bitmap mode: Indexed, Direct or RLE
-;
-; Watch out for the limited lines
-; available for DIRECT COLOR
+; Super Sprites ONLY, with scaling and
+; rotation.
 ; ---------------------------------------
 
 ; -------------------------------
@@ -1477,78 +1474,72 @@ mstr_gfx1_hblk:
 ; Init
 ; -------------------------------
 
-mstr_gfx1_init_2:
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_XShift,gbr)
-		mov 	#_vdpreg,r1
-		mov	#2,r0
-		mov.b	r0,@(bitmapmd,r1)
+; -------------------------------
+; Init
+; -------------------------------
+
 mstr_gfx1_init_1:
-		mov	#MarsVideo_ResetNameTbl,r0
+		xor	r0,r0				; Cleanup our screen RAM
+		mov	#RAM_Mars_ScrnBuff,r1
+		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
+.clr_scrn:
+		mov	r0,@r1
+		dt	r2
+		bf/s	.clr_scrn
+		add	#4,r1
+		mov	#CACHE_MSTR_SCRL,r1		; Load CACHE code
+		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
+		mov	#Mars_LoadCacheRam,r0
 		jsr	@r0
 		nop
+		bra	mstr_gfx1_cont
+		nop
+
+mstr_gfx1_init_2:
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
+
+mstr_gfx1_cont:
+		mov	#$200,r1
+		mov	#512,r2
+		mov	#240,r3
+		mov	#MarsVideo_MakeNametbl,r0
+		jsr	@r0
+		mov	#0,r4
 
 ; -------------------------------
 ; Loop
 ; -------------------------------
 
 mstr_gfx1_loop:
-		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1
-		mov	@(Dreq_Scrn_Type,r1),r0
-		and	#%11,r0
-		shll2	r0
-		mov	#.m1list,r2
-		mov	@(r0,r2),r2
-		jmp	@r2
-		nop
-		align 4
-.m1list:
-		dc.l mstr_ready
-		dc.l mstr_ready		; Indexed
-		dc.l .direct		; Direct
-		dc.l mstr_ready
+		mov	#$200,r1		; *** This also counts as a delay for Watchdog ***
+		mov	#(320+16)/2,r2
+		mov	#240,r3
 
-; -------------------------------
-; Direct color
-; currently 320x200 (DOS-style)
-.direct:
-		mov	@(Dreq_Scrn_Data,r1),r1
-		mov	#_framebuffer+$200,r2
-		mov	#(320*200/2)/2,r3	; <- fixed size
-.copy_me:
-		mov	@r1+,r0
-		mov	r0,@r2
-		add	#4,r2
-		mov	@r1+,r0
-		mov	r0,@r2
-		dt	r3
-		bf/s	.copy_me
-		add	#4,r2
-.dont_rdrw:
-		mov	#$200,r1
-		mov	#320*2,r2
-		mov	#200,r3
-		mov	#MarsVideo_MakeNametbl,r0
+		mov	#MarsVideo_ClearScreen,r0
 		jsr	@r0
-		mov	#12,r4
-		mov	#_vdpreg,r1		; In case we are still on VBlank...
--		mov.b	@(vdpsts,r1),r0
-		tst	#VBLK,r0
-		bf	-
-		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+		mov	#0,r4
+		mov	#$200,r1
+		mov	#0,r2
+		mov	#0,r3
+		mov	#512,r4
+		mov	#240,r5
+		mov	#512*240,r6
+		mov	#MarsVideo_SetSuperSpr,r0
+		jsr	@r0
+		nop
+		mov	#MarsVideo_DrawSuperSpr,r0	; Draw Super Sprites
+		jsr	@r0
+		nop
+		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
 
 		bra	mstr_ready
 		nop
-
-; -------------------------------
-; RLE indexed-compressed image
-
-.rle:
-		bra	mstr_ready
-		nop
+		align 4
 
 ; ============================================================
 ; ---------------------------------------
@@ -1597,9 +1588,9 @@ mstr_gfx2_init_1:
 		mov	#0,r6
 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r0	; Set scrolling source data
 		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	@(Dreq_ScrlBg_Data,r0),r2
-		mov	@(Dreq_ScrlBg_W,r0),r3
-		mov	@(Dreq_ScrlBg_H,r0),r4
+		mov	@(scrlbg_Data,r0),r2
+		mov	@(scrlbg_W,r0),r3
+		mov	@(scrlbg_H,r0),r4
 		bsr	MarsVideo_SetScrlBg
 		nop
 		bra	mstr_gfx2_init_cont
@@ -1623,8 +1614,8 @@ mstr_gfx2_loop:
 		bf	.mid_draw
 		mov	#RAM_Mars_BgBuffScrl,r4
 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r3
-		mov	@(Dreq_ScrlBg_X,r3),r1
-		mov	@(Dreq_ScrlBg_Y,r3),r2
+		mov	@(scrlbg_X,r3),r1
+		mov	@(scrlbg_Y,r3),r2
 		mov	r1,@(mbg_xpos,r4)
 		mov	r2,@(mbg_ypos,r4)
 .mid_draw:
@@ -1695,79 +1686,6 @@ mstr_gfx2_loop:
 
 ; ============================================================
 ; ---------------------------------------
-; Pseudo-screen mode $03:
-; Scalable 256-color screen
-;
-; Not as smooth as Mode 2
-; ---------------------------------------
-
-; -------------------------------
-; HBlank
-; -------------------------------
-
-mstr_gfx3_hblk:
-		rts
-		nop
-		align 4
-
-; -------------------------------
-; Init
-; -------------------------------
-
-mstr_gfx3_init_1:
-		mov	#CACHE_MSTR_SCRL,r1
-		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
-		mov	#Mars_LoadCacheRam,r0
-		jsr	@r0
-		nop
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_XShift,gbr)
-		bra	mstr_gfx3_loop
-		nop
-
-mstr_gfx3_init_2:
-		mov 	#_vdpreg,r1
-		mov	#1,r0
-		mov.b	r0,@(bitmapmd,r1)
-
-; -------------------------------
-; Loop
-; -------------------------------
-
-mstr_gfx3_loop:
-		mov	#$200,r1
-		mov	#0,r2
-		mov	#0,r3
-		mov	#320,r4
-		mov	#240,r5
-		mov	#320*240,r6
-		mov	#MarsVideo_SetSuperSpr,r0
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawScaled,r0
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawSuperSpr,r0	; Draw Super Sprites
-		jsr	@r0
-		nop
-		mov	#$200,r1
-		mov	#320,r2
-		mov	#240,r3
-		mov	#MarsVideo_MakeNametbl,r0
-		jsr	@r0
-		mov	#0,r4
-		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
-		mov.b	@(framectl,r1),r0
-		xor	#1,r0
-		mov.b	r0,@(framectl,r1)
-		bra	mstr_ready
-		nop
-		align 4
-		ltorg
-		align 4
-
-; ============================================================
-; ---------------------------------------
 ; Mode 4: 3D MODE Polygons-only
 ;
 ; Objects are divided into read/write
@@ -1785,7 +1703,7 @@ mstr_gfx3_loop:
 ; HBlank
 ; -------------------------------
 
-mstr_gfx4_hblk:
+mstr_gfx3_hblk:
 		rts
 		nop
 		align 4
@@ -1794,7 +1712,7 @@ mstr_gfx4_hblk:
 ; Init
 ; -------------------------------
 
-mstr_gfx4_init_1:
+mstr_gfx3_init_1:
 		mov	#_sysreg+comm14,r1
 .slv_init:	mov.w	@r1,r0
 		and	#%01111111,r0
@@ -1807,13 +1725,13 @@ mstr_gfx4_init_1:
 		nop
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_XShift,gbr)
-		bra	mstr_gfx4_init_cont
+		bra	mstr_gfx3_init_cont
 		nop
-mstr_gfx4_init_2:
+mstr_gfx3_init_2:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
-mstr_gfx4_init_cont:
+mstr_gfx3_init_cont:
 		mov	#_vdpreg,r1
 .wait_fb:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
 		tst	#2,r0
@@ -1823,13 +1741,13 @@ mstr_gfx4_init_cont:
 ; Loop
 ; -------------------------------
 
-mstr_gfx4_loop:
+mstr_gfx3_loop:
 		mov	#_sysreg+comm12,r1
 		mov	#_sysreg+comm14,r4
 .slv_busy2:
 		mov.w	@r1,r0
 		and	#%1111,r0
-		cmp/eq	#4,r0
+		cmp/eq	#3,r0			; MODE $03?
 		bf	.got_out
 		mov.w	@r4,r0
 		and	#%01111111,r0
@@ -1961,6 +1879,176 @@ mstr_ready:
 		nop
 		align 4
 		ltorg
+
+; ; ============================================================
+; ; ---------------------------------------
+; ; Pseudo-screen mode $01:
+; ;
+; ; A Generic screen in any
+; ; bitmap mode: Indexed, Direct or RLE
+; ;
+; ; Watch out for the limited lines
+; ; available for DIRECT COLOR
+; ; ---------------------------------------
+;
+; ; -------------------------------
+; ; HBlank
+; ; -------------------------------
+;
+; mstr_gfx1_hblk:
+; 		rts
+; 		nop
+; 		align 4
+;
+; ; -------------------------------
+; ; Init
+; ; -------------------------------
+;
+; mstr_gfx1_init_2:
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_XShift,gbr)
+; 		mov 	#_vdpreg,r1
+; 		mov	#2,r0
+; 		mov.b	r0,@(bitmapmd,r1)
+; mstr_gfx1_init_1:
+; 		mov	#MarsVideo_ResetNameTbl,r0
+; 		jsr	@r0
+; 		nop
+;
+; ; -------------------------------
+; ; Loop
+; ; -------------------------------
+;
+; mstr_gfx1_loop:
+; 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1
+; 		mov	@(Dreq_Scrn_Type,r1),r0
+; 		and	#%11,r0
+; 		shll2	r0
+; 		mov	#.m1list,r2
+; 		mov	@(r0,r2),r2
+; 		jmp	@r2
+; 		nop
+; 		align 4
+; .m1list:
+; 		dc.l mstr_ready
+; 		dc.l mstr_ready		; Indexed
+; 		dc.l .direct		; Direct
+; 		dc.l mstr_ready
+;
+; ; -------------------------------
+; ; Direct color
+; ; currently 320x200 (DOS-style)
+; .direct:
+; 		mov	@(Dreq_Scrn_Data,r1),r1
+; 		mov	#_framebuffer+$200,r2
+; 		mov	#(320*200/2)/2,r3	; <- fixed size
+; .copy_me:
+; 		mov	@r1+,r0
+; 		mov	r0,@r2
+; 		add	#4,r2
+; 		mov	@r1+,r0
+; 		mov	r0,@r2
+; 		dt	r3
+; 		bf/s	.copy_me
+; 		add	#4,r2
+; .dont_rdrw:
+; 		mov	#$200,r1
+; 		mov	#320*2,r2
+; 		mov	#200,r3
+; 		mov	#MarsVideo_MakeNametbl,r0
+; 		jsr	@r0
+; 		mov	#12,r4
+; 		mov	#_vdpreg,r1		; In case we are still on VBlank...
+; -		mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	-
+; 		mov	#_vdpreg,r1		; Framebuffer swap REQUEST
+; 		mov.b	@(framectl,r1),r0
+; 		xor	#1,r0
+; 		mov.b	r0,@(framectl,r1)
+;
+; 		bra	mstr_ready
+; 		nop
+;
+; ; -------------------------------
+; ; RLE indexed-compressed image
+;
+; .rle:
+; 		bra	mstr_ready
+; 		nop
+
+; ; ============================================================
+; ; ---------------------------------------
+; ; Pseudo-screen mode $03:
+; ; Scalable 256-color screen
+; ;
+; ; Not as smooth as Mode 2
+; ; ---------------------------------------
+;
+; ; -------------------------------
+; ; HBlank
+; ; -------------------------------
+;
+; mstr_gfx3_hblk:
+; 		rts
+; 		nop
+; 		align 4
+;
+; ; -------------------------------
+; ; Init
+; ; -------------------------------
+;
+; mstr_gfx3_init_1:
+; 		mov	#CACHE_MSTR_SCRL,r1
+; 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
+; 		mov	#Mars_LoadCacheRam,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_XShift,gbr)
+; 		bra	mstr_gfx3_loop
+; 		nop
+;
+; mstr_gfx3_init_2:
+; 		mov 	#_vdpreg,r1
+; 		mov	#1,r0
+; 		mov.b	r0,@(bitmapmd,r1)
+;
+; ; -------------------------------
+; ; Loop
+; ; -------------------------------
+;
+; mstr_gfx3_loop:
+; 		mov	#$200,r1
+; 		mov	#0,r2
+; 		mov	#0,r3
+; 		mov	#320,r4
+; 		mov	#240,r5
+; 		mov	#320*240,r6
+; 		mov	#MarsVideo_SetSuperSpr,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#MarsVideo_DrawScaled,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw Super Sprites
+; 		jsr	@r0
+; 		nop
+; 		mov	#$200,r1
+; 		mov	#320,r2
+; 		mov	#240,r3
+; 		mov	#MarsVideo_MakeNametbl,r0
+; 		jsr	@r0
+; 		mov	#0,r4
+; 		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
+; 		mov.b	@(framectl,r1),r0
+; 		xor	#1,r0
+; 		mov.b	r0,@(framectl,r1)
+; 		bra	mstr_ready
+; 		nop
+; 		align 4
+; 		ltorg
+; 		align 4
 
 ; ============================================================
 

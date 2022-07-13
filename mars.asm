@@ -16,8 +16,7 @@
 ; Main
 ; ----------------------------------------------------------------
 
-	; Transfer RAM-Common code
-		lea	(Md_TopCode+$880000),a0
+		lea	(Md_TopCode+$880000),a0		; Transfer RAM-shared code
 		lea	($FF0000),a1
 		move.w	#((Md_TopCode_e-Md_TopCode))-1,d0
 .copyme:

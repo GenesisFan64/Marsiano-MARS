@@ -41,6 +41,8 @@ RAM_Ytemp	ds.l 1
 ; ------------------------------------------------------
 
 MD_Mode0:
+; 		bra	MD_DebugMenu
+
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
@@ -49,8 +51,8 @@ MD_Mode0:
 		bsr	MdMap_Init
 
 	; Emily variables
-		move.w	#(320/2)+16,(RAM_EmiPosX).w
-		move.w	#(224/2)+8,(RAM_EmiPosY).w
+; 		move.w	#(320/2)+16,(RAM_EmiPosX).w
+; 		move.w	#(224/2)+8,(RAM_EmiPosY).w
 		lea	Pal_Emily(pc),a0
 		moveq	#0,d0
 		move.w	#16,d1
@@ -74,11 +76,11 @@ MD_Mode0:
 
 	; 32X stuff
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG,Dreq_ScrlBg_Data(a0)
-		move.l	#320,Dreq_ScrlBg_W(a0)
-		move.l	#448,Dreq_ScrlBg_H(a0)
-		move.l	#$00000000,Dreq_ScrlBg_X(a0)
-		move.l	#$00000000,Dreq_ScrlBg_Y(a0)
+		move.l	#TESTMARS_BG,scrlbg_Data(a0)
+		move.l	#320,scrlbg_W(a0)
+		move.l	#448,scrlbg_H(a0)
+		move.l	#$00000000,scrlbg_X(a0)
+		move.l	#$00000000,scrlbg_Y(a0)
 		bsr	System_MarsUpdate
 		lea	(PalData_Mars_Test),a0
 		moveq	#0,d0
@@ -106,11 +108,10 @@ MD_Mode0:
 ; ------------------------------------------------------
 
 .loop:
+		bsr	MdMap_Update
 		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.loop
-
-		bsr	MdMap_Run
 
 	; temporal Emily Fujiwara object
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
@@ -126,7 +127,7 @@ MD_Mode0:
 		add.l	d1,(RAM_Ytemp).w
 		move.l	d1,d4
 		asr.l	#2,d4
-		add.l	d4,Dreq_ScrlBg_Y(a1)
+		add.l	d4,scrlbg_Y(a1)
 
 .noz_down:
 		move.w	d7,d6
@@ -138,7 +139,7 @@ MD_Mode0:
 		sub.l	d1,(RAM_Ytemp).w
 		move.l	d1,d4
 		asr.l	#2,d4
-		sub.l	d4,Dreq_ScrlBg_Y(a1)
+		sub.l	d4,scrlbg_Y(a1)
 
 .noz_up:
 		move.w	d7,d6
@@ -150,7 +151,7 @@ MD_Mode0:
 		add.l	d0,(RAM_Xtemp).w
 		move.l	d0,d4
 		asr.l	#2,d4
-		add.l	d4,Dreq_ScrlBg_X(a1)
+		add.l	d4,scrlbg_X(a1)
 .noz_r:
 		move.w	d7,d6
 		btst	#bitJoyLeft,d6
@@ -161,9 +162,19 @@ MD_Mode0:
 		sub.l	d0,(RAM_Xtemp).w
 		move.l	d0,d4
 		asr.l	#2,d4
-		sub.l	d4,Dreq_ScrlBg_X(a1)
+		sub.l	d4,scrlbg_X(a1)
 .noz_l:
-		bsr	Emilie_MkSprite
+; 		bsr	Emilie_MkSprite
+		lea	(RAM_BgBuffer),a0
+		move.w	(RAM_Xtemp).w,md_bg_x(a0)
+		move.w	(RAM_Ytemp).w,md_bg_y(a0)
+		adda	#sizeof_mdbg,a0
+		move.w	(RAM_Xtemp).w,d0
+		move.w	(RAM_Ytemp).w,d1
+		lsr.w	#1,d0
+		lsr.w	#1,d1
+		move.w	d0,md_bg_x(a0)
+		move.w	d1,md_bg_y(a0)
 
 		move.l	(RAM_Xtemp).w,d0
 		move.l	(RAM_Ytemp).w,d1

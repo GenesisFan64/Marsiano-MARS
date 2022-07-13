@@ -292,76 +292,76 @@ indx_lyrs = 0
 while cntr_lyrs:
 	lyr_file = open(PROJFOLER+"/"+layer_tags[indx_lyrs]+".bin","wb")
 
-	lyr_read = layer_data[indx_lyrs].split(",")
-	indx_blk = 0
+	#lyr_read = layer_data[indx_lyrs].split(",")
+	#indx_blk = 0
 
-	curr_hght = LAY_HEIGHT
-	this_line = 0
-	while curr_hght:
-		curr_hght -= 1
+	#curr_hght = LAY_HEIGHT
+	#this_line = 0
+	#while curr_hght:
+		#curr_hght -= 1
 
-		# calculate auto-width
-		c = 0x10
-		d = True
-		while d:
-			e = c-LAY_WIDTH
-			if e > 0:
-				d = False
-				break
-			c = c << 1
-		b = int(c)
-		a = [0]*b	# make fixed line
-		curr_wdth = LAY_WIDTH
-		in_wdth = 0
-		while curr_wdth:
-			b = int(lyr_read[in_wdth+this_line])
-			c = len(layer_tiletops)
-			d = c-1
-			while c:
-				if b > layer_tiletops[d]-1:
-					b -= layer_tiletops[d]-1
-					break
-				d -= 1
-				c -= 1
-
-			# b = block byte
-			a[in_wdth] = b
-			in_wdth += 1
-			curr_wdth -= 1
-		lyr_file.write(bytes(a))
-
-		this_line += LAY_WIDTH
-
-
-
-
-
-
-	#a = layer_data[indx_lyrs].split(",")
-	#b = len(a)
-	#e = 0
-	#while b:
-		#lyr_data = int(a[e])
-		#if lyr_data != 0:
-			#h = len(layer_tiletops)
-			#g = h-1
-			#while h:
-				#if lyr_data > layer_tiletops[g]-1:
-					#lyr_data -= layer_tiletops[g]-1
+		## calculate auto-width
+		#c = 0x10
+		#d = True
+		#while d:
+			#e = c-LAY_WIDTH
+			#if e > 0:
+				#d = False
+				#break
+			#c = c << 1
+		#b = int(c)
+		#a = [0]*b	# make fixed line
+		#curr_wdth = LAY_WIDTH
+		#in_wdth = 0
+		#while curr_wdth:
+			#b = int(lyr_read[in_wdth+this_line])
+			#c = len(layer_tiletops)
+			#d = c-1
+			#while c:
+				#if b > layer_tiletops[d]-1:
+					#b -= layer_tiletops[d]-1
 					#break
-				#g -= 1
-				#h -= 1
+				#d -= 1
+				#c -= 1
 
-		#if WIDE_LAYOUT == True:
-			#lyr_file.write(bytes([ f>>8&0xFF , f&0xFF ]))
-		#else:
-			#if lyr_data > 255:
-				#print("WARNING: ran out of bytes, value:",hex(f))
-				#lyr_data = lyr_data&0xFF
-			#lyr_file.write(bytes([ lyr_data&0xFF ]))
-			##print("LEL")
-		#e += 1
-		#b -= 1
+			## b = block byte
+			#a[in_wdth] = b
+			#in_wdth += 1
+			#curr_wdth -= 1
+		#lyr_file.write(bytes(a))
+
+		#this_line += LAY_WIDTH
+
+
+
+
+
+
+	a = layer_data[indx_lyrs].split(",")
+	b = len(a)
+	e = 0
+	while b:
+		lyr_data = int(a[e])
+		if lyr_data != 0:
+			h = len(layer_tiletops)
+			g = h-1
+			while h:
+				if lyr_data > layer_tiletops[g]-1:
+					lyr_data -= layer_tiletops[g]-1
+					break
+				g -= 1
+				h -= 1
+
+		if WIDE_LAYOUT == True:
+			lyr_file.write(bytes([ f>>8&0xFF , f&0xFF ]))
+		else:
+			if lyr_data > 255:
+				print("WARNING: ran out of bytes, value:",hex(f))
+				lyr_data = lyr_data&0xFF
+			lyr_file.write(bytes([ lyr_data&0xFF ]))
+			#print("LEL")
+		e += 1
+		b -= 1
 
 	lyr_file.close()
 	indx_lyrs += 1  # next layer
