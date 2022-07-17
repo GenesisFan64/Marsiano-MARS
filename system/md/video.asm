@@ -1708,6 +1708,7 @@ MdMap_DrawAll:
 		rol.w	#2,d6
 		and.w	#%11,d6
 		swap	d6
+		and.w	#$3FFF,d0
 		move.w	d0,d6			; d6 - VDP 2nd|1st writes
 		move.w	#(512/16)-1,d7		; d7 - X cells | Y cells
 		swap	d7
@@ -1722,7 +1723,7 @@ MdMap_DrawAll:
 	; a0 - Block-data read
 
 	; d7 - X loop        | Y loop
-	; d6 - VDP 2nd Write | VDP 1st Write
+	; d6 - VDP 2nd Write | X/Y VDP pos
 	; d5 - X loop-save   | X VDP current
 	; d4 - Y wrap        | Y next block pos
 	; d3 - X wrap        | X next block pos
@@ -1766,7 +1767,6 @@ MdMap_DrawAll:
 .no_bg:
 		rts
 
-; this got very tough.
 ; barely got free regs without using stack
 .mk_block:
 		swap	d2
@@ -1784,13 +1784,10 @@ MdMap_DrawAll:
 	; d2 is free
 	;
 	; currently working: 16x16
-	; blk width/height jumps
-	; will go here
-
-		bsr.s	.drwy_16	; x16
-		add.w	#2,d0
-		bsr.s	.drwy_16
-
+		bsr.s	.drwy_16	; 1-
+		add.w	#2,d0		; 2-
+		bsr.s	.drwy_16	; -3
+					; -4
 		swap	d6
 		swap	d2
 		rts
@@ -1869,9 +1866,6 @@ MdMap_DrawScrl:
 		move.b	md_bg_flags(a6),d7
 		btst	#bitBgOn,d7
 		beq	.no_bg
-		move.l	md_bg_blk(a6),a4
-		move.l	md_bg_low(a6),a3
-		move.l	md_bg_hi(a6),a2
 		move.w	md_bg_x(a6),d0		; X start
 		move.w	md_bg_y(a6),d1		; Y start
 		bclr	#bitDrwL,d7
@@ -1880,62 +1874,38 @@ MdMap_DrawScrl:
 .no_l:
 		bclr	#bitDrwR,d7
 		beq.s	.no_r
-		add.w	#320,d0		; X add
+		add.w	#320,d0			; X add
 		bsr.s	.mk_clmn
 .no_r:
+		move.w	md_bg_x(a6),d0		; X start
+		move.w	md_bg_y(a6),d1		; Y start
+		bclr	#bitDrwU,d7
+		beq.s	.no_u
+		bsr	.mk_row
+.no_u:
+		bclr	#bitDrwD,d7
+		beq.s	.no_d
+		add.w	#224,d1			; X add
+		bsr	.mk_row
+.no_d:
 		move.b	d7,md_bg_flags(a6)
 .no_bg:
 		rts
 
-; Make X column
+
+; ------------------------------------------------
+; Make column
 ; d0 - X
 ; d1 - Y
-;
+; ------------------------------------------------
+
 .mk_clmn:
 		swap	d7
-		and.w	#-$10,d0		; block X/Y limit
-		and.w	#-$10,d1
-		move.w	d0,d7
-		swap	d0
-		move.w	d7,d0
-		move.w	d1,d7
-		swap	d1
-		move.w	d7,d1
-		move.w	md_bg_vram(a6),d2
-		swap	d2
-		move.b	md_bg_bh(a6),d3
-		move.b	md_bg_bw(a6),d2
-		move.w	md_bg_w(a6),d4
-		moveq	#0,d5
-		moveq	#0,d6
-		move.w	d0,d5
-		move.w	d1,d6
-		and.w	#$FF,d2
-		mulu.w	d2,d5
-		lsr.w	#8,d5
-		and.w	#$FF,d3
-		mulu.w	d3,d6
-		lsr.w	#8,d6
-		mulu.w	d4,d6
-		add.l	d6,d5
-		add.l	d5,a3
-		add.l	d5,a2
-		lsr.w	#2,d1			; Y >> 2
-		lsl.w	#6,d1			; Y * $40
-		lsr.w	#2,d0			; X >> 2
-		and.w	#$FFF,d1
-		and.w	#$7C,d0
-		add.w	d1,d0
-		move.w	md_bg_vpos(a6),d1
-		move.w	d1,d2
-		and.w	#$3FFF,d1
-		rol.w	#2,d2
-		and.w	#%11,d2
+		bsr	.get_coords
 		move.w	#$FFF,d3
 		swap	d3
 		move.w	#$100,d3
-
-		move.w	md_bg_wf(a6),d4	; Set X minus flag
+		move.w	md_bg_wf(a6),d4		; Set X minus flag
 		moveq	#1,d6
 		move.l	d0,d5
 		swap	d5
@@ -1958,7 +1928,13 @@ MdMap_DrawScrl:
 
 		move.w	#(256/16)-1,d7
 .y_blk:
-
+		move.l	d1,d4
+		move.w	md_bg_hf(a6),d5
+		swap	d4
+		tst.w	d4
+		bmi.s	.blnk
+		cmp.w	d5,d4
+		bge.s	.blnk
 		move.l	d6,d4
 		swap	d4
 		tst.w	d4
@@ -1966,7 +1942,6 @@ MdMap_DrawScrl:
 		moveq	#0,d4
 		moveq	#0,d5
 
-	; Y pos goes here
 		move.b	(a3),d6
 		bne.s	.vld
 		move.b	(a2),d6
@@ -1996,6 +1971,9 @@ MdMap_DrawScrl:
 		add.w	d2,d5
 		swap	d2
 .frce:
+		swap	d1
+		add.w	#$10,d1
+		swap	d1
 		move.w	d0,d6
 		add.w	d1,d6
 		or.w	#$4000,d6
@@ -2006,85 +1984,185 @@ MdMap_DrawScrl:
 		move.w	d6,4(a5)
 		move.w	d2,4(a5)
 		move.l	d5,(a5)
-		move.l	d3,d4	; Next Y block
+		move.l	d3,d4		; Next Y block
 		swap	d4
 		add.w	d3,d0
 		and.w	d4,d0
 		move.w	md_bg_w(a6),d6
 		adda	d6,a3
 		adda	d6,a2
-; .f_blk:
 		dbf	d7,.y_blk
-
-; 		swap	d1
-; 		moveq	#0,d0
-; 		move.b	(a2),d1
-; 		bne.s	.vld
-; 		move.b	(a1),d1
-; 		bne.s	.vld
-; .blnk:
-; 		move.w	d6,d1
-; 		add.w	d4,d1
-; 		or.w	#$4000,d1
-; 		move.w	d1,(a5)
-; 		move.w	d5,(a5)
-; 		move.l	d0,(a4)
-; 		add.w	#$80,d1
-; 		move.w	d1,(a5)
-; 		move.w	d5,(a5)
-; 		move.l	d0,(a4)
-; 		bra.s	.nxt
-; .vld:
-; 		and.w	#$FF,d1
-; 		lsl.w	#3,d1
-; 		move.l	a3,a0
-; 		adda	d1,a0
-; 		move.l	(a0)+,d0
-; 		swap	d0
-; 		move.w	d6,d1
-; 		add.w	d4,d1
-; 		swap	d4
-; 		or.w	#$4000,d1
-; 		move.w	d1,(a5)
-; 		move.w	d5,(a5)
-; 		add.w	d4,d0
-; 		move.w	d0,(a4)
-; 		swap	d0
-; 		add.w	#$80,d1
-; 		move.w	d1,(a5)
-; 		move.w	d5,(a5)
-; 		add.w	d4,d0
-; 		move.w	d0,(a4)
-; 		swap	d4
-;
-; 		move.l	(a0)+,d0
-; 		swap	d0
-; 		move.w	d6,d1
-; 		add.w	#2,d1
-; 		add.w	d4,d1
-; 		swap	d4
-; 		or.w	#$4000,d1
-; 		move.w	d1,(a5)
-; 		move.w	d5,(a5)
-; 		add.w	d4,d0
-; 		move.w	d0,(a4)
-; 		swap	d0
-; 		add.w	#$80,d1
-; 		move.w	d1,(a5)
-; 		move.w	d5,(a5)
-; 		add.w	d4,d0
-; 		move.w	d0,(a4)
-; 		swap	d4
-;
-; .nxt:
-; 		add.w	d2,d6
-; 		and.w	d3,d6
-; 		move.l	d6,d0
-; 		swap	d0
-; 		adda.w	d0,a2
-; 		adda.w	d0,a1
-; 		swap	d1
-; 		dbf	d7,.y_blk
-
 		swap	d7
+		rts
+
+; ------------------------------------------------
+; Make row
+; d0 - X
+; d1 - Y
+; ------------------------------------------------
+
+.mk_row:
+		swap	d7
+		bsr	.get_coords
+		move.w	#$7F,d3
+		swap	d3
+		move.w	#4,d3
+		move.w	md_bg_hf(a6),d4		; Set X minus flag
+		moveq	#1,d6
+		move.l	d1,d5
+		swap	d5
+		cmp.w	d4,d5
+		bge.s	.y_plus
+		tst.w	d5
+		bmi.s	.y_plus
+		moveq	#0,d6
+.y_plus:
+		swap	d6
+
+	; d0 -    X curr | Current cell X/Y (1st)
+	; d1 -    Y curr | VDP 1st write
+	; d2 - Cell VRAM | VDP 2nd write
+	; d3 -    X wrap | X add
+	; d4 -         *****
+	; d5 -         *****
+	; d6 - loopflags | *****
+	; d7 - lastflags | loop blocks
+
+		move.w	d0,d6
+		and.w	#-$100,d6	; Merge d1
+		add.w	d6,d1
+		move.l	d3,d5
+		swap	d5
+		and.w	d5,d0
+		move.w	#((320+16)/16)-1,d7
+.x_blk:
+		move.l	d0,d4
+		move.w	md_bg_wf(a6),d5
+		swap	d4
+		tst.w	d4
+		bmi.s	.xblnk
+		cmp.w	d5,d4
+		bge.s	.xblnk
+		move.l	d6,d4
+		swap	d4
+		tst.w	d4
+		bne	.xblnk
+		moveq	#0,d4
+		moveq	#0,d5
+
+		move.b	(a3),d6
+		bne.s	.xvld
+		move.b	(a2),d6
+		bne.s	.xprio
+.xblnk:
+		moveq	#0,d4
+		moveq	#0,d5
+		bra.s	.xfrce
+.xprio:
+		move.l	#$80008000,d4
+		move.l	#$80008000,d5
+.xvld:
+		move.l	a4,a0
+		and.w	#$FF,d6
+		lsl.w	#3,d6
+		adda	d6,a0
+		swap	d2
+		add.w	(a0)+,d4
+		add.w	(a0)+,d5
+		add.w	d2,d4
+		add.w	d2,d5
+		swap	d4
+		swap	d5
+		add.w	(a0)+,d4
+		add.w	(a0)+,d5
+		add.w	d2,d4
+		add.w	d2,d5
+		swap	d2
+.xfrce:
+		swap	d0
+		add.w	#$10,d0
+		swap	d0
+
+		move.w	d0,d6
+		add.w	d1,d6
+		or.w	#$4000,d6
+		move.w	d6,4(a5)
+		move.w	d2,4(a5)
+		move.l	d4,(a5)
+		add.w	#$80,d6
+		move.w	d6,4(a5)
+		move.w	d2,4(a5)
+		move.l	d5,(a5)
+		add.w	d3,d0
+		swap	d3
+		and.w	d3,d0
+		swap	d3
+
+; 		move.w	d0,d6
+; 		add.w	d1,d6
+; 		or.w	#$4000,d6
+; 		move.w	d6,4(a5)
+; 		move.w	d2,4(a5)
+; 		move.l	d4,(a5)
+; 		add.w	#$80,d6
+; 		move.w	d6,4(a5)
+; 		move.w	d2,4(a5)
+; 		move.l	d5,(a5)
+;
+; ; 		move.l	d3,d4		; Next Y block
+; ; 		swap	d4
+; ; 		add.w	d3,d0
+; ; 		and.w	d4,d0
+
+		adda	#1,a3
+		adda	#1,a2
+
+		dbf	d7,.x_blk
+		swap	d7
+		rts
+
+; ------------------------------------------------
+
+.get_coords:
+		move.l	md_bg_blk(a6),a4
+		move.l	md_bg_low(a6),a3
+		move.l	md_bg_hi(a6),a2
+		and.w	#-$10,d0		; block X/Y limit
+		and.w	#-$10,d1
+		move.w	d0,d7
+		swap	d0
+		move.w	d7,d0
+		move.w	d1,d7
+		swap	d1
+		move.w	d7,d1
+		move.w	md_bg_vram(a6),d2
+		swap	d2
+		move.b	md_bg_bh(a6),d3
+		move.b	md_bg_bw(a6),d2
+		move.w	md_bg_w(a6),d4
+		moveq	#0,d5
+		moveq	#0,d6
+		move.w	d0,d5
+		move.w	d1,d6
+		and.w	#$FF,d2
+		muls.w	d2,d5
+		asr.w	#8,d5
+		and.w	#$FF,d3
+		muls.w	d3,d6
+		asr.w	#8,d6
+		muls.w	d4,d6
+		add.l	d6,d5
+		add.l	d5,a3
+		add.l	d5,a2
+		lsr.w	#2,d1			; Y >> 2
+		lsl.w	#6,d1			; Y * $40
+		lsr.w	#2,d0			; X >> 2
+		and.w	#$FFF,d1
+		and.w	#$7C,d0
+		add.w	d1,d0
+		move.w	md_bg_vpos(a6),d1
+		move.w	d1,d2
+		and.w	#$3FFF,d1
+		rol.w	#2,d2
+		and.w	#%11,d2
 		rts

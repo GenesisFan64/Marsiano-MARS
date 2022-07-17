@@ -10,11 +10,11 @@
 ; Settings
 ; --------------------------------------------------------
 
-MAX_SCRNBUFF	equ $18000	; MAX SDRAM for each fake-screen mode
+MAX_SCRNBUFF	equ $20000	; MAX SDRAM for each fake-screen mode
 FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
 FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines (Screen mode 2)
-MAX_FACES	equ 512		; Max polygon faces (Screen mode 4)
-MAX_SVDP_PZ	equ 512+48	; Max polygon pieces to draw (Screen mode 4)
+MAX_FACES	equ 640		; Max polygon faces (Screen mode 4)
+MAX_SVDP_PZ	equ 640+32	; Max polygon pieces to draw (Screen mode 4)
 MAX_ZDIST	equ -$C00	; Max 3D drawing distance (-Z) (Screen mode 4)
 
 ; --------------------------------------------------------

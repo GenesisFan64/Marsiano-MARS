@@ -48,51 +48,54 @@ MD_Mode0:
 		bsr	Video_Update
 		bsr	Mode_Init
 		bsr	Video_PrintInit
-		bsr	MdMap_Init
+		clr.w	(RAM_PaletteFd).w
 
 	; Emily variables
-; 		move.w	#(320/2)+16,(RAM_EmiPosX).w
-; 		move.w	#(224/2)+8,(RAM_EmiPosY).w
+		move.w	#(320/2)+16,(RAM_EmiPosX).w
+		move.w	#(224/2)+8,(RAM_EmiPosY).w
 		lea	Pal_Emily(pc),a0
 		moveq	#0,d0
 		move.w	#16,d1
 		bsr	Video_FadePal
 
-	; Prepare sound
-		moveq	#0,d0
-		bsr	Sound_TrkStop
-		move.w	#128+16,d1
-		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_Test2),a0
-		moveq	#0,d0
-		move.w	#2,d1
-		moveq	#0,d2
-		move.w	#%01,d3
-		bsr	Sound_TrkPlay
-
 	; Pick and draw scroll maps
+		bsr	MdMap_Init
 		bsr	Level_PickMap
 		bsr	MdMap_DrawAll
 
 	; 32X stuff
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG,scrlbg_Data(a0)
-		move.l	#320,scrlbg_W(a0)
-		move.l	#448,scrlbg_H(a0)
-		move.l	#$00000000,scrlbg_X(a0)
-		move.l	#$00000000,scrlbg_Y(a0)
+		lea	(RAM_MdDreq+Dreq_Objects),a0
+		move.l	#MarsObj_test|TH,mdl_data(a0)
+		move.l	#-$400,mdl_z_pos(a0)
 		bsr	System_MarsUpdate
-		lea	(PalData_Mars_Test),a0
+		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
-		moveq	#0,d2
+		moveq	#1,d2
 		bsr	Video_FadePal_Mars
-		move.w	#2,d0
+		move.w	#$1C<<10|$07<<5,(RAM_MdMarsPalFd).w
+		move.w	#3,d0
 		bsr	Video_Mars_GfxMode
+
+; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
+; 		move.l	#TestMars_Yui,scrlbg_Data(a0)
+; 		move.l	#512,scrlbg_W(a0)
+; 		move.l	#200,scrlbg_H(a0)
+; 		move.l	#$00000000,scrlbg_X(a0)
+; 		move.l	#$00000000,scrlbg_Y(a0)
+; 		bsr	System_MarsUpdate
+; 		lea	(TestMars_YuiP),a0
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		moveq	#1,d2
+; 		bsr	Video_FadePal_Mars
+; 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
+; 		move.w	#0,d0
+; 		bsr	Video_Mars_GfxMode
 	; ****
 
 		move.w	#1,(RAM_FadeMdIncr).w
-		move.w	#4,(RAM_FadeMarsIncr).w
+		move.w	#2,(RAM_FadeMarsIncr).w
 		move.w	#1,(RAM_FadeMdDelay).w
 		move.w	#0,(RAM_FadeMarsDelay).w
 		move.w	#1,(RAM_FadeMdReq).w
@@ -101,6 +104,16 @@ MD_Mode0:
 		move.b	#%000,(RAM_VdpRegs+$B).l
 		move.b	#$10,(RAM_VdpRegs+7).l
 		bsr	Video_Update
+
+	; Prepare sound
+		moveq	#0,d0
+		bsr	Sound_TrkStop
+		lea	(GemaTrkData_Test),a0
+		moveq	#0,d0
+		move.w	#$A,d1
+		moveq	#0,d2
+		move.w	#0,d3
+		bsr	Sound_TrkPlay
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -113,7 +126,23 @@ MD_Mode0:
 		bsr	Video_RunFade
 		bne.s	.loop
 
-	; temporal Emily Fujiwara object
+; 		bsr	Emilie_MkSprite
+
+		lea	(RAM_MdDreq+Dreq_Objects),a0
+		add.l	#$3000,mdl_x_rot(a0)
+		add.l	#$4000,mdl_y_rot(a0)
+		add.l	#$2000,mdl_z_rot(a0)
+
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyB,d7
+		beq.s	.z_up
+		sub.l	#$10,mdl_z_pos(a0)
+.z_up:
+		btst	#bitJoyC,d7
+		beq.s	.z_dw
+		add.l	#$10,mdl_z_pos(a0)
+.z_dw:
+
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
 		move.l	#$20000,d0
 		move.l	#$20000,d1
@@ -125,10 +154,6 @@ MD_Mode0:
 		add.w	#1,(RAM_EmiAnim).w
 
 		add.l	d1,(RAM_Ytemp).w
-		move.l	d1,d4
-		asr.l	#2,d4
-		add.l	d4,scrlbg_Y(a1)
-
 .noz_down:
 		move.w	d7,d6
 		btst	#bitJoyUp,d6
@@ -137,10 +162,6 @@ MD_Mode0:
 		add.w	#1,(RAM_EmiAnim).w
 
 		sub.l	d1,(RAM_Ytemp).w
-		move.l	d1,d4
-		asr.l	#2,d4
-		sub.l	d4,scrlbg_Y(a1)
-
 .noz_up:
 		move.w	d7,d6
 		btst	#bitJoyRight,d6
@@ -149,9 +170,6 @@ MD_Mode0:
 		add.w	#1,(RAM_EmiAnim).w
 
 		add.l	d0,(RAM_Xtemp).w
-		move.l	d0,d4
-		asr.l	#2,d4
-		add.l	d4,scrlbg_X(a1)
 .noz_r:
 		move.w	d7,d6
 		btst	#bitJoyLeft,d6
@@ -160,33 +178,26 @@ MD_Mode0:
 		add.w	#1,(RAM_EmiAnim).w
 
 		sub.l	d0,(RAM_Xtemp).w
-		move.l	d0,d4
-		asr.l	#2,d4
-		sub.l	d4,scrlbg_X(a1)
 .noz_l:
-; 		bsr	Emilie_MkSprite
+		move.w	(RAM_Xtemp),d0
+		move.w	(RAM_Ytemp),d1
+
+		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
+		move.w	d0,scrlbg_X(a0)
+		move.w	d1,scrlbg_Y(a0)
 		lea	(RAM_BgBuffer),a0
-		move.w	(RAM_Xtemp).w,md_bg_x(a0)
-		move.w	(RAM_Ytemp).w,md_bg_y(a0)
-		adda	#sizeof_mdbg,a0
-		move.w	(RAM_Xtemp).w,d0
-		move.w	(RAM_Ytemp).w,d1
-		lsr.w	#1,d0
-		lsr.w	#1,d1
 		move.w	d0,md_bg_x(a0)
 		move.w	d1,md_bg_y(a0)
-
-		move.l	(RAM_Xtemp).w,d0
-		move.l	(RAM_Ytemp).w,d1
-		neg.l	d0
-		swap	d0
-		swap	d1
 		move.w	d0,(RAM_HorScroll).w
 		move.w	d1,(RAM_VerScroll).w
-		lsr.w	#1,d0
-		lsr.w	#1,d1
+		adda	#sizeof_mdbg,a0
+		asr.w	#1,d0
+		asr.w	#1,d1
+		move.w	d0,md_bg_x(a0)
+		move.w	d1,md_bg_y(a0)
 		move.w	d0,(RAM_HorScroll+2).w
 		move.w	d1,(RAM_VerScroll+2).w
+		neg.l	(RAM_HorScroll).w
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7

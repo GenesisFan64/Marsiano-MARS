@@ -15,19 +15,26 @@ TESTMARS_BG:
 TESTMARS_BG2:
 		binclude "data/mars/tests/test2_art.bin"
 		align 4
-TESTMARS_DIRECT_1:
-		binclude "data/mars/tests/direct/frame0_art.bin"
+TestMars_Yui:
+		binclude "data/mars/tests/yui_mars_art.bin"
 		align 4
-TESTMARS_DIRECT_2:
-		binclude "data/mars/tests/direct/frame1_art.bin"
-		align 4
-TESTMARS_DIRECT_3:
-		binclude "data/mars/tests/direct/frame2_art.bin"
-		align 4
+
+; TESTMARS_DIRECT_1:
+; 		binclude "data/mars/tests/direct/frame0_art.bin"
+; 		align 4
+; TESTMARS_DIRECT_2:
+; 		binclude "data/mars/tests/direct/frame1_art.bin"
+; 		align 4
+; TESTMARS_DIRECT_3:
+; 		binclude "data/mars/tests/direct/frame2_art.bin"
+; 		align 4
 
 Textr_test_yui:
 		binclude "data/mars/objects/mtrl/yui_art.bin"
 		align 4
+; Textr_linkoot:
+; 		binclude "data/mars/objects/mtrl/link_art.bin"
+; 		align 4
 
 SuperSpr_Test:
 	binclude "data/mars/tests/sprites/sprites_art.bin"

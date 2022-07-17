@@ -91,68 +91,72 @@ GemaSfxIns_Boom:
 	gInsFm 0,FmIns_Ding_toy
 
 ; ; onett
-; GemaTrkData_Test:
-; 	dc.l GemaPat_Test
-; 	dc.l GemaBlk_Test
-; 	dc.l GemaIns_Test
-; GemaBlk_Test:
-; 	binclude "sound/tracks/float_blk.bin"
-; 	align 2
-; GemaPat_Test:
-; 	binclude "sound/tracks/float_patt.bin"
-; 	align 2
-; GemaIns_Test:
-; 	gInsFm 0,FmIns_Bass_groove_2
-; 	gInsPwm 0,PwmIns_String_1,1
-; 	gInsPwm -18,PwmIns_Tropical,0
-; 	gInsFm -24,FmIns_Trumpet_carnival
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-
-; ; onett
 GemaTrkData_Test:
 	dc.l GemaPat_Test
 	dc.l GemaBlk_Test
 	dc.l GemaIns_Test
 GemaBlk_Test:
-	binclude "sound/tracks/onett_blk.bin"
+	binclude "sound/tracks/mecano_blk.bin"
+	align 2
 GemaPat_Test:
-	binclude "sound/tracks/onett_patt.bin"
+	binclude "sound/tracks/mecano_patt.bin"
+	align 2
 GemaIns_Test:
-	gInsFm 0,FmIns_Bass_calm
-	gInsFm 0,FmIns_Ding_Toy
 	gInsNull
-	gInsFm 0,FmIns_Marimba
-	gInsPsg 0,$20,$01,$10,$04,$04
-	gInsFm 0,FmIns_Trumpet_1
-	gInsFm 0,FmIns_Trombone_gem
-	gInsPsgN 0,$00,$00,$00,$00,$08,%110
-	gInsPsgN 0,$00,$00,$00,$00,$0C,%101
 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
-	gInsPsg 0,$10,$08,$00,$01,$06
-	gInsPsgN 0,$00,$00,$00,$00,$06,%101
+	gInsFm 0,FmIns_PianoM1
+	gInsFm -12,FmIns_Trumpet_carnival
+	gInsFm 0,FmIns_Bass_italo
+	gInsDac 0,DacIns_wegot_kick,0
+	gInsPsgN 0,$00,$00,$00,$00,$08,%110
+	gInsDac -12,DacIns_snare_lobo,0
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsFm 0,FmIns_Bass_2
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
 	gInsNull
-	gInsNull
-	gInsNull
+
+; 	gInsPsgN 0,$00,$00,$00,$00,$08,%110
+; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%101
+; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
+
+; ; onett
+; GemaTrkData_Test:
+; 	dc.l GemaPat_Test
+; 	dc.l GemaBlk_Test
+; 	dc.l GemaIns_Test
+; GemaBlk_Test:
+; 	binclude "sound/tracks/onett_blk.bin"
+; GemaPat_Test:
+; 	binclude "sound/tracks/onett_patt.bin"
+; GemaIns_Test:
+; 	gInsFm 0,FmIns_Bass_calm
+; 	gInsFm 0,FmIns_Ding_Toy
+; 	gInsNull
+; 	gInsFm 0,FmIns_Marimba
+; 	gInsPsg 0,$20,$01,$10,$04,$04
+; 	gInsFm 0,FmIns_Trumpet_1
+; 	gInsFm 0,FmIns_Trombone_gem
+; 	gInsPsgN 0,$00,$00,$00,$00,$08,%110
+; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%101
+; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
+; 	gInsPsg 0,$10,$08,$00,$01,$06
+; 	gInsPsgN 0,$00,$00,$00,$00,$06,%101
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
+; 	gInsNull
 
 GemaTrkData_Test2:
 	dc.l GemaPat_Test2
@@ -265,6 +269,11 @@ GemaIns_Test3:
 ; 	gInsPsgN 0,$00,$00,$00,$00,$08,%100
 ; 	gInsPwm -17,SmpIns_VctrBrass,%001
 ;
+
+GemaTrkData_BeMine:
+	dc.l GemaPat_BeMine
+	dc.l GemaBlk_BeMine
+	dc.l GemaIns_BeMine
 GemaBlk_BeMine:
 	binclude "sound/tracks/bemine_blk.bin"
 GemaPat_BeMine:

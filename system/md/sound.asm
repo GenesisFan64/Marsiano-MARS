@@ -9,7 +9,7 @@
 ; ----------------------------------------------------------------
 
 		struct RAM_MdSound
-RAM_SndSaveReg	ds.l 8		; Backup registers
+RAM_SndSaveReg	ds.l 8			; Backup registers
 sizeof_mdsnd	ds.l 0
 		finish
 
@@ -21,10 +21,9 @@ sizeof_mdsnd	ds.l 0
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-; 		align $80	; <-- needed because some stuff breaks....
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
-		move.w	#$0100,(z80_reset).l		; Z80 reset
+		move.b	#1,(z80_reset).l		; Z80 reset
 .wait:
 		btst	#0,(z80_bus).l
 		bne.s	.wait
@@ -34,18 +33,16 @@ Sound_Init:
 .cleanup:
 		move.b	d1,(a0)+
 		dbf	d0,.cleanup
-		lea	(Z80_CODE).l,a0			; a0 - Z80 code (on $880000 area)
-		lea	(z80_cpu).l,a1			; a1 - Z80 area
+		lea	(Z80_CODE).l,a0			; a0 - Z80 code (on $880000)
+		lea	(z80_cpu).l,a1			; a1 - Z80 CPU area
 		move.w	#(Z80_CODE_END-Z80_CODE)-1,d0	; d0 - Size
 .copy:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copy
-		move.w	#$0000,(z80_reset).l
+		move.b	#1,(z80_reset).l
 		nop
 		nop
 		nop
-		nop
-		move.w	#$0100,(z80_reset).l
 		move.w	#0,(z80_bus).l			; Start Z80
 		rts
 
@@ -254,7 +251,7 @@ Sound_TrkPlay:
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------
-; SoundReq_StopTrack (Pause too.)
+; Sound_TrkStop (and pause)
 ;
 ; Stops OR Pauses current track
 ;
@@ -276,7 +273,7 @@ Sound_TrkStop:
 ; --------------------------------------------------------
 ; Sound_TrkResume
 ;
-; Resumes Paused track
+; Resumes Stopped/Paused track
 ;
 ; Input:
 ; d0 | BYTE - Track slot
@@ -323,7 +320,7 @@ Sound_TrkTicks:
 ; Set GLOBAL Sub-beats (not tempo...)
 ;
 ; Input:
-; d0 | BYTE - Track slot (TODO: for later...)
+; d0 | BYTE - Track slot
 ; d1 | WORD - Ticks
 ;
 ; Breaks:
@@ -342,13 +339,5 @@ Sound_GlbBeats:
 
 ; --------------------------------------------------------
 
-; 		align 4
-; Z80_CODE:
-; 		cpu Z80			; Set Z80 here
-; 		phase 0			; And set PC to 0
-; 		include "system/md/z_driver.asm"
-; 		cpu 68000
-; 		padding off
-; 		phase Z80_CODE+*
-; Z80_CODE_END:
-; 		align 2
+; Z80 code is located on the $880000 area
+

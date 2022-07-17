@@ -54,8 +54,8 @@ FmIns_DrumKick_gem:
 ; ; 		binclude "sound/instr/fm/drum_snare.gsx",$2478,$20
 ; ; ; ; FmIns_DrumCloseHat:
 ; ; ; ; 		binclude "sound/instr/fm/drum_closehat.gsx",$2478,$20
-; FmIns_PianoM1:
-; 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
+FmIns_PianoM1:
+		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
 ; ; FmIns_PianoM116:
 ; ; 		binclude "sound/instr/fm/piano_m116.gsx",$2478,$20
 ;
@@ -74,8 +74,8 @@ FmIns_Bass_calm:
 ; 		binclude "sound/instr/fm/flaute_1.gsx",$2478,$20
 FmIns_Bass_1:
 		binclude "sound/instr/fm/bass_1.gsx",$2478,$20
-; FmIns_Bass_2:
-; 		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
+FmIns_Bass_2:
+		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
 ; FmIns_Bass_3:
 ; 		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
 ; FmIns_Bass_4:

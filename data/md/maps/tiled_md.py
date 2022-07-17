@@ -19,7 +19,7 @@ RLE_PRIZES  = False
 
 # False: Normal mode
 # True: Auto-alignfix for Interlace Double mode
-DOUBLE_MODE = True
+DOUBLE_MODE = False
 
 # False: layout data is on bytes (0-255)
 # True: layout data is on words (0-65535)
@@ -187,7 +187,7 @@ if not os.path.exists(PROJFOLER):
 
 input_file = open(sys.argv[1],"r")
 input_file.seek(0)
-a = input_file.read().find('<map version="1.8"')
+a = input_file.read().find('<map version="1.9"')
 if a != -1:
 	input_file.seek(a)
 	b = input_file.tell()
@@ -356,7 +356,7 @@ while cntr_lyrs:
 			lyr_file.write(bytes([ f>>8&0xFF , f&0xFF ]))
 		else:
 			if lyr_data > 255:
-				print("WARNING: ran out of bytes, value:",hex(f))
+				print("WARNING: ran out of bytes, value:",hex(lyr_data))
 				lyr_data = lyr_data&0xFF
 			lyr_file.write(bytes([ lyr_data&0xFF ]))
 			#print("LEL")

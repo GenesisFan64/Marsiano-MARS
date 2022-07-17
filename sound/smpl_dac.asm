@@ -15,17 +15,22 @@ DacIns_wegot_kick:
 	gSmpHead .end-.start,0
 .start:	binclude "sound/instr/smpl/wegot_kick.wav",$2C
 .end:
+DacIns_snare_lobo:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snare_lobo.wav",$2C
+.end:
+
 
 DacIns_wegot_crash:
 	gSmpHead .end-.start,0
 .start:	binclude "sound/instr/smpl/wegot_crash.wav",$2C
 .end:
 
-DacIns_snare_lobo:
-	gSmpHead .end-.start,0
-.start:	binclude "sound/instr/smpl/snare_lobo.wav",$2C
-.end:
 
+DacIns_snare_scd:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snare_scd.wav",$2C
+.end:
 DacIns_snare_magn:
 	gSmpHead .end-.start,0
 .start:	binclude "sound/instr/smpl/snare_magn.wav",$2C
