@@ -466,7 +466,7 @@ MarsMdl_ReadModel:
 		mov	#-112,r11
 		neg	r11,r12
 		mov	#$7FFFFFFF,r5
-		mov	#$FFFFFFFF,r13
+		mov	#-1,r13		; $FFFFFFFF
 
 	; Do 3 points
 	rept 3
@@ -637,38 +637,34 @@ mdlrd_setpoint:
 	; Object rotation
 		mov	r2,r5			; r5 - X
 		mov	r4,r6			; r6 - Z
-  		mov 	@(mdl_x_rot,r14),r0
-  		shlr2	r0
-  		shlr	r0
+  		mov.w 	@(mdl_x_rot,r14),r0
   		bsr	mdlrd_rotate
-		shlr8	r0
+  		shlr2	r0
    		mov	r7,r2
    		mov	r3,r5
   		mov	r8,r6
-  		mov 	@(mdl_y_rot,r14),r0
-  		shlr2	r0
+  		mov.w	@(mdl_z_rot,r14),r0
   		shlr	r0
   		bsr	mdlrd_rotate
-		shlr8	r0
+  		shlr2	r0
    		mov	r8,r4
    		mov	r2,r5
    		mov	r7,r6
-   		mov 	@(mdl_z_rot,r14),r0
-  		shlr2	r0
+   		mov.w	@(mdl_y_rot,r14),r0
   		shlr	r0
   		bsr	mdlrd_rotate
-		shlr8	r0
+  		shlr2	r0
    		mov	r7,r2
    		mov	r8,r3
-		mov	@(mdl_x_pos,r14),r5
-		mov	@(mdl_y_pos,r14),r6
-		mov	@(mdl_z_pos,r14),r7
-; 		shlr8	r5
-; 		shlr8	r6
-; 		shlr8	r7
-		exts	r5,r5
-		exts	r6,r6
-		exts	r7,r7
+		mov.w	@(mdl_x_pos,r14),r0
+		exts.w	r0,r5
+		mov.w	@(mdl_y_pos,r14),r0
+		exts.w	r0,r6
+		mov.w	@(mdl_z_pos,r14),r0
+		exts.w	r0,r7
+ 		shar	r5
+ 		shar	r6
+ 		shar	r7
 		add 	r5,r2
 		add 	r6,r3
 		add 	r7,r4
@@ -678,15 +674,6 @@ mdlrd_setpoint:
 		mov	@(cam_x_pos,r11),r5
 		mov	@(cam_y_pos,r11),r6
 		mov	@(cam_z_pos,r11),r7
-; 		mov	@(mdl_data,r14),r0		; Layout object?
-; 		shll	r0
-; 		cmp/pl	r0
-; 		bt	.lay_move
-; 		mov	#$FFFFF,r0			; Limit camera movement
-; 		and	r0,r5
-; ; 		and	r0,r6
-; 		and	r0,r7
-; .lay_move:
 		shlr8	r5
 		shlr8	r6
 		shlr8	r7

@@ -73,9 +73,9 @@ FmIns_Bass_calm:
 ; FmIns_Flaute_1:
 ; 		binclude "sound/instr/fm/flaute_1.gsx",$2478,$20
 FmIns_Bass_1:
-		binclude "sound/instr/fm/bass_1.gsx",$2478,$20
+		binclude "sound/instr/fm/bass_low.gsx",$2478,$20
 FmIns_Bass_2:
-		binclude "sound/instr/fm/bass_2.gsx",$2478,$20
+		binclude "sound/instr/fm/bass_strong.gsx",$2478,$20
 ; FmIns_Bass_3:
 ; 		binclude "sound/instr/fm/bass_3.gsx",$2478,$20
 ; FmIns_Bass_4:
@@ -85,7 +85,7 @@ FmIns_Bass_2:
 FmIns_Bass_club:
 		binclude "sound/instr/fm/bass_club.gsx",$2478,$20
 FmIns_Bass_donna:
-		binclude "sound/instr/fm/bass_donna.gsx",$2478,$20
+		binclude "sound/instr/fm/bass_feellove.gsx",$2478,$20
 FmIns_Bass_groove:
 		binclude "sound/instr/fm/bass_groove.gsx",$2478,$20
 FmIns_Bass_groove_2:
@@ -156,7 +156,7 @@ FmIns_Brass_Eur:
 FmIns_Brass_Puy:
 		binclude "sound/instr/fm/brass_puy.gsx",$2478,$20
 FmIns_Flaute_cave:
-		binclude "sound/instr/fm/flaute_cave.gsx",$2478,$20
+		binclude "sound/instr/fm/flaute_sea.gsx",$2478,$20
 FmIns_Banjo_puy:
 		binclude "sound/instr/fm/banjo_puy.gsx",$2478,$20
 ; FmIns_Violin_gem:
@@ -165,6 +165,6 @@ FmIns_Banjo_puy:
 FmIns_PSynth_plus:
 		binclude "sound/instr/fm/psynth_plus.gsx",$2478,$20
 FmIns_Ding_1:
-		binclude "sound/instr/fm/ding_1.gsx",$2478,$20
+		binclude "sound/instr/fm/ding_gem.gsx",$2478,$20
 FmIns_Trombone_gem:
 		binclude "sound/instr/fm/trombone_gem.gsx",$2478,$20

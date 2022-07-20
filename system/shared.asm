@@ -20,19 +20,21 @@ MAX_SUPERSPR	equ 32		; Number of Super Sprites
 		struct 0
 mdl_data	ds.l 1		; Model data pointer, if zero: no model
 mdl_option	ds.l 1		; Model options: pixelvalue add
-mdl_x_pos	ds.l 1		; X position $000000.00
-mdl_y_pos	ds.l 1		; Y position $000000.00
-mdl_z_pos	ds.l 1		; Z position $000000.00
-mdl_x_rot	ds.l 1		; X rotation $000000.00
-mdl_y_rot	ds.l 1		; Y rotation $000000.00
-mdl_z_rot	ds.l 1		; Z rotation $000000.00
+mdl_x_pos	ds.w 1		; X position $0800
+mdl_y_pos	ds.w 1		; Y position $0800
+mdl_z_pos	ds.w 1		; Z position $0800
+mdl_x_rot	ds.w 1		; X rotation $0800
+mdl_y_rot	ds.w 1		; Y rotation $0800
+mdl_z_rot	ds.w 1		; Z rotation $0800
+mdl_frame	ds.w 1
+mdl_flags	ds.w 1
 sizeof_mdlobj	ds.l 0
 		finish
 
 ; "Super" sprite
 ; RAM_MdDreq+Dreq_SuperSpr
 		struct 0
-marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (MANUALLY ADD |TH IF NEEDED), 0 == end-of-spritelist
+marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (0 == end-of-spritelist)
 marsspr_dwidth	ds.w 1		; Spritesheet WIDTH
 marsspr_indx	ds.w 1		; Palette index base
 marsspr_flags	ds.w 1		; Sprite flags: %VH

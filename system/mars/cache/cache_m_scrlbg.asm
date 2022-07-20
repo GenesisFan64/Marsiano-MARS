@@ -14,38 +14,10 @@ CACHE_MSTR_SCRL:
 ; Watchdog interrupt
 ; --------------------------------------------------------
 
-; TODO: mover el MarsVideo_SprBlkRefill aqui y
-; que avance por piezas
-
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-; 		mov	#Cach_SprBkup_S,r0
-; 		mov	r2,@-r0
-; 		mov	r3,@-r0
-; 		mov	r4,@-r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		sts	macl,@-r0
-; 		sts	mach,@-r0
-
-; 		mov	#Cach_SprBkup_LB,r0
-; 		lds	@r0+,mach
-; 		lds	@r0+,macl
-; 		mov	@r0+,r10
-; 		mov	@r0+,r9
-; 		mov	@r0+,r8
-; 		mov	@r0+,r7
-; 		mov	@r0+,r6
-; 		mov	@r0+,r5
-; 		mov	@r0+,r4
-; 		mov	@r0+,r3
-; 		mov	@r0+,r2
 		mov	#$FFFFFE80,r1			; Stop watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
@@ -618,6 +590,8 @@ MarsVideo_DrwSprBlk:
 
 		mov	#_framebuffer,r12
 		mov	@(mbg_fbdata,r14),r0
+		tst	r0,r0
+		bt	.end
 		add	r0,r12
 		mov	@(mbg_data,r14),r0
 		lds	r0,mach

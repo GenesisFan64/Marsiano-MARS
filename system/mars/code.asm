@@ -1547,8 +1547,8 @@ mstr_gfx1_loop:
 ;
 ; 256-color scrolling image
 ;
-; *** WAIT 2 FRAMES TO PROPERLY
-; START THIS MODE ***
+; *** DO NOT USE THIS MODE WITHOUT
+; SETTING THE BACKGROUND POINTER ***
 ; ---------------------------------------
 
 ; -------------------------------

@@ -12,9 +12,9 @@
 TESTMARS_BG:
 		binclude "data/mars/tests/test_art.bin"
 		align 4
-TESTMARS_BG2:
-		binclude "data/mars/tests/test2_art.bin"
-		align 4
+; TESTMARS_BG2:
+; 		binclude "data/mars/tests/test2_art.bin"
+; 		align 4
 TestMars_Yui:
 		binclude "data/mars/tests/yui_mars_art.bin"
 		align 4

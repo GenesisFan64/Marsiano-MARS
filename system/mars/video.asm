@@ -11,11 +11,11 @@
 ; --------------------------------------------------------
 
 MAX_SCRNBUFF	equ $20000	; MAX SDRAM for each fake-screen mode
-FBVRAM_LAST	equ $1FD80	; BLANK line (the very last one usable)
-FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines (Screen mode 2)
-MAX_FACES	equ 640		; Max polygon faces (Screen mode 4)
-MAX_SVDP_PZ	equ 640+32	; Max polygon pieces to draw (Screen mode 4)
-MAX_ZDIST	equ -$C00	; Max 3D drawing distance (-Z) (Screen mode 4)
+FBVRAM_LAST	equ $1F800	; BLANK line (the very last one)
+FBVRAM_PATCH	equ $1E000	; Framebuffer location for the affected XShift lines
+MAX_FACES	equ 640		; MAX polygon faces for models
+MAX_SVDP_PZ	equ 640+32	; MAX polygon pieces to draw (MAX_FACES+few_pieces)
+MAX_ZDIST	equ -$1000	; Maximum 3D field distance (-Z)
 
 ; --------------------------------------------------------
 ; Variables
@@ -315,13 +315,13 @@ MarsVideo_FixTblShift:
 		and	#1,r0
 		tst	r0,r0
 		bt	.ptchset
-
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
 		mov	r14,r13				; r13 - Framebuffer lines to check
 		mov	#_framebuffer+FBVRAM_PATCH,r12	; r12 - Framebuffer output for the patched pixel lines
 		mov	#240,r11			; r11 - Lines to check
-		mov	#$FF,r10			; r10 - AND byte to check ($FF)
-		mov	#$FFFF,r9			;  r9 - AND word limit
+		mov	#-1,r0
+		extu.b	r0,r10				; r10 - AND byte to check ($FF)
+		extu.w	r0,r9				;  r9 - AND word limit ($FFFF)
 .loop:
 		mov.w	@r13,r0
 		and	r9,r0
@@ -620,7 +620,6 @@ MarsVideo_MoveBg:
 		mov.w	r0,@(mbg_ypos_old,r14)
 		exts.w	r1,r1
 		exts.w	r2,r2
-
 ; 		cmp/pz	r1
 ; 		bt	.x_stend
 ; 		exts	r1,r1
@@ -693,6 +692,7 @@ MarsVideo_MoveBg:
 		mov	r0,r7
 		mov.w	@(mbg_yinc_d,r14),r0
 		mov	r0,r8
+
 		add	r1,r5
 		cmp/pl	r1
 		bf	.xnegtv
@@ -865,12 +865,12 @@ MarsVideo_SetSprFill:
 		mov	#$80000000,r11
 		mov	#$7FFFFFFF,r10
 		mov	#MAX_SUPERSPR,r9
-.next_one:
-		cmp/pl	r9
-		bf	.exit
 		mov	@(marsspr_data,r13),r0
 		tst	r0,r0
 		bt	.exit
+.next_one:
+		cmp/pl	r9
+		bf	.exit
 		mov.w	@(marsspr_x,r13),r0		; r1 - X pos (left)
 		mov	r0,r1
 		mov.w	@(marsspr_y,r13),r0		; r2 - Y pos (top)

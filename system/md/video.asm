@@ -74,6 +74,10 @@ md_bg_wf	ds.w 1		; FULL Width in pixels
 md_bg_hf	ds.w 1		; FULL Height in pixels
 md_bg_x_old	ds.w 1		; OLD X position
 md_bg_y_old	ds.w 1		; OLD Y position
+md_bg_xinc_l	ds.w 1		; Layout drawing-beams L/R/U/D
+md_bg_xinc_r	ds.w 1
+md_bg_yinc_u	ds.w 1
+md_bg_yinc_d	ds.w 1
 md_bg_bw	ds.b 1		; Block Width
 md_bg_bh	ds.b 1		; Block Height
 md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
@@ -1435,7 +1439,7 @@ Video_MarsPalFade:
 		or.w	d4,d6
 		lsr.w	#8,d1
 		lsr.w	#2,d1
-		and.w	#$8000,d7
+		and.w	#$8000,d7	; Keep priority bit
 		or.w	d7,d6
 		move.w	d6,(a5)+
 		adda	#2,a6
@@ -1545,6 +1549,8 @@ MdMap_Init:
 ; d1 | WORD - VRAM location for map data
 ; d2 | WORD - VRAM add + palette
 ; d3 | LONG - X size | Y size
+; d4 | Starting X position
+; d5 | Starting Y position
 ;
 ; a0 - Level header:
 ; 	dc.w width,height,blkwidth,blkheight,lslwidth
@@ -1552,6 +1558,9 @@ MdMap_Init:
 ; a1 - Block data
 ; a2 - LOW Priority layout data
 ; a3 - HI Priority layout data
+;
+; Uses:
+; d0
 ; --------------------------------------------------------
 
 MdMap_Set:
@@ -1561,6 +1570,17 @@ MdMap_Set:
 		move.w	d1,md_bg_vpos(a6)
 		move.w	d2,md_bg_vram(a6)
 		move.l	d3,md_bg_size(a6)
+		moveq	#0,d0
+		move.w	d4,d0
+		swap	d0
+		move.w	d0,md_bg_x(a6)
+		move.w	d4,md_bg_x_old(a6)
+		move.w	d5,d0
+		swap	d0
+		move.w	d0,md_bg_y(a6)
+		move.w	d4,md_bg_y_old(a6)
+		swap	d4
+		swap	d5
 		move.l	a1,md_bg_blk(a6)
 		move.l	a2,md_bg_low(a6)
 		move.l	a3,md_bg_hi(a6)
@@ -1580,6 +1600,40 @@ MdMap_Set:
 		mulu.w	d4,d6
 		move.w	d7,md_bg_wf(a6)
 		move.w	d6,md_bg_hf(a6)
+		swap	d4
+		swap	d5
+		and.w	#-$10,d4
+		and.w	#-$10,d5
+	; X beams
+.xl_l:		cmp.w	d7,d4
+		blt.s	.xl_g
+		sub.w	d7,d4
+		bra.s	.xl_l
+.xl_g:
+		move.w	d4,md_bg_xinc_l(a6)
+		add.w	#320,d4			; <-- X resolution R
+.xr_l:		cmp.w	d7,d4
+		blt.s	.xr_g
+		sub.w	d7,d4
+		bra.s	.xr_l
+.xr_g:
+		move.w	d4,md_bg_xinc_r(a6)
+
+	; Y beams
+.yt_l:		cmp.w	d6,d5
+		blt.s	.yt_g
+		sub.w	d6,d5
+		bra.s	.yt_l
+.yt_g:
+		move.w	d5,md_bg_yinc_u(a6)
+		add.w	#224,d5			; <-- Y resolution B
+.yb_l:		cmp.w	d6,d5
+		blt.s	.yb_g
+		sub.w	d6,d5
+		bra.s	.yb_l
+.yb_g:
+		move.w	d5,md_bg_yinc_d(a6)
+
 		bset	#bitBgOn,md_bg_flags(a6)	; Enable this BG
 		rts
 
@@ -1616,7 +1670,22 @@ MdMap_Update:
 		move.w	d3,md_bg_y_old(a6)
 .yequ:
 	; Increment draw beams
-	; ...
+		move.w	d1,d0
+		move.w	md_bg_wf(a6),d5
+		move.w	md_bg_xinc_l(a6),d4
+		bsr.s	.beam_incr
+		move.w	d4,md_bg_xinc_l(a6)
+		move.w	md_bg_xinc_r(a6),d4
+		bsr.s	.beam_incr
+		move.w	d4,md_bg_xinc_r(a6)
+		move.w	d2,d0
+		move.w	md_bg_hf(a6),d5
+		move.w	md_bg_yinc_u(a6),d4
+		bsr.s	.beam_incr
+		move.w	d4,md_bg_yinc_u(a6)
+		move.w	md_bg_yinc_d(a6),d4
+		bsr.s	.beam_incr
+		move.w	d4,md_bg_yinc_d(a6)
 
 	; Update internal counters
 		moveq	#0,d3
@@ -1653,6 +1722,22 @@ MdMap_Update:
 		and.b	d3,d0
 		move.b	d0,md_bg_yset(a6)
 .no_bg:
+		rts
+
+; d0 - Increment by
+; d4 - X/Y beam
+; d5 - Max Width/Height
+.beam_incr:
+		add.w	d0,d4
+.xd_l:		tst.w	d4
+		bpl.s	.xd_g
+		add.w	d5,d4
+		bra.s	.xd_l
+.xd_g:		cmp.w	d5,d4
+		blt.s	.val_h
+		sub.w	d5,d4
+		bra.s	.xd_g
+.val_h:
 		rts
 
 ; --------------------------------------------------------
@@ -1868,23 +1953,29 @@ MdMap_DrawScrl:
 		beq	.no_bg
 		move.w	md_bg_x(a6),d0		; X start
 		move.w	md_bg_y(a6),d1		; Y start
+		move.w	md_bg_xinc_l(a6),d2
+		move.w	md_bg_yinc_u(a6),d3
 		bclr	#bitDrwL,d7
 		beq.s	.no_l
 		bsr.s	.mk_clmn
 .no_l:
 		bclr	#bitDrwR,d7
 		beq.s	.no_r
+		move.w	md_bg_xinc_r(a6),d2
 		add.w	#320,d0			; X add
 		bsr.s	.mk_clmn
 .no_r:
 		move.w	md_bg_x(a6),d0		; X start
 		move.w	md_bg_y(a6),d1		; Y start
+		move.w	md_bg_xinc_l(a6),d2
+		move.w	md_bg_yinc_u(a6),d3
 		bclr	#bitDrwU,d7
 		beq.s	.no_u
 		bsr	.mk_row
 .no_u:
 		bclr	#bitDrwD,d7
 		beq.s	.no_d
+		move.w	md_bg_yinc_d(a6),d3
 		add.w	#224,d1			; X add
 		bsr	.mk_row
 .no_d:
@@ -1892,30 +1983,23 @@ MdMap_DrawScrl:
 .no_bg:
 		rts
 
-
 ; ------------------------------------------------
 ; Make column
 ; d0 - X
 ; d1 - Y
+; d2 - X increment
+; d3 - Y increment
 ; ------------------------------------------------
 
 .mk_clmn:
 		swap	d7
 		bsr	.get_coords
+		swap	d0
+		move.w	d4,d0
+		swap	d0
 		move.w	#$FFF,d3
 		swap	d3
 		move.w	#$100,d3
-		move.w	md_bg_wf(a6),d4		; Set X minus flag
-		moveq	#1,d6
-		move.l	d0,d5
-		swap	d5
-		cmp.w	d4,d5
-		bge.s	.x_plus
-		tst.w	d5
-		bmi.s	.x_plus
-		moveq	#0,d6
-.x_plus:
-		swap	d6
 
 	; d0 -    X curr | Current cell X/Y (1st)
 	; d1 -    Y curr | VDP 1st write
@@ -1923,25 +2007,13 @@ MdMap_DrawScrl:
 	; d3 -    Y wrap | Y add
 	; d4 -         *****
 	; d5 -         *****
-	; d6 - loopflags | *****
+	; d6 -         *****
 	; d7 - lastflags | loop blocks
 
 		move.w	#(256/16)-1,d7
 .y_blk:
-		move.l	d1,d4
-		move.w	md_bg_hf(a6),d5
-		swap	d4
-		tst.w	d4
-		bmi.s	.blnk
-		cmp.w	d5,d4
-		bge.s	.blnk
-		move.l	d6,d4
-		swap	d4
-		tst.w	d4
-		bne.s	.blnk
 		moveq	#0,d4
 		moveq	#0,d5
-
 		move.b	(a3),d6
 		bne.s	.vld
 		move.b	(a2),d6
@@ -1971,9 +2043,6 @@ MdMap_DrawScrl:
 		add.w	d2,d5
 		swap	d2
 .frce:
-		swap	d1
-		add.w	#$10,d1
-		swap	d1
 		move.w	d0,d6
 		add.w	d1,d6
 		or.w	#$4000,d6
@@ -1991,6 +2060,20 @@ MdMap_DrawScrl:
 		move.w	md_bg_w(a6),d6
 		adda	d6,a3
 		adda	d6,a2
+		swap	d1		; <-- TODO: improve this later.
+		add.w	#$10,d1
+		cmp.w	md_bg_hf(a6),d1
+		blt.s	.y_low
+		swap	d0
+		clr.w	d1
+		move.l	md_bg_low(a6),a3
+		move.l	md_bg_hi(a6),a2
+		adda	d0,a2
+		adda	d0,a3
+		swap	d0
+.y_low:
+		swap	d1
+
 		dbf	d7,.y_blk
 		swap	d7
 		rts
@@ -1999,25 +2082,19 @@ MdMap_DrawScrl:
 ; Make row
 ; d0 - X
 ; d1 - Y
+; d2 - X increment
+; d3 - Y increment
 ; ------------------------------------------------
 
 .mk_row:
 		swap	d7
 		bsr	.get_coords
+		swap	d1
+		move.w	d5,d1
+		swap	d1
 		move.w	#$7F,d3
 		swap	d3
 		move.w	#4,d3
-		move.w	md_bg_hf(a6),d4		; Set X minus flag
-		moveq	#1,d6
-		move.l	d1,d5
-		swap	d5
-		cmp.w	d4,d5
-		bge.s	.y_plus
-		tst.w	d5
-		bmi.s	.y_plus
-		moveq	#0,d6
-.y_plus:
-		swap	d6
 
 	; d0 -    X curr | Current cell X/Y (1st)
 	; d1 -    Y curr | VDP 1st write
@@ -2036,20 +2113,8 @@ MdMap_DrawScrl:
 		and.w	d5,d0
 		move.w	#((320+16)/16)-1,d7
 .x_blk:
-		move.l	d0,d4
-		move.w	md_bg_wf(a6),d5
-		swap	d4
-		tst.w	d4
-		bmi.s	.xblnk
-		cmp.w	d5,d4
-		bge.s	.xblnk
-		move.l	d6,d4
-		swap	d4
-		tst.w	d4
-		bne	.xblnk
 		moveq	#0,d4
 		moveq	#0,d5
-
 		move.b	(a3),d6
 		bne.s	.xvld
 		move.b	(a2),d6
@@ -2079,10 +2144,6 @@ MdMap_DrawScrl:
 		add.w	d2,d5
 		swap	d2
 .xfrce:
-		swap	d0
-		add.w	#$10,d0
-		swap	d0
-
 		move.w	d0,d6
 		add.w	d1,d6
 		or.w	#$4000,d6
@@ -2098,30 +2159,36 @@ MdMap_DrawScrl:
 		and.w	d3,d0
 		swap	d3
 
-; 		move.w	d0,d6
-; 		add.w	d1,d6
-; 		or.w	#$4000,d6
-; 		move.w	d6,4(a5)
-; 		move.w	d2,4(a5)
-; 		move.l	d4,(a5)
-; 		add.w	#$80,d6
-; 		move.w	d6,4(a5)
-; 		move.w	d2,4(a5)
-; 		move.l	d5,(a5)
-;
-; ; 		move.l	d3,d4		; Next Y block
-; ; 		swap	d4
-; ; 		add.w	d3,d0
-; ; 		and.w	d4,d0
-
+	; X wrap
+		swap	d0
+		add.w	#$10,d0
+		cmp.w	md_bg_wf(a6),d0
+		blt.s	.x_low
+		sub.w	md_bg_wf(a6),d0
+		moveq	#0,d4
+		move.w	md_bg_w(a6),d4
+		sub.l	d4,a2
+		sub.l	d4,a3
+.x_low:
 		adda	#1,a3
 		adda	#1,a2
+.x_new:
+		swap	d0
 
 		dbf	d7,.x_blk
 		swap	d7
 		rts
 
 ; ------------------------------------------------
+; Input
+; d0 - X position
+; d1 - Y position
+; d2 - X increment beam
+; d3 - Y increment beam
+;
+; Out:
+; d4 - X LEFT increment
+; d5 - Y TOP increment
 
 .get_coords:
 		move.l	md_bg_blk(a6),a4
@@ -2129,31 +2196,37 @@ MdMap_DrawScrl:
 		move.l	md_bg_hi(a6),a2
 		and.w	#-$10,d0		; block X/Y limit
 		and.w	#-$10,d1
-		move.w	d0,d7
+		and.w	#-$10,d2
+		and.w	#-$10,d3
 		swap	d0
-		move.w	d7,d0
-		move.w	d1,d7
 		swap	d1
-		move.w	d7,d1
+		move.w	d2,d0
+		move.w	d3,d1
+		swap	d0
+		swap	d1
+
+		moveq	#0,d4
+		moveq	#0,d5
+		move.b	md_bg_bw(a6),d6
+		move.b	md_bg_bh(a6),d7
+		and.w	#$FF,d6
+		and.w	#$FF,d7
+
+		move.w	d2,d4
+		muls.w	d6,d4
+		asr.w	#8,d4
+		move.w	d3,d5
+		muls.w	d7,d5
+		asr.w	#8,d5
+		muls.w	md_bg_w(a6),d5
+		moveq	#0,d3
+		move.l	d4,d3
+		add.l	d5,d3
+		add.l	d3,a3
+		add.l	d3,a2
+
 		move.w	md_bg_vram(a6),d2
 		swap	d2
-		move.b	md_bg_bh(a6),d3
-		move.b	md_bg_bw(a6),d2
-		move.w	md_bg_w(a6),d4
-		moveq	#0,d5
-		moveq	#0,d6
-		move.w	d0,d5
-		move.w	d1,d6
-		and.w	#$FF,d2
-		muls.w	d2,d5
-		asr.w	#8,d5
-		and.w	#$FF,d3
-		muls.w	d3,d6
-		asr.w	#8,d6
-		muls.w	d4,d6
-		add.l	d6,d5
-		add.l	d5,a3
-		add.l	d5,a2
 		lsr.w	#2,d1			; Y >> 2
 		lsl.w	#6,d1			; Y * $40
 		lsr.w	#2,d0			; X >> 2

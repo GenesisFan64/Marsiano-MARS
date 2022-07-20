@@ -21,6 +21,7 @@ sizeof_mdsnd	ds.l 0
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
+; 		align $80
 Sound_Init:
 		move.w	#$0100,(z80_bus).l		; Request Z80 stop
 		move.b	#1,(z80_reset).l		; Z80 reset

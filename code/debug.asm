@@ -3,8 +3,8 @@
 ; Default gamemode
 ; ----------------------------------------------------------------
 
-TEST_SPEED	equ	$04<<16
-TEST_SPRSPD	equ	$04
+TEST_SPEED	equ	$02<<16
+TEST_SPRSPD	equ	$02
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -185,11 +185,11 @@ MD_DebugMenu:
 		move.b	#0,(RAM_VdpRegs+$C).l
 		bsr	Video_Update
 
-		lea	(PalData_Mars_Test2),a0
-		moveq	#0,d0
-		move.w	#256,d1
-		moveq	#0,d2
-		bsr	Video_FadePal_Mars
+; 		lea	(PalData_Mars_Test2),a0
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		moveq	#0,d2
+; 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.fade_in
@@ -358,8 +358,8 @@ MD_DebugMenu:
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 		move.l	#TESTMARS_BG,scrlbg_Data(a0)
-		move.l	#320,scrlbg_W(a0)
-		move.l	#448,scrlbg_H(a0)
+		move.l	#512,scrlbg_W(a0)
+		move.l	#256,scrlbg_H(a0)
 		move.l	#$00000000,scrlbg_X(a0)
 		move.l	#$00000000,scrlbg_Y(a0)
 		bsr	System_MarsUpdate
@@ -374,8 +374,8 @@ MD_DebugMenu:
 ; 		moveq	#0,d0
 ; 		move.w	#$20,d1
 ; 		bsr	Video_FadePal
-		clr.w	(RAM_MdMarsPalFd).w
-		clr.w	(RAM_MdDreq+Dreq_Palette).w
+; 		clr.w	(RAM_MdMarsPalFd).w
+; 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.this_bg
 		bsr	.fade_in
 .page3:
@@ -457,8 +457,8 @@ MD_DebugMenu:
 
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		move.l	#MarsObj_test|TH,mdl_data(a0)
-		move.l	#-$400,mdl_z_pos(a0)
-; 		move.l	#$4000,mdl_y_pos(a0)
+		move.w	#-$400,mdl_z_pos(a0)
+; 		move.w	#$4000,mdl_y_pos(a0)
 		lea	str_Page4(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
@@ -478,18 +478,18 @@ MD_DebugMenu:
 		move.l	#locate(0,2,4),d0
 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
-		add.l	#$2000,mdl_x_rot(a0)
-; 		add.l	#$2000,mdl_y_rot(a0)
-; 		add.l	#$2000,mdl_z_rot(a0)
+		add.w	#8*2,mdl_x_rot(a0)
+; 		add.w	#8*2,mdl_y_rot(a0)
+; 		add.w	#8*5,mdl_z_rot(a0)
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.z_up
-		sub.l	#$10,mdl_z_pos(a0)
+		sub.w	#$10,mdl_z_pos(a0)
 .z_up:
 		btst	#bitJoyDown,d7
 		beq.s	.z_dw
-		add.l	#$10,mdl_z_pos(a0)
+		add.w	#$10,mdl_z_pos(a0)
 .z_dw:
 
 		move.w	(Controller_1+on_press),d7
@@ -1362,7 +1362,7 @@ str_Cursor:	dc.b " ",$A
 		dc.b " ",0
 		align 2
 str_Title:
-		dc.b "Project MARSIANO test menu",$A
+		dc.b "Project MARSIANO tester",$A
 		dc.b $A
 		dc.b "  Screen 00 BLANK",$A
 		dc.b "  Screen 01 256-SuperSprites w/scale",$A
@@ -1520,13 +1520,13 @@ str_Stats:
 ; ; 		dc.l RAM_MdDreq+Dreq_Objects+mdl_z_pos
 ; 		align 2
 
-PAL_TESTBOARD:
-		binclude "data/md/bg/bg_pal.bin"
-		binclude "data/md/bg/fg_pal.bin"
-		align 2
-PAL_BG:
-		binclude "data/md/bg/bg_pal.bin"
-		align 2
+; PAL_TESTBOARD:
+; 		binclude "data/md/bg/bg_pal.bin"
+; 		binclude "data/md/bg/fg_pal.bin"
+; 		align 2
+; PAL_BG:
+; 		binclude "data/md/bg/bg_pal.bin"
+; 		align 2
 
 ; Map_Nicole:
 ; 		include "data/md/sprites/emi_map.asm"
