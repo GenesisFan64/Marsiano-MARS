@@ -753,7 +753,7 @@ MarsVideo_DrwSprBlk:
 		add	r0,r4
 		add	r3,r4
 		mov	@r4,r0
-; 		or	r4,r0		; TEST DOTS
+		or	r4,r0		; TEST DOTS
 		mov	r5,r4
 		add	r12,r4
 		mov	r0,@r4

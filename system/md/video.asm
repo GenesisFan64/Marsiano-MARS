@@ -49,6 +49,7 @@ bitDrwL		equ 1
 bitDrwD		equ 2
 bitDrwU		equ 3
 bitBgOn		equ 7
+bitMarsBg	equ 6
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -60,12 +61,10 @@ bitBgOn		equ 7
 md_bg_low	ds.l 1		; MAIN layout data
 md_bg_hi	ds.l 1		; HI layout data
 md_bg_blk	ds.l 1		; Block data
-md_bg_col	ds.l 1		; Collision data
+md_bg_col	ds.l 1		; Collision data (if needed)
 md_bg_size	ds.l 1		; Scroll size(s) for this layer X|Y
 md_bg_x		ds.l 1		; X pos 0000.0000
 md_bg_y		ds.l 1		; Y pos 0000.0000
-md_bg_vbl_vlr	ds.w 1		; VRAM precalc'd location for L/R drawing
-md_bg_vbl_vud	ds.w 1		; VRAM precalc'd location for U/D drawing
 md_bg_vpos	ds.w 1		; VRAM output for map
 md_bg_vram	ds.w 1		; VRAM start for cells
 md_bg_w		ds.w 1		; Width in blocks
@@ -74,7 +73,7 @@ md_bg_wf	ds.w 1		; FULL Width in pixels
 md_bg_hf	ds.w 1		; FULL Height in pixels
 md_bg_x_old	ds.w 1		; OLD X position
 md_bg_y_old	ds.w 1		; OLD Y position
-md_bg_xinc_l	ds.w 1		; Layout drawing-beams L/R/U/D
+md_bg_xinc_l	ds.w 1		; Layout draw-beams L/R/U/D
 md_bg_xinc_r	ds.w 1
 md_bg_yinc_u	ds.w 1
 md_bg_yinc_d	ds.w 1
@@ -1948,23 +1947,13 @@ MdMap_DrawScrl:
 		bsr.s	.this_bg
 		adda	#sizeof_mdbg,a6
 .this_bg:
+
 		move.b	md_bg_flags(a6),d7
 		btst	#bitBgOn,d7
 		beq	.no_bg
-		move.w	md_bg_x(a6),d0		; X start
-		move.w	md_bg_y(a6),d1		; Y start
-		move.w	md_bg_xinc_l(a6),d2
-		move.w	md_bg_yinc_u(a6),d3
-		bclr	#bitDrwL,d7
-		beq.s	.no_l
-		bsr.s	.mk_clmn
-.no_l:
-		bclr	#bitDrwR,d7
-		beq.s	.no_r
-		move.w	md_bg_xinc_r(a6),d2
-		add.w	#320,d0			; X add
-		bsr.s	.mk_clmn
-.no_r:
+		btst	#bitMarsBg,d7
+		bne.s	.no_bg
+
 		move.w	md_bg_x(a6),d0		; X start
 		move.w	md_bg_y(a6),d1		; Y start
 		move.w	md_bg_xinc_l(a6),d2
@@ -1979,6 +1968,21 @@ MdMap_DrawScrl:
 		add.w	#224,d1			; X add
 		bsr	.mk_row
 .no_d:
+		move.w	md_bg_x(a6),d0		; X start
+		move.w	md_bg_y(a6),d1		; Y start
+		move.w	md_bg_xinc_l(a6),d2
+		move.w	md_bg_yinc_u(a6),d3
+		bclr	#bitDrwL,d7
+		beq.s	.no_l
+		bsr.s	.mk_clmn
+.no_l:
+		bclr	#bitDrwR,d7
+		beq.s	.no_r
+		move.w	md_bg_xinc_r(a6),d2
+		add.w	#320,d0			; X add
+		bsr.s	.mk_clmn
+.no_r:
+
 		move.b	d7,md_bg_flags(a6)
 .no_bg:
 		rts

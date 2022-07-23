@@ -1581,7 +1581,7 @@ mstr_gfx2_init_1:
 		nop
 		mov	#RAM_Mars_BgBuffScrl,r1		; Make a scrolling layer
 		mov	#$200,r2
-		mov	#8,r3
+		mov	#16,r3				; <-- block size
 		mov	#320,r4
 		mov	#224,r5
 		bsr	MarsVideo_MkScrlField
@@ -1624,10 +1624,10 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
 		jsr	@r0				; BEFORE Updating X/Y scroll position
 		nop
-		mov	#_vdpreg,r1			; In case we are still on VBlank...
--		mov.b	@(vdpsts,r1),r0
-		tst	#VBLK,r0
-		bf	-
+; 		mov	#_vdpreg,r1			; In case we are still on VBlank...
+; -		mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	-
 		mov	#RAM_Mars_BgBuffScrl,r14	; r14 - Background to read
 		mov	@(mbg_xpos,r14),r1
 		mov	@(mbg_ypos,r14),r2
@@ -1635,7 +1635,7 @@ mstr_gfx2_loop:
 		shlr16	r0
 		bsr	MarsVideo_MoveBg
 		mov.w	r0,@(marsGbl_XShift,gbr)	; Update X/Y, including XShift bit
-; 	testme 2
+
 		mov	#RAM_Mars_BgBuffScrl,r14	; Set SuperSprite settings for this screen
 		mov	@(mbg_fbdata,r14),r1
 		mov	@(mbg_fbpos,r14),r2
@@ -1649,6 +1649,13 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_SetSuperSpr,r0
 		jsr	@r0
 		nop
+		mov	#RAM_Mars_BgBuffScrl,r14
+		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
+		mov	#RAM_Mars_RdrwBlocks,r12
+		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
+		jsr	@r0
+		nop
+
 		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data we just recieved
 		jsr	@r0				; this also decrements timers.
 		nop
@@ -1658,6 +1665,8 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
 		jsr	@r0
 		nop
+
+
 		mov	#RAM_Mars_BgBuffScrl,r1		; Make a visible background section
 		mov	#0,r2				; on screen from lines 0 to 240
 		mov	#240,r3
@@ -1667,13 +1676,7 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
-		mov	#RAM_Mars_RdrwBlocks,r12
-		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
-		jsr	@r0
-		nop
-; 	testme 1
+
 		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
@@ -2396,7 +2399,8 @@ sizeof_marsvid		ds.l 0
 ; --------------------------------------------------------
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
-RAM_Mars_PixelData	ds.b (320+32)*(240+32)
+RAM_Mars_PixlScroll	ds.b (320+16)*(240+16)
+RAM_Mars_HudDisplay	ds.b 320*32
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

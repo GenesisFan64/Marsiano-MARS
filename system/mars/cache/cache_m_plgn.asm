@@ -21,7 +21,7 @@ CACHE_MSTR_PLGN:
 		mov.w	@(marsGbl_WdgHold,gbr),r0
 		cmp/eq	#1,r0
 		bt	.exit
-		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($08)?
+		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($07)?
 		cmp/eq	#7,r0
 		bf	maindrw_tasks
 
@@ -85,8 +85,7 @@ maindrw_tasks:
 ; Task $02
 ; --------------------------------
 
-; TODO: currently it only resumes
-; from solid_color
+; NOTE: It only resumes from solid_color
 
 slvplgn_02:
 		mov	r2,@-r15

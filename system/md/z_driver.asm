@@ -22,7 +22,7 @@ Z80_TOP:
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
 ZSET_WTUNE	equ -24		; Manual frequency adjustment for DAC WAVE playback
 ZSET_TESTME	equ 0		; Set to 1 to "hear" test the DAC playback
-MAX_INS		equ 16
+MAX_INS		equ 19
 
 ; --------------------------------------------------------
 ; Structs
@@ -38,12 +38,10 @@ trk_romIns	equ 06h	; 24-bit ROM instrument pointers
 trk_romPattRd	equ 09h	; same but for reading
 trk_Read	equ 0Ch	; Current track position (in our storage)
 trk_Rows	equ 0Eh	; Current track length
-
 trk_Halfway	equ 10h	; Only 00h or 80h
 trk_currBlk	equ 11h	; Current block
 trk_setBlk	equ 12h	; Start on this block
 trk_status	equ 13h	; %ERPB Sxxx | E-enabled / R-Init|Restart track / P-refill-on-playback / B-use global beats / S-silence
-
 trk_tickTmr	equ 14h	; Ticks timer
 trk_tickSet	equ 15h	; Ticks set for this track
 trk_sizeIns	equ 16h	; Max instrument storage

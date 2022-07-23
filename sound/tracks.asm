@@ -11,7 +11,7 @@
 ; Instrument macros
 ; do note that some 24-bit pointers add 90h to the MSB automaticly.
 ;
-; TODO: this might fail.
+; TODO: this might fail to work.
 gInsNull macro
 	dc.b  -1,$00,$00,$00
 	dc.b $00,$00,$00,$00
@@ -90,18 +90,88 @@ GemaSfxIns_Boom:
 	gInsPsgN 0,$00,$00,$00,$00,$02,%110
 	gInsFm 0,FmIns_Ding_toy
 
-; ; onett
+; ------------------------------------------------------------
+; BGM tracks
+; ------------------------------------------------------------
+
 GemaTrkData_Test:
 	dc.l GemaPat_Test
 	dc.l GemaBlk_Test
 	dc.l GemaIns_Test
 GemaBlk_Test:
-	binclude "sound/tracks/mecano_blk.bin"
+	binclude "sound/tracks/nadie_blk.bin"
 	align 2
 GemaPat_Test:
-	binclude "sound/tracks/mecano_patt.bin"
+	binclude "sound/tracks/nadie_patt.bin"
 	align 2
 GemaIns_Test:
+	gInsPwm 0,SmpIns_Nadie,%10
+	gInsFm -36,FmIns_Piano_Aqua
+	gInsFm +12,FmIns_PSynth_plus
+	gInsPwm -12,SmpIns_PKick,%00
+	gInsPsg 0,$10,$20,$08,$04,$06
+	gInsFm 0,FmIns_Trumpet_1
+	gInsPwm 0,SmpIns_Piano,%00
+	gInsPwm -12,SmpIns_PTom,%00
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+	gInsNull
+
+GemaTrkData_Mecano:
+	dc.l GemaPat_Mecano
+	dc.l GemaBlk_Mecano
+	dc.l GemaIns_Mecano
+GemaBlk_Mecano:
+	binclude "sound/tracks/mecano_blk.bin"
+	align 2
+GemaPat_Mecano:
+	binclude "sound/tracks/mecano_patt.bin"
+	align 2
+GemaIns_Mecano:
 	gInsNull
 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
 	gInsFm 0,FmIns_PianoM1
@@ -122,41 +192,6 @@ GemaIns_Test:
 	gInsNull
 	gInsNull
 	gInsNull
-
-; 	gInsPsgN 0,$00,$00,$00,$00,$08,%110
-; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%101
-; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
-
-; ; onett
-; GemaTrkData_Test:
-; 	dc.l GemaPat_Test
-; 	dc.l GemaBlk_Test
-; 	dc.l GemaIns_Test
-; GemaBlk_Test:
-; 	binclude "sound/tracks/onett_blk.bin"
-; GemaPat_Test:
-; 	binclude "sound/tracks/onett_patt.bin"
-; GemaIns_Test:
-; 	gInsFm 0,FmIns_Bass_calm
-; 	gInsFm 0,FmIns_Ding_Toy
-; 	gInsNull
-; 	gInsFm 0,FmIns_Marimba
-; 	gInsPsg 0,$20,$01,$10,$04,$04
-; 	gInsFm 0,FmIns_Trumpet_1
-; 	gInsFm 0,FmIns_Trombone_gem
-; 	gInsPsgN 0,$00,$00,$00,$00,$08,%110
-; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%101
-; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
-; 	gInsPsg 0,$10,$08,$00,$01,$06
-; 	gInsPsgN 0,$00,$00,$00,$00,$06,%101
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
 
 GemaTrkData_Test2:
 	dc.l GemaPat_Test2
@@ -207,69 +242,6 @@ GemaIns_Test3:
 	gInsFm -12,FmIns_Ding_toy
 	gInsNull
 
-
-; GemaTrkData_Test:
-; 	dc.l GemaPat_Test
-; 	dc.l GemaBlk_Test
-; 	dc.l GemaIns_Test
-; GemaBlk_Test:
-; 	binclude "sound/tracks/bonus_blk.bin"
-; GemaPat_Test:
-; 	binclude "sound/tracks/bonus_patt.bin"
-; GemaIns_Test:
-; 	gInsFm  -12,FmIns_Bass_Oil
-; 	gInsDac -24,DacIns_SaurKick,0
-; 	gInsPsgN 0,$00,$00,$00,$00,$18,%100
-; 	gInsPsgN 0,$00,$00,$00,$00,$18,%100
-; 	gInsPsgN 0,$00,$00,$00,$00,$10,%100
-; 	gInsDac -12,DacIns_Snare_Gem,0
-; 	gInsNull
-; 	gInsFm -12,FmIns_Organ_Ito
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsFm -12,FmIns_Ding_Baseball
-; 	gInsFm -12,FmIns_Brass_Eur
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-
-; 	gInsFm3 0,FmIns_Fm3_Explosion
-; 	gInsPsgN 0,$00,$00,$00,$00,$02,%110
-; 	gInsFm 0,FmIns_Ding_toy
-
-; GemaTrk_blk_Vectr:
-; 	binclude "sound/tracks/vectr_blk.bin"
-; GemaTrk_patt_Vectr:
-; 	binclude "sound/tracks/vectr_patt.bin"
-; GemaTrk_ins_Vectr:
-; 	gInsPwm -17,SmpIns_Vctr01,%001
-; 	gInsNull
-; 	gInsPwm -15,SmpIns_VctrCrash,0
-; 	gInsPwm -17,SmpIns_Vctr04,%001
-; 	gInsNull
-; 	gInsPwm -15,SmpIns_VctrTimpani,%001
-; 	gInsFm -22,FmIns_Bass_4
-; 	gInsPsg 0,$00,$00,$00,$00,$01
-; 	gInsPsg 0,$00,$00,$00,$00,$01
-; 	gInsPwm -17,SmpIns_VctrSnare,%000
-; 	gInsPwm -17,SmpIns_VctrKick,%000
-; 	gInsPsgN 0,$00,$00,$00,$00,$10,%100
-; 	gInsPsgN 0,$00,$00,$00,$00,$08,%100
-; 	gInsPwm -17,SmpIns_VctrBrass,%001
-;
-
 GemaTrkData_BeMine:
 	dc.l GemaPat_BeMine
 	dc.l GemaBlk_BeMine
@@ -304,22 +276,3 @@ GemaIns_BeMine:
 	gInsNull
 	gInsNull
 	gInsNull
-;
-; GemaTrk_blk_HILLS:
-; 	binclude "sound/tracks/hill_blk.bin"
-; GemaTrk_patt_HILLS:
-; 	binclude "sound/tracks/hill_patt.bin"
-; GemaTrk_ins_HILLS:
-; 	gInsPsg +2,$40,$02,$30,$10,$00
-; 	gInsFm -10,FmIns_Trumpet_1
-; 	gInsPsgN 0,$00,$00,$00,$00,$04,%110
-; 	gInsDac -3,DacIns_LowString,1;gInsPwm -8,DacIns_LowString,1
-; 	gInsFm -8-12,FmIns_Ding_Toy
-; 	gInsFm -25,FmIns_Bass_3
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull

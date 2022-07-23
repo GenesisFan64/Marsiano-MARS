@@ -34,6 +34,7 @@ RAM_EmiUpd	ds.w 1
 RAM_EmiTimer	ds.w 1
 RAM_Xtemp	ds.l 1
 RAM_Ytemp	ds.l 1
+RAM_ThisSpeed	ds.l 1
 		finish
 
 ; ====================================================================
@@ -50,6 +51,7 @@ MD_Mode0:
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 		clr.w	(RAM_PaletteFd).w
+		move.l	#$10000,(RAM_ThisSpeed).l
 
 	; Emily variables
 		move.w	#(320/2)+16,(RAM_EmiPosX).w
@@ -81,20 +83,22 @@ MD_Mode0:
 ; 		bsr	SuperSpr_Init
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TestMars_Yui,scrlbg_Data(a0)
+		move.l	#TESTMARS_BG,scrlbg_Data(a0)
 		move.l	#512,scrlbg_W(a0)
-		move.l	#200,scrlbg_H(a0)
+		move.l	#256,scrlbg_H(a0)
 		move.l	#$00000000,scrlbg_X(a0)
 		move.l	#$00000000,scrlbg_Y(a0)
 		bsr	System_MarsUpdate
-		lea	(TestMars_YuiP),a0
+		move.w	#2,d0
+		bsr	Video_Mars_GfxMode
+		lea	(PalData_Mars_Test),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
-		and.w	#$7FFF,(RAM_MdMarsPalFd).w
-		move.w	#0,d0
+		move.w	#2,d0
 		bsr	Video_Mars_GfxMode
+		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 	; ****
 
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -111,12 +115,16 @@ MD_Mode0:
 	; Prepare sound
 		moveq	#0,d0
 		bsr	Sound_TrkStop
-		lea	(GemaTrkData_Test2),a0
+		move.w	#200+32,d1
+		bsr	Sound_GlbBeats
+		lea	(GemaTrkData_Test),a0
 		moveq	#0,d0
-		move.w	#2,d1
+		move.w	#6,d1
 		moveq	#0,d2
-		move.w	#1,d3
+		move.w	#%01,d3
 		bsr	Sound_TrkPlay
+
+		bsr	SuperSpr_Init
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -137,19 +145,23 @@ MD_Mode0:
 		add.w	#8*2,mdl_y_rot(a0)
 		add.w	#8*5,mdl_z_rot(a0)
 
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyB,d7
-		beq.s	.z_up
-		sub.w	#8*3,mdl_z_pos(a0)
-.z_up:
+		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
-		beq.s	.z_dw
-		add.w	#8*3,mdl_z_pos(a0)
-.z_dw:
+		beq.s	.z_up
+		add.l	#$10000,(RAM_ThisSpeed).l
+		and.l	#$70000,(RAM_ThisSpeed).l
+		bne.s	.z_up
+		add.l	#$10000,(RAM_ThisSpeed).l
+; 		sub.w	#8*3,mdl_z_pos(a0)
+.z_up:
+; 		btst	#bitJoyC,d7
+; 		beq.s	.z_dw
+; ; 		add.w	#8*3,mdl_z_pos(a0)
+; .z_dw:
 
 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
-		move.l	#$20000,d0
-		move.l	#$20000,d1
+		move.l	(RAM_ThisSpeed),d0
+		move.l	(RAM_ThisSpeed),d1
 		move.w	(Controller_1+on_hold),d7
 		move.w	d7,d6
 		btst	#bitJoyDown,d7
@@ -190,6 +202,8 @@ MD_Mode0:
 		move.w	d0,scrlbg_X(a0)
 		move.w	d1,scrlbg_Y(a0)
 		lea	(RAM_BgBuffer),a0
+		asr.w	#1,d0
+		asr.w	#1,d1
 		move.w	d0,md_bg_x(a0)
 		move.w	d1,md_bg_y(a0)
 		move.w	d0,(RAM_HorScroll).w

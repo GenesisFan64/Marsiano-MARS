@@ -70,3 +70,28 @@ SmpIns_SSTR162A:
 .start:	binclude "sound/instr/smpl/SSTR162A.wav",$2C
 	align 4
 .end:
+
+SmpIns_Nadie:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/nadie_st.wav",$2C
+	align 4
+.end:
+
+SmpIns_PKick:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/wegot_kick.wav",$2C
+	align 4
+.end:
+
+SmpIns_PTom:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/sauron_tom.wav",$2C
+	align 4
+.end:
+
+SmpIns_Piano:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/piano_1.wav",$2C
+	align 4
+.end:
+

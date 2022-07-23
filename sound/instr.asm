@@ -2,18 +2,13 @@
 ; FM instrument patches
 ;
 ; This must be located at the 900000 area.
+;
+; And the 68K BANK set to 0 currently.
 ; ====================================================================
 
-; Sizes
-; Normal FM ins: $20
-; Special FM ins: $28
+; Savestate FM data at: $2478
 ;
-
-; --------------------------------------------------------
-; FM instruments/patches
-; --------------------------------------------------------
-
-; Sizes
+; Sizes:
 ; Normal FM ins: $20
 ; Special FM ins: $28
 
@@ -24,16 +19,10 @@ FmIns_Fm3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
 FmIns_Fm3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
+FmIns_Bass_Oil:	binclude "sound/instr/fm/bass_oil.gsx",$2478,$20
 
-; Bass
-FmIns_Bass_Oil:
-		binclude "sound/instr/fm/bass_oil.gsx",$2478,$20
-
-; Organ
 FmIns_Organ_Ito:
 		binclude "sound/instr/fm/organ_ito.gsx",$2478,$20
-
-; Bell-ish
 FmIns_Ding_Baseball:
 		binclude "sound/instr/fm/ding_baseball.gsx",$2478,$20
 
@@ -94,6 +83,9 @@ FmIns_Bass_groove_gem:
 		binclude "sound/instr/fm/bass_groove_gem.gsx",$2478,$20
 FmIns_Bass_italo:
 		binclude "sound/instr/fm/bass_italo.gsx",$2478,$20
+FmIns_Bass_duck:
+		binclude "sound/instr/fm/bass_duck.gsx",$2478,$20
+
 ; FmIns_Bass_kon:
 ; 		binclude "sound/instr/fm/bass_kon.gsx",$2478,$20
 

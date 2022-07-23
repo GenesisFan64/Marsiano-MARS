@@ -1209,7 +1209,7 @@ MasterTrkList:
 	dc.l GemaPat_BeMine,GemaBlk_BeMine,GemaIns_BeMine
 	dc.w $A,%000
 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
-	dc.w 4,%000
+	dc.w 6,%001
 	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
 	dc.w 2,%001
 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3

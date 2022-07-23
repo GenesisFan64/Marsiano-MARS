@@ -57,9 +57,9 @@ mbg_width	ds.w 1		; Source image's Width
 mbg_height	ds.w 1		; Source image's Height
 mbg_indxinc	ds.l 1		; Index increment (full 4 bytes)
 mbg_intrl_size	ds.l 1		;
-mbg_data	ds.l 1		; Bitmap data or tiles
-mbg_map		ds.l 1
-mbg_fbpos	ds.l 1		; Map's currrent TopLeft position
+mbg_data	ds.l 1		; Bitmap data or Tile data
+mbg_map		ds.l 1		; Map data
+mbg_fbpos	ds.l 1		; Field's currrent TopLeft position
 mbg_fbdata	ds.l 1		; Framebuffer location of the playfield
 mbg_xpos	ds.l 1		; 0000.0000
 mbg_ypos	ds.l 1		; 0000.0000
@@ -889,7 +889,7 @@ MarsVideo_SetSprFill:
 		add	r2,r4
 
 		mov	r5,r0		; Extra size add
-		shlr	r0		; <-- TODO: lower = faster
+		shar	r0		; <-- TODO: lower = faster
 		sub	r0,r2
 		add	r0,r4
 		sub	r0,r1

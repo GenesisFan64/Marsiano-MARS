@@ -34,17 +34,18 @@ sizeof_mdlobj	ds.l 0
 ; "Super" sprite
 ; RAM_MdDreq+Dreq_SuperSpr
 		struct 0
-marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (0 == end-of-spritelist)
+marsspr_xs	ds.b 1		; Sprite X size
+marsspr_ys	ds.b 1		; Sprite Y size
+marsspr_xfrm	ds.b 1		; Animation X frame pos
+marsspr_yfrm	ds.b 1		; Animation Y frame pos
 marsspr_dwidth	ds.w 1		; Spritesheet WIDTH
 marsspr_indx	ds.w 1		; Palette index base
 marsspr_flags	ds.w 1		; Sprite flags: %VH
 marsspr_x	ds.w 1		; Screen X position
 marsspr_y	ds.w 1		; Screen Y position
-marsspr_xs	ds.b 1		; Sprite X size
-marsspr_ys	ds.b 1		; Sprite Y size
-marsspr_xfrm	ds.b 1		; Animation X frame pos
-marsspr_yfrm	ds.b 1		; Animation Y frame pos
-marsspr_fill	ds.w 1		; <-- 2 bytes free to use (filler)
+marsspr_fill	ds.w 1		; <-- 2 filler bytes
+marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (0 == end-of-spritelist)
+marsspr_map	ds.l 1		; MAP data
 sizeof_marsspr	ds.l 0
 		finish
 
@@ -55,11 +56,14 @@ sizeof_marsspr	ds.l 0
 ; then read these as indirect(aX)
 
 		struct 0
+scrlbg_flags	ds.w 1		; Flags
+scrlbg_fill	ds.w 1
 scrlbg_data	ds.l 1		; Screen mode 2: Source image (SH2's area)
 scrlbg_x	ds.l 1		; X pos 0000.0000
 scrlbg_y	ds.l 1		; Y pos 0000.0000
 scrlbg_w	ds.l 1		; Width
 scrlbg_h	ds.l 1		; Height
+sizeof_scrlbg	ds.l 0
 		finish
 
 ; ====================================================================
@@ -79,7 +83,7 @@ scrlbg_h	ds.l 1		; Height
 
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
-Dreq_ScrnBuff	ds.b $20				; Buffer for the current screen mode
+Dreq_ScrnBuff	ds.b $40				; Buffer for the current screen mode
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
 Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0
