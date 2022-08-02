@@ -39,3 +39,10 @@ DacIns_kick:
 	gSmpHead .end-.start,0
 .start:	binclude "sound/instr/smpl/stKick.wav",$2C
 .end:
+
+DacIns_Nadie:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/nadie.wav",$2C
+	align 4
+.end:
+

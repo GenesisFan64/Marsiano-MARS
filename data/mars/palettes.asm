@@ -24,3 +24,6 @@ MDLDATA_PAL_TEST:
 TestMars_YuiP:
 		binclude "data/mars/tests/yui_mars_pal.bin"
 		align 4
+
+MapPal_M:	binclude "data/md/maps/level0/pal_m.bin"
+		align 2

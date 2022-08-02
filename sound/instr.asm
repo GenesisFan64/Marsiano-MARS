@@ -160,3 +160,6 @@ FmIns_Ding_1:
 		binclude "sound/instr/fm/ding_gem.gsx",$2478,$20
 FmIns_Trombone_gem:
 		binclude "sound/instr/fm/trombone_gem.gsx",$2478,$20
+
+FmIns_HBeat_tom:
+		binclude "sound/instr/fm/nadia_tom.gsx",$2478,$20

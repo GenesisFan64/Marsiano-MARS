@@ -89,9 +89,6 @@ maindrw_tasks:
 
 slvplgn_02:
 		mov	r2,@-r15
-		mov.w	@(marsGbl_WdgHold,gbr),r0
-		cmp/eq	#1,r0
-		bt	.exit
 		mov	r3,@-r15
 		mov	r4,@-r15
 		mov	r5,@-r15

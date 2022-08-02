@@ -3,6 +3,8 @@
 ; Genesis Video
 ; ----------------------------------------------------------------
 
+RAM_BgBufferM	equ	RAM_MdDreq+Dreq_BgExBuff	; Relocate MARS layer control
+
 ; ====================================================================
 ; --------------------------------------------------------
 ; Settings
@@ -56,15 +58,17 @@ bitMarsBg	equ 6
 ; Structs
 ; ----------------------------------------------------------------
 
-; SIZE: $
+; IN SH2 SIZES ORDER, still works fine on 68k
+
 		struct 0
-md_bg_low	ds.l 1		; MAIN layout data
-md_bg_hi	ds.l 1		; HI layout data
-md_bg_blk	ds.l 1		; Block data
-md_bg_col	ds.l 1		; Collision data (if needed)
-md_bg_size	ds.l 1		; Scroll size(s) for this layer X|Y
-md_bg_x		ds.l 1		; X pos 0000.0000
-md_bg_y		ds.l 1		; Y pos 0000.0000
+md_bg_bw	ds.b 1		; Block Width
+md_bg_bh	ds.b 1		; Block Height
+md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
+md_bg_flags	ds.b 1		; Drawing flags: %EM00UDLR
+md_bg_xset	ds.b 1		; X-counter
+md_bg_yset	ds.b 1		; Y-counter
+md_bg_movex	ds.b 1
+md_bg_movey	ds.b 1
 md_bg_vpos	ds.w 1		; VRAM output for map
 md_bg_vram	ds.w 1		; VRAM start for cells
 md_bg_w		ds.w 1		; Width in blocks
@@ -77,12 +81,12 @@ md_bg_xinc_l	ds.w 1		; Layout draw-beams L/R/U/D
 md_bg_xinc_r	ds.w 1
 md_bg_yinc_u	ds.w 1
 md_bg_yinc_d	ds.w 1
-md_bg_bw	ds.b 1		; Block Width
-md_bg_bh	ds.b 1		; Block Height
-md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
-md_bg_flags	ds.b 1		; Drawing flags: %MUDLR
-md_bg_xset	ds.b 1		; X-counter
-md_bg_yset	ds.b 1		; Y-counter
+md_bg_low	ds.l 1		; MAIN layout data
+md_bg_hi	ds.l 1		; HI layout data
+md_bg_blk	ds.l 1		; Block data
+md_bg_col	ds.l 1		; Collision data (if needed)
+md_bg_x		ds.l 1		; X pos 0000.0000
+md_bg_y		ds.l 1		; Y pos 0000.0000
 sizeof_mdbg	ds.l 0
 		finish
 
@@ -1266,7 +1270,10 @@ Video_Mars_GfxMode:
 		and.w	#$FF00,d7			; Clear our byte
 		or.w	d6,d7				; merge changes
 		move.w	d7,(sysmars_reg+comm12).l	; Write into it.
-		bra	Video_Mars_WaitInit
+; .wait:		move.w	(sysmars_reg+comm12).l,d7
+; 		and.w	#%11000000,d7
+; 		bne.s	.wait
+; 		rts
 
 ; --------------------------------------------------------
 ; Video_MarsRedraw
@@ -1275,13 +1282,13 @@ Video_Mars_GfxMode:
 ; on the 32X side.
 ; --------------------------------------------------------
 
-Video_Mars_Redraw:
-		move.w	(sysmars_reg+comm12).l,d7
-		bset	#7,d7
-		move.w	d7,(sysmars_reg+comm12).l
+; Video_Mars_Redraw:
+; 		move.w	(sysmars_reg+comm12).l,d7
+; 		bset	#7,d7
+; 		move.w	d7,(sysmars_reg+comm12).l
 Video_Mars_WaitInit:
 		move.w	(sysmars_reg+comm12).l,d7
-		btst	#7,d7
+		and.w	#%11000000,d7
 		bne.s	Video_Mars_WaitInit
 		rts
 
@@ -1541,45 +1548,85 @@ MdMap_Init:
 ; --------------------------------------------------------
 ; MdMap_Set
 ;
-; Adds a new scrolling map.
+; Sets a new scrolling section to use.
+;
+; **X and Y COORDS ARE SET EXTERNALLY
+; BEFORE GETTING HERE**
 ;
 ; Input:
-; d0 | WORD - BG internal slot
+; ** Genesis side **
+; d0 | WORD - BG internal slot (-1: 32X only)
 ; d1 | WORD - VRAM location for map data
 ; d2 | WORD - VRAM add + palette
-; d3 | LONG - X size | Y size
-; d4 | Starting X position
-; d5 | Starting Y position
-;
-; a0 - Level header:
-; 	dc.w width,height,blkwidth,blkheight,lslwidth
-;
+; d3 | X start
+; d4 | Y start
+; a0 - Level header data:
+; 	dc.w width,height
+; 	dc.b blkwidth,blkheight
 ; a1 - Block data
-; a2 - LOW Priority layout data
-; a3 - HI Priority layout data
+; a2 - LOW priority layout data
+; a3 - HIGH priority layout data
+; d4 - Collision data
+;
+; Then load the graphics externally at the same
+; location set in d2
+;
+;
+; ** 32X side **
+; d0 | WORD - Write as -1
+; d1 | WORD - Scroll buffer to use on the 32X side
+; d2 | WORD - Index-palette increment
+; d3 | X start
+; d4 | Y start
+; a0 - Level header data:
+; 	dc.w width,height
+; 	dc.b blkwidth,blkheight
+; a1 - Graphics data stored as blocks (*SH2 SIDE)
+; a2 - MAIN layout (*SH2 SIDE)
+; a3 - SUB layout (*for later, set to 0*)
+; a4 - Collision data
 ;
 ; Uses:
-; d0
+; d0,d6-d7
 ; --------------------------------------------------------
 
 MdMap_Set:
+		tst.w	d0
+		bpl.s	.md_side
+		lea	(RAM_BgBufferM),a6
+		bset	#bitMarsBg,md_bg_flags(a6)
+		bra.s	.mars_side
+.md_side:
 		lea	(RAM_BgBuffer),a6
 		mulu.w	#sizeof_mdbg,d0
 		adda	d0,a6
+		bclr	#bitMarsBg,md_bg_flags(a6)
+.mars_side:
 		move.w	d1,md_bg_vpos(a6)
 		move.w	d2,md_bg_vram(a6)
-		move.l	d3,md_bg_size(a6)
-		moveq	#0,d0
-		move.w	d4,d0
-		swap	d0
-		move.w	d0,md_bg_x(a6)
-		move.w	d4,md_bg_x_old(a6)
-		move.w	d5,d0
-		swap	d0
-		move.w	d0,md_bg_y(a6)
+
+		moveq	#0,d7
+		move.w	d3,d7
+		swap	d7
+		move.l	d7,md_bg_x(a6)
+		move.w	d3,md_bg_x_old(a6)
+		moveq	#0,d7
+		move.w	d4,d7
+		swap	d7
+		move.l	d7,md_bg_y(a6)
 		move.w	d4,md_bg_y_old(a6)
-		swap	d4
-		swap	d5
+
+; 		moveq	#0,d0
+; 		move.w	d3,d0
+; 		swap	d0
+; 		move.l	d0,md_bg_x(a6)
+; 		move.w	d3,md_bg_x_old(a6)
+; 		move.w	d4,d0
+; 		swap	d0
+; 		move.l	d0,md_bg_y(a6)
+; 		move.w	d4,md_bg_y_old(a6)
+; 		swap	d3
+; 		swap	d4
 		move.l	a1,md_bg_blk(a6)
 		move.l	a2,md_bg_low(a6)
 		move.l	a3,md_bg_hi(a6)
@@ -1587,51 +1634,53 @@ MdMap_Set:
 		move.l	a0,a5
 		move.w	(a5)+,d7	; Layout Width (blocks)
 		move.w	(a5)+,d6	; Layout Height (blocks)
-		move.b	(a5)+,d5	; BLOCK width
-		move.b	(a5)+,d4	; BLOCK height
-		and.w	#$FF,d5
+		move.b	(a5)+,d4	; BLOCK width
+		move.b	(a5)+,d3	; BLOCK height
 		and.w	#$FF,d4
+		and.w	#$FF,d3
 		move.w	d7,md_bg_w(a6)
 		move.w	d6,md_bg_h(a6)
-		move.b	d5,md_bg_bw(a6)
-		move.b	d4,md_bg_bh(a6)
-		mulu.w	d5,d7
-		mulu.w	d4,d6
+		move.b	d4,md_bg_bw(a6)
+		move.b	d3,md_bg_bh(a6)
+		mulu.w	d4,d7
+		mulu.w	d3,d6
 		move.w	d7,md_bg_wf(a6)
 		move.w	d6,md_bg_hf(a6)
-		swap	d4
-		swap	d5
-		and.w	#-$10,d4
-		and.w	#-$10,d5
+; 		swap	d3
+; 		swap	d4
+
+	; TODO: cleanup
+		moveq	#0,d3
+		moveq	#0,d4
 	; X beams
-.xl_l:		cmp.w	d7,d4
+.xl_l:		cmp.w	d7,d3
 		blt.s	.xl_g
-		sub.w	d7,d4
+		sub.w	d7,d3
 		bra.s	.xl_l
 .xl_g:
-		move.w	d4,md_bg_xinc_l(a6)
-		add.w	#320,d4			; <-- X resolution R
-.xr_l:		cmp.w	d7,d4
+		move.w	d3,md_bg_xinc_l(a6)
+		add.w	#320,d3				; <-- X resolution R
+.xr_l:		cmp.w	d7,d3
 		blt.s	.xr_g
-		sub.w	d7,d4
+		sub.w	d7,d3
 		bra.s	.xr_l
 .xr_g:
-		move.w	d4,md_bg_xinc_r(a6)
+		move.w	d3,md_bg_xinc_r(a6)
 
 	; Y beams
-.yt_l:		cmp.w	d6,d5
+.yt_l:		cmp.w	d6,d4
 		blt.s	.yt_g
-		sub.w	d6,d5
+		sub.w	d6,d4
 		bra.s	.yt_l
 .yt_g:
-		move.w	d5,md_bg_yinc_u(a6)
-		add.w	#224,d5			; <-- Y resolution B
-.yb_l:		cmp.w	d6,d5
+		move.w	d4,md_bg_yinc_u(a6)
+		add.w	#224,d4				; <-- Y resolution B
+.yb_l:		cmp.w	d6,d4
 		blt.s	.yb_g
-		sub.w	d6,d5
+		sub.w	d6,d4
 		bra.s	.yb_l
 .yb_g:
-		move.w	d5,md_bg_yinc_d(a6)
+		move.w	d4,md_bg_yinc_d(a6)
 
 		bset	#bitBgOn,md_bg_flags(a6)	; Enable this BG
 		rts
@@ -1640,10 +1689,18 @@ MdMap_Set:
 ; MdMap_Update
 ;
 ; Updates backgrounds internally
-; CALL MdMap_Draw during VBlank to draw the changes.
+;
+; For drawing the changes call MdMap_DrawScrl
+; on VBlank, this also applies to the 32X side as this
+; routine clears the draw bits there.
+;
+; For the 32X:
+; Call System_MarsUpdate AFTER this.
 ; --------------------------------------------------------
 
 MdMap_Update:
+		lea	(RAM_BgBufferM),a6
+		bsr.s	.this_bg
 		lea	(RAM_BgBuffer),a6
 		bsr.s	.this_bg
 		adda	#sizeof_mdbg,a6
@@ -1668,7 +1725,11 @@ MdMap_Update:
 		sub.w	d0,d2
 		move.w	d3,md_bg_y_old(a6)
 .yequ:
-	; Increment draw beams
+		move.b	d1,md_bg_movex(a6)	; Save X/Y moves
+		move.b	d2,md_bg_movey(a6)
+; 		movem.l	d1-d2,$FF0000
+
+	; Increment drawing beams
 		move.w	d1,d0
 		move.w	md_bg_wf(a6),d5
 		move.w	md_bg_xinc_l(a6),d4
@@ -1764,11 +1825,13 @@ MdMap_DrawAll:
 		move.b	md_bg_bw(a6),d2
 		move.b	md_bg_bh(a6),d3
 		move.w	md_bg_w(a6),d4
-		move.w	#$FF,d5
-		and.w	d5,d2
+		move.w	md_bg_wf(a6),d5
+		move.w	md_bg_hf(a6),d6
+
+		and.w	#$FF,d2
 		mulu.w	d2,d0
 		lsr.w	#8,d0
-		and.w	d5,d3
+		and.w	#$FF,d3
 		mulu.w	d3,d1
 		lsr.w	#8,d1
 		mulu.w	d4,d1
@@ -1937,23 +2000,20 @@ MdMap_DrawAll:
 ; MdMap_DrawScrl
 ;
 ; Draw off-screen changes
-;
 ; CALL THIS ON VBLANK ONLY, MUST BE QUICK.
 ; --------------------------------------------------------
 
 MdMap_DrawScrl:
+		lea	(RAM_BgBufferM),a6
+		bsr	.this_bg
 		lea	(RAM_BgBuffer),a6
 		lea	(vdp_data),a5
 		bsr.s	.this_bg
 		adda	#sizeof_mdbg,a6
 .this_bg:
-
 		move.b	md_bg_flags(a6),d7
 		btst	#bitBgOn,d7
 		beq	.no_bg
-		btst	#bitMarsBg,d7
-		bne.s	.no_bg
-
 		move.w	md_bg_x(a6),d0		; X start
 		move.w	md_bg_y(a6),d1		; Y start
 		move.w	md_bg_xinc_l(a6),d2
@@ -1996,6 +2056,8 @@ MdMap_DrawScrl:
 ; ------------------------------------------------
 
 .mk_clmn:
+		btst	#bitMarsBg,d7
+		bne	.mars_ret_c
 		swap	d7
 		bsr	.get_coords
 		swap	d0
@@ -2080,6 +2142,7 @@ MdMap_DrawScrl:
 
 		dbf	d7,.y_blk
 		swap	d7
+.mars_ret_c:
 		rts
 
 ; ------------------------------------------------
@@ -2091,6 +2154,8 @@ MdMap_DrawScrl:
 ; ------------------------------------------------
 
 .mk_row:
+		btst	#bitMarsBg,d7
+		bne.s	.mars_ret_c
 		swap	d7
 		bsr	.get_coords
 		swap	d1

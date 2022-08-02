@@ -131,7 +131,7 @@ System_WaitFrame:
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
-		jsr	(Video_DmaBlast).l		; Process DMA Blast list
+; 		jsr	(Video_DmaBlast).l		; Process DMA Blast list
 		bsr	MdMap_DrawScrl
 		add.l	#1,(RAM_Framecount).l
 		rts

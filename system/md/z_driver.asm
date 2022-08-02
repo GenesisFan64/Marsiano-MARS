@@ -20,7 +20,7 @@ Z80_TOP:
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-ZSET_WTUNE	equ -24		; Manual frequency adjustment for DAC WAVE playback
+ZSET_WTUNE	equ -27		; Manual frequency adjustment for DAC WAVE playback
 ZSET_TESTME	equ 0		; Set to 1 to "hear" test the DAC playback
 MAX_INS		equ 19
 

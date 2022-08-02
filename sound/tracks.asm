@@ -8,6 +8,8 @@
 ; PWM pitches:
 ; -17 - 8000
 
+; NORMAL FM TL LEVEL: $0E AVERAGE
+
 ; Instrument macros
 ; do note that some 24-bit pointers add 90h to the MSB automaticly.
 ;
@@ -95,6 +97,7 @@ GemaSfxIns_Boom:
 ; ------------------------------------------------------------
 
 GemaTrkData_Test:
+GemaTrkData_Nadie_MARS:
 	dc.l GemaPat_Test
 	dc.l GemaBlk_Test
 	dc.l GemaIns_Test
@@ -107,59 +110,34 @@ GemaPat_Test:
 GemaIns_Test:
 	gInsPwm 0,SmpIns_Nadie,%10
 	gInsFm -36,FmIns_Piano_Aqua
-	gInsFm +12,FmIns_PSynth_plus
+	gInsFm -12,FmIns_HBeat_tom
 	gInsPwm -12,SmpIns_PKick,%00
-	gInsPsg 0,$10,$20,$08,$04,$06
+	gInsPsg 0,$40,$60,$10,$08,$0A
 	gInsFm 0,FmIns_Trumpet_1
 	gInsPwm 0,SmpIns_Piano,%00
 	gInsPwm -12,SmpIns_PTom,%00
 	gInsNull
+
+GemaTrkData_Nadie_MD:
+	dc.l .patt
+	dc.l .blk
+	dc.l .inst
+.blk:
+	binclude "sound/tracks/nadie_md_blk.bin"
+	align 2
+.patt:
+	binclude "sound/tracks/nadie_md_patt.bin"
+	align 2
+.inst:
+	gInsDac 0,DacIns_Nadie,0
+	gInsFm -36,FmIns_Piano_Aqua
+	gInsFm -12,FmIns_HBeat_tom
+	gInsFm -37,FmIns_DrumKick_gem
+	gInsPsg 0,$40,$60,$10,$08,$0A
+	gInsFm 0,FmIns_Trumpet_1
 	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
+	gInsFm3 0,FmIns_Fm3_ClosedHat
+	gInsFm3 0,FmIns_Fm3_OpenHat
 
 GemaTrkData_Mecano:
 	dc.l GemaPat_Mecano

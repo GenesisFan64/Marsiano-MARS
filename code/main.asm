@@ -8,7 +8,8 @@
 ; Variables
 ; ------------------------------------------------------
 
-emily_VRAM	equ $380
+TEST_MAINSPD	equ $02
+; emily_VRAM	equ $380
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -26,15 +27,12 @@ emily_VRAM	equ $380
 ; ------------------------------------------------------
 
 		struct RAM_ModeBuff
+RAM_MapX	ds.l 1
+RAM_MapY	ds.l 1
+RAM_ThisSpeed	ds.l 1
 RAM_EmiFrame	ds.w 1
 RAM_EmiAnim	ds.w 1
-RAM_EmiPosX	ds.w 1
-RAM_EmiPosY	ds.w 1
-RAM_EmiUpd	ds.w 1
 RAM_EmiTimer	ds.w 1
-RAM_Xtemp	ds.l 1
-RAM_Ytemp	ds.l 1
-RAM_ThisSpeed	ds.l 1
 		finish
 
 ; ====================================================================
@@ -53,18 +51,15 @@ MD_Mode0:
 		clr.w	(RAM_PaletteFd).w
 		move.l	#$10000,(RAM_ThisSpeed).l
 
-	; Emily variables
-		move.w	#(320/2)+16,(RAM_EmiPosX).w
-		move.w	#(224/2)+8,(RAM_EmiPosY).w
-; 		lea	Pal_Emily(pc),a0
-; 		moveq	#0,d0
-; 		move.w	#16,d1
-; 		bsr	Video_FadePal
+		move.w	#0,(RAM_MapX).l
+		move.w	#0,(RAM_MapY).l
+		bsr	.update_pos
 
 	; Pick and draw scroll maps
 		bsr	MdMap_Init
 		bsr	Level_PickMap
 		bsr	MdMap_DrawAll
+		bsr	System_MarsUpdate		; Send first DREQ
 
 	; 32X stuff
 ; 		lea	(RAM_MdDreq+Dreq_Objects),a0
@@ -80,25 +75,16 @@ MD_Mode0:
 ; 		move.w	#$1D<<10|$0C<<5,(RAM_MdMarsPalFd).w
 ; 		move.w	#3,d0
 ; 		bsr	Video_Mars_GfxMode
-; 		bsr	SuperSpr_Init
 
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG,scrlbg_Data(a0)
-		move.l	#512,scrlbg_W(a0)
-		move.l	#256,scrlbg_H(a0)
-		move.l	#$00000000,scrlbg_X(a0)
-		move.l	#$00000000,scrlbg_Y(a0)
-		bsr	System_MarsUpdate
-		move.w	#2,d0
-		bsr	Video_Mars_GfxMode
-		lea	(PalData_Mars_Test),a0
+		bsr	SuperSpr_Init
+		lea	(MapPal_M),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
-		move.w	#2,d0
-		bsr	Video_Mars_GfxMode
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
+		moveq	#2,d0
+		bsr	Video_Mars_GfxMode
 	; ****
 
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -117,14 +103,13 @@ MD_Mode0:
 		bsr	Sound_TrkStop
 		move.w	#200+32,d1
 		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_Test),a0
+; 		lea	(GemaTrkData_Nadie_MARS),a0
+		lea	(GemaTrkData_Nadie_MD),a0
 		moveq	#0,d0
 		move.w	#6,d1
 		moveq	#0,d2
 		move.w	#%01,d3
 		bsr	Sound_TrkPlay
-
-		bsr	SuperSpr_Init
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -138,28 +123,20 @@ MD_Mode0:
 		bne.s	.loop
 
 		bsr	SuperSpr_Main
-; 		bsr	Emilie_MkSprite
 
-		lea	(RAM_MdDreq+Dreq_Objects),a0
-		add.w	#8*4,mdl_x_rot(a0)
-		add.w	#8*2,mdl_y_rot(a0)
-		add.w	#8*5,mdl_z_rot(a0)
+; 		lea	(RAM_MdDreq+Dreq_Objects),a0
+; 		add.w	#8*4,mdl_x_rot(a0)
+; 		add.w	#8*2,mdl_y_rot(a0)
+; 		add.w	#8*5,mdl_z_rot(a0)
 
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
 		beq.s	.z_up
 		add.l	#$10000,(RAM_ThisSpeed).l
-		and.l	#$70000,(RAM_ThisSpeed).l
-		bne.s	.z_up
-		add.l	#$10000,(RAM_ThisSpeed).l
-; 		sub.w	#8*3,mdl_z_pos(a0)
+		cmp.l	#$80000,(RAM_ThisSpeed).l
+		ble.s	.z_up
+		move.l	#$10000,(RAM_ThisSpeed).l
 .z_up:
-; 		btst	#bitJoyC,d7
-; 		beq.s	.z_dw
-; ; 		add.w	#8*3,mdl_z_pos(a0)
-; .z_dw:
-
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a1
 		move.l	(RAM_ThisSpeed),d0
 		move.l	(RAM_ThisSpeed),d1
 		move.w	(Controller_1+on_hold),d7
@@ -168,39 +145,44 @@ MD_Mode0:
 		beq.s	.noz_down
 		move.w	#0,(RAM_EmiFrame).w
 		add.w	#1,(RAM_EmiAnim).w
-
-		add.l	d1,(RAM_Ytemp).w
+		add.l	d1,(RAM_MapY).w
 .noz_down:
 		move.w	d7,d6
 		btst	#bitJoyUp,d6
 		beq.s	.noz_up
 		move.w	#4,(RAM_EmiFrame).w
 		add.w	#1,(RAM_EmiAnim).w
-
-		sub.l	d1,(RAM_Ytemp).w
+		sub.l	d1,(RAM_MapY).w
 .noz_up:
 		move.w	d7,d6
 		btst	#bitJoyRight,d6
 		beq.s	.noz_r
 		move.w	#8,(RAM_EmiFrame).w
 		add.w	#1,(RAM_EmiAnim).w
-
-		add.l	d0,(RAM_Xtemp).w
+		add.l	d0,(RAM_MapX).w
 .noz_r:
 		move.w	d7,d6
 		btst	#bitJoyLeft,d6
 		beq.s	.noz_l
 		move.w	#$C,(RAM_EmiFrame).w
 		add.w	#1,(RAM_EmiAnim).w
-
-		sub.l	d0,(RAM_Xtemp).w
+		sub.l	d0,(RAM_MapX).w
 .noz_l:
-		move.w	(RAM_Xtemp),d0
-		move.w	(RAM_Ytemp),d1
 
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.w	d0,scrlbg_X(a0)
-		move.w	d1,scrlbg_Y(a0)
+		bsr.s	.update_pos
+
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyStart,d7
+		beq	.loop
+		bra	MD_DebugMenu
+
+
+.update_pos:
+		move.w	(RAM_MapX),d0
+		move.w	(RAM_MapY),d1
+		lea	(RAM_BgBufferM),a0
+		move.w	d0,md_bg_x(a0)
+		move.w	d1,md_bg_y(a0)
 		lea	(RAM_BgBuffer),a0
 		asr.w	#1,d0
 		asr.w	#1,d1
@@ -216,11 +198,7 @@ MD_Mode0:
 		move.w	d0,(RAM_HorScroll+2).w
 		move.w	d1,(RAM_VerScroll+2).w
 		neg.l	(RAM_HorScroll).w
-
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyStart,d7
-		beq	.loop
-		bra	MD_DebugMenu
+		rts
 
 ; ====================================================================
 ; ----------------------------------------------
@@ -349,24 +327,11 @@ SuperSpr_Init:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$B0,marsspr_x(a0)
-		move.w	#$60,marsspr_y(a0)
+		move.w	#320/2-16,marsspr_x(a0)
+		move.w	#224/2-16,marsspr_y(a0)
 		move.b	#32,marsspr_xs(a0)
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		adda	#sizeof_marsspr,a0
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$60,marsspr_x(a0)
-		move.w	#$50,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-		adda	#sizeof_marsspr,a0
-		move.l	#0,marsspr_data(a0)
 
 SuperSpr_Main:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
@@ -405,8 +370,8 @@ SuperSpr_Main:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		move.w	marsspr_x(a0),d0
 		move.w	marsspr_y(a0),d1
-		moveq	#TEST_SPRSPD,d2
-		moveq	#TEST_SPRSPD,d3
+		moveq	#TEST_MAINSPD,d2
+		moveq	#TEST_MAINSPD,d3
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_s
@@ -434,8 +399,8 @@ SuperSpr_Main:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		move.w	marsspr_xs(a0),d0
 		move.w	marsspr_ys(a0),d1
-		moveq	#TEST_SPRSPD,d2
-		moveq	#TEST_SPRSPD,d3
+		moveq	#TEST_MAINSPD,d2
+		moveq	#TEST_MAINSPD,d3
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyRight,d7
 		beq.s	.nor_s2
@@ -466,6 +431,18 @@ SuperSpr_Main:
 ; ------------------------------------------------------
 
 Level_PickMap:
+		move.l	#MapHead_M,a0
+		move.l	#MapBlk_M,a1
+		move.l	#MapFg_M,a2
+		move.l	#0,a3
+		move.l	#0,a4
+		moveq	#-1,d0
+		moveq	#0,d1
+		moveq	#0,d2
+		move.w	(RAM_MapX),d3
+		move.w	(RAM_MapY),d4
+		bsr	MdMap_Set
+
 		move.l	#MapHead_0,a0
 		move.l	#MapBlk_0,a1
 		move.l	#MapFgL_0,a2
@@ -474,9 +451,8 @@ Level_PickMap:
 		moveq	#0,d0
 		move.w	#$C000,d1
 		move.w	#$2000,d2
-		move.l	#dword($80,$40),d3
-		moveq	#0,d4
-		moveq	#0,d5
+		move.w	(RAM_MapX),d3
+		move.w	(RAM_MapY),d4
 		bsr	MdMap_Set
 
 		move.l	#MapHead_0,a0
@@ -487,10 +463,16 @@ Level_PickMap:
 		moveq	#1,d0
 		move.w	#$E000,d1
 		move.w	#$2000,d2
-		move.l	#dword($80,$40),d3
-		moveq	#0,d4
-		moveq	#0,d5
+		move.w	(RAM_MapX),d3
+		move.w	(RAM_MapY),d4
 		bsr	MdMap_Set
+
+; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
+; 		move.l	#TESTMARS_BG,scrlbg_Data(a0)
+; 		move.l	#512,scrlbg_W(a0)
+; 		move.l	#256,scrlbg_H(a0)
+; 		move.l	#$00000000,scrlbg_X(a0)
+; 		move.l	#$00000000,scrlbg_Y(a0)
 
 		lea	(Pal_level0),a0
 		moveq	#$10,d0

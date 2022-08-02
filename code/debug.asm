@@ -356,13 +356,13 @@ MD_DebugMenu:
 ; 		move.w	#$0001,d2
 ; 		bsr	Video_LoadMap
 
-		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-		move.l	#TESTMARS_BG,scrlbg_Data(a0)
-		move.l	#512,scrlbg_W(a0)
-		move.l	#256,scrlbg_H(a0)
-		move.l	#$00000000,scrlbg_X(a0)
-		move.l	#$00000000,scrlbg_Y(a0)
-		bsr	System_MarsUpdate
+; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
+; 		move.l	#TESTMARS_BG,scrlbg_Data(a0)
+; 		move.l	#512,scrlbg_W(a0)
+; 		move.l	#256,scrlbg_H(a0)
+; 		move.l	#$00000000,scrlbg_X(a0)
+; 		move.l	#$00000000,scrlbg_Y(a0)
+; 		bsr	System_MarsUpdate
 		move.w	#2,d0
 		bsr	Video_Mars_GfxMode
 		lea	(PalData_Mars_Test),a0
@@ -384,37 +384,37 @@ MD_DebugMenu:
 		bsr	Video_Print
 		bsr	.this_bg
 
-		move.w	(Controller_1+on_hold),d7
-		and.w	#JoyB+JoyA,d7
-		bne.s	.stayoff
-		move.l	(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X).w,d0
-		move.l	(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y).w,d1
-		move.l	#TEST_SPEED,d5
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyRight,d7
-		beq.s	.nor_m
-		add.l	d5,d0
-.nor_m:
-		btst	#bitJoyLeft,d7
-		beq.s	.nol_m
-		sub.l	d5,d0
-.nol_m:
-		btst	#bitJoyDown,d7
-		beq.s	.nod_m
-		add.l	d5,d1
-.nod_m:
-		btst	#bitJoyUp,d7
-		beq.s	.nou_m
-		sub.l	d5,d1
-.nou_m:
-		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X).w
-		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y).w
-		swap	d0
-		swap	d1
-		neg.w	d0
-		move.w	d0,(RAM_HorScroll+2).w
-		move.w	d1,(RAM_VerScroll+2).w
-.stayoff:
+; 		move.w	(Controller_1+on_hold),d7
+; 		and.w	#JoyB+JoyA,d7
+; 		bne.s	.stayoff
+; 		move.l	(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X).w,d0
+; 		move.l	(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y).w,d1
+; 		move.l	#TEST_SPEED,d5
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.nor_m
+; 		add.l	d5,d0
+; .nor_m:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.nol_m
+; 		sub.l	d5,d0
+; .nol_m:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.nod_m
+; 		add.l	d5,d1
+; .nod_m:
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.nou_m
+; 		sub.l	d5,d1
+; .nou_m:
+; 		move.l	d0,(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X).w
+; 		move.l	d1,(RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y).w
+; 		swap	d0
+; 		swap	d1
+; 		neg.w	d0
+; 		move.w	d0,(RAM_HorScroll+2).w
+; 		move.w	d1,(RAM_VerScroll+2).w
+; .stayoff:
 
 		bsr	SuperSprite_Test
 		move.w	(Controller_1+on_press),d7
@@ -1393,10 +1393,10 @@ str_Page3_bg:
 		dc.b "*** GfxMode 02, LAYER B ***",0
 		align 2
 str_Page3:
-		dc.b "*** GfxMode 02, LAYER A ***",$A,$A
-		dc.b "X/Y: \\l \\l",0
-		dc.l RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X
-		dc.l RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y
+		dc.b "*** GfxMode 02, LAYER A ***",0;$A,$A
+; 		dc.b "X/Y: \\l \\l",0
+; 		dc.l RAM_MdDreq+Dreq_ScrnBuff+scrlbg_X
+; 		dc.l RAM_MdDreq+Dreq_ScrnBuff+scrlbg_Y
 		align 2
 str_Page4:
 		dc.b "GfxMode 03",0

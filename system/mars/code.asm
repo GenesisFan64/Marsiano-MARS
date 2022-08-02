@@ -57,14 +57,14 @@ marsGbl_CurrZList	ds.l 1	; Current Zsort entry
 marsGbl_CurrZTop	ds.l 1	; Current Zsort list
 marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
-marsGbl_WdgMode		ds.w 1
-marsGbl_WdgHold		ds.w 1
+marsGbl_WdgMode		ds.w 1	; Current watchdog task
+marsGbl_WdgHold		ds.w 1	; Watchdog pause
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
 marsGbl_CntrRdSpr	ds.w 1	; Number of sprites to read
 marsGbl_XShift		ds.w 1	; Xshift bit at the start of master_loop (TODO: a HBlank list)
-marsGbl_MdInitTmr	ds.w 1	; Screen init counter for redrawing the entire screen (Write $02)
+marsGbl_MdDrawTmr	ds.w 1	; Screen init counter for redrawing the entire screen (Write $02)
 marsGbl_WaveEnable	ds.w 1	; General linetable wave effect: Disable/Enable
 marsGbl_WaveSpd		ds.w 1	; Linetable wave speed
 marsGbl_WaveMax		ds.w 1	; Maximum wave
@@ -297,15 +297,15 @@ int_s_list:
 ; comm2: (CPU)(CODE)
 ; comm4: PC counter
 ;
-;  CPU | SH2 who got the error:
+;  CPU | The CPU who got the error:
 ;        $00 - Master
 ;        $01 - Slave
 ;
 ; CODE | Error type:
-;	 -1: Unknown error
+;	  -1: Unknown error
 ;	 $01: Illegal instruction
 ;	 $02: Invalid slot instruction
-;	 $03: Address error <-- most common if you don't align by 4
+;	 $03: Address error
 ;	 $04: DMA error
 ;	 $05: NMI vector
 ;	 $06: User break
@@ -434,13 +434,15 @@ m_irq_cmd:
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 		mov.w	@r1,r0
-		mov	#_vdpreg,r1		; <-- make sure we don't get
--		mov.b	@(vdpsts,r1),r0		; mid VBlank
+		mov	#_vdpreg,r1		; <-- make sure we don't get in VBlank
+-		mov.b	@(vdpsts,r1),r0
 		tst	#VBLK,r0
 		bf	-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_WdgHold,gbr)
 		mov	#_sysreg,r4		; r4 - sysreg base
 		mov	#_DMASOURCE0,r3		; r3 - DMA base register
 		mov	#_sysreg+comm12,r2	; r2 - comm to write the signal
@@ -449,7 +451,7 @@ m_irq_cmd:
 		mov	r0,@($C,r3)
 		mov	#RAM_Mars_DreqDma,r0
 		mov	r0,@(4,r3)		; Destination
-		mov.w	@(dreqlen,r4),r0	; TODO: a check if this gets Zero'd
+		mov.w	@(dreqlen,r4),r0	; TODO: needs a 0-size check.
 		extu.w	r0,r0
 		mov	r0,@(8,r3)		; Length (set by 68k)
 		mov	r1,@r3			; Source
@@ -462,14 +464,15 @@ m_irq_cmd:
 		mov.b	r0,@r2
 		nop
 		nop
-.wait_dma:	mov	@($C,r3),r0		; Active?
+	; Watchdog is still active here.
+	; (hopefully)
+.wait_dma:	mov	@($C,r3),r0		; DMA active?
 		tst	#%10,r0
 		bt	.wait_dma
 		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
 		mov	r0,@($C,r3)
-
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -1239,19 +1242,30 @@ SH2_M_HotStart:
 ; MASTER CPU loop
 ;
 ; comm12:
-; bssscccc ir000lll
+; bssscccc ii000lll
 ;
 ; b - Busy bit, this CPU can't be interrupted by request.
 ; s - Status bits for some CMD interrupt tasks
 ; c - Command number for CMD interrupt
-; i - Screen mode-initialization bit
-; r - 68K writes this bit to wait for the next frame, SH2 clears
-;     when the frame is ready.
+; i - Screen initialization bit(s)
 ; l - MAIN LOOP command/task. for any mode change add $80 (i bit)
 ; ----------------------------------------------------------------
 
 		align 4
 master_loop:
+; 		mov	#_DMASOURCE0,r3		; *** DOESNT WORK ***
+; 		mov	@($C,r3),r0		; DMA enabled?
+; 		tst	#%01,r0
+; 		bt	.no_dma
+; .wait_dma:	mov	@($C,r3),r0		; DMA active?
+; 		tst	#%10,r0
+; 		bt	.wait_dma
+; 		mov	#0,r0			; _DMAOPERATION = 0
+; 		mov	r0,@($30,r3)
+; 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
+; 		mov	r0,@($C,r3)
+; .no_dma:
+
 	if SH2_DEBUG
 		mov	#_sysreg+comm0,r1		; DEBUG counter
 		mov.b	@r1,r0
@@ -1302,8 +1316,6 @@ master_loop:
 		add	#4,r2
 		ldc	@r15+,sr
 
-
-
 ; ---------------------------------------
 ; Init/Loop the current mode
 ;
@@ -1317,33 +1329,27 @@ master_loop:
 ; exits on display.
 ; ---------------------------------------
 
-; 		mov	#mstr_gfxlist_v,r1		; VBlank jump
-; 		mov	#_sysreg+comm12,r2
-; 		mov.w	@r2,r0
-; 		and	#%0111,r0
-; 		shll2	r0
-; 		shll2	r0
-; 		mov	@(r1,r0),r1
-; 		jsr	@r1
-; 		nop
 		mov	#mstr_gfxlist,r3		; Default LOOP points
 		mov	#_sysreg+comm12,r2
 		mov.w	@r2,r0				; r0 - bit check
 		mov	r0,r1				; r1 - current mode
-		tst	#%10000000,r0			; First time flag?
+		tst	#%11000000,r0			; Init counter?
 		bt	.no_init
-		mov.w	@r2,r0				; Reset init bit
-		and	#%01111111,r0
+		mov	#%01000000,r4
+		mov.w	@r2,r0				; Decrement init bits
+		sub	r4,r0
 		mov.w	r0,@r2
+		tst	#%01000000,r0
+		bt	.no_init
 		mov	#2,r0				; Set Init timer.
-		mov.w	r0,@(marsGbl_MdInitTmr,gbr)
+		mov.w	r0,@(marsGbl_MdDrawTmr,gbr)
 .no_init:
-		mov.w	@(marsGbl_MdInitTmr,gbr),r0	; r2 - Add init timer
+		mov.w	@(marsGbl_MdDrawTmr,gbr),r0	; r2 - Add init timer
 		mov	r0,r2
 		tst	r0,r0
 		bt	.tmr_off
 		dt	r0
-		mov.w	r0,@(marsGbl_MdInitTmr,gbr)
+		mov.w	r0,@(marsGbl_MdDrawTmr,gbr)
 .tmr_off:
 		shll2	r2
 		mov	r1,r0
@@ -1545,10 +1551,7 @@ mstr_gfx1_loop:
 ; ---------------------------------------
 ; Pseudo-screen mode $02:
 ;
-; 256-color scrolling image
-;
-; *** DO NOT USE THIS MODE WITHOUT
-; SETTING THE BACKGROUND POINTER ***
+; 256-color smooth scrolling map
 ; ---------------------------------------
 
 ; -------------------------------
@@ -1565,7 +1568,7 @@ mstr_gfx2_hblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
-		xor	r0,r0				; Cleanup our screen RAM
+		xor	r0,r0					; Cleanup our screen RAM
 		mov	#RAM_Mars_ScrnBuff,r1
 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
 .clr_scrn:
@@ -1573,35 +1576,31 @@ mstr_gfx2_init_1:
 		dt	r2
 		bf/s	.clr_scrn
 		add	#4,r1
-
-		mov	#CACHE_MSTR_SCRL,r1		; Load CACHE code
+		mov	#CACHE_MSTR_SCRL,r1			; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadCacheRam,r0
 		jsr	@r0
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r1		; Make a scrolling layer
-		mov	#$200,r2
-		mov	#16,r3				; <-- block size
-		mov	#320,r4
-		mov	#224,r5
+
+	; *** Create scrolling Section 0
+		mov	#0,r1			; Make a scrolling section
+		mov	#$200,r2		; Framebuffer VRAM position
+		mov	#320,r3
+		mov	#224,r4
 		bsr	MarsVideo_MkScrlField
-		mov	#0,r6
-		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r0	; Set scrolling source data
-		mov	#RAM_Mars_BgBuffScrl,r1
-		mov	@(scrlbg_Data,r0),r2
-		mov	@(scrlbg_W,r0),r3
-		mov	@(scrlbg_H,r0),r4
-		bsr	MarsVideo_SetScrlBg
-		nop
+		mov	#16,r5			; <-- block size
 		bra	mstr_gfx2_init_cont
 		nop
+
 mstr_gfx2_init_2:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx2_init_cont:
-		mov	#MarsVideo_DrawAllBg,r0
-		jsr	@r0				; Process FULL image
+		mov	#RAM_Mars_ScrlBuff,r14
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r13
+		mov	#MarsVideo_DrawAll,r0
+		jsr	@r0
 		nop
 
 ; -------------------------------
@@ -1609,75 +1608,64 @@ mstr_gfx2_init_cont:
 ; -------------------------------
 
 mstr_gfx2_loop:
-		mov.w	@(marsGbl_MdInitTmr,gbr),r0
-		tst	r0,r0
-		bf	.mid_draw
-		mov	#RAM_Mars_BgBuffScrl,r4
-		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r3
-		mov	@(scrlbg_X,r3),r1
-		mov	@(scrlbg_Y,r3),r2
-		mov	r1,@(mbg_xpos,r4)
-		mov	r2,@(mbg_ypos,r4)
-.mid_draw:
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_RdrwBlocks,r13
-		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
-		jsr	@r0				; BEFORE Updating X/Y scroll position
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14
+		mov	#RAM_Mars_ScrlBuff,r13
+		bsr	MarsVideo_Bg_MdMove
 		nop
-; 		mov	#_vdpreg,r1			; In case we are still on VBlank...
-; -		mov.b	@(vdpsts,r1),r0
-; 		tst	#VBLK,r0
-; 		bf	-
-		mov	#RAM_Mars_BgBuffScrl,r14	; r14 - Background to read
-		mov	@(mbg_xpos,r14),r1
-		mov	@(mbg_ypos,r14),r2
-		mov	r1,r0
-		shlr16	r0
-		bsr	MarsVideo_MoveBg
-		mov.w	r0,@(marsGbl_XShift,gbr)	; Update X/Y, including XShift bit
-
-		mov	#RAM_Mars_BgBuffScrl,r14	; Set SuperSprite settings for this screen
-		mov	@(mbg_fbdata,r14),r1
-		mov	@(mbg_fbpos,r14),r2
-		mov.w	@(mbg_fbpos_y,r14),r0
-		mov	r0,r3
-		mov.w	@(mbg_intrl_w,r14),r0
-		mov	r0,r4
-		mov.w	@(mbg_intrl_h,r14),r0
-		mov	r0,r5
-		mov	@(mbg_intrl_size,r14),r6
-		mov	#MarsVideo_SetSuperSpr,r0
-		jsr	@r0
+		bsr	MarsVideo_Bg_MdReq
 		nop
-		mov	#RAM_Mars_BgBuffScrl,r14
-		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
-		mov	#RAM_Mars_RdrwBlocks,r12
-		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
+		mov.w	#0,r0					; Setup Watchdog interrupt
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		mov	#0,r1
+		mov	#$10,r2
+		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
 
-		mov	#MarsVideo_DrawScrlLR,r0	; Draw L/R data we just recieved
-		jsr	@r0				; this also decrements timers.
-		nop
-		mov	#MarsVideo_DrawScrlUD,r0	; Second pass for U/D data
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
-		jsr	@r0
-		nop
+; 		mov.w	@(marsGbl_MdDrawTmr,gbr),r0
+; 		tst	r0,r0
+; 		bt	.no_timer
 
+; .no_timer:
 
-		mov	#RAM_Mars_BgBuffScrl,r1		; Make a visible background section
-		mov	#0,r2				; on screen from lines 0 to 240
-		mov	#240,r3
+; 		mov	@(scrl_fbdata,r14),r1
+; 		mov	@(scrl_fbpos,r14),r2
+; 		mov.w	@(scrl_fbpos_y,r14),r0
+; 		mov	r0,r3
+; 		mov.w	@(scrl_intrl_w,r14),r0
+; 		mov	r0,r4
+; 		mov.w	@(scrl_intrl_h,r14),r0
+; 		mov	r0,r5
+; 		mov	@(scrl_intrl_size,r14),r6
+; 		mov	#MarsVideo_SetSuperSpr,r0
+; 		jsr	@r0
+; 		nop
+; 		mov	#RAM_Mars_ScrlBuff,r14
+; 		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
+; 		mov	#RAM_Mars_RdrwBlocks,r12
+; 		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
+; 		jsr	@r0
+; 		nop
+; 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
+; 		jsr	@r0
+; 		nop
+
+		mov	#RAM_Mars_ScrlBuff,r1		; *** Make a visible section
+		mov	#0,r2				; of the scrolling data
+		mov	#240,r3				; From Y 0 to 240
 		mov	#MarsVideo_ShowScrlBg,r0
 		jsr	@r0
 		nop
-		mov	#MarsVideo_FixTblShift,r0	; Fix those broken lines that
-		jsr	@r0				; the Xshift register can't move
+.wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Watchdog finished?
+		tst	r0,r0
+		bf	.wait_wdg
+		mov.l   #$FFFFFE80,r1			; Watchdog OFF
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
+		mov	#MarsVideo_FixTblShift,r0	; HW: Fix those broken lines that
+		jsr	@r0				; the Xshift register can't move.
 		nop
-
-		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
+		mov	#_vdpreg,r1			; Wait framebuffer
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -1923,7 +1911,7 @@ mstr_ready:
 ; ; -------------------------------
 ;
 ; mstr_gfx1_loop:
-; 		mov	#RAM_Mars_DreqRead+Dreq_ScrnBuff,r1
+; 		mov	#RAM_Mars_DreqRead+Dreq_ScrlBuff,r1
 ; 		mov	@(Dreq_Scrn_Type,r1),r0
 ; 		and	#%11,r0
 ; 		shll2	r0
@@ -2088,7 +2076,7 @@ mstr_ready:
 ; 	; ---------------------------------------
 ; 	; Clear screen
 ; 	; ---------------------------------------
-; 		mov.w	@(marsGbl_MdInitTmr,gbr),r0
+; 		mov.w	@(marsGbl_MdDrawTmr,gbr),r0
 ; 		tst	r0,r0
 ; 		bf	.no_redraw_2
 ; 		mov	#$200,r1		; *** This also counts as a delay for Watchdog ***
