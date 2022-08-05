@@ -69,18 +69,18 @@ md_bg_xset	ds.b 1		; X-counter
 md_bg_yset	ds.b 1		; Y-counter
 md_bg_movex	ds.b 1
 md_bg_movey	ds.b 1
-md_bg_vpos	ds.w 1		; VRAM output for map
-md_bg_vram	ds.w 1		; VRAM start for cells
 md_bg_w		ds.w 1		; Width in blocks
 md_bg_h		ds.w 1		; Height in blocks
 md_bg_wf	ds.w 1		; FULL Width in pixels
 md_bg_hf	ds.w 1		; FULL Height in pixels
-md_bg_x_old	ds.w 1		; OLD X position
-md_bg_y_old	ds.w 1		; OLD Y position
 md_bg_xinc_l	ds.w 1		; Layout draw-beams L/R/U/D
 md_bg_xinc_r	ds.w 1
 md_bg_yinc_u	ds.w 1
 md_bg_yinc_d	ds.w 1
+md_bg_x_old	ds.w 1		; OLD X position
+md_bg_y_old	ds.w 1		; OLD Y position
+md_bg_vpos	ds.w 1		; VRAM output for map
+md_bg_vram	ds.w 1		; VRAM start for cells
 md_bg_low	ds.l 1		; MAIN layout data
 md_bg_hi	ds.l 1		; HI layout data
 md_bg_blk	ds.l 1		; Block data
@@ -1578,7 +1578,7 @@ MdMap_Init:
 ; d2 | WORD - Index-palette increment
 ; d3 | X start
 ; d4 | Y start
-; a0 - Level header data:
+; a0 - Level header data: (GENESIS SIDE)
 ; 	dc.w width,height
 ; 	dc.b blkwidth,blkheight
 ; a1 - Graphics data stored as blocks (*SH2 SIDE)
@@ -1610,23 +1610,16 @@ MdMap_Set:
 		swap	d7
 		move.l	d7,md_bg_x(a6)
 		move.w	d3,md_bg_x_old(a6)
+		move.b	d3,md_bg_xset(a6)
 		moveq	#0,d7
 		move.w	d4,d7
 		swap	d7
 		move.l	d7,md_bg_y(a6)
 		move.w	d4,md_bg_y_old(a6)
+		move.b	d3,md_bg_yset(a6)
 
-; 		moveq	#0,d0
-; 		move.w	d3,d0
-; 		swap	d0
-; 		move.l	d0,md_bg_x(a6)
-; 		move.w	d3,md_bg_x_old(a6)
-; 		move.w	d4,d0
-; 		swap	d0
-; 		move.l	d0,md_bg_y(a6)
-; 		move.w	d4,md_bg_y_old(a6)
-; 		swap	d3
-; 		swap	d4
+		swap	d3
+		swap	d4
 		move.l	a1,md_bg_blk(a6)
 		move.l	a2,md_bg_low(a6)
 		move.l	a3,md_bg_hi(a6)
@@ -1646,12 +1639,16 @@ MdMap_Set:
 		mulu.w	d3,d6
 		move.w	d7,md_bg_wf(a6)
 		move.w	d6,md_bg_hf(a6)
-; 		swap	d3
-; 		swap	d4
+		sub.w	#1,d4
+		sub.w	#1,d3
+		and.b	d4,md_bg_xset(a6)
+		and.b	d3,md_bg_yset(a6)
+		swap	d3
+		swap	d4
 
 	; TODO: cleanup
-		moveq	#0,d3
-		moveq	#0,d4
+		move.w	md_bg_x(a6),d3
+		move.w	md_bg_y(a6),d4
 	; X beams
 .xl_l:		cmp.w	d7,d3
 		blt.s	.xl_g
@@ -1725,9 +1722,9 @@ MdMap_Update:
 		sub.w	d0,d2
 		move.w	d3,md_bg_y_old(a6)
 .yequ:
-		move.b	d1,md_bg_movex(a6)	; Save X/Y moves
-		move.b	d2,md_bg_movey(a6)
-; 		movem.l	d1-d2,$FF0000
+; 		move.b	d1,md_bg_movex(a6)	; Save X/Y moves
+; 		move.b	d2,md_bg_movey(a6)
+
 
 	; Increment drawing beams
 		move.w	d1,d0
@@ -1850,7 +1847,7 @@ MdMap_DrawAll:
 		swap	d4
 		move.w	#$100,d4
 		moveq	#0,d5			; d5 - temporal | X-add read
-		move.w	md_bg_vpos(a6),d6
+		move.w	md_bg_vpos(a6),d6	; <-- TODO: X/Y increment
 		move.w	d6,d0
 		rol.w	#2,d6
 		and.w	#%11,d6

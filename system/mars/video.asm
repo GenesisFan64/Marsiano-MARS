@@ -684,20 +684,134 @@ MarsVideo_Bg_MdMove:
 ; r14 | Genesis background buffer
 ; r13 | Scrolling-area buffer
 ;
-; Genesis sides clears the bits later.
+; Note: The drawing bits are cleared on the Genesis-side.
 ; --------------------------------------------------------
+
+; TODO: merge the bits
 
 		align 4
 MarsVideo_Bg_MdReq:
-; 		mov	#2,r2
-; 		mov	#Cach_DrawTimers,r1
-; 		mov.b	@(md_bg_flags,r14),r0
-; 		tst	#bitDrwR,r0
-; 		bt	.no_r
-; 		bra *
-; 		nop
-; 		mov	r2,@r1		; Right timer
-; .no_r:
+		sts	pr,@-r15
+		mov.b	@(md_bg_flags,r14),r0
+		mov	#Cach_DrawTimers,r2
+		and	#$FF,r0
+		mov	r2,r1			; Set NEW screen timers ($02)
+		mov	#2,r3
+		tst	#%00000001,r0		; bitDrwR
+		bt	.no_r
+		mov	r3,@r1
+.no_r:
+		add	#4,r1
+		tst	#%00000010,r0		; bitDrwL
+		bt	.no_l
+		mov	r3,@r1
+.no_l:
+		add	#4,r1
+		tst	#%00000100,r0		; bitDrwD
+		bt	.no_d
+		mov	r3,@r1
+.no_d:
+		add	#4,r1
+		tst	#%00001000,r0		; bitDrwU
+		bt	.no_upd
+		mov	r3,@r1
+.no_upd:
+
+	; mach - Watchdog settings
+	;  r14 - Background buffer
+	;  r13 - Scroll area buffer
+	;  r12 - Layout data
+	;  r11 - Framebuffer X/Y pos
+	;  r10 - Layout width
+	;   r9 - Scroll width (next line)
+	;   r8 - Scroll FULL size (w*h)
+	;   r7 - Framebuffer BASE
+	;   r6 - Block data
+	;   r5 - Block timer
+	;   r4 - X or Y increment
+	;   r3 - Layout increment
+	;   r2 - Screen timers RLDU
+
+		mov	@(md_bg_low,r14),r12
+		mov	#Cach_WdgBuffWr,r3
+		mov	@(scrl_fbpos,r13),r11
+		mov	#-16,r1			; <-- manual size
+		mov.w	@(md_bg_w,r14),r0
+		extu.w	r0,r10
+		mov.w	@(scrl_intrl_w,r13),r0
+		extu.w	r0,r9
+		mov	@(scrl_intrl_size,r13),r8
+		mov	#_framebuffer,r0
+		mov	@(scrl_fbdata,r13),r7
+		add	r0,r7
+		mov	@(md_bg_blk,r14),r6
+		mov	#((240+16)/16)-1,r5		; Timer for L/R
+		mov.w	@(scrl_fbpos_y,r14),r0
+		lds	r3,mach
+		extu.w	r0,r0
+		mulu	r0,r9
+		sts	macl,r0
+		and	r1,r11
+
+	; L/R draw
+		mov	r12,r13			; <-- copy layout
+		mov.w	@(md_bg_yinc_u,r14),r0	; Move top Y
+		mov	#16,r1
+		muls	r1,r0
+		sts	macl,r0
+		shlr8	r0
+		mulu	r10,r0
+		sts	macl,r0
+		add	r0,r13
+
+		mov.w	@(md_bg_xinc_r,r14),r0
+		exts.w	r0,r3
+		mov	#320,r4			; r4 - X increment
+		bsr	.x_draw
+		nop
+		mov.w	@(md_bg_xinc_l,r14),r0
+		exts.w	r0,r3
+		mov	#0,r4
+		bsr	.x_draw
+		add	#4,r2			; <-- Next timer to check
+
+.lr_done:
+		lds	@r15+,pr
+		rts
+		nop
+		align 4
+
+.x_draw:
+		mov	@r2,r0
+		tst	r0,r0
+		bt	.no_timer
+		dt	r0
+		mov	r0,@r2
+
+		mov	#16,r1
+		muls	r1,r3
+		sts	macl,r3
+		shlr8	r3
+
+		mov	r11,r1
+		add	r4,r1
+		cmp/ge	r8,r1
+		bf	.sz_safe
+		sub	r8,r1
+.sz_safe:
+		sts	mach,r0
+		mov	r5,@-r0
+		mov	r6,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r10,@-r0
+		mov	 r1,@-r0	; <-- copy of r11
+		mov	r12,r1
+		add	 r3,r1
+		mov	 r1,@-r0
+
+.no_timer:
 		rts
 		nop
 		align 4

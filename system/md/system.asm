@@ -165,8 +165,7 @@ System_Dma_Exit:
 System_MarsUpdate:
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
-		jmp	(System_RomSendDreq).l
-
+		jmp	(System_RomSendDreq).l	; <-- external jump
 
 ; --------------------------------------------------------
 ; System_JumpRamCode

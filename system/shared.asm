@@ -83,7 +83,7 @@ sizeof_scrlbg	ds.l 0
 
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
-Dreq_BgExBuff	ds.b $60				; 32X's FG scroll buffer (NOTE: manual size)
+Dreq_BgExBuff	ds.b $80				; 32X's FG scroll buffer (NOTE: manual size)
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
 Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0

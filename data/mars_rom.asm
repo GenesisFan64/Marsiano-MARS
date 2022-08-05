@@ -33,8 +33,8 @@
 ; --------------------------------------------------------
 
 		align 4
-MapHead_M:	binclude "data/md/maps/level0/head_m.bin"
-		align 4
+; MapHead_M:	binclude "data/md/maps/level0/head_m.bin"
+; 		align 4
 MapBlk_M:	binclude "data/md/maps/level0/art_m.bin"
 		align 4
 MapFg_M:	binclude "data/md/maps/level0/fg_main.bin"

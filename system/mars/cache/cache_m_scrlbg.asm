@@ -18,21 +18,147 @@ CACHE_MSTR_SCRL:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	r2,@-r15
 
-; 		mov	#CS3|$60,r1
-; 		mov	@r1,r0
-; 		add	#1,r0
-; 		mov	r0,@r1
-
-; 		mov	#$FFFFFE80,r1			; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-
-		mov	@r15+,r2
+		mov	#Cach_WdgBuffWr-4,r1
+		mov	@r1,r0
+		tst	r0,r0
+		bf	.draw_lr
+		mov	#$20,r0
+		sub	r0,r1
+		mov	@r1,r0
+		tst	r0,r0
+		bf	.draw_ud
+.finish:
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_WdgMode,gbr)
+		mov	#$FFFFFE80,r1			; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 		rts
 		nop
 		align 4
+
+; ----------------------------------------
+; Draw timer L/R
+; ----------------------------------------
+
+.draw_lr:
+		dt	r0
+		mov	r0,@r1
+
+		mov	#Cach_WdBackup_S,r0
+		mov	r2,@-r0
+		mov	r3,@-r0
+		mov	r4,@-r0
+		mov	r5,@-r0
+		mov	r6,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r10,@-r0
+		mov	r11,@-r0
+		mov	r12,@-r0
+		mov	r13,@-r0
+		mov	r14,@-r0
+		sts	macl,@-r0
+
+; $00 - Layout data (read)
+; $04 - FB pos (read)
+; $08 - Layout width (next block)
+; $0C - FB width (next line)
+; $10 - FB FULL size
+; $14 - FB base
+; $18 - Block data
+; $1C - Block counter
+
+		mov	#Cach_WdgBuffRd,r14
+		mov	@($14,r14),r13		; r13 - FB base
+		mov	@($10,r14),r12		; r12 - FB full size
+		mov	@($0C,r14),r11		; r11 - FB width
+		mov	@($04,r14),r10		; r10 - FB x/y pos
+		mov	@($18,r14),r9		; r9 - Block data
+		mov	@r14,r8			; r8 - Layout data
+		mov	#320,r5
+
+		mov.b	@r8,r0
+		and	#$FF,r0
+		mov	#16*16,r1
+		mulu	r0,r1
+		sts	macl,r0
+		add	r0,r9
+
+		mov	#16,r7
+.y_loop:
+		cmp/gt	r12,r10
+		bf	.lne_sz
+		sub	r12,r10
+.lne_sz:
+		mov	r10,r3
+		mov	#16/4,r6
+.x_loop:
+		mov	r13,r4
+		add	r3,r4
+		mov	@r9+,r0
+		mov	r0,@r4
+		cmp/ge	r5,r3
+		bt	.ex_line
+		mov	r13,r4
+		add	r3,r4
+		add	r12,r4
+		mov	r0,@r4
+.ex_line:
+		dt	r6
+		bf/s	.x_loop
+		add	#4,r3
+		dt	r7
+		bf/s	.y_loop
+		add	r11,r10
+
+		mov	@($08,r14),r0
+		add	r0,r8
+		mov	r8,@r14
+		mov	r10,@($04,r14)	; Save FB pos
+
+		mov	#Cach_WdBackup_L,r0
+		lds	@r0+,macl
+		mov	@r0+,r14
+		mov	@r0+,r13
+		mov	@r0+,r12
+		mov	@r0+,r11
+		mov	@r0+,r10
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r6
+		mov	@r0+,r5
+		mov	@r0+,r4
+		mov	@r0+,r3
+		mov	@r0+,r2
+		bra	.next_wd
+		nop
+
+; ----------------------------------------
+; Draw timer U/D
+; ----------------------------------------
+
+.draw_ud:
+		dt	r0
+		mov	r0,@r1
+
+; ----------------------------------------
+
+.next_wd:
+		mov	#$FFFFFE80,r1
+		mov.w   #$A518,r0		; OFF
+		mov.w   r0,@r1
+		or      #$20,r0			; ON
+		mov.w   r0,@r1
+		mov.w   #$5A20,r0		; Timer for the next WD
+		mov.w   r0,@r1
+		rts
+		nop
+		align 4
+
 		ltorg
 
 ; 	; NEXT ENTER
@@ -61,7 +187,7 @@ CACHE_MSTR_SCRL:
 ; ----------------------------------------------------------------
 ; Drawing routines for the smooth-scrolling background
 ;
-; NOTE: NO RV-ROM PROTECTION.
+; NOTE: NO RV-ROM PROTECTION
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -80,32 +206,36 @@ CACHE_MSTR_SCRL:
 		align 4
 MarsVideo_DrawAll:
 		sts	pr,@-r15
+		mov	@(scrl_intrl_size,r13),r12
 		mov	#_framebuffer,r5
-		mov.w	@(scrl_intrl_w,r14),r0
+		mov.w	@(scrl_intrl_w,r13),r0
 		extu.w	r0,r11
-		mov.w	@(scrl_intrl_h,r14),r0
+		mov.w	@(scrl_intrl_h,r13),r0
 		extu.w	r0,r10
-		mov	@(scrl_fbdata,r14),r0
+		mov	@(scrl_fbdata,r13),r0
 		add	r0,r5
-		mov	@(md_bg_x,r13),r1
+		mov	@(md_bg_x,r14),r1
 		shlr16	r1
-		mov	@(md_bg_y,r13),r2
+		mov	@(md_bg_y,r14),r2
 		shlr16	r2
-		mov	@(md_bg_blk,r13),r9
+		mov	@(md_bg_blk,r14),r9
 		exts.w	r1,r1
-		mov	@(md_bg_low,r13),r8
+		mov	@(md_bg_low,r14),r8
 		exts.w	r2,r2
-		mov.b	@(md_bg_bw,r13),r0
+		mov.b	@(md_bg_bw,r14),r0
 		extu.b	r0,r3
-		mov.b	@(md_bg_bh,r13),r0
+		mov.b	@(md_bg_bh,r14),r0
 		extu.b	r0,r4
-		mov.w	@(md_bg_w,r13),r0
+		mov.w	@(md_bg_w,r14),r0
 		extu.w	r0,r7
-		mov	@(scrl_intrl_size,r14),r12
+		mov.w	@(md_bg_h,r14),r0
+		extu.w	r0,r6
 		lds	r5,mach
 		mov	#-16,r0
 		and	r0,r1
 		and	r0,r2
+
+	; TODO: X/Y map wrap check
 		mulu	r3,r1
 		sts	macl,r0
 		shlr8	r0
@@ -116,7 +246,7 @@ MarsVideo_DrawAll:
 		mulu	r7,r0
 		sts	macl,r0
 		add	r0,r8
-		mov	#16,r6
+
 .x_in:
 		cmp/pl	r1		; X set
 		bt	.x_pl
@@ -150,8 +280,8 @@ MarsVideo_DrawAll:
 	;   r9 - Block graphics data
 	;   r8 - Map data
 	;   r7 - Map width
-	;   r6 - Block size
-	;   r5 - Current write Y
+	;   r6 - Map height
+	;   r5 - Current FB top
 
 		mov	#16,r0
 		mulu	r10,r0
@@ -172,19 +302,22 @@ MarsVideo_DrawAll:
 .x_loop:
 		bsr	.this_blk
 		mov.b	@r8+,r0
+		mov	#16,r0
 		dt	r3
 		bf/s	.x_loop
-		add	r6,r5
+		add	r0,r5
 		mov	#Cach_InRead_L,r0
 		mov	@r0+,r8
 		mov	@r0+,r5
+
 		mov	#16,r0
 		mulu	r11,r0
 		sts	macl,r0
 		add	r0,r5
-		dt	r2
-		bf/s	.y_loop
 		add	r7,r8
+		dt	r2
+		bf	.y_loop
+
 		lds	@r15+,pr
 		rts
 		nop
@@ -1098,26 +1231,37 @@ MarsVideo_NxtSuprSpr:
 ; 		ltorg
 
 ; --------------------------------------------------------
-; Quick RAM buffers
+; Quick RAM
 ; --------------------------------------------------------
 
+; Cach_WdgDrawBuff:
+; $00 - Layout data (read)
+; $04 - FB pos (read)
+; $08 - Layout width (next block)
+; $0C - FB width (next line)
+; $10 - FB FULL size
+; $14 - FB base
+; $18 - Block data
+; $1C - Block counter
+
 			align 4
+RAM_Mars_ScrlBuff	ds.w sizeof_mscrl*2	; Scrolling buffers
+Cach_WdgBuffRd		ds.l 8
+Cach_WdgBuffWr		ds.l 0		; <-- read backwards
 Cach_InRead_L		ds.l 2
 Cach_InRead_S		ds.l 0		; <-- read backwards
 Cach_BlkBackup_L	ds.l 6
 Cach_BlkBackup_S	ds.l 0		; <-- read backwards
-Cach_DrawTimers		ds.l 4		; Draw timers LRUD, write $02 to these
-Cach_FbData		ds.l 1		; *** KEEP THESE IN ORDER
+Cach_WdBackup_L		ds.l 14
+Cach_WdBackup_S		ds.l 0		; <-- read backwards
+Cach_DrawTimers		ds.l 4		; Screen draw-request timers, write $02 to these
+
+Cach_FbData		ds.l 1		; *** KEEP THIS ORDER
 Cach_FbPos		ds.l 1
 Cach_FbPos_Y		ds.l 1
 Cach_Intrl_W		ds.l 1
 Cach_Intrl_H		ds.l 1
 Cach_Intrl_Size		ds.l 1		; ***
-
-RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2	; Scrolling section control
-
-RAM_Mars_RdrwBlocks	ds.b ((320+16)/16)*((240+16)/16)
-
 
 ; --------------------------------------------------------
 .end:		phase CACHE_MSTR_SCRL+.end&$1FFF

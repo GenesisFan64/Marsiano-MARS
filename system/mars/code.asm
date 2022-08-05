@@ -1597,8 +1597,8 @@ mstr_gfx2_init_2:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx2_init_cont:
-		mov	#RAM_Mars_ScrlBuff,r14
-		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r13
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14
+		mov	#RAM_Mars_ScrlBuff,r13
 		mov	#MarsVideo_DrawAll,r0
 		jsr	@r0
 		nop
@@ -1614,7 +1614,7 @@ mstr_gfx2_loop:
 		nop
 		bsr	MarsVideo_Bg_MdReq
 		nop
-		mov.w	#0,r0					; Setup Watchdog interrupt
+		mov.w	#1,r0				; Setup Watchdog interrupt
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 		mov	#0,r1
 		mov	#$10,r2
@@ -1796,9 +1796,8 @@ mstr_gfx3_loop:
 		jsr	@r0
 		nop
 
-	; While we are doing this, the watchdog is
-	; working on the background drawing the polygons
-	; using the "pieces" list
+	; While doing this: the watchdog is
+	; drawing the polygons using the "pieces" list
 	;
 	; r14 - Polygon pointers list
 	; r13 - Number of polygons to build

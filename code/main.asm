@@ -55,27 +55,9 @@ MD_Mode0:
 		move.w	#0,(RAM_MapY).l
 		bsr	.update_pos
 
-	; Pick and draw scroll maps
+	; Pick maps
 		bsr	MdMap_Init
 		bsr	Level_PickMap
-		bsr	MdMap_DrawAll
-		bsr	System_MarsUpdate		; Send first DREQ
-
-	; 32X stuff
-; 		lea	(RAM_MdDreq+Dreq_Objects),a0
-; 		move.l	#MarsObj_test|TH,mdl_data(a0)
-; 		move.w	#-$800,mdl_z_pos(a0)
-; 		bsr	System_MarsUpdate
-; ; 		lea	(PalData_Mars_Test),a0
-; 		lea	(MDLDATA_PAL_TEST),a0
-; 		moveq	#0,d0
-; 		move.w	#256,d1
-; 		moveq	#1,d2
-; 		bsr	Video_FadePal_Mars
-; 		move.w	#$1D<<10|$0C<<5,(RAM_MdMarsPalFd).w
-; 		move.w	#3,d0
-; 		bsr	Video_Mars_GfxMode
-
 		bsr	SuperSpr_Init
 		lea	(MapPal_M),a0
 		moveq	#0,d0
@@ -83,9 +65,19 @@ MD_Mode0:
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
+		bsr	System_MarsUpdate		; Send first DREQ
 		moveq	#2,d0
 		bsr	Video_Mars_GfxMode
 	; ****
+		bsr	MdMap_DrawAll
+		lea	(Pal_level0),a0
+		moveq	#$10,d0
+		move.w	#32,d1
+		bsr	Video_FadePal
+		move.l	#Art_level0,d0
+		move.w	#1,d1
+		move.w	#Art_level0_e-Art_level0,d2
+		bsr	Video_LoadArt
 
 		move.w	#1,(RAM_FadeMdIncr).w
 		move.w	#2,(RAM_FadeMarsIncr).w
@@ -103,8 +95,8 @@ MD_Mode0:
 		bsr	Sound_TrkStop
 		move.w	#200+32,d1
 		bsr	Sound_GlbBeats
-; 		lea	(GemaTrkData_Nadie_MARS),a0
-		lea	(GemaTrkData_Nadie_MD),a0
+		lea	(GemaTrkData_Nadie_MARS),a0
+; 		lea	(GemaTrkData_Nadie_MD),a0
 		moveq	#0,d0
 		move.w	#6,d1
 		moveq	#0,d2
@@ -133,7 +125,7 @@ MD_Mode0:
 		btst	#bitJoyC,d7
 		beq.s	.z_up
 		add.l	#$10000,(RAM_ThisSpeed).l
-		cmp.l	#$80000,(RAM_ThisSpeed).l
+		cmp.l	#$70000,(RAM_ThisSpeed).l
 		ble.s	.z_up
 		move.l	#$10000,(RAM_ThisSpeed).l
 .z_up:
@@ -431,9 +423,9 @@ SuperSpr_Main:
 ; ------------------------------------------------------
 
 Level_PickMap:
-		move.l	#MapHead_M,a0
-		move.l	#MapBlk_M,a1
-		move.l	#MapFg_M,a2
+		move.l	#MapHead_M|TH,a0
+		move.l	#MapBlk_M|TH,a1
+		move.l	#MapFg_M|TH,a2
 		move.l	#0,a3
 		move.l	#0,a4
 		moveq	#-1,d0
@@ -467,21 +459,14 @@ Level_PickMap:
 		move.w	(RAM_MapY),d4
 		bsr	MdMap_Set
 
+		rts
+
 ; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
 ; 		move.l	#TESTMARS_BG,scrlbg_Data(a0)
 ; 		move.l	#512,scrlbg_W(a0)
 ; 		move.l	#256,scrlbg_H(a0)
 ; 		move.l	#$00000000,scrlbg_X(a0)
 ; 		move.l	#$00000000,scrlbg_Y(a0)
-
-		lea	(Pal_level0),a0
-		moveq	#$10,d0
-		move.w	#32,d1
-		bsr	Video_FadePal
-		move.l	#Art_level0,d0
-		move.w	#1,d1
-		move.w	#Art_level0_e-Art_level0,d2
-		bra	Video_LoadArt
 
 ; ====================================================================
 ; ------------------------------------------------------

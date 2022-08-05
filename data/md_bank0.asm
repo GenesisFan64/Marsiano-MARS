@@ -30,3 +30,10 @@ MapBgL_0:	binclude "data/md/maps/level0/bg_low.bin"
 		align 2
 MapBgH_0:	binclude "data/md/maps/level0/bg_hi.bin"
 		align 2
+
+; ----------------------------------------------------------------
+; Headers for 32X maps go here...
+
+		align 2
+MapHead_M:	binclude "data/md/maps/level0/head_m.bin"
+		align 2
