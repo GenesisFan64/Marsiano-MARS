@@ -285,6 +285,8 @@ MarsVideo_MakeNameTbl:
 ; Emulators ignore this.
 ; --------------------------------------------------------
 
+; TODO: add extra options
+
 MarsVideo_FixTblShift:
 		mov	#_vdpreg,r14
 		mov.b	@(bitmapmd,r14),r0		; Check if we are on indexed mode
@@ -295,6 +297,7 @@ MarsVideo_FixTblShift:
 		and	#1,r0
 		tst	r0,r0
 		bt	.ptchset
+
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
 		mov	r14,r13				; r13 - Framebuffer lines to check
 		mov	#_framebuffer+FBVRAM_PATCH,r12	; r12 - Framebuffer output for the patched pixel lines
@@ -685,6 +688,9 @@ MarsVideo_Bg_MdMove:
 ; r13 | Scrolling-area buffer
 ;
 ; Note: The drawing bits are cleared on the Genesis-side.
+;
+; Breaks:
+; r13
 ; --------------------------------------------------------
 
 ; TODO: merge the bits
@@ -745,41 +751,73 @@ MarsVideo_Bg_MdReq:
 		mov	@(scrl_fbdata,r13),r7
 		add	r0,r7
 		mov	@(md_bg_blk,r14),r6
-		mov	#((240+16)/16)-1,r5		; Timer for L/R
-		mov.w	@(scrl_fbpos_y,r14),r0
-		lds	r3,mach
+		mov	#((224+16)/16),r5		; Timer for L/R
+		mov.w	@(scrl_fbpos_y,r13),r0
 		extu.w	r0,r0
+		and	r1,r11
+		and	r1,r0
 		mulu	r0,r9
 		sts	macl,r0
-		and	r1,r11
+		add	r0,r11
+		lds	r3,mach
 
-	; L/R draw
-		mov	r12,r13			; <-- copy layout
-		mov.w	@(md_bg_yinc_u,r14),r0	; Move top Y
+	; L/R columns
+		mov	r12,r13				; <-- copy layout
+		mov.w	@(md_bg_yinc_u,r14),r0		; Move top Y
+		exts.w	r0,r0
 		mov	#16,r1
 		muls	r1,r0
 		sts	macl,r0
 		shlr8	r0
-		mulu	r10,r0
+		exts.w	r0,r0
+		muls	r10,r0
 		sts	macl,r0
-		add	r0,r13
-
+		add	r0,r12
 		mov.w	@(md_bg_xinc_r,r14),r0
-		exts.w	r0,r3
 		mov	#320,r4			; r4 - X increment
 		bsr	.x_draw
-		nop
+		exts.w	r0,r3
 		mov.w	@(md_bg_xinc_l,r14),r0
 		exts.w	r0,r3
 		mov	#0,r4
 		bsr	.x_draw
-		add	#4,r2			; <-- Next timer to check
+		add	#4,r2
 
-.lr_done:
+	; U/D rows
+		mov	#((320+16)/16),r5		; Timer for U/D
+		mov	r13,r12
+		add	#4,r2				; Now check D/U timers
+		sts	mach,r0
+		add	#$20,r0
+		lds	r0,mach
+		mov.w	@(md_bg_xinc_l,r14),r0		; Move left
+		exts.w	r0,r0
+		mov	#16,r1
+		muls	r1,r0
+		sts	macl,r0
+		shlr8	r0
+		exts.w	r0,r0
+		add	r0,r12
+		mov.w	@(md_bg_yinc_d,r14),r0
+		mov	#224,r4
+		bsr	.y_draw
+		exts.w	r0,r3
+		mov.w	@(md_bg_yinc_u,r14),r0
+		extu.w	r0,r3
+		mov	#0,r4
+		bsr	.y_draw
+		add	#4,r2
+
 		lds	@r15+,pr
 		rts
 		nop
 		align 4
+
+; ----------------------------------------
+
+; r3 - layout X increment
+; r4 - framebuffer X increment
+; mach - Cach_WdgBuffWr
 
 .x_draw:
 		mov	@r2,r0
@@ -788,11 +826,10 @@ MarsVideo_Bg_MdReq:
 		dt	r0
 		mov	r0,@r2
 
-		mov	#16,r1
+		mov	#16,r1		; layout increment
 		muls	r1,r3
 		sts	macl,r3
 		shlr8	r3
-
 		mov	r11,r1
 		add	r4,r1
 		cmp/ge	r8,r1
@@ -807,11 +844,57 @@ MarsVideo_Bg_MdReq:
 		mov	r9,@-r0
 		mov	r10,@-r0
 		mov	 r1,@-r0	; <-- copy of r11
-		mov	r12,r1
+		mov	r12,r1		; <-- layout + X pos
 		add	 r3,r1
 		mov	 r1,@-r0
-
 .no_timer:
+		rts
+		nop
+		align 4
+
+; ----------------------------------------
+
+; r3 - layout Y increment
+; r4 - framebuffer Y increment
+; mach - Cach_WdgBuffWr_UD
+
+.y_draw:
+		mov	@r2,r0
+		tst	r0,r0
+		bt	.no_timer
+		dt	r0
+		mov	r0,@r2
+
+		mov	#16,r1		; layout increment
+		muls	r1,r3
+		sts	macl,r3
+		shlr8	r3
+		mulu	r10,r3
+		sts	macl,r3
+
+
+	; HEIGHT WRAP GOES HERE
+
+
+		mov	r11,r1
+		mulu	r9,r4
+		sts	macl,r0
+		add	r0,r1
+		cmp/ge	r8,r1
+		bf	.sz_safey
+		sub	r8,r1
+.sz_safey:
+		sts	mach,r0
+		mov	r5,@-r0
+		mov	r6,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r10,@-r0
+		mov	 r1,@-r0	; <-- copy of r11
+		mov	r12,r1		; <-- layout + Y pos
+		add	 r3,r1
+		mov	 r1,@-r0
 		rts
 		nop
 		align 4
@@ -1032,4 +1115,3 @@ MarsVideo_SetWatchdog:
 		nop
 		align 4
 		ltorg
-		align 4

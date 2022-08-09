@@ -3,21 +3,21 @@
 ; PROJECT MARSIANO
 ; +-----------------------------------------------------------------+
 
-		include	"system/macros.asm"	; Assembler macros
-		include	"system/shared.asm"	; Shared Genesis/32X variables
-		include	"system/md/map.asm"	; Genesis hardware map
-		include	"system/md/const.asm"	; Genesis variables
-		include	"system/mars/map.asm"	; 32X hardware map
-		include "code/global.asm"	; Global user variables on the Genesis
-		include	"system/head.asm"	; 32X header
+		include	"system/macros.asm"		; Assembler macros
+		include	"system/shared.asm"		; Shared Genesis/32X variables
+		include	"system/md/map.asm"		; Genesis hardware map
+		include	"system/md/const.asm"		; Genesis variables
+		include	"system/mars/map.asm"		; 32X hardware map
+		include "code/global.asm"		; Global user variables on the Genesis
+		include	"system/head.asm"		; 32X header
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Main
 ; ----------------------------------------------------------------
 
-		lea	(Md_TopCode+$880000),a0		; Transfer RAM-shared code
-		lea	($FF0000),a1
+		lea	(Md_TopCode+$880000),a0			; Transfer common 68K code
+		lea	($FF0000),a1				; at the top of RAM
 		move.w	#((Md_TopCode_e-Md_TopCode))-1,d0
 .copyme:
 		move.b	(a0)+,(a1)+
@@ -25,7 +25,7 @@
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		move.l	#RamCode_Boot,d0
+		move.l	#RamCode_Boot,d0			; Main code section
 		jmp	(System_JumpRamCode).l
 
 ; ====================================================================
@@ -40,8 +40,7 @@ minfo_ram_s:
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
 	if MOMPASS=6
-.here:
-		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
+.here:		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
 	endif
 RAMCODE_USER:
 		dephase
@@ -60,39 +59,18 @@ RamCode_Boot:
 		dephase
 .here:
 	if MOMPASS=6
-		message "THIS RAM-BANK uses: \{.here-RamCode_Boot} of \{MDRAM_START&$FFFF-RAMCODE_USER&$FFFF}"
+		message "THIS RAM-BANK uses: \{.here-RamCode_Boot}"
 	endif
-;
-; ; ====================================================================
-; ; --------------------------------------------------------
-; ; Section stored at the $880000 area
-; ; --------------------------------------------------------
-;
-; 		phase $FF0000
-; Md_TopCode:
-; 		include	"system/md/sound.asm"
-; 		include	"system/md/video.asm"
-; 		include	"system/md/system.asm"
-; 		include "code/main.asm"
-; 		include "code/debug.asm"
-; Md_TopCode_e:
-; 		dephase
-; 		align 2
-;
-; 	if MOMPASS=6
-; .end:
-; 		message "Fixed 68K code ends at: \{Md_TopCode_end}"
-; 	endif
 
 ; ====================================================================
 ; --------------------------------------------------------
-; Stuff that needs to be stored on the $880000+ area
+; Stuff stored on the 880000+ ROM area
 ; --------------------------------------------------------
 
 		align 4
 		phase $880000+*
-		include "system/md/sub_dreq.asm"
-Z80_CODE:	include "system/md/z_driver.asm"
+		include "system/md/sub_dreq.asm"	; <-- DREQ only works on 880000
+Z80_CODE:	include "system/md/z_driver.asm"	; <-- Reads once
 Z80_CODE_END:
 		dephase
 		align 2
@@ -104,16 +82,14 @@ Z80_CODE_END:
 
 ; ---------------------------------------------
 ; BANK 0
-;
-; First one is smaller than the others...
 ; ---------------------------------------------
 
 		phase $900000+*			; Only one currently
 MDBNK0_START:
-		include "sound/tracks.asm"
-		include "sound/instr.asm"
-		include "sound/smpl_dac.asm"
-		include "data/md_bank0.asm"
+		include "sound/tracks.asm"	; <-- Sound data
+		include "sound/instr.asm"	;  --
+		include "sound/smpl_dac.asm"	;  --
+		include "data/md_bank0.asm"	; <-- 68K banked data
 MDBNK0_END:
 		dephase
 ; 		org $100000-4			; Fill this bank and
@@ -179,7 +155,7 @@ MARS_RAMDATA_E:
 ; ====================================================================
 ; --------------------------------------------------------
 ; 32X data for SH2's ROM view
-; This section will be gone if RV=1
+; This section will be gone if RV bit is set to 1
 ; --------------------------------------------------------
 
 		phase CS1+*

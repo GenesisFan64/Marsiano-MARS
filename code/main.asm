@@ -51,7 +51,7 @@ MD_Mode0:
 		clr.w	(RAM_PaletteFd).w
 		move.l	#$10000,(RAM_ThisSpeed).l
 
-		move.w	#0,(RAM_MapX).l
+		move.w	#$40,(RAM_MapX).l
 		move.w	#0,(RAM_MapY).l
 		bsr	.update_pos
 
@@ -170,26 +170,44 @@ MD_Mode0:
 
 
 .update_pos:
-		move.w	(RAM_MapX),d0
-		move.w	(RAM_MapY),d1
-		lea	(RAM_BgBufferM),a0
-		move.w	d0,md_bg_x(a0)
-		move.w	d1,md_bg_y(a0)
-		lea	(RAM_BgBuffer),a0
-		asr.w	#1,d0
+		moveq	#-1,d0
+		move.w	(RAM_MapX),d1
+		move.w	(RAM_MapY),d2
+		bsr	MdMap_Move
+		moveq	#0,d0
 		asr.w	#1,d1
-		move.w	d0,md_bg_x(a0)
-		move.w	d1,md_bg_y(a0)
-		move.w	d0,(RAM_HorScroll).w
-		move.w	d1,(RAM_VerScroll).w
-		adda	#sizeof_mdbg,a0
-		asr.w	#1,d0
+		asr.w	#1,d2
+		move.w	d1,(RAM_HorScroll).w
+		move.w	d2,(RAM_VerScroll).w
+		bsr	MdMap_Move
+		moveq	#1,d0
 		asr.w	#1,d1
-		move.w	d0,md_bg_x(a0)
-		move.w	d1,md_bg_y(a0)
-		move.w	d0,(RAM_HorScroll+2).w
-		move.w	d1,(RAM_VerScroll+2).w
+		asr.w	#1,d2
+		move.w	d1,(RAM_HorScroll+2).w
+		move.w	d2,(RAM_VerScroll+2).w
+		bsr	MdMap_Move
 		neg.l	(RAM_HorScroll).w
+
+; 		move.w	(RAM_MapX),d0
+; 		move.w	(RAM_MapY),d1
+; 		lea	(RAM_BgBufferM),a0
+; 		move.w	d0,md_bg_x(a0)
+; 		move.w	d1,md_bg_y(a0)
+; 		lea	(RAM_BgBuffer),a0
+; 		asr.w	#1,d0
+; 		asr.w	#1,d1
+; 		move.w	d0,md_bg_x(a0)
+; 		move.w	d1,md_bg_y(a0)
+; 		move.w	d0,(RAM_HorScroll).w
+; 		move.w	d1,(RAM_VerScroll).w
+; 		adda	#sizeof_mdbg,a0
+; 		asr.w	#1,d0
+; 		asr.w	#1,d1
+; 		move.w	d0,md_bg_x(a0)
+; 		move.w	d1,md_bg_y(a0)
+; 		move.w	d0,(RAM_HorScroll+2).w
+; 		move.w	d1,(RAM_VerScroll+2).w
+; 		neg.l	(RAM_HorScroll).w
 		rts
 
 ; ====================================================================
@@ -431,8 +449,6 @@ Level_PickMap:
 		moveq	#-1,d0
 		moveq	#0,d1
 		moveq	#0,d2
-		move.w	(RAM_MapX),d3
-		move.w	(RAM_MapY),d4
 		bsr	MdMap_Set
 
 		move.l	#MapHead_0,a0
@@ -443,8 +459,6 @@ Level_PickMap:
 		moveq	#0,d0
 		move.w	#$C000,d1
 		move.w	#$2000,d2
-		move.w	(RAM_MapX),d3
-		move.w	(RAM_MapY),d4
 		bsr	MdMap_Set
 
 		move.l	#MapHead_0,a0
@@ -455,8 +469,6 @@ Level_PickMap:
 		moveq	#1,d0
 		move.w	#$E000,d1
 		move.w	#$2000,d2
-		move.w	(RAM_MapX),d3
-		move.w	(RAM_MapY),d4
 		bsr	MdMap_Set
 
 		rts

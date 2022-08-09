@@ -43,16 +43,17 @@ s_irq_pwm:
 
 ; ------------------------------------------------
 
-		mov	r2,@-r15
-		mov	r3,@-r15
-		mov	r4,@-r15
-		mov	r5,@-r15
-		mov	r6,@-r15
-		mov	r7,@-r15
-		mov	r8,@-r15
-		mov	r9,@-r15
-		mov	r10,@-r15
-		sts	macl,@-r15
+		mov	#Cach_SlvStack_S,r0
+		mov	r2,@-r0
+		mov	r3,@-r0
+		mov	r4,@-r0
+		mov	r5,@-r0
+		mov	r6,@-r0
+		mov	r7,@-r0
+		mov	r8,@-r0
+		mov	r9,@-r0
+		mov	r10,@-r0
+		sts	macl,@-r0
 
 		mov	#MarsSnd_PwmCache,r10
 		mov	#MarsSnd_PwmChnls,r9	; r9 - Channel list
@@ -212,17 +213,18 @@ s_irq_pwm:
  		mov.w	r6,@r1
  		mov.w	r7,@r2
 
-		lds	@r15+,macl
-		mov	@r15+,r10
-		mov	@r15+,r9
-		mov	@r15+,r8
-		mov	@r15+,r7
-		mov	@r15+,r6
-		mov	@r15+,r5
-		mov	@r15+,r4
-		mov	@r15+,r3
+		mov	#Cach_SlvStack_L,r0
+		lds	@r0+,macl
+		mov	@r0+,r10
+		mov	@r0+,r9
+		mov	@r0+,r8
+		mov	@r0+,r7
+		mov	@r0+,r6
+		mov	@r0+,r5
+		mov	@r0+,r4
+		mov	@r0+,r3
 		rts
-		mov	@r15+,r2
+		mov	@r0+,r2
 		align 4
 		ltorg
 
@@ -847,6 +849,8 @@ Cach_BkupPnt_S		ds.l 0			; <-- Reads backwards
 Cach_BkupS_L		ds.l 5			; **
 Cach_BkupS_S		ds.l 0			; <-- Reads backwards
 Cach_CurrPlygn		ds.b sizeof_polygn	; Current reading polygon
+Cach_SlvStack_L		ds.l 10
+Cach_SlvStack_S		ds.l 0
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

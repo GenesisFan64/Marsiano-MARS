@@ -58,7 +58,8 @@ bitMarsBg	equ 6
 ; Structs
 ; ----------------------------------------------------------------
 
-; IN SH2 SIZES ORDER, still works fine on 68k
+; IN SH2 ORDER
+; still works fine on this side.
 
 		struct 0
 md_bg_bw	ds.b 1		; Block Width
@@ -67,8 +68,8 @@ md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
 md_bg_flags	ds.b 1		; Drawing flags: %EM00UDLR
 md_bg_xset	ds.b 1		; X-counter
 md_bg_yset	ds.b 1		; Y-counter
-md_bg_movex	ds.b 1
-md_bg_movey	ds.b 1
+md_bg_movex	ds.b 1		; *** ALIGNMENT, FREE TO USE
+md_bg_movey	ds.b 1		; ***
 md_bg_w		ds.w 1		; Width in blocks
 md_bg_h		ds.w 1		; Height in blocks
 md_bg_wf	ds.w 1		; FULL Width in pixels
@@ -90,9 +91,9 @@ md_bg_y		ds.l 1		; Y pos 0000.0000
 sizeof_mdbg	ds.l 0
 		finish
 
-; md_bg_flags: %EM.. UDLR
+; md_bg_flags: %EM..UDLR
 ; UDLR - off-screen update bits
-;    M - Map belongs to: Genesis or 32X
+;    M - Map belongs to Genesis or 32X
 ;    E - Enable this map
 
 ; ====================================================================
@@ -1550,7 +1551,7 @@ MdMap_Init:
 ;
 ; Sets a new scrolling section to use.
 ;
-; **X and Y COORDS ARE SET EXTERNALLY
+; **SET YOUR X and Y COORDS EXTERNALLY
 ; BEFORE GETTING HERE**
 ;
 ; Input:
@@ -1558,8 +1559,6 @@ MdMap_Init:
 ; d0 | WORD - BG internal slot (-1: 32X only)
 ; d1 | WORD - VRAM location for map data
 ; d2 | WORD - VRAM add + palette
-; d3 | X start
-; d4 | Y start
 ; a0 - Level header data:
 ; 	dc.w width,height
 ; 	dc.b blkwidth,blkheight
@@ -1569,15 +1568,12 @@ MdMap_Init:
 ; d4 - Collision data
 ;
 ; Then load the graphics externally at the same
-; location set in d2
-;
+; VRAM location set in d2
 ;
 ; ** 32X side **
 ; d0 | WORD - Write as -1
 ; d1 | WORD - Scroll buffer to use on the 32X side
 ; d2 | WORD - Index-palette increment
-; d3 | X start
-; d4 | Y start
 ; a0 - Level header data: (GENESIS SIDE)
 ; 	dc.w width,height
 ; 	dc.b blkwidth,blkheight
@@ -1606,17 +1602,19 @@ MdMap_Set:
 		move.w	d2,md_bg_vram(a6)
 
 		moveq	#0,d7
-		move.w	d3,d7
+		move.w	md_bg_x(a6),d7
+		move.b	d7,md_bg_xset(a6)
+		move.w	d7,md_bg_x_old(a6)
 		swap	d7
 		move.l	d7,md_bg_x(a6)
-		move.w	d3,md_bg_x_old(a6)
-		move.b	d3,md_bg_xset(a6)
 		moveq	#0,d7
-		move.w	d4,d7
+		move.w	md_bg_y(a6),d7
+		move.b	d7,md_bg_yset(a6)
+		move.w	d7,md_bg_y_old(a6)
 		swap	d7
 		move.l	d7,md_bg_y(a6)
-		move.w	d4,md_bg_y_old(a6)
-		move.b	d3,md_bg_yset(a6)
+		and.w	#$F,d3
+		and.w	#$F,d4
 
 		swap	d3
 		swap	d4
@@ -1646,7 +1644,7 @@ MdMap_Set:
 		swap	d3
 		swap	d4
 
-	; TODO: cleanup
+	; TODO: improve this...
 		move.w	md_bg_x(a6),d3
 		move.w	md_bg_y(a6),d4
 	; X beams
@@ -1683,13 +1681,65 @@ MdMap_Set:
 		rts
 
 ; --------------------------------------------------------
+; MdMap_Move
+;
+; Moves the current background/foreground
+; and checks for overflow.
+;
+; Input:
+; d0 | WORD - Background slot, if -1 32X's
+; d1 | WORD - Current X position
+; d2 | WORD - Current Y position
+; a0 - Background to move and check.
+;
+; Uses:
+; d6-d7
+; --------------------------------------------------------
+
+MdMap_Move:
+		lea	(RAM_BgBufferM),a6
+		tst.w	d0
+		bmi.s	.mars_side
+		lea	(RAM_BgBuffer),a6
+		mulu.w	#sizeof_mdbg,d0
+		adda	d0,a6
+.mars_side:
+; 		btst	#bitBgOn,md_bg_flags(a6)
+; 		beq	.not_enabld
+		move.w	md_bg_wf(a6),d0
+		tst.w	d1
+		bpl.s	.x_left
+		clr.w	d1
+.x_left:
+		sub.w	#320,d0
+		cmp.w	d0,d1
+		bcs.s	.x_right
+		move.w	d0,d1
+.x_right:
+		move.w	md_bg_hf(a6),d0
+		tst.w	d2
+		bpl.s	.y_left
+		clr.w	d2
+.y_left:
+		sub.w	#224,d0
+		cmp.w	d0,d2
+		bcs.s	.y_right
+		move.w	d0,d2
+.y_right:
+		move.w	d1,md_bg_x(a6)
+		move.w	d2,md_bg_y(a6)
+.not_enabld:
+		rts
+
+; --------------------------------------------------------
 ; MdMap_Update
 ;
-; Updates backgrounds internally
+; Updates backgrounds internally, call this
+; BEFORE going into VBlank.
 ;
-; For drawing the changes call MdMap_DrawScrl
-; on VBlank, this also applies to the 32X side as this
-; routine clears the draw bits there.
+; Then later call MdMap_DrawScrl on VBlank,
+; this also applies for the 32X as this routine also
+; resets the drawing bits.
 ;
 ; For the 32X:
 ; Call System_MarsUpdate AFTER this.
@@ -1722,9 +1772,6 @@ MdMap_Update:
 		sub.w	d0,d2
 		move.w	d3,md_bg_y_old(a6)
 .yequ:
-; 		move.b	d1,md_bg_movex(a6)	; Save X/Y moves
-; 		move.b	d2,md_bg_movey(a6)
-
 
 	; Increment drawing beams
 		move.w	d1,d0
@@ -1822,16 +1869,37 @@ MdMap_DrawAll:
 		move.b	md_bg_bw(a6),d2
 		move.b	md_bg_bh(a6),d3
 		move.w	md_bg_w(a6),d4
-		move.w	md_bg_wf(a6),d5
-		move.w	md_bg_hf(a6),d6
+; 		move.w	md_bg_wf(a6),d5
+; 		move.w	md_bg_hf(a6),d6
+
+		moveq	#0,d6
+		move.w	d0,d6
+		and.w	#-$10,d6
+		lsr.w	#2,d6
+		and.w	#$7F,d6
+
+		moveq	#0,d5
+		move.w	d1,d5
+		and.w	#-$10,d5
+		lsr.w	#3,d5
+		and.w	#$FFF,d5
+
+		add.w	d5,d6
+		add.w	md_bg_vpos(a6),d6	; <-- TODO: X/Y increment
+		move.w	d6,d5
+		rol.w	#2,d6
+		and.w	#%11,d6
+		swap	d6
+		and.w	#$3FFF,d5
+		move.w	d5,d6			; d6 - VDP 2nd|1st writes
 
 		and.w	#$FF,d2
-		mulu.w	d2,d0
+		muls.w	d2,d0
 		lsr.w	#8,d0
 		and.w	#$FF,d3
-		mulu.w	d3,d1
+		muls.w	d3,d1
 		lsr.w	#8,d1
-		mulu.w	d4,d1
+		muls.w	d4,d1
 		add.l	d1,d0
 		add.l	d0,a4
 		add.l	d0,a3
@@ -1846,14 +1914,8 @@ MdMap_DrawAll:
 		move.w	#$3FFF,d4		; d4 - Y wrap | Y next block + bits
 		swap	d4
 		move.w	#$100,d4
+		move.w	d5,d0
 		moveq	#0,d5			; d5 - temporal | X-add read
-		move.w	md_bg_vpos(a6),d6	; <-- TODO: X/Y increment
-		move.w	d6,d0
-		rol.w	#2,d6
-		and.w	#%11,d6
-		swap	d6
-		and.w	#$3FFF,d0
-		move.w	d0,d6			; d6 - VDP 2nd|1st writes
 		move.w	#(512/16)-1,d7		; d7 - X cells | Y cells
 		swap	d7
 		move.w	#(256/16)-1,d7
