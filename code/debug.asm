@@ -194,6 +194,7 @@ MD_DebugMenu:
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.fade_in
 
+
 .page1:
 
 		bsr	SuperSprite_Test
@@ -464,14 +465,15 @@ MD_DebugMenu:
 		bsr	Video_Print
 
 		bsr	System_MarsUpdate
-		move.w	#3,d0
-		bsr	Video_Mars_GfxMode
+
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
-
+		move.w	#3,d0
+		bsr	Video_Mars_GfxMode
+		bsr	Video_Mars_WaitFrame
 		bsr	.fade_in
 .page4:
 		lea	str_Stats(pc),a0

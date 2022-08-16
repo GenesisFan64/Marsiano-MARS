@@ -32,9 +32,10 @@ TestMars_Yui:
 Textr_test_yui:
 		binclude "data/mars/objects/mtrl/yui_art.bin"
 		align 4
-; Textr_linkoot:
-; 		binclude "data/mars/objects/mtrl/link_art.bin"
-; 		align 4
+
+Textr_pecsi:
+		binclude "data/mars/objects/mtrl/pecsi_art.bin"
+		align 4
 
 SuperSpr_Test:
 	binclude "data/mars/tests/sprites/sprites_art.bin"

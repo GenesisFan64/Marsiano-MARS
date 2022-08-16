@@ -48,49 +48,38 @@ MD_Mode0:
 		bsr	Video_Update
 		bsr	Mode_Init
 		bsr	Video_PrintInit
-		clr.w	(RAM_PaletteFd).w
-		move.l	#$10000,(RAM_ThisSpeed).l
 
-		move.w	#$40,(RAM_MapX).l
-		move.w	#0,(RAM_MapY).l
-		bsr	.update_pos
-
-	; Pick maps
-		bsr	MdMap_Init
-		bsr	Level_PickMap
-		bsr	SuperSpr_Init
-		lea	(MapPal_M),a0
+	; Load assets first
+		move.l	#Art_level0,d0			; Genesis VDP graphics
+		move.w	#1,d1
+		move.w	#Art_level0_e-Art_level0,d2
+		bsr	Video_LoadArt
+		lea	(Pal_level0),a0			; 16-color palette
+		moveq	#$10,d0
+		move.w	#32,d1
+		bsr	Video_FadePal
+		lea	(MapPal_M),a0			; 256-color palette
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
+		clr.w	(RAM_PaletteFd).w		; <-- quick patch
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
+
+	; Load maps
+		move.l	#$10000,(RAM_ThisSpeed).l
+		move.w	#0,(RAM_MapX).l
+		move.w	#0,(RAM_MapY).l
+		bsr	.update_pos
+		bsr	MdMap_Init
+		bsr	Level_PickMap
+		bsr	SuperSpr_Init
 		bsr	System_MarsUpdate		; Send first DREQ
 		moveq	#2,d0
 		bsr	Video_Mars_GfxMode
-	; ****
 		bsr	MdMap_DrawAll
-		lea	(Pal_level0),a0
-		moveq	#$10,d0
-		move.w	#32,d1
-		bsr	Video_FadePal
-		move.l	#Art_level0,d0
-		move.w	#1,d1
-		move.w	#Art_level0_e-Art_level0,d2
-		bsr	Video_LoadArt
 
-		move.w	#1,(RAM_FadeMdIncr).w
-		move.w	#2,(RAM_FadeMarsIncr).w
-		move.w	#1,(RAM_FadeMdDelay).w
-		move.w	#0,(RAM_FadeMarsDelay).w
-		move.w	#1,(RAM_FadeMdReq).w
-		move.w	#1,(RAM_FadeMarsReq).w
-		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
-		move.b	#%000,(RAM_VdpRegs+$B).l
-		move.b	#$10,(RAM_VdpRegs+7).l
-		bsr	Video_Update
-
-	; Prepare sound
+	; Testing track
 		moveq	#0,d0
 		bsr	Sound_TrkStop
 		move.w	#200+32,d1
@@ -102,6 +91,18 @@ MD_Mode0:
 		moveq	#0,d2
 		move.w	#%01,d3
 		bsr	Sound_TrkPlay
+
+	; Set Fade-in settings
+		move.w	#1,(RAM_FadeMdIncr).w
+		move.w	#2,(RAM_FadeMarsIncr).w
+		move.w	#1,(RAM_FadeMdDelay).w
+		move.w	#0,(RAM_FadeMarsDelay).w
+		move.w	#1,(RAM_FadeMdReq).w
+		move.w	#1,(RAM_FadeMarsReq).w
+		move.b	#%000,(RAM_VdpRegs+$B).l
+		move.b	#$10,(RAM_VdpRegs+7).l
+		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
+		bsr	Video_Update
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -129,6 +130,11 @@ MD_Mode0:
 		ble.s	.z_up
 		move.l	#$10000,(RAM_ThisSpeed).l
 .z_up:
+
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyB,d7
+		bne.s	.not_hold3
+
 		move.l	(RAM_ThisSpeed),d0
 		move.l	(RAM_ThisSpeed),d1
 		move.w	(Controller_1+on_hold),d7
@@ -162,7 +168,7 @@ MD_Mode0:
 .noz_l:
 
 		bsr.s	.update_pos
-
+.not_hold3:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq	.loop
@@ -337,11 +343,24 @@ SuperSpr_Init:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#320/2-16,marsspr_x(a0)
-		move.w	#224/2-16,marsspr_y(a0)
+		move.w	#$B0,marsspr_x(a0)
+		move.w	#$60,marsspr_y(a0)
 		move.b	#32,marsspr_xs(a0)
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$60,marsspr_x(a0)
+		move.w	#$50,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+		adda	#sizeof_marsspr,a0
+		move.l	#0,marsspr_data(a0)
 
 SuperSpr_Main:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0

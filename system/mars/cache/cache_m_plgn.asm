@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; CACHE code for MASTER CPU
+; CACHE code
 ;
 ; LIMIT: $800 bytes
 ; ----------------------------------------------------------------
@@ -128,7 +128,7 @@ slvplgn_02:
 
 ; --------------------------------
 ; Task $01
-; ------------------------------f--
+; --------------------------------
 
 slvplgn_01:
 		mov	r2,@-r15
@@ -221,7 +221,7 @@ go_drwtex_gonxtpz:
 		nop
 		align 4
 drwtsk_texmode:
-		mov.w	@(marsGbl_DivStop_M,gbr),r0	; Waste interrupt if MarsVideo_MakePolygon is in the
+		mov.w	@(marsGbl_WdgDivLock,gbr),r0	; Waste interrupt if MarsVideo_MakePolygon is in the
 		cmp/eq	#1,r0				; middle of HW-division
 		bf	.texvalid
 		bra	drwtask_return
@@ -294,7 +294,7 @@ drwsld_nxtline_tex:
 	; Calculate new DX values
 	; make sure DIV is not in use
 	; before getting here.
-	; (set marsGbl_DivStop_M to 1)
+	; (set marsGbl_WdgDivLock to 1)
 		mov	tag_JR,r0			; r6 / r2
 		mov	r2,@r0
 		mov	r6,@(4,r0)
@@ -337,10 +337,11 @@ drwsld_nxtline_tex:
 		mov	@(plypz_type,r14),r4	;  r4 - texture width|palinc
 		mov	r4,r13
 		shlr16	r4
-		mov	#$FF,r0
+		extu.b	r13,r13
+; 		mov	#$FF,r0
 		mov	#$3FFF,r2
 		and	r2,r4
-		and	r0,r13
+; 		and	r0,r13
 		mov 	r9,r0			; Y position * $200
 		shll8	r0
 		shll	r0
@@ -357,7 +358,8 @@ drwsld_nxtline_tex:
 		add	r2,r0
 		mov.b	@(r0,r1),r0		; Read left pixel
 		add	r13,r0			; color-index increment
-		and	#$FF,r0
+		extu.b	r0,r0
+; 		and	#$FF,r0
 		shll8	r0
 		lds	r0,mach			; Save left pixel
 
@@ -372,7 +374,8 @@ drwsld_nxtline_tex:
 		add	r2,r0
 		mov.b	@(r0,r1),r0		; Read right pixel
 		add	r13,r0			; color-index increment
-		and	#$FF,r0
+		extu.b	r0,r0
+; 		and	#$FF,r0
 
 		sts	mach,r2
 		or	r2,r0
@@ -431,11 +434,13 @@ tag_yhght:	dc.l	SCREEN_HEIGHT
 ; ------------------------------------
 
 drwtsk_solidmode:
-		mov	#$FF,r0
+; 		mov	#$FF,r0
 		mov	@(plypz_mtrl,r14),r6
 		mov	@(plypz_type,r14),r5
-		and	r0,r5
-		and	r0,r6
+		extu.b	r5,r5
+		extu.b	r6,r6
+; 		and	r0,r5
+; 		and	r0,r6
 		add	r5,r6
 		mov	#_vdpreg,r13
 .wait:		mov.w	@(10,r13),r0
@@ -545,11 +550,14 @@ drwsld_updline:
 ; ------------------------------------
 
 drwsld_nextpz:
+		xor	r0,r0
+		mov	r0,@(plypz_type,r14)
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
 		add	#sizeof_plypz,r14		; And set new point
 		cmp/ge	r0,r14
 		bf	.reset_rd
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
+		mov	r0,r14
 .reset_rd:
 		mov	r14,r0
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
@@ -723,6 +731,10 @@ MarsVideo_SlicePlgn:
 
 		mov	@(marsGbl_PlyPzList_W,gbr),r0	; r1 - Current piece to WRITE
 		mov	r0,r1
+; .wait:		mov	@(plypz_type,r1),r0
+; 		tst	r0,r0
+; 		bf	.wait
+
 		mov	@(4,r2),r8
 		mov	@(4,r3),r9
 		sub	r10,r8
@@ -812,7 +824,7 @@ set_left:
 		shll8	r5
 
 		mov	#1,r0
-		mov.w	r0,@(marsGbl_DivStop_M,gbr)
+		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 		sts	mach,r8
 		mov	#_JR,r0
 		mov	r8,@r0
@@ -842,7 +854,7 @@ set_left:
 		mov	@(4,r0),r5
 		shll8	r5
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DivStop_M,gbr)
+		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 .lft_skip:
 		rts
 		nop
@@ -888,7 +900,7 @@ set_right:
 		shll8	r7
 
 		mov	#1,r0
-		mov.w	r0,@(marsGbl_DivStop_M,gbr)
+		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 		sts	mach,r9
 		mov	#_JR,r0
 		mov	r9,@r0
@@ -918,7 +930,7 @@ set_right:
 		mov	@(4,r0),r7
 		shll8	r7
 		mov	#0,r0
-		mov.w	r0,@(marsGbl_DivStop_M,gbr)
+		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 .rgt_skip:
 		rts
 		nop

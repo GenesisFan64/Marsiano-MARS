@@ -1,13 +1,15 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 32X Sound
+;
+; Playback code is located on cache_slv.asm
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
 
-MAX_PWMCHNL	equ 7		; MAXIMUM usable PWM channels (TODO: keep it like this, might break the Z80 side...)
+MAX_PWMCHNL	equ 7		; MAXIMUM usable PWM channels (TODO: keep it like this)
 MAX_PWMBACKUP	equ $80		; 1-bit sizes only: $40,$80,$100...
 SAMPLE_RATE	equ 22050
 
@@ -81,7 +83,7 @@ MarsSound_Init:
 ; r3 | End address (SH2 AREA)
 ; r4 | Loop address (SH2 AREA, ignored if loop bit isn't set)
 ; r5 | Pitch ($xxxxxx.xx, $100 default speed)
-; r6 | Volume (Reverse: higher value is lower)
+; r6 | Volume (0-High)
 ; r7 | Flags: %xxxxslLR
 ;      LR - Enable output to these speakers
 ;       l - LOOP flag
@@ -105,8 +107,12 @@ MarsSound_SetPwm:
 		mov 	r6,@(mchnsnd_vol,r8)
 		mov 	r7,@(mchnsnd_flags,r8)
 		mov 	r2,r0				; Set MSB
-		mov 	#$FF000000,r9
-		and 	r9,r0
+		mov	#-1,r9				; r9 - FF000000
+		shll16	r9
+		shll8	r9
+		and	r9,r0
+; 		mov 	#$FF000000,r9
+; 		and 	r9,r0
 		mov 	r0,@(mchnsnd_bank,r8)
 		mov 	r4,r0				; Set POINTS
 		cmp/eq	#-1,r0
@@ -134,7 +140,7 @@ MarsSound_SetPwm:
 ;
 ; Input:
 ; r1 | Channel
-; r2 | Pitch ($xxxxxx.xx, $100 default)
+; r2 | Pitch ($xxxxxx.xx) $100 default speed
 ;
 ; Breaks:
 ; r8,macl
@@ -247,8 +253,6 @@ MarsSnd_Refill:
 		mov	r4,r3
 		shlr8	r3
 		add	r0,r3
-
-	; TODO: luego checar si ya puedo usar LONGs.
 .copy_now:
 	rept 4-1
 		mov.b	@r3+,r0		; byte by byte...

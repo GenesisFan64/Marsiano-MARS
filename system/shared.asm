@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD/MARS shared constants
+; MD/32X shared constants
 ; ----------------------------------------------------------------
 
 ; ====================================================================
@@ -13,8 +13,6 @@ MAX_SUPERSPR	equ 32		; Number of Super Sprites
 
 ; --------------------------------------------------------
 ; Structs
-;
-; NOTE: SIZES MUST BE ALIGNED BY 4-bytes
 ; --------------------------------------------------------
 
 		struct 0
@@ -31,8 +29,7 @@ mdl_flags	ds.w 1
 sizeof_mdlobj	ds.l 0
 		finish
 
-; "Super" sprite
-; RAM_MdDreq+Dreq_SuperSpr
+; "Super" sprites: RAM_MdDreq+Dreq_SuperSpr
 		struct 0
 marsspr_xs	ds.b 1		; Sprite X size
 marsspr_ys	ds.b 1		; Sprite Y size
@@ -47,23 +44,6 @@ marsspr_fill	ds.w 1		; <-- 2 filler bytes
 marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (0 == end-of-spritelist)
 marsspr_map	ds.l 1		; MAP data
 sizeof_marsspr	ds.l 0
-		finish
-
-; ------------------------------------------------
-; Structs for each pseudo-Screen, max $20 bytes
-;
-; Read these as: RAM_MdDreq+Dreq_BgExBuff
-; then read these as indirect(aX)
-
-		struct 0
-scrlbg_flags	ds.w 1		; Flags
-scrlbg_fill	ds.w 1
-scrlbg_data	ds.l 1		; Screen mode 2: Source image (SH2's area)
-scrlbg_x	ds.l 1		; X pos 0000.0000
-scrlbg_y	ds.l 1		; Y pos 0000.0000
-scrlbg_w	ds.l 1		; Width
-scrlbg_h	ds.l 1		; Height
-sizeof_scrlbg	ds.l 0
 		finish
 
 ; ====================================================================
@@ -83,7 +63,7 @@ sizeof_scrlbg	ds.l 0
 
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
-Dreq_BgExBuff	ds.b $80				; 32X's FG scroll buffer (NOTE: manual size)
+Dreq_BgExBuff	ds.b $80				; 32X's Background buffer (NOTE: manual size)
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
 Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0

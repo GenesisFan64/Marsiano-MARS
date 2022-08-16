@@ -16,7 +16,7 @@ PalData_Mars_Test:
 ; 		binclude "data/mars/tests/test2_pal.bin"
 ; 		align 2
 MDLDATA_PAL_TEST:
-		binclude "data/mars/objects/mtrl/yui_pal.bin"
+		binclude "data/mars/objects/mtrl/pecsi_pal.bin"
 		align 2
 ; MDLDATA_PAL_TEST2:
 ; 		binclude "data/mars/objects/mtrl/link_pal.bin"

@@ -1,9 +1,9 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS SH2 CODE section, stored on SDRAM
+; MARS SH2 SDRAM section, shared for both CPUs
 ;
-; CODE for both CPUs
-; RAM and some DATA also goes here
+; Do note that both CPUs doesn't like each other, if both
+; CPUs read/write the same place it will trigger a crash.
 ; ----------------------------------------------------------------
 
 ; *************************************************
@@ -59,6 +59,7 @@ marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model da
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1	; Current watchdog task
 marsGbl_WdgHold		ds.w 1	; Watchdog pause
+marsGbl_WdgDivLock	ds.w 1	; Tell Watchdog we are mid-division.
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
 marsGbl_CntrRdPlgn	ds.w 1	; Number of polygons to slice
@@ -70,8 +71,7 @@ marsGbl_WaveSpd		ds.w 1	; Linetable wave speed
 marsGbl_WaveMax		ds.w 1	; Maximum wave
 marsGbl_WaveDeform	ds.w 1	; Wave increment value
 marsGbl_WaveTan		ds.w 1	; Linetable wave tan
-marsGbl_DivStop_M	ds.w 1
-marsGbl_DrwPause	ds.w 1
+; marsGbl_DrwPause	ds.w 1
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -897,7 +897,6 @@ s_irq_cmd:
 		bra	.next_chnl
 		add	#1,r14		; next PWM entry
 .end_chnls:
-
 	; ---------------------------------
 	; *** END of PWM driver for GEMA
 	; ---------------------------------
@@ -1241,29 +1240,19 @@ SH2_M_HotStart:
 ; MASTER CPU loop
 ;
 ; comm12:
-; bssscccc ii000lll
+; bssscccc iir00lll
 ;
-; b - Busy bit, this CPU can't be interrupted by request.
-; s - Status bits for some CMD interrupt tasks
+; b - Busy bit, this CPU can't be interrupted for CMD requests
+; r - Clears when frame is ready.
+; s - Status bits for some of the CMD interrupt tasks
 ; c - Command number for CMD interrupt
 ; i - Screen initialization bit(s)
-; l - MAIN LOOP command/task. for any mode change add $80 (i bit)
+; l - MAIN LOOP command/task, For any mode change fill the
+;     ii bits: $C0+mode.
 ; ----------------------------------------------------------------
 
 		align 4
 master_loop:
-; 		mov	#_DMASOURCE0,r3		; *** DOESNT WORK ***
-; 		mov	@($C,r3),r0		; DMA enabled?
-; 		tst	#%01,r0
-; 		bt	.no_dma
-; .wait_dma:	mov	@($C,r3),r0		; DMA active?
-; 		tst	#%10,r0
-; 		bt	.wait_dma
-; 		mov	#0,r0			; _DMAOPERATION = 0
-; 		mov	r0,@($30,r3)
-; 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
-; 		mov	r0,@($C,r3)
-; .no_dma:
 
 	if SH2_DEBUG
 		mov	#_sysreg+comm0,r1		; DEBUG counter
@@ -1298,7 +1287,7 @@ master_loop:
 .not_ready:
 		mov	#_sysreg+comm12+1,r1		; Clear comm R bit
 		mov.b	@r1,r0				; this tells to 68k that the frame is ready.
-		and	#%10111111,r0
+		and	#%11011111,r0
 		mov.b	r0,@r1
 
 		stc	sr,@-r15
@@ -1331,6 +1320,7 @@ master_loop:
 		mov	#mstr_gfxlist,r3		; Default LOOP points
 		mov	#_sysreg+comm12,r2
 		mov.w	@r2,r0				; r0 - bit check
+		extu.w	r0,r0
 		mov	r0,r1				; r1 - current mode
 		tst	#%11000000,r0			; Init counter?
 		bt	.no_init
@@ -1338,19 +1328,17 @@ master_loop:
 		mov.w	@r2,r0				; Decrement init bits
 		sub	r4,r0
 		mov.w	r0,@r2
-		tst	#%01000000,r0
-		bt	.no_init
-		mov	#2,r0				; Set Init timer.
-		mov.w	r0,@(marsGbl_MdDrawTmr,gbr)
 .no_init:
-		mov.w	@(marsGbl_MdDrawTmr,gbr),r0	; r2 - Add init timer
-		mov	r0,r2
-		tst	r0,r0
-		bt	.tmr_off
-		dt	r0
-		mov.w	r0,@(marsGbl_MdDrawTmr,gbr)
+; 		mov.w	@(marsGbl_MdDrawTmr,gbr),r0	; r2 - Add init timer
+; 		mov	r0,r2
+; 		tst	r0,r0
+; 		bt	.tmr_off
+; 		dt	r0
+; 		mov.w	r0,@(marsGbl_MdDrawTmr,gbr)
 .tmr_off:
-		shll2	r2
+		mov	r1,r2
+		shlr2	r2
+		shlr2	r2
 		mov	r1,r0
 		and	#%111,r0
 		shll2	r0
@@ -1521,7 +1509,6 @@ mstr_gfx1_loop:
 		mov	#$200,r1		; *** This also counts as a delay for Watchdog ***
 		mov	#(320+16)/2,r2
 		mov	#240,r3
-
 		mov	#MarsVideo_ClearScreen,r0
 		jsr	@r0
 		mov	#0,r4
@@ -1620,34 +1607,42 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_SetWatchdog,r0
 		jsr	@r0
 		nop
-
-; 		mov.w	@(marsGbl_MdDrawTmr,gbr),r0
-; 		tst	r0,r0
-; 		bt	.no_timer
-
-; .no_timer:
-
-; 		mov	@(scrl_fbdata,r14),r1
-; 		mov	@(scrl_fbpos,r14),r2
-; 		mov.w	@(scrl_fbpos_y,r14),r0
-; 		mov	r0,r3
-; 		mov.w	@(scrl_intrl_w,r14),r0
-; 		mov	r0,r4
-; 		mov.w	@(scrl_intrl_h,r14),r0
-; 		mov	r0,r5
-; 		mov	@(scrl_intrl_size,r14),r6
-; 		mov	#MarsVideo_SetSuperSpr,r0
-; 		jsr	@r0
-; 		nop
-; 		mov	#RAM_Mars_ScrlBuff,r14
-; 		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
-; 		mov	#RAM_Mars_RdrwBlocks,r12
-; 		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
-; 		jsr	@r0
-; 		nop
-; 		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
-; 		jsr	@r0
-; 		nop
+		mov	#RAM_Mars_ScrlBuff,r14
+		mov	@(scrl_fbdata,r14),r1
+		mov	@(scrl_fbpos,r14),r2
+		mov.w	@(scrl_fbpos_y,r14),r0
+		mov	r0,r3
+		mov.w	@(scrl_intrl_w,r14),r0
+		mov	r0,r4
+		mov.w	@(scrl_intrl_h,r14),r0
+		mov	r0,r5
+		mov	@(scrl_intrl_size,r14),r6
+		mov	#MarsVideo_SetSuperSpr,r0
+		jsr	@r0
+		nop
+; 		testme 2
+		mov	#RAM_Mars_ScrlBuff,r14
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r13
+		mov	#RAM_Mars_RdrwBlocks,r12
+		mov	#MarsVideo_DrwSprBlk,r0		; Draw sprite-refill blocks
+		jsr	@r0				; BEFORE Updating X/Y scroll position
+		nop
+		mov	#RAM_Mars_ScrlBuff,r14
+		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r13
+		mov	#RAM_Mars_RdrwBlocks,r12
+		mov	#MarsVideo_SetSprFill,r0	; Set redraw blocks for the next frame
+		jsr	@r0
+		nop
+; 		testme 1
+.wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Watchdog finished?
+		tst	r0,r0
+		bf	.wait_wdg
+		mov.l   #$FFFFFE80,r1			; Watchdog OFF
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
+		mov	#MarsVideo_DrawSuperSpr,r0	; Draw sprites graphics
+		jsr	@r0
+		nop
 
 		mov	#RAM_Mars_ScrlBuff,r1		; *** Make a visible section
 		mov	#0,r2				; of the scrolling data
@@ -1655,16 +1650,19 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_ShowScrlBg,r0
 		jsr	@r0
 		nop
-.wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Watchdog finished?
-		tst	r0,r0
-		bf	.wait_wdg
-		mov.l   #$FFFFFE80,r1			; Watchdog OFF
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
+
+	; Prepare frameswap
+		mov	#0,r1
+		mov	#224,r2
+		mov	#FBVRAM_PATCH,r3
 		mov	#MarsVideo_FixTblShift,r0	; HW: Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move.
 		nop
-		mov	#_vdpreg,r1			; Wait framebuffer
+		mov	#_vdpreg,r1			; Wait framebuffer and request swap
+; .waitv:
+; 		mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	.waitv
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -2385,13 +2383,10 @@ sizeof_marsvid		ds.l 0
 ; --------------------------------------------------------
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
-RAM_Mars_PixlScroll	ds.b (320+16)*(240+16)
-RAM_Mars_HudDisplay	ds.b 320*32
+RAM_Mars_RdrwBlocks	ds.l ((320+16)*(240+16))/16
+RAM_Mars_RdrwBlocks_2	ds.l ((320+16)*(240+16))/16
+RAM_Mars_HudData	ds.b 320*32
 end_scrn02		ds.l 0
-			finish
-			struct RAM_Mars_ScrnBuff
-RAM_SCRN03_FILLER	ds.l 1
-sizeof_scrn03		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff
 RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
@@ -2399,20 +2394,18 @@ RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
-RAM_Mars_ObjCamera	ds.b sizeof_camera		; 3D Camera buffer
-RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES		; polygondata, Zpos
+RAM_Mars_ObjCamera	ds.b sizeof_camera			; 3D Camera buffer
+RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES			; polygondata, Zpos
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
-RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
+RAM_Mars_PlgnNum_0	ds.l 1					; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
 sizeof_scrn04		ds.l 0
 			finish
 	if MOMPASS=6
 	if end_scrn02-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
-		error "RAN OUT OF RAM FOR MARS SCREEN 02 (\{(end_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
-	elseif sizeof_scrn03-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
-		error "RAN OUT OF RAM FOR MARS SCREEN 03 (\{(sizeof_scrn03-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
+		error "RAN OUT OF RAM FOR 2D STUFF (\{(end_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
 	elseif sizeof_scrn04-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
-		error "RAN OUT OF RAM FOR MARS SCREEN 04 (\{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
+		error "RAN OUT OF RAM FOR 3D STUFF (\{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
 	endif
 	endif
 
@@ -2422,7 +2415,7 @@ sizeof_scrn04		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_System
-RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data recieved from Genesis in DMA ***DO NOT READ FROM HERE***
+RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
 RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy of DREQ for reading.
 RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here
 sizeof_marssys		ds.l 0

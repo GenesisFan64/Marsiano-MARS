@@ -1,12 +1,12 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; ROM HEADER FOR 32X
+; ROM HEADER
 ;
 ; These labels still work even if the 32X isn't present
 ; ----------------------------------------------------------------
 
 		dc.l 0				; Stack point
-		dc.l $3F0			; Entry point: MUST point to $3F0
+		dc.l $3F0			; Entry point, MUST point to $3F0
 		dc.l MD_ErrBus			; Bus error
 		dc.l MD_ErrAddr			; Address error
 		dc.l MD_ErrIll			; ILLEGAL Instruction
@@ -70,10 +70,10 @@
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
 		dc.b "SEGA 32X        "
-		dc.b "(C)GF64 2022.???"
-		dc.b "Proyecto MARSIANO                               "
-		dc.b "Project MARSIANO                                "
-		dc.b "GM HOMEBREW-00"
+		dc.b "(C)GF64 2022.NOV"
+		dc.b "Un demo chafa para el 32X llamado MARSIANO con S"
+		dc.b "MARSIANO tech demo                              "
+		dc.b "GM TECHDEMO-00"
 		dc.w 0
 		dc.b "J6              "
 		dc.l 0
@@ -84,7 +84,7 @@
 		dc.l $20202020		; $200000
 		dc.l $20202020		; $203FFF
 		align $1F0
-		dc.b "U               "
+		dc.b "JU              "
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -182,7 +182,7 @@
 ;
 ; d0: %h0000000 rsc000ti
 ; 	h - Cold start / Hot Start
-; 	r - SDRAM Self Check pass or error
+; 	r - SDRAM self check pass or error
 ; 	s - Security check pass or error
 ; 	c - Checksum pass or error
 ; 	t - TV mode pass or error
@@ -200,10 +200,11 @@
 ; 	cs: Test failed**
 ;
 ; ** HARDWARE BUG: This may still trigger if using
-; DREQ, DMA or Watchdog, and/or pressing RESET so many times.
+; DREQ+DMA, and/or pressing RESET so many times.
 ; (Found this on VRDX)
+;
 ; Workaround: after jumping to the "No 32X detected" loop,
-; test the checksum bit, and if it passes: Init as usual.
+; test the checksum bit again and if it passes Init as usual.
 ; ----------------------------------------------------------------
 
 MARS_Entry:
@@ -217,16 +218,18 @@ MARS_Entry:
 ; ----------------------------------------------------------------
 
 .no_mars:
-		btst	#5,d0				; If for some reason we got here...
-		beq.s	MD_Init				;
-		move.w	#$2700,sr			; Disable interrupts
-		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
-		move.w	#$0E00,(vdp_data).l		; Write blue
-		bra.s	*				; Infinite loop.
+		btst	#5,d0			; <-- If we got here even when checksum was good.
+		beq.s	MD_Init			;
+		move.w	#$2700,sr		; Disable interrupts
+		move.l	#$C0000000,(vdp_ctrl).l	; VDP: Point to Color 0
+		move.w	#$0E00,(vdp_data).l	; Write blue
+		bra.s	*			; Infinite loop.
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 68k's Error handlers
+;
+; HBlank and VBlank jump to RAM instead.
 ; ----------------------------------------------------------------
 
 MD_ErrBus:		; Bus error
@@ -242,8 +245,8 @@ MD_Line1111:		; Line 1111 Emulator
 MD_ErrorEx:		; Error exception
 MD_ErrorTrap:
 		move.w	#$2700,sr			; Disable interrupts
-		move.l	#$C0000000,(vdp_ctrl).l		; VDP: Point to Color 0
-		move.w	#$000E,(vdp_data).l		; Write red
+		move.l	#$C0000000,(vdp_ctrl).l
+		move.w	#$000E,(vdp_data).l
 		bra.s	*
 
 ; ====================================================================
@@ -279,4 +282,4 @@ MD_Init:
 		move.l	d0,comm0(a5)
 		move.l	d0,comm4(a5)
 		move.l	d0,comm8(a5)
-; 		move.l	d0,comm12(a5)
+		move.l	d0,comm12(a5)

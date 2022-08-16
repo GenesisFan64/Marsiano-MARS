@@ -7,15 +7,15 @@
 ; SH2 SIDE MAP
 ; --------------------------------------------------------
 
-CS0		equ	$00000000	; Boot rom & system registers
-CS1		equ	$02000000	; ROM data (all 4MB), Locked if RV bit is active.
-CS2		equ	$04000000	; Framebuffer section
+CS0		equ	$00000000	; Boot ROM & System registers
+CS1		equ	$02000000	; ROM data all 4MB, Gone if RV=1
+CS2		equ	$04000000	; Framebuffer area
 CS3		equ	$06000000	; SDRAM
-TH		equ	$20000000	; Cache-thru OR | value
+TH		equ	$20000000	; OR value for CacheThru
 _sysreg		equ	$00004000|TH	; MARS System registers (Genesis side: sysmars_reg)
 _vdpreg		equ	$00004100|TH	; SuperVDP registers
 _palette	equ	$00004200|TH	; Palette RAM for Pixel-Packed or RLE mode
-_framebuffer:	equ	CS2|TH		; Framebuffer, first 240 are for the linetable
+_framebuffer:	equ	CS2|TH		; Framebuffer, First 240 words: Linetable
 _overwrite:	equ	CS2|TH+$20000	; Overwrite, $00 writes are ignored
 
 ; --------------------------------------------------------
@@ -83,9 +83,9 @@ CMDIRQ_ON	equ	$02
 PWMIRQ_ON	equ	$01
 
 ; _vdpreg
-tvmode		equ	$00		; TV mode register
-bitmapmd	equ	$01		; Bitmap mode register
-shift		equ	$02		; Shift Control register
+tvmode		equ	$00		; TV mode
+bitmapmd	equ	$01		; Bitmap mode
+shift		equ	$02		; Lineshift bit
 filllength	equ	$04		; Auto Fill Length register
 fillstart	equ	$06		; Auto Fill Start Address register
 filldata	equ	$08		; Auto Fill Data register
@@ -109,7 +109,7 @@ _OCR_H		equ	$04		; Output compare register High
 _OCR_L		equ	$05		; Output compare register Low
 _TCR		equ	$06		; Timer control register
 _TOCR		equ	$07		; Timer output compare control register
-_CCR:		equ	$FFFFFE92	; Cache register (WORD)
+_CCR		equ	$FFFFFE92	; Cache register (WORD)
 _JR		equ	$FFFFFF00	; DIVU (--- / val)
 _HRL32		equ	$FFFFFF04	; DIVU (val / ---) or RIGHT-long result if read
 _HRH		equ	$FFFFFF10	; DIVU Result: LEFT long

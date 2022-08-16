@@ -1271,45 +1271,26 @@ Video_Mars_GfxMode:
 		and.w	#$FF00,d7			; Clear our byte
 		or.w	d6,d7				; merge changes
 		move.w	d7,(sysmars_reg+comm12).l	; Write into it.
-; .wait:		move.w	(sysmars_reg+comm12).l,d7
-; 		and.w	#%11000000,d7
-; 		bne.s	.wait
-; 		rts
-
-; --------------------------------------------------------
-; Video_MarsRedraw
-;
-; Call this to redraw the entire screen
-; on the 32X side.
-; --------------------------------------------------------
-
-; Video_Mars_Redraw:
-; 		move.w	(sysmars_reg+comm12).l,d7
-; 		bset	#7,d7
-; 		move.w	d7,(sysmars_reg+comm12).l
-Video_Mars_WaitInit:
-		move.w	(sysmars_reg+comm12).l,d7
+.wait:		move.w	(sysmars_reg+comm12).l,d7
 		and.w	#%11000000,d7
-		bne.s	Video_Mars_WaitInit
+		bne.s	.wait
 		rts
 
 ; --------------------------------------------------------
 ; Video_Mars_WaitFrame
-;
-;
-; on the 32X side.
 ; --------------------------------------------------------
 
 Video_Mars_WaitFrame:
-		move.w	(sysmars_reg+comm12).l,d7	; Set R bit
-		bset	#6,d7
-		move.w	d7,(sysmars_reg+comm12).l
+		bset	#5,(sysmars_reg+comm12+1).l
+; 		move.w	(sysmars_reg+comm12).l,d7	; Set R bit
+; 		bset	#5,d7
+; 		move.w	d7,(sysmars_reg+comm12).l
 .wait:
-		move.w	(vdp_ctrl),d7
-		btst	#bitVBlk,d7
-		bne.s	.late
+; 		move.w	(vdp_ctrl),d7
+; 		btst	#bitVBlk,d7
+; 		bne.s	.late
 		move.w	(sysmars_reg+comm12).l,d7
-		btst	#6,d7
+		btst	#5,d7
 		bne.s	.wait
 .late:
 		rts

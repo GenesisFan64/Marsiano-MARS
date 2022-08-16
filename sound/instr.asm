@@ -6,7 +6,7 @@
 ; And the 68K BANK set to 0 currently.
 ; ====================================================================
 
-; Savestate FM data at: $2478
+; Savestate FM data is located at: $2478
 ;
 ; Sizes:
 ; Normal FM ins: $20

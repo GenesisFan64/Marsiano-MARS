@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; CACHE code for SLAVE CPU
+; CACHE code
 ;
 ; LIMIT: $800 bytes
 ; ----------------------------------------------------------------
@@ -28,9 +28,9 @@ CACHE_SLAVE:
 ; ====================================================================
 ; --------------------------------------------------------
 ; PWM Interrupt for playback
-; --------------------------------------------------------
-
+;
 ; **** MUST BE FAST ***
+; --------------------------------------------------------
 
 s_irq_pwm:
 		mov	#_FRT,r1
@@ -158,9 +158,8 @@ s_irq_pwm:
 		mov	@(mchnsnd_cchread,r9),r3
 		add	r5,r3
 		mov	r3,@(mchnsnd_cchread,r9)
-		mov	#$FF,r3
-		and	r3,r1
-		and	r3,r2
+		extu.b	r1,r1
+		extu.b	r2,r2
 		tst	#%00000010,r0	; LEFT enabled?
 		bf	.no_l
 		mov	#$7F,r1		; Force LEFT off
@@ -379,8 +378,6 @@ MarsMdl_ReadModel:
 		mov	r13,r5			; r5 - Go to UV section
 		add 	#polygn_srcpnts,r5
 		mov	r7,r3			; r3 - copy of current face points (3 or 4)
-
-	; Faster read
 	rept 3
 		mov.w	@r11+,r0		; Read UV index
 		extu	r0,r0
@@ -402,9 +399,9 @@ MarsMdl_ReadModel:
 		shlr16	r0
 		mov.w	r0,@r5
 .alluvdone:
-
 		mov	@(mdl_option,r14),r0
-		and	#$FF,r0
+		extu.b	r0,r0
+; 		and	#$FF,r0
 		mov	r0,r1
 		mov	r4,r0
 		mov	.tag_andmtrl,r5
@@ -434,7 +431,8 @@ MarsMdl_ReadModel:
 
 .solid_type:
 		mov	@(mdl_option,r14),r0
-		and	#$FF,r0
+		extu.b	r0,r0
+; 		and	#$FF,r0
 		mov	r0,r1
 		mov	r4,r0
 		mov	#$E000,r5
@@ -442,7 +440,8 @@ MarsMdl_ReadModel:
 		shll16	r4
 		add	r1,r4
 		mov	r4,@(polygn_type,r13)		; Set type 0 (tri) or quad (1)
-		and	#$FF,r0
+		extu.b	r0,r0
+; 		and	#$FF,r0
 		mov	r0,@(polygn_mtrl,r13)		; Set pixel color (0-255)
 
 ; --------------------------------
@@ -842,15 +841,15 @@ mdlrd_rotate:
 
 			align 4
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-MarsSnd_PwmControl	ds.b $38		; 8 bytes per channel.
-MarsSnd_RvMode		ds.l 1			; ROM RV protection flag
-Cach_BkupPnt_L		ds.l 8			; **
-Cach_BkupPnt_S		ds.l 0			; <-- Reads backwards
-Cach_BkupS_L		ds.l 5			; **
-Cach_BkupS_S		ds.l 0			; <-- Reads backwards
-Cach_CurrPlygn		ds.b sizeof_polygn	; Current reading polygon
-Cach_SlvStack_L		ds.l 10
-Cach_SlvStack_S		ds.l 0
+Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
+MarsSnd_PwmControl	ds.b $38			; 8 bytes per channel.
+MarsSnd_RvMode		ds.l 1				; ROM RV protection flag
+Cach_BkupPnt_L		ds.l 8				; **
+Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards
+Cach_BkupS_L		ds.l 5				; **
+Cach_BkupS_S		ds.l 0				; <-- Reads backwards
+Cach_SlvStack_L		ds.l 10				; **
+Cach_SlvStack_S		ds.l 0				; <-- Reads backwards
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF
