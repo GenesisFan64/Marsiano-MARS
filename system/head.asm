@@ -283,3 +283,10 @@ MD_Init:
 		move.l	d0,comm4(a5)
 		move.l	d0,comm8(a5)
 		move.l	d0,comm12(a5)
+		move.l	#$FF,d1
+.wait_1:
+		move.l	#$FF,d0
+.wait_2:
+		nop
+		dbf	d0,.wait_2
+		dbf	d1,.wait_1

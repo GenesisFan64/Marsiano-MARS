@@ -10,7 +10,8 @@
 ;
 ; CALL THIS OUTSIDE OF VBLANK ONLY.
 ;
-; NOTE: THIS CODE ONLY WORKS PROPERLY ON THE
+; NOTE:
+; THIS CODE ONLY WORKS PROPERLY ON THE
 ; $880000/$900000 AREAS. (FOR real hardware)
 ; --------------------------------------------------------
 
@@ -19,8 +20,10 @@ System_RomSendDreq:
 		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
 		lea	($A15112).l,a4
-		btst	#7,dreqctl+1(a5)	; If FIFO got full, skip.
-		bne.s	.bad
+; 		btst	#7,comm12(a5)
+; 		bne.s	.bad
+; 		btst	#7,dreqctl+1(a5)	; If FIFO got full, skip.
+; 		bne.s	.bad
 		move.w	#%000,dreqctl(a5)	; Set 68S
 		move.w	d0,d6			; Length in bytes
 		lsr.w	#1,d6			; d6 - (length/2)
@@ -38,6 +41,7 @@ System_RomSendDreq:
 		move.w  (a0)+,(a4)
 		move.w  (a0)+,(a4)
 		dbf	d5,.l0
+		move.w	#%000,dreqctl(a5)	; Set 68S
 		move.w	d7,sr
 		rts
 .bad:

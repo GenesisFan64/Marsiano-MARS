@@ -12,28 +12,28 @@
 		include "data/mars/palettes.asm"	; All 32X palettes will be here.
 
 		align 2
-Pal_level0:	binclude "data/md/maps/level0/pal.bin"
+Pal_level0:	binclude "data/maps/level0/pal.bin"
 		align 2
 ; ----------------------------------------------------------------
 
 		align 2
-MapHead_0:	binclude "data/md/maps/level0/head.bin"
-MapBlk_0:	binclude "data/md/maps/level0/blocks.bin"
+MapHead_0:	binclude "data/maps/level0/head.bin"
+MapBlk_0:	binclude "data/maps/level0/blocks.bin"
 		align 2
-MapFgL_0:	binclude "data/md/maps/level0/fg_low.bin"
+MapFgL_0:	binclude "data/maps/level0/fg_low.bin"
 		align 2
-MapFgH_0:	binclude "data/md/maps/level0/fg_hi.bin"
+MapFgH_0:	binclude "data/maps/level0/fg_hi.bin"
 		align 2
-MapFgC_0:	binclude "data/md/maps/level0/fg_col.bin"
+MapFgC_0:	binclude "data/maps/level0/fg_col.bin"
 		align 2
-MapBgL_0:	binclude "data/md/maps/level0/bg_low.bin"
+MapBgL_0:	binclude "data/maps/level0/bg_low.bin"
 		align 2
-MapBgH_0:	binclude "data/md/maps/level0/bg_hi.bin"
+MapBgH_0:	binclude "data/maps/level0/bg_hi.bin"
 		align 2
 
 ; ----------------------------------------------------------------
 ; Headers for 32X maps go here...
 
 		align 2
-MapHead_M:	binclude "data/md/maps/level0/head_m.bin"
+MapHead_M:	binclude "data/maps/level0/head_m.bin"
 		align 2

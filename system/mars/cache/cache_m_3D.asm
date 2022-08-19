@@ -213,6 +213,7 @@ drwtsk1_newpz:
 ; r10  - Number of lines
 ; ------------------------------------
 
+		align 4
 go_drwsld_updline_tex:
 		bra	drwsld_updline_tex
 		nop
@@ -731,10 +732,6 @@ MarsVideo_SlicePlgn:
 
 		mov	@(marsGbl_PlyPzList_W,gbr),r0	; r1 - Current piece to WRITE
 		mov	r0,r1
-; .wait:		mov	@(plypz_type,r1),r0
-; 		tst	r0,r0
-; 		bf	.wait
-
 		mov	@(4,r2),r8
 		mov	@(4,r3),r9
 		sub	r10,r8
@@ -1061,7 +1058,6 @@ put_piece:
 		nop
 		align 4
 		ltorg
-		align 4
 
 ; ------------------------------------------------
 
@@ -1074,7 +1070,6 @@ Cach_DDA_Src_L	ds.l 4		; X/DX/Y/DX result for textures
 Cach_DDA_Src_R	ds.l 4
 Cach_LnDrw_L	ds.l 14		;
 Cach_LnDrw_S	ds.l 0		; <-- Reads backwards
-Cach_Bkup_LT	ds.l 5
 Cach_Bkup_LB	ds.l 11
 Cach_Bkup_S	ds.l 0		; <-- Reads backwards
 Cach_Bkup_LPZ	ds.l 7

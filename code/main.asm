@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-TEST_MAINSPD	equ $02
+TEST_MAINSPD	equ $04
 ; emily_VRAM	equ $380
 
 ; ====================================================================
@@ -49,7 +49,25 @@ MD_Mode0:
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 
-	; Load assets first
+	; 3D TEST
+; 		lea	(RAM_MdDreq+Dreq_Objects),a0
+; 		move.l	#MarsObj_test|TH,mdl_data(a0)
+; 		move.w	#-$300,mdl_z_pos(a0)
+; 		lea	str_Page4(pc),a0	; Print text
+; 		move.l	#locate(0,2,2),d0
+; 		bsr	Video_Print
+; 		lea	(MDLDATA_PAL_TEST),a0
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		moveq	#0,d2
+; 		bsr	Video_FadePal_Mars
+; 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
+; ; 		clr.w	(RAM_MdMarsPalFd).w
+; 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
+; 		move.w	#3,d0
+; 		bsr	Video_Mars_GfxMode
+
+	; MAP TESTING
 		move.l	#Art_level0,d0			; Genesis VDP graphics
 		move.w	#1,d1
 		move.w	#Art_level0_e-Art_level0,d2
@@ -58,15 +76,18 @@ MD_Mode0:
 		moveq	#$10,d0
 		move.w	#32,d1
 		bsr	Video_FadePal
-		lea	(MapPal_M),a0			; 256-color palette
+		lea	(MapPal_M),a0			; index-color palette
 		moveq	#0,d0
-		move.w	#256,d1
+		move.w	#128,d1
+		moveq	#1,d2
+		bsr	Video_FadePal_Mars
+		lea	(TestSupSpr_Pal),a0
+		move.w	#128,d0
+		move.w	#128,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
-
-	; Load maps
 		move.l	#$10000,(RAM_ThisSpeed).l
 		move.w	#0,(RAM_MapX).l
 		move.w	#0,(RAM_MapY).l
@@ -114,14 +135,26 @@ MD_Mode0:
 		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.loop
-
-		bsr	SuperSpr_Main
-
-; 		lea	(RAM_MdDreq+Dreq_Objects),a0
-; 		add.w	#8*4,mdl_x_rot(a0)
+;
+; 		lea	str_Stats(pc),a0
+; 		move.l	#locate(0,8,4),d0
+; 		bsr	Video_Print
+		lea	(RAM_MdDreq+Dreq_Objects),a0
+		add.w	#8*2,mdl_x_rot(a0)
 ; 		add.w	#8*2,mdl_y_rot(a0)
 ; 		add.w	#8*5,mdl_z_rot(a0)
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyUp,d7
+		beq.s	.z_up2
+		sub.w	#$10,mdl_z_pos(a0)
+.z_up2:
+		btst	#bitJoyDown,d7
+		beq.s	.z_dw2
+		add.w	#$10,mdl_z_pos(a0)
+.z_dw2:
 
+
+		bsr	SuperSpr_Main
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyC,d7
 		beq.s	.z_up
@@ -343,11 +376,12 @@ SuperSpr_Init:
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$B0,marsspr_x(a0)
-		move.w	#$60,marsspr_y(a0)
+		move.w	#$50,marsspr_x(a0)
+		move.w	#$90,marsspr_y(a0)
 		move.b	#32,marsspr_xs(a0)
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
+
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
 		or.l	#TH,d1
@@ -359,6 +393,20 @@ SuperSpr_Init:
 		move.b	#32,marsspr_xs(a0)
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
+
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$10,marsspr_x(a0)
+		move.w	#$10,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+		move.b	#1,marsspr_yfrm(a0)
+
 		adda	#sizeof_marsspr,a0
 		move.l	#0,marsspr_data(a0)
 

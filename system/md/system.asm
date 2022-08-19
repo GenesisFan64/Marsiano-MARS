@@ -131,9 +131,18 @@ System_WaitFrame:
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
-; 		jsr	(Video_DmaBlast).l		; Process DMA Blast list
+; 		jsr	(Video_DmaBlast).l
 		bsr	MdMap_DrawScrl
 		add.l	#1,(RAM_Framecount).l
+
+; 		lea	(vdp_ctrl),a6
+; ; .wait_in:	move.w	(a6),d4
+; ; 		btst	#bitVBlk,d4
+; ; 		beq.s	.wait_in
+; .wait_out:	move.w	(a6),d4
+; 		btst	#bitVBlk,d4
+; 		bne.s	.wait_out
+
 		rts
 
 ; --------------------------------------------------------
