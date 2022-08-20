@@ -71,6 +71,7 @@ marsGbl_WaveSpd		ds.w 1	; Linetable wave speed
 marsGbl_WaveMax		ds.w 1	; Maximum wave
 marsGbl_WaveDeform	ds.w 1	; Wave increment value
 marsGbl_WaveTan		ds.w 1	; Linetable wave tan
+marsGbl_GotDreq		ds.w 1
 sizeof_MarsGbl		ds.l 0
 			finish
 
@@ -452,10 +453,10 @@ m_irq_cmd:
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 		mov.w	@r1,r0
-		mov	#_vdpreg,r1		; Just in case...
--		mov.b	@(vdpsts,r1),r0
-		tst	#VBLK,r0
-		bf	-
+; 		mov	#_vdpreg,r1		; Just in case...
+; -		mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	-
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -480,8 +481,7 @@ m_irq_cmd:
 		mov.b	@r2,r0			; Tell Genesis we can recieve DREQ data
 		or	#%01000000,r0
 		mov.b	r0,@r2
-		nop
-		nop
+
 ; 		mov	#_vdpreg,r1
 ; -		mov.b	@(vdpsts,r1),r0
 ; 		tst	#VBLK,r0
@@ -586,10 +586,6 @@ m_irq_v:
 ; 		mov.b	@r1,r0				; this tells to 68k that the frame is ready.
 ; 		and	#%10111111,r0
 ; 		mov.b	r0,@r1
-
-		mov	@r15+,r4
-		mov	@r15+,r3
-		mov	@r15+,r2
 		rts
 		nop
 		align 4
@@ -600,12 +596,15 @@ m_irq_v:
 ; ------------------------------------------------
 
 m_irq_vres:
-		mov.l   #$FFFFFE80,r1
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
 		mov	#_sysreg,r1
 		mov	r15,r0
 		mov.w	r0,@(vresintclr,r1)
+		mov	#_DMASOURCE0,r1
+		mov	#0,r0
+		mov	r0,@($30,r1)
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r1)
+		mov	#_sysreg,r1
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
 		bf	.rv_busy
@@ -617,15 +616,6 @@ m_irq_vres:
 		mov	#_sysreg,r1
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r1)
-
-		mov	#_DMAOPERATION,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#_DMACHANNEL0,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#$44E0,r1
-		mov	r0,@r1
 		rte
 		nop
 		align 4
@@ -1026,6 +1016,12 @@ s_irq_vres:
 		mov	#_sysreg,r1
 		mov	r15,r0
 		mov.w	r0,@(vresintclr,r1)
+		mov	#_DMASOURCE0,r1
+		mov	#0,r0
+		mov	r0,@($30,r1)
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r1)
+		mov	#_sysreg,r1
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
 		bf	.rv_busy
@@ -1037,14 +1033,14 @@ s_irq_vres:
 		mov	#_sysreg,r1
 		mov	#"S_OK",r0
 		mov	r0,@(comm4,r1)
-		mov	#_DMAOPERATION,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#_DMACHANNEL0,r1
-		mov     #0,r0
-		mov	r0,@r1
-		mov	#$44E0,r1
-		mov	r0,@r1
+; 		mov	#_DMAOPERATION,r1
+; 		mov     #0,r0
+; 		mov	r0,@r1
+; 		mov	#_DMACHANNEL0,r1
+; 		mov     #0,r0
+; 		mov	r0,@r1
+; 		mov	#$44E0,r1
+; 		mov	r0,@r1
 		rte
 		nop
 		align 4
@@ -1351,6 +1347,18 @@ master_loop:
 		dt	r3
 		bf/s	.copy_safe
 		add	#4,r2
+; 		mov	#_CCR,r1
+; 		mov	#%00010000,r0			; Cache purge + Disable
+; 		mov.w	r0,@r1
+; 		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
+; 		nop
+; 		mov	#%00001001,r0			; Cache two-way mode + Enable
+; 		mov.w	r0,@r1
 		ldc	@r15+,sr
 
 		mov	#_sysreg+comm12+1,r1		; Clear comm R bit
@@ -1382,8 +1390,6 @@ master_loop:
 		mov.w	@r2,r0				; Decrement init bits
 		sub	r4,r0
 		mov.w	r0,@r2
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_GotDreq,gbr)
 .no_init:
 ; 		mov.w	@(marsGbl_MdDrawTmr,gbr),r0	; r2 - Add init timer
 ; 		mov	r0,r2
@@ -1637,7 +1643,7 @@ mstr_gfx2_init_1:
 		mov	#320,r3
 		mov	#224,r4
 		bsr	MarsVideo_MkScrlField
-		mov	#16,r5			; <-- block size
+		mov	#16,r5			; <-- expand size
 		bra	mstr_gfx2_init_cont
 		nop
 
@@ -1657,34 +1663,24 @@ mstr_gfx2_init_cont:
 ; -------------------------------
 
 mstr_gfx2_loop:
-;  testme 2
-		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14
+ testme 2
+		mov	#MarsVideo_DrawBgSSpr,r0		; Draw pixel backup BEFORE updating
+		jsr	@r0					; the X/Y screen position
+		nop
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Move this scrolling area
 		mov	#RAM_Mars_ScrlBuff,r13
 		bsr	MarsVideo_Bg_MdMove
 		nop
-		bsr	MarsVideo_Bg_MdReq
+		bsr	MarsVideo_Bg_MdReq			; Process draw-requests from Genesis
 		nop
-
-
-; 		mov	#RAM_Mars_ScrlBuff,r14
-; 		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r13
-; 		mov	#RAM_Mars_RdrwBlocks,r12
-; 		mov	#MarsVideo_WdSprBlk,r0
-; 		jsr	@r0
-; 		nop
-		mov.w	#1,r0				; Setup Watchdog interrupt
+		mov.w	#1,r0
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 		mov	#0,r1
 		mov	#$08,r2
-		mov	#MarsVideo_SetWatchdog,r0
+		mov	#MarsVideo_SetWatchdog,r0		; Start watchdog
 		jsr	@r0
 		nop
-
 	; *** Watchdog is active ***
-
-		mov	#MarsVideo_DrawBgSSpr,r0	; Draw pixel backup from last screen
-		jsr	@r0
-		nop
 		mov	#RAM_Mars_ScrlBuff,r14
 		mov	@(scrl_fbdata,r14),r1
 		mov	@(scrl_fbpos,r14),r2
@@ -1695,40 +1691,35 @@ mstr_gfx2_loop:
 		mov.w	@(scrl_intrl_h,r14),r0
 		mov	r0,r5
 		mov	@(scrl_intrl_size,r14),r6
-		mov	#MarsVideo_SetSuperSpr,r0	; Update sprite settings
-		jsr	@r0
-		nop
-		mov	#MarsVideo_SaveBgSSpr,r0	; Make NEW pixel backup
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawSuperSpr,r0	; Now draw the sprites
-		jsr	@r0
-		nop
-
-
-		mov	#RAM_Mars_ScrlBuff,r1		; *** Make a visible section
-		mov	#0,r2				; of the scrolling data
-		mov	#240,r3				; From Y 0 to 240
-		mov	#MarsVideo_ShowScrlBg,r0
+		mov	#MarsVideo_SetSuperSpr,r0		; Update NEW sprite "layer" settings
 		jsr	@r0
 		nop
 .wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Watchdog finished?
 		tst	r0,r0
 		bf	.wait_wdg
-
-
 		mov.l   #$FFFFFE80,r1			; Watchdog OFF
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
+		mov	#MarsVideo_SaveBgSSpr,r0		; Make NEW pixel data backup
+		jsr	@r0
+		nop
+		mov	#MarsVideo_DrawSuperSpr,r0		; Now draw the sprites
+		jsr	@r0
+		nop
+		mov	#RAM_Mars_ScrlBuff,r1			; *** Make a visible section
+		mov	#0,r2					; of the scrolling data
+		mov	#240,r3					; From Y 0 to 240
+		mov	#MarsVideo_ShowScrlBg,r0
+		jsr	@r0
+		nop
+	testme 1
+
 		mov	#0,r1
 		mov	#224,r2
 		mov	#FBVRAM_PATCH,r3
 		mov	#MarsVideo_FixTblShift,r0	; HW: Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move.
 		nop
-; 	testme 1
-
-
 		mov	#_vdpreg,r1
 .waitv:
 		mov.b	@(vdpsts,r1),r0
@@ -2450,8 +2441,8 @@ sizeof_marsvid		ds.l 0
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
 RAM_Mars_SpriteCopy	ds.b sizeof_marsspr*MAX_SUPERSPR
-RAM_Mars_HudData	ds.b 512*32				; <-- for later
-RAM_Mars_ScrlCopy	ds.b ((320+16)*(240+16))+320		; Read-back background pixels
+; RAM_Mars_HudData	ds.b 512*32				; <-- for later
+RAM_Mars_ScrlCopy	ds.b ((320+4)*(240+4))			; Read-back background pixels
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

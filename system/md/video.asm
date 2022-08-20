@@ -1555,13 +1555,13 @@ MdMap_Init:
 ; d0 | WORD - Write as -1
 ; d1 | WORD - Scroll buffer to use on the 32X side
 ; d2 | WORD - Index-palette increment
-; a0 - Level header data: (GENESIS SIDE)
+; a0 - Level header data: (68K AREA)
 ; 	dc.w width,height
 ; 	dc.b blkwidth,blkheight
-; a1 - Graphics data stored as blocks (*SH2 SIDE)
-; a2 - MAIN layout (*SH2 SIDE)
-; a3 - SUB layout (*for later, set to 0*)
-; a4 - Collision data
+; a1 - Graphics data stored as blocks (SH2 AREA)
+; a2 - MAIN layout (SH2 AREA)
+; a3 - SUB layout (**If needed later, set to 0)
+; a4 - Collision data (68K AREA)
 ;
 ; Uses:
 ; d0,d6-d7

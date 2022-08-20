@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-TEST_MAINSPD	equ $04
+TEST_MAINSPD	equ $08
 ; emily_VRAM	equ $380
 
 ; ====================================================================
@@ -83,7 +83,7 @@ MD_Mode0:
 		bsr	Video_FadePal_Mars
 		lea	(TestSupSpr_Pal),a0
 		move.w	#128,d0
-		move.w	#128,d1
+		move.w	#32,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
@@ -373,7 +373,7 @@ SuperSpr_Init:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
-		or.l	#TH,d1
+; 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
 		move.w	#$50,marsspr_x(a0)
@@ -382,30 +382,30 @@ SuperSpr_Init:
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
 
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		adda	#sizeof_marsspr,a0
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$60,marsspr_x(a0)
-		move.w	#$50,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		adda	#sizeof_marsspr,a0
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$10,marsspr_x(a0)
-		move.w	#$10,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-		move.b	#1,marsspr_yfrm(a0)
+; 		move.l	#SuperSpr_Test,d0
+; 		move.l	d0,d1
+; ; 		or.l	#TH,d1
+; 		adda	#sizeof_marsspr,a0
+; 		move.l	d1,marsspr_data(a0)
+; 		move.w	#64,marsspr_dwidth(a0)
+; 		move.w	#$60,marsspr_x(a0)
+; 		move.w	#$50,marsspr_y(a0)
+; 		move.b	#32,marsspr_xs(a0)
+; 		move.b	#48,marsspr_ys(a0)
+; 		move.w	#$80,marsspr_indx(a0)
+;
+; 		move.l	#SuperSpr_Test,d0
+; 		move.l	d0,d1
+; ; 		or.l	#TH,d1
+; 		adda	#sizeof_marsspr,a0
+; 		move.l	d1,marsspr_data(a0)
+; 		move.w	#64,marsspr_dwidth(a0)
+; 		move.w	#$10,marsspr_x(a0)
+; 		move.w	#$10,marsspr_y(a0)
+; 		move.b	#32,marsspr_xs(a0)
+; 		move.b	#48,marsspr_ys(a0)
+; 		move.w	#$80,marsspr_indx(a0)
+; 		move.b	#1,marsspr_yfrm(a0)
 
 		adda	#sizeof_marsspr,a0
 		move.l	#0,marsspr_data(a0)
@@ -508,7 +508,7 @@ SuperSpr_Main:
 ; ------------------------------------------------------
 
 Level_PickMap:
-		move.l	#MapHead_M|TH,a0
+		move.l	#MapHead_M,a0
 		move.l	#MapBlk_M|TH,a1
 		move.l	#MapFg_M|TH,a2
 		move.l	#0,a3

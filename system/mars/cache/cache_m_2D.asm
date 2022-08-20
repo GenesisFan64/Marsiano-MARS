@@ -710,12 +710,12 @@ MarsVideo_NxtSuprSpr:
 		add	r0,r13
 	; XR / YB
 		mov	#320,r0
-		cmp/ge	r0,r7
+		cmp/gt	r0,r7
 		bf	.xb_e
 		mov	r0,r7
 .xb_e:
 		mov	#224,r0
-		cmp/ge	r0,r8
+		cmp/gt	r0,r8
 		bf	.yb_e
 		mov	r0,r8
 .yb_e:
@@ -844,10 +844,9 @@ MarsVideo_NxtSuprSpr:
 		align 4
 
 ; --------------------------------------------------------
-; MarsVideo_SaveSuperSpr
+; MarsVideo_SaveBgSSpr
 ;
-; Saves the background's pixels before
-; drawing the super sprites
+; Call this BEFORE drawing the sprites.
 ; --------------------------------------------------------
 
 		align 4
@@ -897,6 +896,7 @@ MarsVideo_SaveBgSSpr:
 		nop
 		align 4
 .valid:
+	; ** copy paste
 		mov	r9,r4
 		mov.w	@(marsspr_x,r14),r0
 		exts.w	r0,r5
@@ -908,54 +908,47 @@ MarsVideo_SaveBgSSpr:
 		exts.b	r0,r8
 		add	r5,r7
 		add	r6,r8
-		mov	#8,r0	; expand box
+		mov	#MAX_SSPRSPD,r0	; expand box (max speed)
 		sub	r0,r5
 		sub	r0,r6
 		add	r0,r7
 		add	r0,r8
-
-		mov	#320,r1
-		mov	#240,r2
-; 		cmp/pz	r5
-; 		bt	.x_l
-; 		xor	r5,r5
-; .x_l:
-		cmp/pz	r6
-		bt	.y_l
-		xor	r6,r6
-.y_l:
-; 		cmp/pz	r7
-; 		bt	.xs_l
-; 		xor	r7,r7
-; .xs_l:
-		cmp/pz	r8
-		bt	.ys_l
-		xor	r8,r8
-.ys_l:
-; 		cmp/ge	r1,r5
-; 		bf	.x_r
-; 		mov	r1,r5
-; .x_r:
-; 		cmp/ge	r2,r6
-; 		bf	.y_r
-; 		mov	r2,r6
-; .y_r:
-; 		cmp/ge	r1,r7
-; 		bf	.xs_r
-; 		mov	r1,r7
-; .xs_r:
-; 		cmp/ge	r2,r8
-; 		bf	.ys_r
-; 		mov	r2,r8
-; .ys_r:
-		cmp/eq	r8,r6
-		bt	.spr_out
-		cmp/eq	r7,r5
-		bt	.spr_out
+		shlr	r0
+		add	r0,r7
+		add	r0,r8
 
 		mov	#-4,r0
 		and	r0,r5
 		and	r0,r7
+; 		and	r0,r6
+; 		and	r0,r8
+		mov	#320+16,r1
+		mov	#224+16,r2
+		cmp/pl	r7
+		bf	.spr_out
+		cmp/pl	r8
+		bf	.spr_out
+		cmp/ge	r1,r5
+		bt	.spr_out
+		cmp/ge	r2,r6
+		bt	.spr_out
+		cmp/pz	r5
+		bt	.xl_l
+		xor	r5,r5
+.xl_l:
+		cmp/pz	r6
+		bt	.yl_l
+		xor	r6,r6
+.yl_l:
+		cmp/gt	r1,r7
+		bf	.xr_l
+		mov	r1,r7
+.xr_l:
+		cmp/gt	r2,r8
+		bf	.yr_l
+		mov	r2,r8
+.yr_l:
+
 		mulu	r11,r6
 		sts	macl,r0
 		add	r0,r4
@@ -964,6 +957,8 @@ MarsVideo_SaveBgSSpr:
 		bf	.y_keep
 		sub	r12,r4
 .y_keep:
+	; **
+
 		mov	r5,r1
 		mov	r4,r2
 .x_lp:
@@ -973,19 +968,14 @@ MarsVideo_SaveBgSSpr:
 		mov	@r3,r0		; GRAB pixels
 		mov	r0,@r13		; save into backup data
 		add	#4,r13
-
 		add	#4,r1
 		cmp/ge	r7,r1
 		bf	.x_lp
-		add	#4,r2
 		add	#1,r6
 		cmp/ge	r8,r6
 		bf/s	.y_lp
 		add	r11,r4
 
-
-; 		bra *
-; 		nop
 .spr_out:
 		bra	.next_save
 		add 	#sizeof_marsspr,r14
@@ -993,10 +983,9 @@ MarsVideo_SaveBgSSpr:
 		ltorg
 
 ; --------------------------------------------------------
-; MarsVideo_SaveSuperSpr
+; MarsVideo_DrawBgSSpr
 ;
-; Saves the background's pixels before
-; drawing the super sprites
+; Call this BEFORE updating Sprite info
 ; --------------------------------------------------------
 
 		align 4
@@ -1036,6 +1025,7 @@ MarsVideo_DrawBgSSpr:
 		nop
 		align 4
 .valid:
+	; ** copy paste
 		mov	r9,r4
 		mov.w	@(marsspr_x,r14),r0
 		exts.w	r0,r5
@@ -1047,54 +1037,47 @@ MarsVideo_DrawBgSSpr:
 		exts.b	r0,r8
 		add	r5,r7
 		add	r6,r8
-		mov	#8,r0	; expand box
+		mov	#MAX_SSPRSPD,r0	; expand box (max speed)
 		sub	r0,r5
 		sub	r0,r6
 		add	r0,r7
 		add	r0,r8
-
-		mov	#320,r1
-		mov	#240,r2
-; 		cmp/pz	r5
-; 		bt	.x_l
-; 		xor	r5,r5
-; .x_l:
-		cmp/pz	r6
-		bt	.y_l
-		xor	r6,r6
-.y_l:
-; 		cmp/pz	r7
-; 		bt	.xs_l
-; 		xor	r7,r7
-; .xs_l:
-		cmp/pz	r8
-		bt	.ys_l
-		xor	r8,r8
-.ys_l:
-; 		cmp/ge	r1,r5
-; 		bf	.x_r
-; 		mov	r1,r5
-; .x_r:
-; 		cmp/ge	r2,r6
-; 		bf	.y_r
-; 		mov	r2,r6
-; .y_r:
-; 		cmp/ge	r1,r7
-; 		bf	.xs_r
-; 		mov	r1,r7
-; .xs_r:
-; 		cmp/ge	r2,r8
-; 		bf	.ys_r
-; 		mov	r2,r8
-; .ys_r:
-		cmp/eq	r8,r6
-		bt	.spr_out
-		cmp/eq	r7,r5
-		bt	.spr_out
+		shlr	r0
+		add	r0,r7
+		add	r0,r8
 
 		mov	#-4,r0
 		and	r0,r5
 		and	r0,r7
+; 		and	r0,r6
+; 		and	r0,r8
+		mov	#320+16,r1
+		mov	#224+16,r2
+		cmp/pl	r7
+		bf	.spr_out
+		cmp/pl	r8
+		bf	.spr_out
+		cmp/ge	r1,r5
+		bt	.spr_out
+		cmp/ge	r2,r6
+		bt	.spr_out
+		cmp/pz	r5
+		bt	.xl_l
+		xor	r5,r5
+.xl_l:
+		cmp/pz	r6
+		bt	.yl_l
+		xor	r6,r6
+.yl_l:
+		cmp/gt	r1,r7
+		bf	.xr_l
+		mov	r1,r7
+.xr_l:
+		cmp/gt	r2,r8
+		bf	.yr_l
+		mov	r2,r8
+.yr_l:
+
 		mulu	r11,r6
 		sts	macl,r0
 		add	r0,r4
@@ -1103,6 +1086,9 @@ MarsVideo_DrawBgSSpr:
 		bf	.y_keep
 		sub	r12,r4
 .y_keep:
+	; **
+
+	; Return pixels to framebuffer
 		mov	r5,r1
 		mov	r4,r2
 .x_lp:
@@ -1110,6 +1096,7 @@ MarsVideo_DrawBgSSpr:
 		add	r2,r3
 		add	r1,r3
 		mov	@r13+,r0
+; 		mov	#-1,r0
 		mov	r0,@r3
 ; 		mov	#320,r3
 ; 		cmp/ge	r3,r1
@@ -1123,7 +1110,6 @@ MarsVideo_DrawBgSSpr:
 		add	#4,r1
 		cmp/ge	r7,r1
 		bf	.x_lp
-		add	#4,r2
 		add	#1,r6
 		cmp/ge	r8,r6
 		bf/s	.y_lp

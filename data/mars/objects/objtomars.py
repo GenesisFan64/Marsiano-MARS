@@ -312,7 +312,7 @@ while reading:
                       has_img = False
                       random_mode = False
 
-                  out_mtrl.write("\t dc.l "+str(TAG_TEXTUR)+str(mtlname)+"\n")
+                  out_mtrl.write("\t dc.l "+str(TAG_TEXTUR)+str(mtlname)+"|TH\n") # Add |TH assembly tag
                   out_mtrl.write("\t dc.w "+str(img_width)+"\n")
                   out_mtrl.write("\t dc.w "+str(INDXBASE)+"\n")
                   
