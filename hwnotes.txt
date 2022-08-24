@@ -28,7 +28,7 @@ LIST OF UNEMULATED 32X HARDWARE FEATURES, BUGS AND ERRORS, the ones marked with 
 
 -- PWM --
 - It's 3-word FIFO isn't emulated properly, on emulators it behaves like a normal write-register. (I imagine...)
-- The output limit for both LEFT and RIGHT channels is 1023 ($03FF), NOT 4095 ($0FFF) mentioned in the docs.
+- Normally the output limit for both LEFT and RIGHT channels is 4095 ($0FFF) but depending of the speed of the PWM interrupt the MAXIMUM value decreases: for example if the PWM interrupt is at 22050hz the limit is 1023 ($03FF)
 
 --- Both sides ---
 - FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The Framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP it will freeze the entire system (either Genesis 68K or 32X SH2).

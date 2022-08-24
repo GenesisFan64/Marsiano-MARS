@@ -12,11 +12,11 @@ CS1		equ	$02000000	; ROM data all 4MB, Gone if RV=1
 CS2		equ	$04000000	; Framebuffer area
 CS3		equ	$06000000	; SDRAM
 TH		equ	$20000000	; OR value for CacheThru
-_sysreg		equ	$00004000|TH	; MARS System registers (Genesis side: sysmars_reg)
+_sysreg		equ	$00004000|TH	; MARS System registers
 _vdpreg		equ	$00004100|TH	; SuperVDP registers
 _palette	equ	$00004200|TH	; Palette RAM for Pixel-Packed or RLE mode
-_framebuffer:	equ	CS2|TH		; Framebuffer, First 240 words: Linetable
-_overwrite:	equ	CS2|TH+$20000	; Overwrite, $00 writes are ignored
+_framebuffer:	equ	CS2|TH		; Framebuffer: First 240 words are the linetable
+_overwrite:	equ	CS2|TH+$20000	; Overwrite: $00 writes are ignored
 
 ; --------------------------------------------------------
 ; Variables

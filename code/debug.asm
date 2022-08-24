@@ -481,8 +481,8 @@ MD_DebugMenu:
 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.w	#8*2,mdl_x_rot(a0)
-; 		add.w	#8*2,mdl_y_rot(a0)
-; 		add.w	#8*5,mdl_z_rot(a0)
+		add.w	#8*2,mdl_y_rot(a0)
+		add.w	#8*5,mdl_z_rot(a0)
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7

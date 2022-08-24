@@ -2,8 +2,8 @@
 ; ----------------------------------------------------------------
 ; 32X Video
 ;
-; Some routines are located on the cache.asm for
-; speedup reasons.
+; Some routines are located on the cache folder for
+; speed reasons.
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -15,7 +15,7 @@ FBVRAM_LAST	equ $1F800	; BLANK line (the very last one)
 FBVRAM_PATCH	equ $1D000	; Framebuffer location for the affected XShift lines
 MAX_FACES	equ 700		; MAX polygon faces for models
 MAX_SVDP_PZ	equ 700+128	; MAX polygon pieces to draw (MAX_FACES+few_pieces)
-MAX_ZDIST	equ -$C00	; Maximum 3D field distance (-Z)
+MAX_ZDIST	equ -$1000	; Maximum 3D field distance (-Z)
 MAX_SSPRSPD	equ 8		; Maximum pixel speed for Super Sprites
 
 ; --------------------------------------------------------

@@ -52,7 +52,7 @@ MD_Mode0:
 	; 3D TEST
 ; 		lea	(RAM_MdDreq+Dreq_Objects),a0
 ; 		move.l	#MarsObj_test|TH,mdl_data(a0)
-; 		move.w	#-$300,mdl_z_pos(a0)
+; 		move.w	#-$800,mdl_z_pos(a0)
 ; 		lea	str_Page4(pc),a0	; Print text
 ; 		move.l	#locate(0,2,2),d0
 ; 		bsr	Video_Print
@@ -141,8 +141,8 @@ MD_Mode0:
 ; 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.w	#8*2,mdl_x_rot(a0)
-; 		add.w	#8*2,mdl_y_rot(a0)
-; 		add.w	#8*5,mdl_z_rot(a0)
+		add.w	#8*2,mdl_y_rot(a0)
+		add.w	#8*5,mdl_z_rot(a0)
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.z_up2
@@ -382,18 +382,18 @@ SuperSpr_Init:
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
 
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; ; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$60,marsspr_x(a0)
-; 		move.w	#$50,marsspr_y(a0)
-; 		move.b	#32,marsspr_xs(a0)
-; 		move.b	#48,marsspr_ys(a0)
-; 		move.w	#$80,marsspr_indx(a0)
-;
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+; 		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$60,marsspr_x(a0)
+		move.w	#$50,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+
 ; 		move.l	#SuperSpr_Test,d0
 ; 		move.l	d0,d1
 ; ; 		or.l	#TH,d1
