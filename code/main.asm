@@ -8,7 +8,7 @@
 ; Variables
 ; ------------------------------------------------------
 
-TEST_MAINSPD	equ $08
+TEST_MAINSPD	equ $04
 ; emily_VRAM	equ $380
 
 ; ====================================================================
@@ -46,7 +46,7 @@ MD_Mode0:
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-		bsr	Mode_Init
+; 		bsr	Mode_Init
 		bsr	Video_PrintInit
 
 	; 3D TEST
@@ -394,18 +394,31 @@ SuperSpr_Init:
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
 
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; ; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$10,marsspr_x(a0)
-; 		move.w	#$10,marsspr_y(a0)
-; 		move.b	#32,marsspr_xs(a0)
-; 		move.b	#48,marsspr_ys(a0)
-; 		move.w	#$80,marsspr_indx(a0)
-; 		move.b	#1,marsspr_yfrm(a0)
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+; 		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$10,marsspr_x(a0)
+		move.w	#$10,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+		move.b	#1,marsspr_yfrm(a0)
+
+		move.l	#SuperSpr_Test,d0
+		move.l	d0,d1
+; 		or.l	#TH,d1
+		adda	#sizeof_marsspr,a0
+		move.l	d1,marsspr_data(a0)
+		move.w	#64,marsspr_dwidth(a0)
+		move.w	#$110,marsspr_x(a0)
+		move.w	#$80,marsspr_y(a0)
+		move.b	#32,marsspr_xs(a0)
+		move.b	#48,marsspr_ys(a0)
+		move.w	#$80,marsspr_indx(a0)
+		move.b	#3,marsspr_yfrm(a0)
 
 		adda	#sizeof_marsspr,a0
 		move.l	#0,marsspr_data(a0)

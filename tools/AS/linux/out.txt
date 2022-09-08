@@ -1,0 +1,145 @@
+macro assembler 1.42 Beta [Bld 118]
+(x86_64-unknown-linux)
+(C) 1992,2017 Alfred Arnold
+Motorola MPC821 Additions (C) 2012 Marcin Cieslak
+68RS08-Generator (C) 2006 Andreas Bolsch
+Mitsubishi M16C-Generator also (C) 1999 RMS
+XILINX KCPSM(Picoblaze)-Generator (C) 2003 Andreas Wassatsch
+TMS320C2x-Generator (C) 1994/96 Thomas Sailer
+TMS320C5x-Generator (C) 1995/96 Thomas Sailer
+
+calling convention : asl [options] [file] [options] ...
+--------------------
+
+options :
+---------
+
+-p : share file formatted for Pascal  -c : share file formatted for C
+-a : share file formatted for AS
+-o <name> : change name of code file
+-olist <nname> : change name of list file
+-shareout <nname> : change name of share file
+-q,  -quiet : silent compilation
+-cpu <name> : set target processor
+-alias <new>=<old> : define processor alias
+-l : listing to console               -L : listing to file
+-i <path>[;path]... : list of paths for include files
+-D <symbol>[,symbol]... : predefine symbols
+-gnuerrors: error messages in GNU format
+-E <name> : target file for error list,
+            !0..!4 for standard handles
+            default is <srcname>.LOG
+-r : generate messages if repassing necessary
+-Y : branch error suppression (see manual)
+-w : suppress warnings                +G : suppress code generation
+-s : generate section list            -t : enable/disable parts of listing
+-u : generate usage list              -C : generate cross reference list
+-I : generate include nesting list
+-g [map|atmel|noice] : write debug info
+-A : compact symbol table
+-U : case-sensitive operation
+-x : extended error messages          -n : add error #s to error messages
+-P : write macro processor output     -M : extract macro definitions
+-h : use lower case in hexadecimal output
+
+source file specification may contain wildcards
+
+implemented processors :
+
+68008     68000     68010     68012     MCF5200   68332     68340     
+68360     68020     68030     68040     
+56000     56002     56300     
+PPC403    PPC403GC  MPC505    MPC601    MPC821    RS6000    
+MCORE     
+XGATE     
+6800      6301      6811      68HC11K4  
+6805      68HC05    68HC08    68HCS08   
+6809      6309      
+68HC12    68HC12X   
+68HC16    
+68RS08    
+H8/300L   HD6413308 H8/300    HD6413309 H8/300H   
+HD6475328 HD6475348 HD6475368 HD6475388 
+SH7000    SH7600    SH7700    
+6502      65SC02    65C02     W65C02S   65C19     MELPS740  HUC6280   
+6502UNDOC 
+65816     MELPS7700 MELPS7750 MELPS7751 
+HD614023  HD614043  HD614081  
+MELPS4500 
+M16       
+M16C      M30600M8  M30610    M30620    
+4004      4040      
+8008      8008NEW   
+8021      8022      8039      8048      80C39     80C48     8041      
+8042      
+87C750    8051      8052      80C320    80C501    80C502    80C504    
+80515     80517     80C390    80C251    80C251T   
+8096      80196     80196N    80296     
+8080      8085      8085UNDOC 
+8086      80186     V30       V35       
+80960     
+8X300     8X305     
+2650      
+XAG1      XAG2      XAG3      
+AT90S1200 AT90S2313 AT90S4414 AT90S8515 ATMEGA8   ATMEGA16  ATMEGA32  
+ATMEGA64  ATMEGA128 ATMEGA256 
+AM29245   AM29243   AM29240   AM29000   
+80C166    80C167    80C167CS  
+Z80       Z80UNDOC  Z180      RABBIT2000Z380      
+Z8601     Z8604     Z8608     Z8630     Z8631     EZ8       
+KCPSM     
+KCPSM3    
+MICO8_05  MICO8_V3  MICO8_V31 
+96C141    93C141    
+90C141    
+87C00     87C20     87C40     87C70     
+TLCS-870/C
+47C00     470C00    470AC00   
+97C241    
+TC9331    
+16C54     16C55     16C56     16C57     
+16C64     16C84     16C873    16C874    16C876    16C877    
+17C42     
+ST6210    ST6215    ST6220    ST6225    
+ST7       
+ST9020    ST9030    ST9040    ST9050    
+6804      
+32010     32015     
+320C25    320C26    320C28    
+320C30    320C31    320C40    320C44    
+320C203   320C50    320C51    320C53    
+320C541   
+32060     
+TMS9900   
+TMS70C00  TMS70C20  TMS70C40  TMS70CT20 TMS70CT40 TMS70C02  TMS70C42  
+TMS70C82  TMS70C08  TMS70C48  
+370C010   370C020   370C030   370C040   370C050   
+MSP430    MSP430X   
+TMS1000   TMS1100   TMS1200   TMS1300   
+7810      78C10     
+7566      7508      
+75402     75004     75006     75008     75268     75304     75306     
+75308     75312     75316     75328     75104     75106     75108     
+75112     75116     75206     75208     75212     75216     75512     
+75516     
+78070     
+78214     
+78310     
+7720      7725      
+77230     
+SC/MP     
+8070      
+COP410    COP420    COP440    COP444    
+COP87L84  
+SC14400   SC14401   SC14402   SC14404   SC14405   SC14420   SC14421   
+SC14422   SC14424   
+ACE1101   ACE1202   
+SYM53C810 SYM53C860 SYM53C815 SYM53C825 SYM53C875 SYM53C895 
+MB89190   
+MB90500   
+MSM5840   MSM5842   MSM58421  MSM58422  MSM5847   
+MSM5054   MSM5055   MSM5056   MSM6051   MSM6052   
+1802      1804      1805      1806      1804A     1805A     1806A     
+ATARI_VECTOR
+XS1       
+1750      

@@ -20,8 +20,8 @@
 		cpu SH7600	; Should be SH7095 but this CPU mode works.
 
 ; CPU TEST MACRO
-testme macro miau
-		mov	#miau,r1
+testme macro color
+		mov	#color,r1
 		mov	#_vdpreg,r2
 		mov	#_vdpreg+bitmapmd,r3
 -		mov.b	@(vdpsts,r2),r0
@@ -38,7 +38,7 @@ testme macro miau
 ; Settings
 ; ----------------------------------------------------------------
 
-SH2_DEBUG	equ 1		; Set to 1 too see if CPUs are active using comm counters (0 and 1)
+SH2_DEBUG	equ 1			; Set to 1 too see if CPUs are active using comm counters (0 and 1)
 STACK_MSTR	equ CS3|$40000
 STACK_SLV	equ CS3|$3F000
 
@@ -594,6 +594,12 @@ m_irq_vres:
 		mov	r0,@($30,r1)
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
+		mov	#_DMASOURCE1,r1
+		mov	#0,r0
+		mov	r0,@($30,r1)
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r1)
+
 		mov	#_sysreg,r1
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
@@ -1372,35 +1378,31 @@ master_loop:
 ; exits on display.
 ; ---------------------------------------
 
-		mov	#mstr_gfxlist,r3		; Default LOOP points
-		mov	#_sysreg+comm12,r2
-		mov.w	@r2,r0				; r0 - bit check
-		extu.w	r0,r0
-		mov	r0,r1				; r1 - current mode
-		tst	#%11000000,r0			; Init counter?
+		mov	#_sysreg+(comm12+1),r4
+		mov	#%11000000,r3
+		mov	#0,r1
+		mov.b	@r4,r0				; r0 - bit check
+		exts.w	r0,r0
+		cmp/pz	r0
 		bt	.no_init
-		mov	#%01000000,r4
-		mov.w	@r2,r0				; Decrement init bits
-		sub	r4,r0
-		mov.w	r0,@r2
-.no_init:
-; 		mov.w	@(marsGbl_MdDrawTmr,gbr),r0	; r2 - Add init timer
-; 		mov	r0,r2
-; 		tst	r0,r0
-; 		bt	.tmr_off
-; 		dt	r0
-; 		mov.w	r0,@(marsGbl_MdDrawTmr,gbr)
-.tmr_off:
+		extu.b	r0,r1
 		mov	r1,r2
-		shlr2	r2
-		shlr2	r2
-		mov	r1,r0
-		and	#%111,r0
-		shll2	r0
-		shll2	r0
+		shll	r2
+		and	r3,r2
+		and	r3,r1
+		and	#%00000011,r0
 		add	r2,r0
-		mov	@(r3,r0),r3
-		jmp	@r3
+		mov.b	r0,@r4
+		shlr2	r1
+		shlr2	r1
+.no_init:
+		and	#%00000011,r0
+		shll2	r0
+		shll2	r0
+		add	r1,r0
+		mov	#mstr_gfxlist,r1
+		mov	@(r1,r0),r1
+		jmp	@r1
 		nop
 		align 4
 		ltorg
@@ -1413,37 +1415,21 @@ master_loop:
 
 		align 4
 mstr_gfxlist:	dc.l mstr_gfx0_loop	; $00
+		dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx0_init_2
 		dc.l mstr_gfx0_init_1
-mstr_gfxlist_h:	dc.l mstr_gfx0_hblk
 		dc.l mstr_gfx1_loop	; $01
+		dc.l mstr_gfx1_hblk
 		dc.l mstr_gfx1_init_2
 		dc.l mstr_gfx1_init_1
-		dc.l mstr_gfx1_hblk
 		dc.l mstr_gfx2_loop	; $02
+		dc.l mstr_gfx2_hblk
 		dc.l mstr_gfx2_init_2
 		dc.l mstr_gfx2_init_1
-		dc.l mstr_gfx2_hblk
 		dc.l mstr_gfx3_loop	; $03
+		dc.l mstr_gfx3_hblk
 		dc.l mstr_gfx3_init_2
 		dc.l mstr_gfx3_init_1
-		dc.l mstr_gfx3_hblk
-		dc.l mstr_gfx0_loop	; $04
-		dc.l mstr_gfx0_init_2
-		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_hblk
-		dc.l mstr_gfx0_loop	; $05
-		dc.l mstr_gfx0_init_2
-		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_hblk
-		dc.l mstr_gfx0_loop	; $06
-		dc.l mstr_gfx0_init_2
-		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_hblk
-		dc.l mstr_gfx0_loop	; $07
-		dc.l mstr_gfx0_init_2
-		dc.l mstr_gfx0_init_1
-		dc.l mstr_gfx0_hblk
 
 ; ============================================================
 ; ---------------------------------------
@@ -1531,14 +1517,14 @@ mstr_gfx1_hblk:
 ; -------------------------------
 
 mstr_gfx1_init_1:
-		xor	r0,r0				; Cleanup our screen RAM
-		mov	#RAM_Mars_ScrnBuff,r1
-		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
-.clr_scrn:
-		mov	r0,@r1
-		dt	r2
-		bf/s	.clr_scrn
-		add	#4,r1
+; 		xor	r0,r0				; Cleanup our screen RAM
+; 		mov	#RAM_Mars_ScrnBuff,r1
+; 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
+; .clr_scrn:
+; 		mov	r0,@r1
+; 		dt	r2
+; 		bf/s	.clr_scrn
+; 		add	#4,r1
 		mov	#CACHE_MSTR_SCRL,r1		; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -1616,14 +1602,14 @@ mstr_gfx2_hblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
-		xor	r0,r0					; Cleanup our screen RAM
-		mov	#RAM_Mars_ScrnBuff,r1
-		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
-.clr_scrn:
-		mov	r0,@r1
-		dt	r2
-		bf/s	.clr_scrn
-		add	#4,r1
+; 		xor	r0,r0					; Cleanup our screen RAM
+; 		mov	#RAM_Mars_ScrnBuff,r1
+; 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
+; .clr_scrn:
+; 		mov	r0,@r1
+; 		dt	r2
+; 		bf/s	.clr_scrn
+; 		add	#4,r1
 		mov	#CACHE_MSTR_SCRL,r1			; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -1637,6 +1623,13 @@ mstr_gfx2_init_1:
 		mov	#224,r4
 		bsr	MarsVideo_MkScrlField
 		mov	#16,r5			; <-- expand size
+
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14
+		mov	#RAM_Mars_ScrlBuff,r13
+		mov	#MarsVideo_DrwMapData,r0
+		jsr	@r0
+		nop
+
 		bra	mstr_gfx2_init_cont
 		nop
 
@@ -1645,11 +1638,23 @@ mstr_gfx2_init_2:
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx2_init_cont:
-		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14
-		mov	#RAM_Mars_ScrlBuff,r13
-		mov	#MarsVideo_DrawAll,r0
+
+	; Copy-paste the entire pixel data
+		mov	#RAM_Mars_ScrlBuff,r14
+		mov	#RAM_Mars_ScrlData,r1
+		mov	#_framebuffer,r2
+		mov	@(scrl_fbdata,r14),r0
+		add	r0,r2
+		mov	#(((320+16)*(224+16))+320)/4,r3
+		mov	#MarsVideo_DrawScrl,r0
 		jsr	@r0
 		nop
+
+; 		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14
+; 		mov	#RAM_Mars_ScrlBuff,r13
+; 		mov	#MarsVideo_DrawAll,r0
+; 		jsr	@r0
+; 		nop
 
 ; -------------------------------
 ; Loop
@@ -1657,29 +1662,11 @@ mstr_gfx2_init_cont:
 
 mstr_gfx2_loop:
  testme 2
-		mov	#MarsVideo_DrawBgSSpr,r0		; Draw pixel backup data BEFORE updating
-		jsr	@r0					; the X/Y screen position
-		nop
 		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Move this scrolling area
 		mov	#RAM_Mars_ScrlBuff,r13
 		bsr	MarsVideo_Bg_MdMove
 		nop
 		bsr	MarsVideo_Bg_MdReq			; Process draw-requests from Genesis
-		nop
-
-	; BG now changed X/Y position
-		mov	#RAM_Mars_ScrlBuff,r14
-		mov	@(scrl_fbdata,r14),r1
-		mov	@(scrl_fbpos,r14),r2
-		mov.w	@(scrl_fbpos_y,r14),r0
-		mov	r0,r3
-		mov.w	@(scrl_intrl_w,r14),r0
-		mov	r0,r4
-		mov.w	@(scrl_intrl_h,r14),r0
-		mov	r0,r5
-		mov	@(scrl_intrl_size,r14),r6
-		mov	#MarsVideo_SetSuperSpr,r0		; Update NEW sprite "layer" settings
-		jsr	@r0
 		nop
 		mov.w	#1,r0
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
@@ -1688,6 +1675,26 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_SetWatchdog,r0		; Start watchdog
 		jsr	@r0
 		nop
+ 		mov	#MarsVideo_DrawBgSSpr,r0
+		jsr	@r0
+		nop
+
+; 	; BG now changed X/Y position
+		mov	#RAM_Mars_ScrlBuff,r14
+		mov	@(scrl_fbdata,r14),r1
+		mov	@(scrl_fbpos,r14),r2
+		mov	@(scrl_fbpos_y,r14),r3
+		mov	@(scrl_intrl_w,r14),r4
+		mov	@(scrl_intrl_h,r14),r5
+		mov	@(scrl_intrl_size,r14),r6
+		mov	#MarsVideo_SetSuperSpr,r0		; Update NEW sprite "layer" settings
+		jsr	@r0
+		nop
+		mov	#MarsVideo_MkSprBoxes,r0
+		jsr	@r0
+		nop
+
+
 .wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0		; Watchdog finished?
 		tst	r0,r0
 		bf	.wait_wdg
@@ -1695,12 +1702,10 @@ mstr_gfx2_loop:
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
 
-		mov	#MarsVideo_SaveBgSSpr,r0		; Make NEW pixel data backup
-		jsr	@r0
-		nop
 		mov	#MarsVideo_DrawSuperSpr,r0		; Now draw the sprites
 		jsr	@r0
 		nop
+
 
 		mov	#RAM_Mars_ScrlBuff,r1			; *** Make a visible section
 		mov	#0,r2					; of the scrolling data
@@ -1775,6 +1780,7 @@ mstr_gfx3_init_1:
 		mov.w	r0,@(marsGbl_XShift,gbr)
 		bra	mstr_gfx3_init_cont
 		nop
+
 mstr_gfx3_init_2:
 		mov 	#_vdpreg,r1
 		mov	#1,r0
@@ -1819,7 +1825,7 @@ mstr_gfx3_loop:
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
 		mov.w	@r4,r0
-		or	#$01,r0
+		or	#$02,r0				; Slave task $02
 		mov.w	r0,@r4
 		mov	#_vdpreg,r1
 .wait_fb:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
@@ -1846,6 +1852,7 @@ mstr_gfx3_loop:
 		mov	#MarsVideo_MakeNametbl,r0
 		jsr	@r0
 		mov	#0,r4
+
 		mov	#0,r1
 		mov	#$10,r2
 		mov	#MarsVideo_SetWatchdog,r0
@@ -1865,7 +1872,7 @@ mstr_gfx3_loop:
 		mov	#RAM_Mars_PlgnNum_0,r13
 .page_2:
 		mov 	#RAM_Mars_PlgnList_1,r14
-		nop
+; 		nop
 		mov	#RAM_Mars_PlgnNum_1,r13
 .cont_plgn:
 		mov	@r13,r13
@@ -2207,7 +2214,7 @@ SH2_S_Entry:
 		mov.w   #$FEE4,r0
 		mov     #($120/4)<<8,r1		; VBR jump for WDG
 		mov.w   r1,@r0
-		mov	#-$60,r0		; $FFFFFFA0
+		mov	#-$60,r0		; _DMAVECTORN0 / $FFFFFFA0
 		mov     #($124/4),r1		; VBR jump for DMA
 		mov	r1,@r0
 
@@ -2324,9 +2331,7 @@ slave_loop:
 
 		align 4
 slv_task_1:
-		mov	#MarsMdl_MdlLoop,r0
-		jsr	@r0
-		nop
+
 		bra	slv_exit
 		nop
 		align 4
@@ -2338,6 +2343,9 @@ slv_task_1:
 
 		align 4
 slv_task_2:
+		mov	#MarsMdl_MdlLoop,r0
+		jsr	@r0
+		nop
 		bra	slv_exit
 		nop
 		align 4
@@ -2420,9 +2428,8 @@ sizeof_marsvid		ds.l 0
 ; --------------------------------------------------------
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
-RAM_Mars_SpriteCopy	ds.b sizeof_marsspr*MAX_SUPERSPR
-RAM_Mars_SpritePixels	ds.b (64*64)*16				;
-RAM_Mars_ScrlCopy	ds.b ((320+4)*(240+4))			; Read-back background pixels
+RAM_Mars_ScrlData	ds.b ((320+16)*(224+16))+320
+RAM_Mars_SprStorage	ds.b $10000				; <-- Custom size, careful.
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff

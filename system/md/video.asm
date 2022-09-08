@@ -1266,7 +1266,7 @@ Video_DmaBlast:
 Video_Mars_GfxMode:
 		move.w	d0,d6
 		and.w	#%00000111,d6			; Current limit: 8 modes
-		bset	#7,d6
+		or.w	#$C0,d6
 		move.w	(sysmars_reg+comm12).l,d7	; Grab current comm12
 		and.w	#$FF00,d7			; Clear our byte
 		or.w	d6,d7				; merge changes

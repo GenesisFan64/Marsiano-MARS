@@ -16,7 +16,7 @@ FBVRAM_PATCH	equ $1D000	; Framebuffer location for the affected XShift lines
 MAX_FACES	equ 700		; MAX polygon faces for models
 MAX_SVDP_PZ	equ 700+128	; MAX polygon pieces to draw (MAX_FACES+few_pieces)
 MAX_ZDIST	equ -$1000	; Maximum 3D field distance (-Z)
-MAX_SSPRSPD	equ 8		; Maximum pixel speed for Super Sprites
+MAX_SSPRSPD	equ 4		; Maximum pixel speed for Super Sprites
 
 ; --------------------------------------------------------
 ; Variables
@@ -33,17 +33,16 @@ PLGN_TRI	equ %01000000
 ; --------------------------------------------------------
 
 		struct 0
-scrl_xpos_old	ds.w 1		; OLD Xpos position
-scrl_ypos_old	ds.w 1		; OLD Ypos position
-scrl_fbpos_y	ds.w 1		; This field's REAL Y position
-scrl_null_w	ds.w 1		; ** FILLER, free to use **
-scrl_intrl_w	ds.w 1		; Internal scroll Width (MUST be larger than 320)
-scrl_intrl_h	ds.w 1		; Internal scroll Height
+scrl_xpos_old	ds.l 1		; OLD Xpos position
+scrl_ypos_old	ds.l 1		; OLD Ypos position
+scrl_intrl_w	ds.l 1		; Internal scroll Width (MUST be larger than 320)
+scrl_intrl_h	ds.l 1		; Internal scroll Height
+scrl_fbpos_y	ds.l 1		; Screen's Y position
 scrl_intrl_size	ds.l 1		; Internal scroll FULL size (scrl_intrl_w*scrl_intrl_h)
-scrl_fbpos	ds.l 1		; Top-left position of this field
+scrl_fbpos	ds.l 1		; Top-Left position of this field (Not X)
 scrl_fbdata	ds.l 1		; Location of the pixel data in the framebuffer
-scrl_xpos	ds.l 1		; 0000.0000
-scrl_ypos	ds.l 1		; 0000.0000
+scrl_xpos	ds.l 1		; $0000.0000
+scrl_ypos	ds.l 1		; $0000.0000
 sizeof_mscrl	ds.l 0
 		finish
 
@@ -74,7 +73,8 @@ plypz_src_yr_dx	ds.l 1
 sizeof_plypz	ds.l 0
 		finish
 
-; Polygon data, Size: $38
+; Polygon data
+; Size: $38
 		struct 0
 polygn_type	ds.l 1		; %MSww wwww 0000 aaaa | %MS w-Texture width, a-Pixel increment
 polygn_mtrl	ds.l 1		; Material Type: Color (0-255) or Texture data address
@@ -148,9 +148,9 @@ MarsVideo_Init:
 ;
 ; Uses:
 ; r5-r6
-;
-; *** 512-pixel lines ONLY ***
 ; --------------------------------------------------------
+
+; TODO: Fix this.
 
 		align 4
 MarsVideo_ClearScreen:
@@ -220,9 +220,9 @@ MarsVideo_MakeNameTbl:
 		shll	r4
 		add	r4,r10
 		mov 	#_vdpreg,r5
-		mov.b	@(bitmapmd,r5),r0	; Cannot mess with the RLE lines.
+		mov.b	@(bitmapmd,r5),r0
 		and	#%11,r0
-		cmp/eq	#3,r0
+		cmp/eq	#3,r0			; Don't mess with the RLE lines.
 		bt	.cant_use
 		mov.w	@(marsGbl_WaveEnable,gbr),r0
 		tst	r0,r0
@@ -285,7 +285,7 @@ MarsVideo_MakeNameTbl:
 ; --------------------------------------------------------
 ; MarsVideo_FixTblShift
 ;
-; Fix the $xxFF lines
+; Fix the affected $xxFF lines
 ;
 ; Input:
 ; r1 | Start line
@@ -296,7 +296,7 @@ MarsVideo_MakeNameTbl:
 ; r7-r14
 ; --------------------------------------------------------
 
-; TODO: customize Top/Bottom
+; TODO: Check this later.
 
 MarsVideo_FixTblShift:
 		mov	#_vdpreg,r14
@@ -361,11 +361,7 @@ MarsVideo_FixTblShift:
 ; --------------------------------------------------------
 ; MarsVideo_MkScrlField
 ;
-; This makes a new internal scrolling background
-;
-; Call this first to setup the internal scrolling values,
-; then after this call MarsVideo_SetBg to set your
-; source image and it's size.
+; This builds a new internal scrolling background
 ;
 ; Input:
 ; r1 | Background buffer to initialize
@@ -375,7 +371,7 @@ MarsVideo_FixTblShift:
 ; r5 | Scroll block size (4 pixels minimum)
 ;
 ; NOTE:
-; At the very last scrollable line, the next 320
+; At the very last scrollable line: The next 320
 ; pixels will be visible until that line resets
 ; into 0 again.
 ; When you write pixels in in the range of 0-320,
@@ -394,101 +390,22 @@ MarsVideo_MkScrlField:
 		mov	#RAM_Mars_ScrlBuff,r0
 		add	r0,r1
 
-		add	r5,r3	; add "block" into width/height
-		add	r5,r4
-
+		add	r5,r3	; add "block"
 		mov	r2,@(scrl_fbdata,r1)
-		mov	r3,r0
-		mov.w	r0,@(scrl_intrl_w,r1)
-		mov	r4,r0
-		mov.w	r0,@(scrl_intrl_h,r1)
-; 		mov	r5,r0
-; 		mov.w	r0,@(scrl_intrl_blk,r1)
+		add	r5,r4
+		mov	r3,@(scrl_intrl_w,r1)
 		mulu	r3,r4
+		mov	r4,@(scrl_intrl_h,r1)
 		sts	macl,r0
 		mov	r0,@(scrl_intrl_size,r1)
-
 		xor	r0,r0
-; 		mov.b	r0,@(scrl_xset,r1)
-; 		mov.b	r0,@(scrl_yset,r1)
-		mov.w	r0,@(scrl_xpos_old,r1)
-		mov.w	r0,@(scrl_ypos_old,r1)
+		mov	r0,@(scrl_xpos_old,r1)
+		mov	r0,@(scrl_ypos_old,r1)
 		mov	r0,@(scrl_fbpos,r1)
-		mov.w	r0,@(scrl_fbpos_y,r1)
+		mov	r0,@(scrl_fbpos_y,r1)
 		rts
 		nop
 		align 4
-
-; --------------------------------------------------------
-; MarsVideo_SetScrlBg
-;
-; Sets the source data for the background
-;
-; Input:
-; r1 | Background buffer
-; r2 | Pixel data location
-; r3 | Map data location
-; r4 | Block size
-; r5 | Map width in blocks
-; r6 | Map height in blocks
-;
-; Breaks:
-; r0,r1
-;
-; NOTES:
-; - ROM data is NOT protected.
-; --------------------------------------------------------
-
-; MarsVideo_SetScrlBg:
-; 		mov	r2,@(scrl_data,r1)
-; 		mov	r3,@(scrl_mapdata,r1)
-; 		mov	r4,r0
-; 		mov.b	r0,@(scrl_bg_bw,r1)
-; 		mov	r5,r0
-; 		mov.w	r0,@(scrl_width,r1)
-; 		mov	r6,r0
-; 		mov.w	r0,@(scrl_height,r1)
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
-; ; --------------------------------------------------------
-; ; MarsVideo_SetScrlBg
-; ;
-; ; Sets the source data for the background
-; ;
-; ; Input:
-; ; r1 | Background buffer
-; ; r2 | Source image location (ROM or SDRAM)
-; ; r3 | Source image Width
-; ; r4 | Source image Height
-; ;
-; ; Breaks:
-; ; r0,r1
-; ;
-; ; NOTES:
-; ; - Width and Height must be aligned by the current
-; ; buffer's block size
-; ; - ROM data is NOT protected
-; ; --------------------------------------------------------
-;
-; MarsVideo_SetScrlBg:
-; 		mov	r2,@(scrl_data,r1)
-; 		mov.b	@(scrl_flags,r1),r0
-; 		and	#%10,r0
-; 		tst	r0,r0
-; 		bt	.indxmode
-; 		shll	r3
-; .indxmode:
-; 		mov	r3,r0
-; 		mov.w	r0,@(scrl_width,r1)
-; 		mov	r4,r0
-; 		mov.w	r0,@(scrl_height,r1)
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
 
 ; --------------------------------------------------------
 ; MarsVideo_ShowScrlBg
@@ -512,18 +429,17 @@ MarsVideo_MkScrlField:
 		align 4
 MarsVideo_ShowScrlBg:
 		mov	#_framebuffer,r14		; r14 - Framebuffer BASE
-		mov	@(scrl_fbdata,r1),r13		; r13 - Framebuffer pixeldata position
-		mov	@(scrl_intrl_size,r1),r12	; r12 - Full size of screen-scroll
 		mov	#0,r11				; r11 - line counter
-		mov.w	@(scrl_intrl_w,r1),r0
-		mov	r0,r10				; r10 - Next line to add
+		mov	@(scrl_fbdata,r1),r13		; r13 - Framebuffer pixeldata position
 		mov	r2,r6
+		mov	@(scrl_intrl_size,r1),r12	; r12 - Full size of screen-scroll
 		mov	r2,r0
+		mov	@(scrl_intrl_w,r1),r10		; r10 - Next line to add
 		shll	r0
-		add	r0,r14
-		mov.w	@(scrl_fbpos_y,r1),r0
-		mulu	r10,r0
 		mov	@(scrl_fbpos,r1),r7
+		add	r0,r14
+		mov	@(scrl_fbpos_y,r1),r0
+		mulu	r10,r0
 		sts	macl,r0
 		add	r0,r7
 		mov.w	@(marsGbl_WaveEnable,gbr),r0
@@ -634,26 +550,26 @@ MarsVideo_Bg_MdMove:
 		mov.w	r0,@(marsGbl_XShift,gbr)	; ** Grab missing bit for xshift
 		exts.w	r0,r0
 		mov	r0,r3
-		mov.w	@(scrl_xpos_old,r13),r0
+		mov	@(scrl_xpos_old,r13),r0
 		cmp/eq	r0,r3
 		bt	.xequ
 		mov	r3,r1
 		sub	r0,r1
 .xequ:
 		mov	r3,r0
-		mov.w	r0,@(scrl_xpos_old,r13)
+		mov	r0,@(scrl_xpos_old,r13)
 		mov	@(scrl_ypos,r13),r0	; 0000.0000
 		shlr16	r0
 		exts.w	r0,r0
 		mov	r0,r3
-		mov.w	@(scrl_ypos_old,r13),r0
+		mov	@(scrl_ypos_old,r13),r0
 		cmp/eq	r0,r3
 		bt	.yequ
 		mov	r3,r2
 		sub	r0,r2
 .yequ:
 		mov	r3,r0
-		mov.w	r0,@(scrl_ypos_old,r13)
+		mov	r0,@(scrl_ypos_old,r13)
 		exts.w	r1,r1
 		exts.w	r2,r2
 
@@ -661,11 +577,9 @@ MarsVideo_Bg_MdMove:
 	; Move Y-Framebuffer pos
 	; ---------------------------------------
 
-		mov.w	@(scrl_intrl_h,r13),r0
-		mov	r0,r3
-		mov.w	@(scrl_fbpos_y,r13),r0
-		mov	r0,r4
+		mov	@(scrl_fbpos_y,r13),r4
 		add	r2,r4
+		mov	@(scrl_intrl_h,r13),r3
 		cmp/pl	r2
 		bf	.ypu_negtv
 		cmp/ge	r3,r4
@@ -678,8 +592,7 @@ MarsVideo_Bg_MdMove:
 		bt	.ypu_postv
 		add	r3,r4
 .ypu_postv:
-		mov	r4,r0
-		mov.w	r0,@(scrl_fbpos_y,r13)
+		mov	r4,@(scrl_fbpos_y,r13)
 
 	; ---------------------------------------
 	; Update Framebuffer Top-Left position
@@ -713,20 +626,18 @@ MarsVideo_Bg_MdMove:
 ; r13 | Scrolling-area buffer
 ;
 ; Note:
-; The R/L/D/U bits are cleared on the Genesis-side, no
-; need to clear them here.
+; The R/L/D/U bits must be cleared on the Genesis-side,
+; don't clear those here.
 ;
 ; Breaks:
 ; ALL
 ; --------------------------------------------------------
 
-; TODO: merge the bits
-
 		align 4
 MarsVideo_Bg_MdReq:
 		sts	pr,@-r15
-		mov.b	@(md_bg_flags,r14),r0
 		mov	#Cach_DrawTimers,r2
+		mov.b	@(md_bg_flags,r14),r0
 		extu.b	r0,r0
 ; 		and	#$FF,r0
 		mov	r2,r1			; Set NEW screen timers ($02)
@@ -750,6 +661,7 @@ MarsVideo_Bg_MdReq:
 		bt	.no_upd
 		mov	r3,@r1
 .no_upd:
+		nop
 
 	; mach - Watchdog settings
 	;  r14 - Background buffer
@@ -772,18 +684,14 @@ MarsVideo_Bg_MdReq:
 		mov	#-16,r1				; <-- (-)manual block size
 		mov.w	@(md_bg_w,r14),r0
 		extu.w	r0,r10
-		mov.w	@(scrl_intrl_w,r13),r0
-		extu.w	r0,r9
-		mov	@(scrl_intrl_size,r13),r8
-		mov	#_framebuffer,r0
-		mov	@(scrl_fbdata,r13),r7
-		add	r0,r7
-		mov	@(md_bg_blk,r14),r6
+		mov	@(scrl_intrl_w,r13),r9
 		mov	#((224+16)/16),r5		; Timer for L/R
-		mov.w	@(scrl_fbpos_y,r13),r0
-		extu.w	r0,r0
+		mov	@(scrl_intrl_size,r13),r8
+		mov	@(md_bg_blk,r14),r6
 		and	r1,r11
+		mov	@(scrl_fbpos_y,r13),r0
 		and	r1,r0
+		mov	@(scrl_fbdata,r13),r7
 		mulu	r0,r9
 		sts	macl,r0
 		add	r0,r11
@@ -927,7 +835,7 @@ MarsVideo_Bg_MdReq:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Super sprites
+; Super Sprites
 ;
 ; Some routines are located on cache_m_scrlbg.asm
 ; ----------------------------------------------------------------
@@ -964,234 +872,119 @@ MarsVideo_SetSuperSpr:
 		align 4
 		ltorg
 
-; ; --------------------------------------------------------
-; ; MarsVideo_SetSprFill
-; ;
-; ; Builds a list of blocks to redraw for the
-; ; next frame.
-; ;
-; ; Input:
-; ; r14 | Scrolling buffer
-; ; r13 | Background buffer
-; ; r12 | List of blocks to redraw
-; ; --------------------------------------------------------
-;
-; 		align 4
-; MarsVideo_SetSprFill:
-; 		mov	#$80000000,r11
-; 		mov	#$7FFFFFFF,r10
-; 		mov	#MAX_SUPERSPR,r9
-; .next_one:
-; 		mov	@(marsspr_data,r13),r0
-; 		tst	r0,r0
-; 		bt	.exit
-; 		cmp/pl	r9
-; 		bf	.exit
-; 		mov.w	@(marsspr_x,r13),r0		; r1 - X pos (left)
-; 		mov	r0,r1
-; 		mov.w	@(marsspr_y,r13),r0		; r2 - Y pos (top)
-; 		mov	r0,r2
-; 		mov.b	@(marsspr_xs,r13),r0		; r3 - XS (right)
-; 		extu.b	r0,r3
-; 		mov.b	@(marsspr_ys,r13),r0		; r4 - YS (bottom)
-; 		extu.b	r0,r4
-; 		mov	@(scrl_xpos,r14),r8
-; 		shlr16	r8
-; 		mov	@(scrl_ypos,r14),r9
-; 		shlr16	r9
-; 		add	r1,r3
-; 		add	r2,r4
-; 		mov	#16,r5		; <-- manual block size
-;
-; 		mov	r5,r0		; extend box
-; 		sub	r0,r1
-; 		sub	r0,r2
-; 		shlr	r0
-; 		add	r0,r3
-; 		add	r0,r4
-;
-; 		dt	r0
-; 		and	r0,r8
-; 		and	r0,r9
-; ; 		shll	r8
-; 		add	r8,r1
-; 		add	r8,r3
-; 		add	r8,r3
-;
-; 	; TODO: X/Y REVERSE CHECK
-; 		mov	#320,r6			; <-- manual sizes
-; 		mov	#224,r7
-; 		add	r5,r6
+; --------------------------------------------------------
+; MarsVideo_MkSprBoxes
+; --------------------------------------------------------
+
+		align 4
+MarsVideo_MkSprBoxes:
+ 		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
+		mov	#Cach_SprBoxList,r13
+.next_save:
+		mov	@(marsspr_data,r14),r0
+		tst	r0,r0
+		bt	.last
+		mov	#MAX_SSPRSPD,r0		; expand box (max speed)
+		mov	@(marsspr_x,r14),r5	; XXXX YYYY
+		exts.w	r5,r6
+		mov	@(marsspr_xfrm,r14),r7	; ?? ?? XX YY
+		shlr16	r5
+		exts.w	r5,r5
+		extu.b	r7,r8
+		shlr8	r7
+		extu.b	r7,r7
+		add	r5,r7
+		add	r6,r8
+; 		mov.w	@(marsspr_x,r14),r0
+; 		exts.w	r0,r5
+; 		mov.w	@(marsspr_y,r14),r0
+; 		exts.w	r0,r6
+; 		mov.b	@(marsspr_xs,r14),r0
+; 		exts.b	r0,r7
+; 		mov.b	@(marsspr_ys,r14),r0
+; 		exts.b	r0,r8
 ; 		add	r5,r7
-; 		cmp/pl	r1
-; 		bt	.xl_l
-; 		xor	r1,r1
-; .xl_l:
-; 		cmp/ge	r6,r1
-; 		bf	.xl_r
-; 		mov	r6,r1
-; .xl_r:
-; 		cmp/pl	r3
-; 		bt	.xr_l
-; 		xor	r3,r3
-; .xr_l:
-; 		cmp/ge	r6,r3
-; 		bf	.xr_r
-; 		mov	r6,r3
-; .xr_r:
-;
-; 		cmp/pl	r2
-; 		bt	.yt_l
-; 		xor	r2,r2
-; .yt_l:
-; 		cmp/ge	r7,r2
-; 		bf	.yt_r
-; 		mov	r7,r2
-; .yt_r:
-; 		cmp/pl	r4
-; 		bt	.yb_l
-; 		xor	r4,r4
-; .yb_l:
-; 		cmp/ge	r7,r4
-; 		bf	.yb_r
-; 		mov	r7,r4
-; .yb_r:
-; 		cmp/eq	r1,r3
-; 		bt	.bad_xy
-; 		cmp/eq	r2,r4
-; 		bt	.bad_xy
-;
-; 	; r1 - X direct
-; 	; r2 - Y direct
-; 	; r3 - X s
-; 	; r4 - Y s
-; 	; r5 - block size
-; 	; r6 - last corrds
-; 		mov	#-1,r6
-; .y_mk:
-; 		mov	r1,r9
-; .x_mk:
-; 		mulu	r5,r9
-; 		sts	macl,r7
-; 		shlr8	r7
-; 		mulu	r5,r2
-; 		sts	macl,r8
-; 		shlr8	r8
-; 		shll8	r8
-; 		mov	r7,r0
-; 		extu.b	r0,r0
-; 		add	r8,r0
-; 		mov	#$8000,r8
-; 		or	r8,r0
-; 		cmp/eq	r6,r0
-; 		bt	.keep
-; 		mov.w	r0,@r12
-; 		mov	r0,r6
-; 		add	#4,r12
-; .keep:
-; 		add	#16,r9
-; 		cmp/ge	r3,r9
-; 		bf	.x_mk
-; 		add	#16,r2
-; 		cmp/ge	r4,r2
-; 		bf	.y_mk
-;
-; .bad_xy:
-; 		bra	.next_one
-; 		add	#sizeof_marsspr,r13
-; .exit:
-; 		rts
-; 		nop
-; 		align 4
-; ; 		ltorg
+; 		add	r6,r8
 
-; ; --------------------------------------------------------
-; ; MarsVideo_WdSprBlk
-; ;
-; ; Refill the background sections overwritten by
-; ; the Super-Sprites using a list generated by
-; ; MarsVideo_SetSprFill
-; ;
-; ; Input:
-; ; r14 | Scrolling buffer
-; ; r13 | Background buffer
-; ; r12 | List of blocks to redraw
-; ;
-; ; Note:
-; ; CPU-intensive, and doesn't have any overflow protection.
-; ; --------------------------------------------------------
-;
-; 		align 4
-; MarsVideo_WdSprBlk:
-; 		mov	#16,r2			; <-- (-)manual block size
-; 		mov	@(scrl_intrl_size,r14),r10
-; 		mov	#_framebuffer,r4
-; 		mov	@(scrl_fbdata,r14),r0
-; 		add	r0,r4
-; 		mov	@(scrl_fbpos,r14),r11
-; 		neg	r2,r1
-; 		mov.w	@(scrl_fbpos_y,r14),r0
-; 		extu.w	r0,r3
-; 		mov.w	@(scrl_intrl_w,r14),r0
-; 		extu.w	r0,r9
-; 		mov	@(md_bg_blk,r13),r8
-; 		and	r1,r3
-; 		mov	@(md_bg_low,r13),r7
-; 		and	r1,r11
-; 		mov.w	@(md_bg_w,r13),r0
-; 		extu.w	r0,r6
-; 		mov.w	@(md_bg_xinc_l,r13),r0
-; 		exts.w	r0,r1
-; 		mov.w	@(md_bg_yinc_u,r13),r0
-; 		exts.w	r0,r0
-; 		lds	r4,mach
-; 		muls	r2,r1
-; 		sts	macl,r1
-; 		muls	r2,r0
-; 		sts	macl,r0
-; 		shlr8	r0
-; 		shlr8	r1
-; 		exts.b	r0,r0
-; 		exts.b	r1,r1
-; 		muls	r6,r0
-; 		sts	macl,r0
-; 		add	r0,r1
-; 		add	r1,r7
-;
-; 		mulu	r9,r3
-; 		sts	macl,r0
-; 		add	r0,r11
-; 		cmp/gt	r10,r11
-; 		bf	.fbmuch
-; 		sub	r10,r11
-; .fbmuch:
-; 		mov	#16,r5		; <-- manual block size
-; .next:
-;
-; 	; mach - _framebuffer area
-; 	;  r13 - Counter
-; 	;  r12 - Refill buffer
-; 	;  r11 - Scroll current top-left
-; 	;  r10 - FULL Scroll area size
-; 	;   r9 - Scroll Width
-; 	;   r8 - Block graphics
-; 	;   r7 - Layout data
-; 	;   r6 - Layout width
-; 	;   r5 - Block size
-;
-; 		mov	#($80*(240/4))/16,r13
-; 		mov	#Cach_BlkRefill_S,r0
-; 		sts	mach,@-r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		mov	r11,@-r0
-; 		mov	r12,@-r0
-; 		mov	r13,@-r0
+		sub	r0,r5
+		sub	r0,r6
+		add	r0,r7
+		add	r0,r8
+; 		shlr	r0
+		add	r0,r7
+; 		add	r0,r8
 
+		mov	#-4,r0
+		and	r0,r5
+		and	r0,r7
+		and	r0,r6
+		and	r0,r8
+
+		mov	#320+16,r1
+		mov	#224+16,r2
+		cmp/pl	r7
+		bf	.spr_out
+		cmp/pl	r8
+		bf	.spr_out
+		cmp/ge	r1,r5
+		bt	.spr_out
+		cmp/ge	r2,r6
+		bt	.spr_out
+		cmp/pz	r5
+		bt	.xl_l
+		xor	r5,r5
+.xl_l:
+		cmp/pz	r6
+		bt	.yl_l
+		xor	r6,r6
+.yl_l:
+		cmp/gt	r1,r7
+		bf	.xr_l
+		mov	r1,r7
+.xr_l:
+		cmp/gt	r2,r8
+		bf	.yr_l
+		mov	r2,r8
+.yr_l:
+		mulu	r11,r6
+		sts	macl,r0
+		add	r0,r4
+.y_lp:
+		cmp/gt	r12,r4
+		bf	.y_keep
+		sub	r12,r4
+.y_keep:
+
+	; r5 - X left
+	; r6 - Y top
+	; r7 - X right
+	; r8 - Y bottom
+	;
+	; (Xend>>2)|$80,(Xstart>>2),Ybottom,Ytop
+		mov	r7,r0
+		shlr2	r0
+		extu.b	r0,r0
+		or	#$80,r0
+		shll16	r0
+		shll8	r0
+		mov	r5,r2
+		shll16	r2
+		shlr2	r2
+		mov	r0,r3
+		mov	r6,r0
+		mov	r8,r1
+		extu.b	r1,r1
+		shll8	r1
+		and	#$FF,r0
+		or	r3,r0
+		or	r2,r0
+		or	r1,r0
+		mov	r0,@r13
+		add	#4,r13
+.spr_out:
+		bra	.next_save
+		add 	#sizeof_marsspr,r14
+.last:
 		rts
 		nop
 		align 4
@@ -1225,16 +1018,16 @@ MarsVideo_SetWatchdog:
 		stc	sr,r4
 		mov	#$F0,r0
 		ldc 	r0,sr
-		mov.l	#_CCR,r3				; Refresh Cache
-		mov	#%00001000,r0				; Two-way mode
+		mov.l	#_CCR,r3		; Refresh Cache
+		mov	#%00001000,r0		; Two-way mode
 		mov.w	r0,@r3
-		mov	#%00011001,r0				; Cache purge / Two-way mode / Cache ON
+		mov	#%00011001,r0		; Cache purge / Two-way mode / Cache ON
 		mov.w	r0,@r3
 		mov	#$FFFFFE80,r3
-		mov.w	#$5A00,r0				; Watchdog pre-timer
+		mov.w	#$5A00,r0		; Watchdog pre-timer
 		or	r2,r0
 		mov.w	r0,@r3
-		mov.w	#$A538,r0				; Enable Watchdog
+		mov.w	#$A538,r0		; Enable Watchdog
 		or	r1,r0
 		mov.w	r0,@r3
 		ldc	r4,sr
