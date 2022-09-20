@@ -6,9 +6,9 @@ A GameBase/Engine/Library for making Sega 32X Games in assembly using all CPUs:
 
 - Z80 for the sound including PWM
 
-- SH2 for the 2D+3D visuals and extra sound channels.
+- SH2 for the 2D+3D visuals and extra sound channels. MASTER does the graphics, SLAVE does the sound and sometimes helps MASTER
 
 
-This is also being used to research bugs and limitations of the real hardware that current emulators ignore, see hwnotes.txt for details.
+This is also being used to research bugs and limitations of the real hardware that current emulators ignore... see hwnotes.txt for details.
 
-(No list of features until everything gets working again.)
+TODO: List of features.

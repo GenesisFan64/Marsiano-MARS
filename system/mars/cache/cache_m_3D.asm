@@ -18,15 +18,15 @@ CACHE_MSTR_PLGN:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov.w	@(marsGbl_WdgHold,gbr),r0
-		cmp/eq	#1,r0
-		bt	.exit
+; 		mov.w	@(marsGbl_WdgHold,gbr),r0
+; 		cmp/eq	#1,r0
+; 		bt	.exit
 		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($07)?
 		cmp/eq	#7,r0
 		bf	maindrw_tasks
 
 ; ------------------------------------------------
-; First task: clear Framebuffer
+; Clear Framebuffer
 ; ------------------------------------------------
 
 		mov	#_vdpreg,r1
@@ -34,12 +34,12 @@ CACHE_MSTR_PLGN:
 		tst     #2,r0
 		bf      .wait_fb
 		mov.w   @(6,r1),r0			; SVDP-fill address
-		add     #$5B,r0				; pre-increment
+		add     #$5B,r0				; <-- Pre-increment
 		mov.w   r0,@(6,r1)
 		mov.w   #328/2,r0			; SVDP-fill size (320 pixels)
 		mov.w   r0,@(4,r1)
 		mov.w	#$0000,r0			; SVDP-fill pixel data
-		mov.w   r0,@(8,r1)			; now SVDP-fill is now busy.
+		mov.w   r0,@(8,r1)			; now SVDP-fill is working.
 		mov	#$FFFFFE80,r1
 		mov.w   #$A518,r0			; OFF
 		mov.w   r0,@r1
@@ -140,6 +140,11 @@ slvplgn_01:
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
+		mov	@(marsGbl_PlyPzList_R,gbr),r0
+		mov	r0,r1
+		mov	@(marsGbl_PlyPzList_W,gbr),r0
+		cmp/eq	r0,r1
+		bt	g_return
 		mov	r3,@-r15			; Save all these regs
 		mov	r4,@-r15
 		mov	r5,@-r15
@@ -176,6 +181,7 @@ drwtsk1_newpz:
 .invld_y:
 		bra	drwsld_nextpz		; if LEN < 0 then check next one instead.
 		nop
+		align 4
 .no_pz:
 		bra	drwtask_exit
 		nop
@@ -197,6 +203,10 @@ drwtsk1_newpz:
 		nop
 		align 4
 		ltorg
+g_return:
+		bra	drwtask_return
+		nop
+		align 4
 
 ; ------------------------------------
 ; Texture mode
@@ -260,7 +270,7 @@ drwsld_nxtline_tex:
 		mov	r10,@-r0
 		mov	r11,@-r0
 
-	; r11-r12 are free now.
+	; NOTE: r11-r12 are free
 		shlr16	r1
 		shlr16	r3
 		exts	r1,r1
@@ -749,12 +759,12 @@ MarsVideo_SlicePlgn:
 		mov	r8,@-r0
 		mov	r9,@-r0
 		mov	r11,@-r0
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
 		bsr	put_piece
 		nop
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
 		mov	#Cach_Bkup_LPZ,r0
 		mov	@r0+,r11
 		mov	@r0+,r9
@@ -1062,7 +1072,7 @@ put_piece:
 ; ------------------------------------------------
 
 		align 4
-Cach_ClrLines	ds.l 1		; Current lines to clear
+Cach_ClrLines	ds.l 1		; Linecounter for the WDG task $07
 Cach_DDA_Top	ds.l 2*2	; First 2 points
 Cach_DDA_Last	ds.l 2*2	; Triangle or Quad (+8)
 Cach_DDA_Src	ds.l 4*2

@@ -16,8 +16,8 @@
 ; Main
 ; ----------------------------------------------------------------
 
-		lea	(Md_TopCode+$880000),a0			; Transfer common 68K code
-		lea	($FF0000),a1				; at the top of RAM
+		lea	(Md_TopCode+$880000),a0		; Transfer common 68K code
+		lea	($FF0000),a1			; at the top of RAM
 		move.w	#((Md_TopCode_e-Md_TopCode))-1,d0
 .copyme:
 		move.b	(a0)+,(a1)+
@@ -25,7 +25,7 @@
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		move.l	#RamCode_Boot,d0			; Main code section
+		move.l	#RamCode_Boot,d0		; Transfer USER code and jump into it
 		jmp	(System_JumpRamCode).l
 
 ; ====================================================================
@@ -84,7 +84,7 @@ Z80_CODE_END:
 ; BANK 0
 ; ---------------------------------------------
 
-		phase $900000+*			; Only one currently
+		phase $900000+*			; Currently only this one.
 MDBNK0_START:
 		include "sound/tracks.asm"	; <-- Sound data
 		include "sound/instr.asm"	;  --

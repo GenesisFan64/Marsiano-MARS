@@ -73,18 +73,18 @@ System_Init:
 ; --------------------------------------------------------
 ; System_WaitFrame
 ;
-; Call this to wait for a frame and process changes.
-; ***DISPLAY MUST BE ENABLED TO USE THIS***
+; Call this to wait until the next frame.
 ;
-; Before getting on VBlank:
-; The DREQ section from here will be transfered
-; to the 32X side
+; Before entering VBlank:
+; - The DREQ section from here will be transfered
+; to the 32X side then processed on the next
+; frame.
 ;
-; Call this it will:
-; - Update the controllers
+; Inside VBlank this will:
+; - Update the controller inputs
 ; - Transfer the Genesis palette, sprites and scroll
-;   data from from RAM to VDP (Doesn't require RV bit)
-; - Process DMA tasks from the BLAST list
+;   data from from RAM to VDP
+;   (Doesn't require the RV bit)
 ; --------------------------------------------------------
 
 System_WaitFrame:

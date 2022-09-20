@@ -676,7 +676,7 @@ MarsVideo_DrawScrl:
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; MarsVideo_DrawSuperSpr
+; MarsVideo_DrawSuperSpr_M
 ;
 ; Draws the Super-sprites directly recieved on DREQ
 ;
@@ -691,7 +691,7 @@ MarsVideo_DrawScrl:
 ; --------------------------------------------------------
 
 		align 4
-MarsVideo_DrawSuperSpr:
+MarsVideo_DrawSuperSpr_M:
 		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
 		mov	#Cach_Intrl_W,r11
 		mov	@r11,r11
@@ -729,7 +729,6 @@ MarsVideo_NxtSuprSpr:
 		add	r5,r7
 		add	r6,r8
 
-
 		mov	#Cach_Intrl_H,r0
 		mov	@r0,r0
 		cmp/pl	r8
@@ -740,6 +739,17 @@ MarsVideo_NxtSuprSpr:
 		bt	.spr_out
 		cmp/ge	r0,r6
 		bt	.spr_out
+	; XR / YB
+; 		mov	#224,r0
+		cmp/ge	r0,r8
+		bf	.yb_e
+		mov	r0,r8
+.yb_e:
+		mov	#320,r0
+		cmp/ge	r0,r7
+		bf	.xb_e
+		mov	r0,r7
+.xb_e:
 
 		mov.w	@(marsspr_dwidth,r14),r0
 		mov	r0,r1
@@ -758,17 +768,7 @@ MarsVideo_NxtSuprSpr:
 		mulu	r3,r0
 		sts	macl,r0
 		add	r0,r13
-	; XR / YB
-		mov	#320,r0
-		cmp/gt	r0,r7
-		bf	.xb_e
-		mov	r0,r7
-.xb_e:
-		mov	#224,r0
-		cmp/gt	r0,r8
-		bf	.yb_e
-		mov	r0,r8
-.yb_e:
+
 		mov	#Cach_FbData,r2
 		mov	@r2,r2
 		mov	#_framebuffer,r0
@@ -826,10 +826,7 @@ MarsVideo_NxtSuprSpr:
 		mov	@r2,r2
 		sts	macl,r4
 		add	r2,r4
-; 		mov	#RAM_Mars_ScrlCopy,r0
-; 		lds	r0,macl
 
-	; macl - Fake framebuffer
 	; mach - _framebuffer + base
 	;  r14 - Sprite data
 	;  r13 - Texture data
@@ -852,25 +849,15 @@ MarsVideo_NxtSuprSpr:
 		mov	r13,r1			; r1 - Texture IN
 		mov	r5,r2			; r2 - X counter
 .x_loop:
-; 		sts	mach,r3
-; 		add	r4,r3
-; 		add	r2,r3
-; 		mov.b	@r3,r0
-; 		sts	macl,r3
-; 		add	r4,r3
-; 		add	r2,r3
-; 		mov.b	r0,@r3
-
 		sts	mach,r3			; r3 - Framebuffer + FbData
 		add	r4,r3			; add top-left position
 		add	r2,r3			; add X position
-; 		mov.b	r0,@r3
+
 		mov.b	@r1,r0			; r0 - pixel
 		tst	r0,r0			; blank pixel 0?
 		bt	.blnk
 		add	r12,r0			; add pixel increment
 .blnk:
-
 		mov.b	r0,@r3			; Write pixel
 		mov	#320,r0			; Check for hidden line (X < 320)
 		cmp/ge	r2,r0
@@ -1000,18 +987,12 @@ MarsVideo_NxtSuprSpr:
 ; 		nop
 ; 		align 4
 ; 		ltorg
-;
+
 ; --------------------------------------------------------
 ; MarsVideo_DrawBgSSpr
 ;
 ; Call this BEFORE updating Sprite info
 ; --------------------------------------------------------
-
-; Cach_FbData		ds.l 1		; *** KEEP THIS ORDER
-; Cach_FbPos		ds.l 1
-; Cach_FbPos_Y		ds.l 1
-; Cach_Intrl_W		ds.l 1
-; Cach_Intrl_H		ds.l 1
 
 		align 4
 MarsVideo_DrawBgSSpr:
@@ -1044,7 +1025,7 @@ MarsVideo_DrawBgSSpr:
 
 		mulu	r0,r11
 		sts	macl,r1
-		mov	#RAM_Mars_ScrlData,r0	; <- Cache'd
+		mov	#RAM_Mars_ScrlData,r0
 		add	r1,r10
 		cmp/ge	r12,r10
 		bf	.ygood
@@ -1122,6 +1103,194 @@ MarsVideo_DrawBgSSpr:
 		nop
 		align 4
 		ltorg
+
+; ; --------------------------------------------------------
+; ; MarsVideo_StorSuperSpr_W
+; ; --------------------------------------------------------
+;
+; MarsVideo_StorSuperSpr_W:
+;  		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
+; 		mov	#RAM_Mars_SprStorage,r13
+; .next_save:
+; 		mov	@(marsspr_data,r14),r12
+; 		nop
+; 		tst	r12,r12
+; 		bt	.last
+; 		mov.w	@(marsspr_dwidth,r14),r0
+; 		extu.w	r0,r11
+; 		mov.w	@(marsspr_indx,r14),r0
+; 		extu.b	r0,r7
+;
+; 		mov	#48,r9
+; .y_tex:
+; 		mov	r12,r10
+; 		mov	#32,r8
+; 		shlr	r8
+; .x_tex:
+; 		mov.b	@r10+,r0
+; 		bt	*
+;
+; ; 		add	r7,r6
+; ; 		mov.b	@r10+,r0
+; ; 		add	r7,r0
+; ; 		shll8	r6
+; ; 		or	r6,r0
+;
+; 		mov.w	r0,@r13
+; 		dt	r8
+; 		bf/s	.x_tex
+; 		add	#2,r13
+; 		dt	r9
+; 		bf/s	.y_tex
+; 		add	r11,r12
+;
+; .spr_out:
+; 		bra	.next_save
+; 		add 	#sizeof_marsspr,r14
+; .last:
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
+
+; ; --------------------------------------------------------
+; ; MarsVideo_DrawSuperSpr_W
+; ; --------------------------------------------------------
+;
+; 		align 4
+; MarsVideo_DrawSuperSpr_W:
+;  		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
+; 		mov	#RAM_Mars_ScrlBuff,r13
+; 		mov	@(scrl_fbpos_y,r13),r0
+; 		mov	#_overwrite,r1
+; 		mov	@(scrl_fbdata,r13),r9
+; 		add	r1,r9
+; 		mov	@(scrl_intrl_w,r13),r11
+; 		mulu	r0,r11
+; 		mov	@(scrl_fbpos,r13),r10
+; 		sts	macl,r0
+; 		mov	@(scrl_intrl_size,r13),r12
+; 		add	r0,r10
+; 		mov	#-2,r0
+; 		and	r0,r10
+; 		lds	r9,mach
+; 		mov	#RAM_Mars_SprStorage,r9
+;
+; .next_save:
+; 		mov	@(marsspr_data,r14),r0
+; 		tst	r0,r0
+; 		bt	.last
+; 		mov	@(marsspr_x,r14),r5	; XXXX YYYY
+; 		exts.w	r5,r6
+; 		mov	@(marsspr_xfrm,r14),r7	; ?? ?? XX YY
+; 		shlr16	r5
+; 		exts.w	r5,r5
+; 		extu.b	r7,r8
+; 		shlr8	r7
+; 		extu.b	r7,r7
+; 		add	r5,r7
+; 		add	r6,r8
+; ; 		mov.w	@(marsspr_x,r14),r0
+; ; 		exts.w	r0,r5
+; ; 		mov.w	@(marsspr_y,r14),r0
+; ; 		exts.w	r0,r6
+; ; 		mov.b	@(marsspr_xs,r14),r0
+; ; 		exts.b	r0,r7
+; ; 		mov.b	@(marsspr_ys,r14),r0
+; ; 		exts.b	r0,r8
+; ; 		add	r5,r7
+; ; 		add	r6,r8
+;
+;
+; ; 		and	r0,r6
+; ; 		and	r0,r8
+;
+; 		mov	#320+2,r1
+; 		mov	#224,r2
+; 		cmp/pl	r7
+; 		bf	.spr_out
+; 		cmp/pl	r8
+; 		bf	.spr_out
+; 		cmp/ge	r1,r5
+; 		bt	.spr_out
+; 		cmp/ge	r2,r6
+; 		bt	.spr_out
+; 		cmp/pz	r5
+; 		bt	.xl_l
+; 		xor	r5,r5
+; .xl_l:
+; 		cmp/pz	r6
+; 		bt	.yl_l
+; 		xor	r6,r6
+; .yl_l:
+; 		cmp/gt	r1,r7
+; 		bf	.xr_l
+; 		mov	r1,r7
+; .xr_l:
+; 		cmp/gt	r2,r8
+; 		bf	.yr_l
+; 		mov	r2,r8
+; .yr_l:
+;
+; 		mov	#-2,r0
+; 		and	r0,r5
+; 		and	r0,r7
+;
+; 		mov	r5,r4
+; 		mulu	r11,r6
+; 		sts	macl,r0
+; 		add	r0,r4
+; 		add	r10,r4
+;
+; 		sub	r6,r8
+; 		cmp/pl	r8
+; 		bf	.spr_out
+; 		mov	#320,r6
+; .y_lp:
+; 	;  r5 - X left AND 2
+; 	;  r6 - 320
+; 	;  r7 - X right
+; 	;  r8 - Y size
+; 	;  r9 - Scroll TopLeft pos
+; 	; r10 - Scroll BASE
+; 	; r11 - Scroll Width
+; 	; r12 - Scroll FULL Size W*H
+;
+; 		mov	#320,r3
+; 		mov	r5,r1
+; 		mov	r4,r2
+; .x_lp:
+; 		cmp/gt	r12,r2
+; 		bf	.y_keep
+; 		sub	r12,r2
+; .y_keep:
+; 		mov.w	@r9+,r0
+; ; 		mov.w	#$1020,r0
+;
+; 		sts	mach,r3
+; 		add	r2,r3
+; 		mov.w	r0,@r3
+; 		cmp/ge	r6,r2
+; 		bt	.x_lrg
+; 		add	r12,r3
+; 		mov.w	r0,@r3
+; .x_lrg:
+; 		add	#2,r1
+; 		cmp/ge	r7,r1
+; 		bf/s	.x_lp
+; 		add	#2,r2
+; 		dt	r8
+; 		bf/s	.y_lp
+; 		add	r11,r4
+;
+; .spr_out:
+; 		bra	.next_save
+; 		add 	#sizeof_marsspr,r14
+; .last:
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
 
 ; --------------------------------------------------------
 ; Quick RAM

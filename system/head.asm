@@ -1,23 +1,21 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; ROM HEADER
-;
-; These labels still work even if the 32X isn't present
+; 32X ROM HEADER
 ; ----------------------------------------------------------------
 
-		dc.l 0				; Stack point
-		dc.l $3F0			; Entry point, MUST point to $3F0
-		dc.l MD_ErrBus			; Bus error
-		dc.l MD_ErrAddr			; Address error
-		dc.l MD_ErrIll			; ILLEGAL Instruction
-		dc.l MD_ErrZDiv			; Divide by 0
-		dc.l MD_ErrChk			; CHK Instruction
-		dc.l MD_ErrTrapV		; TRAPV Instruction
-		dc.l MD_ErrPrivl		; Privilege violation
-		dc.l MD_Trace			; Trace
-		dc.l MD_Line1010		; Line 1010 Emulator
-		dc.l MD_Line1111		; Line 1111 Emulator
-		dc.l MD_ErrorEx			; Error exception
+		dc.l 0			; Stack point
+		dc.l $3F0		; Entry point MUST point to $3F0
+		dc.l MD_ErrBus		; Bus error
+		dc.l MD_ErrAddr		; Address error
+		dc.l MD_ErrIll		; ILLEGAL Instruction
+		dc.l MD_ErrZDiv		; Divide by 0
+		dc.l MD_ErrChk		; CHK Instruction
+		dc.l MD_ErrTrapV	; TRAPV Instruction
+		dc.l MD_ErrPrivl	; Privilege violation
+		dc.l MD_Trace		; Trace
+		dc.l MD_Line1010	; Line 1010 Emulator
+		dc.l MD_Line1111	; Line 1111 Emulator
+		dc.l MD_ErrorEx		; Error exception
 		dc.l MD_ErrorEx
 		dc.l MD_ErrorEx
 		dc.l MD_ErrorEx
@@ -88,25 +86,28 @@
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Second header for 32X
+; NEW header for 32X
 ;
-; These new jumps are for the 68K if the 32X is currently active.
+; These new jumps are for the 68K if
+; the 32X is currently active, must point to the $880000/$900000
+; areas
 ;
+; NOTE:
 ; Disable ALL interrupts if you are using the RV bit
 ; ----------------------------------------------------------------
 
 		jmp	($880000|MARS_Entry).l
-		jmp	($880000|MD_ErrBus).l			; Bus error
-		jmp	($880000|MD_ErrAddr).l			; Address error
-		jmp	($880000|MD_ErrIll).l			; ILLEGAL Instruction
-		jmp	($880000|MD_ErrZDiv).l			; Divide by 0
-		jmp	($880000|MD_ErrChk).l			; CHK Instruction
-		jmp	($880000|MD_ErrTrapV).l			; TRAPV Instruction
-		jmp	($880000|MD_ErrPrivl).l			; Privilege violation
-		jmp	($880000|MD_Trace).l			; Trace
-		jmp	($880000|MD_Line1010).l			; Line 1010 Emulator
-		jmp	($880000|MD_Line1111).l			; Line 1111 Emulator
-		jmp	($880000|MD_ErrorEx).l			; Error exception
+		jmp	($880000|MD_ErrBus).l		; Bus error
+		jmp	($880000|MD_ErrAddr).l		; Address error
+		jmp	($880000|MD_ErrIll).l		; ILLEGAL Instruction
+		jmp	($880000|MD_ErrZDiv).l		; Divide by 0
+		jmp	($880000|MD_ErrChk).l		; CHK Instruction
+		jmp	($880000|MD_ErrTrapV).l		; TRAPV Instruction
+		jmp	($880000|MD_ErrPrivl).l		; Privilege violation
+		jmp	($880000|MD_Trace).l		; Trace
+		jmp	($880000|MD_Line1010).l		; Line 1010 Emulator
+		jmp	($880000|MD_Line1111).l		; Line 1111 Emulator
+		jmp	($880000|MD_ErrorEx).l		; Error exception
 		jmp	($880000|MD_ErrorEx).l
 		jmp	($880000|MD_ErrorEx).l
 		jmp	($880000|MD_ErrorEx).l
@@ -122,9 +123,9 @@
 		jmp	($880000|MD_ErrorTrap).l
 		jmp	($880000|MD_ErrorTrap).l
 		jmp	($880000|MD_ErrorTrap).l
-		jmp	(RAM_MdMarsHInt).l			; RAM jump for HBlank (JMP xxxx xxxx)
+		jmp	(RAM_MdMarsHInt).l		; RAM jump for HBlank (JMP xxxx xxxx)
 		jmp	($880000|MD_ErrorTrap).l
-		jmp	(RAM_MdMarsVInt).l			; RAM jump for VBlank (JMP xxxx xxxx)
+		jmp	(RAM_MdMarsVInt).l		; RAM jump for VBlank (JMP xxxx xxxx)
 		jmp	($880000|MD_ErrorTrap).l
 		jmp	($880000|MD_ErrorTrap).l
 		jmp	($880000|MD_ErrorTrap).l
@@ -164,21 +165,21 @@
 		align $3C0
 		dc.b "MARS CHECK MODE "			; Module name
 		dc.l 0					; Version (always 0)
-		dc.l MARS_RAMDATA			; Set to 0 if SH2 code points to ROM
-		dc.l 0					; Zero.
-		dc.l MARS_RAMDATA_e-MARS_RAMDATA	; Set to 4 if SH2 code points to ROM
+		dc.l MARS_RAMDATA			; RAM-code location *Set to 0 if SH2 code points to ROM*
+		dc.l 0					; Zero again.
+		dc.l MARS_RAMDATA_e-MARS_RAMDATA	; RAM-code size (END-START) *Set to 4 if SH2 code points to ROM*
 		dc.l SH2_M_Entry			; Master SH2 PC (SH2 map area)
 		dc.l SH2_S_Entry			; Slave SH2 PC (SH2 map area)
 		dc.l SH2_Master				; Master SH2 default VBR
 		dc.l SH2_Slave				; Slave SH2 default VBR
-		binclude "system/mars/data/security.bin"
+		binclude "system/mars/data/security.bin"; All the securty/boot code
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Entry point, this must be located at $800
 ;
-; At this point, the initialization
-; returns the following bits:
+; At this point, these registers return
+; the following bits:
 ;
 ; d0: %h0000000 rsc000ti
 ; 	h - Cold start / Hot Start
@@ -199,16 +200,15 @@
 ; 	cc: Test passed
 ; 	cs: Test failed**
 ;
-; ** HARDWARE BUG: This may still trigger if using
-; DREQ+DMA, and/or pressing RESET so many times.
-; (Found this on VRDX)
-;
-; Workaround: after jumping to the "No 32X detected" loop,
-; test the checksum bit again and if it passes Init as usual.
+; ** HARDWARE BUG: This may still trigger if pressing
+; RESET so many times. (Found this on VRDX)
+; * WORKAROUND: After jumping to the
+; "No 32X detected" loop, test the checksum bit again
+; and if it passes Init as usual.
 ; ----------------------------------------------------------------
 
 MARS_Entry:
-		bcc	MD_Init				; Carry clear: pass
+		bcc	MD_Init			; Carry clear: pass
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -218,8 +218,8 @@ MARS_Entry:
 ; ----------------------------------------------------------------
 
 .no_mars:
-		btst	#5,d0			; <-- If we got here even when checksum was good.
-		beq.s	MD_Init			;
+		btst	#5,d0			; Check the checksum AGAIN in case we got here
+		beq.s	MD_Init			; when it was already good.
 		move.w	#$2700,sr		; Disable interrupts
 		move.l	#$C0000000,(vdp_ctrl).l	; VDP: Point to Color 0
 		move.w	#$0E00,(vdp_data).l	; Write blue
@@ -257,7 +257,7 @@ MD_ErrorTrap:
 MD_Init:
 		move.w	#$2700,sr
 		tst.w	(vdp_ctrl).l
-		btst	#15,d0			; TODO: this seems to fail...
+		btst	#15,d0
 		bne.s	.hotstart
 		lea	(sysmars_reg).l,a5
 .wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master active?
@@ -283,7 +283,7 @@ MD_Init:
 		move.l	d0,comm4(a5)
 		move.l	d0,comm8(a5)
 		move.l	d0,comm12(a5)
-		move.l	#$FF,d1
+		move.l	#$FF,d1			; Small delay.
 .wait_1:
 		move.l	#$FF,d0
 .wait_2:

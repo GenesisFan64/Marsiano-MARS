@@ -4,7 +4,7 @@
 ; for big stuff like maps, levels, etc.
 ;
 ; For graphics use DMA and place your files at
-; md_dma.asm (Watch out for the $20000-section limit.)
+; md_dma.asm (Watch out for the $20000 limit.)
 ;
 ; Maximum size: $0FFFFF bytes per bank
 ; ----------------------------------------------------------------
@@ -14,6 +14,11 @@
 		align 2
 Pal_level0:	binclude "data/maps/level0/pal.bin"
 		align 2
+Pal_Test3D:	binclude "data/bg/md/test_3d/md_bg_pal.bin"
+		align 2
+Map_Test3D:	binclude "data/bg/md/test_3d/md_bg_map.bin"
+		align 2
+
 ; ----------------------------------------------------------------
 
 		align 2
@@ -32,7 +37,7 @@ MapBgH_0:	binclude "data/maps/level0/bg_hi.bin"
 		align 2
 
 ; ----------------------------------------------------------------
-; Headers for 32X maps go here...
+; HEADERS for 32X maps go here...
 
 		align 2
 MapHead_M:	binclude "data/maps/level0/head_m.bin"

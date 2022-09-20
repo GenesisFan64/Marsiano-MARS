@@ -1,6 +1,8 @@
 ; ===========================================================================
 ; ----------------------------------------------------------------
 ; MACROS
+;
+; Include this file FIRST
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -8,7 +10,7 @@
 ; --------------------------------------------------------
 
 		!org 0				; Start at 0
-		cpu 		68000		; Current CPU is 68k, gets changed later
+		cpu 		68000		; Current CPU is 68k, gets changed later.
 		padding		off		; Dont pad dc.b
 		listing 	purecode	; Want listing file, but only the final code in expanded macros
 		supmode 	on 		; Supervisor mode
@@ -21,7 +23,7 @@
 ; ---------------------------------------------
 
 dword 		function l,r,(l<<16&$FFFF0000|r&$FFFF)			; LLLL RRRR
-mapsize		function l,r,(((l-1)/8)<<16&$FFFF0000|((r-1)/8)&$FFFF)	; for cells w/h use doubleword
+mapsize		function l,r,(((l-1)/8)<<16&$FFFF0000|((r-1)/8)&$FFFF)	; Full w/h sizes, for cell sizes use doubleword
 locate		function a,b,c,(c&$FF)|(b<<8&$FF00)|(a<<16&$FF0000)	; VDP locate: Layer|X pos|Y pos for some video routines
 
 ; ====================================================================
@@ -49,7 +51,7 @@ GLBL_LASTORG	set *
 ; Finish struct
 ; -------------------------------------
 
-finish		macro				; Then finish custom struct.
+finish		macro				; Then finish the custom struct.
 		!org GLBL_LASTORG
 		phase GLBL_LASTPC
 		endm
@@ -64,7 +66,7 @@ colorme		macro this
 		endm
 
 ; -------------------------------------
-; Custom ORG
+; Custom ORG-filler
 ;
 ; (from s2disasm)
 ; -------------------------------------

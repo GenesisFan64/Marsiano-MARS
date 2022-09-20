@@ -1,15 +1,25 @@
 ; --------------------------------------------------------
-; GEMA sound driver, inspired by GEMS (kinda)
+; GEMA sound driver
 ;
-; Two playable track slots: BGM(0) and SFX(1)
+; Reads custom miniature versions of Impulsetracker
+; files, has automatic detection of soundchips for each
+; instrument it uses.
 ;
-; Slot 1 can either overwrite chip channels or
-; if possible grab unused slots
+; Features:
+; - Support for 32X but needs specific sound driver code
+; on the SH2 side, and requires the CMD interrupt.
+; - All 10 FM+PSG channels can be used, 7 PWMs
+; - Two playable track slots: BGM(0) and SFX(1)
+;   Slot 1 can either overwrite chip channels or
+;   if possible grab unused slots
+; - Supports FM/PSG effects
 ;
-; WARNING: DAC sample playback has to be sync'd manually
-; on every code change, sample rate is at the
-; 18000hz range
+; ...TODO...
 ; --------------------------------------------------------
+
+; NOTE: DAC sample playback has to be sync'd manually
+; on every code change.
+; Sample rate is at the 18000hz+ range
 
 Z80_TOP:
 		cpu Z80			; Enter Z80
@@ -21,14 +31,14 @@ Z80_TOP:
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
 ZSET_WTUNE	equ -27		; Manual frequency adjustment for DAC WAVE playback
-ZSET_TESTME	equ 0		; Set to 1 to "hear" test the DAC playback
-MAX_INS		equ 19
+ZSET_TESTME	equ 0		; Set to 1 to "hear"-test the DAC playback
+MAX_INS		equ 19		; Max usable instruments for EACH track slot
 
 ; --------------------------------------------------------
 ; Structs
-;
-; NOTE: struct doesn't work here. use equs instead
 ; --------------------------------------------------------
+
+; NOTE: struct doesn't work here, use equs instead.
 
 ; trkBuff struct
 ; LIMIT: 20h (32) bytes
@@ -134,7 +144,7 @@ PWINSL		equ	48
 ; call dac_off to disable it (check for FM6 manually)
 ; --------------------------------------------------------
 
-; NOTE: This plays at 18000hz but we are using
+; NOTE: This plays at 18000hz but I'm using
 ; 16000hz as the "center" note (C-5)
 ; check ZSET_WTUNE if you want change the
 ; "center" frequency.
@@ -172,6 +182,8 @@ commZWrite	db 0			; cmd fifo wptr (from 68k)
 ; *** THIS BREAKS ALL REGISTERS IF REFILL IS REQUESTED ***
 ; --------------------------------------------------------
 
+; TODO: might slow down the entire driver.
+
 		org 20h
 dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
 		ld	a,(dDacFifoMid)	; a - Get current wavebuffer LSB (00h or 80h)
@@ -184,10 +196,10 @@ dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
 		ret
 
 ; --------------------------------------------------------
-
+; 02Eh
 marsBlock	db 0		; flag to temporally disable PWM communication
-currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 marsUpd		db 0		; flag to request a PWM transfer
+currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 palMode		db 0		; PAL speed flag (TODO)
 sbeatPtck_1	dw 200-56	; Global tempo (sub beats) (-32 for PAL)
 sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
@@ -199,7 +211,7 @@ x68ksrcmid	db 0		; transferRom temporal MID
 ; --------------------------------------------------------
 
 		org 38h				; Align 38h
-		ld	(tickFlag),sp		; Use sp to set the TICK flag (xx1F, read as tickFlag+1)
+		ld	(tickFlag),sp		; Grab the sp to as the TICK flag (xx1F, read as tickFlag+1)
 		di				; Disable interrupt
 		ret
 
@@ -208,7 +220,7 @@ x68ksrcmid	db 0		; transferRom temporal MID
 ; --------------------------------------------------------
 
 z80_init:
-		call	gema_init		; Initilize VBLANK sound driver
+		call	gema_init		; Init values
 		ei
 
 ; --------------------------------------------------------
@@ -258,7 +270,7 @@ drv_loop:
 		ld	a,(commZRead)
 		cp	b
 		jr	z,drv_loop		; If both are equal: no requests
-		rst	20h			; first dacfill
+		rst	20h			; First dacfill
 		rst	8
 		call	get_cmdbyte
 		cp	-1			; Got -1? (Start of command)
@@ -379,7 +391,7 @@ drv_loop:
 ; --------------------------------------------------------
 ; $03 - Resume track
 ;
-; TODO: This doesn't work right. but I'm leaving
+; TODO: This doesn't work right, but I'm leaving
 ; it here just in case.
 ; --------------------------------------------------------
 
@@ -420,6 +432,8 @@ drv_loop:
 ; a - track index
 ; --------------------------------------------------------
 
+; NOTE: manual pointers
+
 get_trkindx:
 		ld	hl,trkPointers
 		add	a,a
@@ -439,7 +453,7 @@ trkPointers:
 		dw trkBuff_1
 
 ; --------------------------------------------------------
-; Read cmd byte, auto re-aligns to 7Fh
+; Read cmd byte, auto re-aligns to 3Fh
 ; --------------------------------------------------------
 
 get_cmdbyte:
@@ -489,7 +503,7 @@ updtrack:
 		ret
 
 ; ----------------------------------------
-; Read current track
+; Read track data
 ;
 ; iy - Track control
 ; ix - Track channels
@@ -585,7 +599,7 @@ updtrack:
 		add	ix,de
 		rst	8
 		and	00111111b
-; 		cp	(iy+trk_numChnls)	; TODO: mala idea.
+; 		cp	(iy+trk_numChnls)
 ; 		jp	nc,.rnout_chnls
 		add	a,a			; * 8
 		add	a,a
@@ -636,7 +650,7 @@ updtrack:
 		call	.inc_cpatt
 .no_eff:
 		rst	8
-		ld	a,b			; Merge the Impulse recycle bits to main bits
+		ld	a,b		; Merge the Impulse recycle bits into main bits
 		srl	a
 		srl	a
 		srl	a
@@ -652,11 +666,11 @@ updtrack:
 		or	c
 		ld	(ix+chnl_Flags),a
 		rst	8
-		pop	bc			; Restore rowcount
+		pop	bc		; Restore rowcount
 
 	; Check for effects that change things
 	; to internal playback (jump, tempo, etc.)
-		and	1000b		; Filter EFFECT bit only
+		and	1000b		; Only check for the EFFECT bit
 		or	a
 		jp	z,.next_note
 		ld	a,(ix+chnl_EffId)
@@ -669,9 +683,9 @@ updtrack:
 		cp	3		; Effect C: Pattern break
 		call	z,.eff_C
 		jp	.next_note
-.rnout_chnls:
-		pop	bc
-		jp	.next_note
+; .rnout_chnls:
+; 		pop	bc
+; 		jp	.next_note
 
 ; ----------------------------------------
 ; Call this to increment the
@@ -984,14 +998,14 @@ track_out:
 		ret
 
 ; --------------------------------------------------------
-; ** 32X ONLY ***
-; Communicate to Slave SH2 to play
-; PWM sound channels
+; ** 32X ***
+; Communicate with the Slave CPU to send the table
+; of PWM's to play.
 ; --------------------------------------------------------
 
 mars_scomm:
 		ld	hl,6000h	; Point BANK closely
-		rst	8		; to the 32X area
+		rst	8		; to the 32X area ($A10000)
 		ld	(hl),0
 		ld	(hl),1
 		ld	(hl),0
@@ -1003,7 +1017,7 @@ mars_scomm:
 		ld	(hl),0
 		rst	8
 		ld	(hl),1
-		ld	iy,5100h|8000h	; iy - mars sysreg
+		ld	iy,8000h|5100h	; iy - mars sysreg (now $A15100)
 		ld	ix,pwmcom
 		ld	a,(marsBlock)	; block MARS requests?
 		or	a
@@ -1025,14 +1039,14 @@ mars_scomm:
 		rst	8
 		and	00001111b	; Did it write?
 		cp	1
-		jr	nz,.wait_enter
-		set	7,(iy+comm14)	; Set this as ours
+		jr	nz,.wait_enter	; If not, retry.
+		set	7,(iy+comm14)	; Lock bit
 		set	1,(iy+standby)	; Request Slave CMD
 		rst	8
 .wait_cmd:
-; 		bit	1,(iy+standby)
+; 		bit	1,(iy+standby)	; <-- not needed
 ; 		jr	nz,.wait_cmd
-		ld	c,14		; c - 14 words
+		ld	c,14		; c - 14 words 2-byte
 .next_pass:
 		push	iy
 		pop	hl
@@ -1051,11 +1065,11 @@ mars_scomm:
 		ld	(hl),e
 		inc	hl
 		djnz	.next_comm
-		set	6,(iy+comm14)	; Send CLK to Slave CMD
+		set	6,(iy+comm14)	; PASS data bit
 		rst	8
 .w_pass2:
 		nop
-		bit	6,(iy+comm14)	; CLK cleared?
+		bit	6,(iy+comm14)	; PASS cleared?
 		jr	nz,.w_pass2
 		dec	c
 		jr	nz,.next_pass
@@ -1063,11 +1077,11 @@ mars_scomm:
 		res	6,(iy+comm14)	; Clear CLK
 		rst	8
 .blocked:
-		ld	hl,pwmcom	; clear our COM bytes
+		ld	hl,pwmcom
 		ld	b,7		; MAX PWM channels
 		xor	a
 .clrcom:
-		ld	(hl),a
+		ld	(hl),a		; Reset our COM bytes
 		inc	hl
 		djnz	.clrcom
 		ret
@@ -1138,7 +1152,7 @@ setupchip:
 		call	nz,.req_eff
 		bit	0,(iy+chnl_Flags)
 		call	nz,.req_note
-; 		ld	a,(iy+chnl_Flags)	; Instrument+effect also allowed.
+; 		ld	a,(iy+chnl_Flags)
 ; 		and	1010b
 ; 		or	a
 ; 		call	nz,.req_note
@@ -2800,7 +2814,7 @@ showRom:
 ;
 ; Input:
 ; hl - ROM position in Z80's area
-;      (BANK must be set already)
+;      (BANK must be set first)
 ;
 ; Output:
 ; a - byte recieved

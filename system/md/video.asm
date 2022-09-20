@@ -1553,7 +1553,7 @@ MdMap_Init:
 ;
 ; ** 32X side **
 ; d0 | WORD - Write as -1
-; d1 | WORD - Scroll buffer to use on the 32X side
+; d1 | WORD - Scroll buffer to use on the 32X side (0 - default)
 ; d2 | WORD - Index-palette increment
 ; a0 - Level header data: (68K AREA)
 ; 	dc.w width,height
@@ -2044,8 +2044,8 @@ MdMap_DrawAll:
 ; --------------------------------------------------------
 
 MdMap_DrawScrl:
-		lea	(RAM_BgBufferM),a6
-		bsr	.this_bg
+; 		lea	(RAM_BgBufferM),a6	; <-- SH2 updates bits now.
+; 		bsr	.this_bg
 		lea	(RAM_BgBuffer),a6
 		lea	(vdp_data),a5
 		bsr.s	.this_bg
@@ -2096,8 +2096,8 @@ MdMap_DrawScrl:
 ; ------------------------------------------------
 
 .mk_clmn:
-		btst	#bitMarsBg,d7
-		bne	.mars_ret_c
+; 		btst	#bitMarsBg,d7
+; 		bne	.mars_ret_c
 		swap	d7
 		bsr	.get_coords
 		swap	d0
@@ -2194,8 +2194,8 @@ MdMap_DrawScrl:
 ; ------------------------------------------------
 
 .mk_row:
-		btst	#bitMarsBg,d7
-		bne.s	.mars_ret_c
+; 		btst	#bitMarsBg,d7
+; 		bne.s	.mars_ret_c
 		swap	d7
 		bsr	.get_coords
 		swap	d1

@@ -562,6 +562,7 @@ MarsMdl_ReadModel:
 		mov	r5,@r8				; Store current Z to Zlist
 		mov	r1,@(4,r8)			; And it's address
 
+; ****
 ; 	Sort this face
 ; 	r7 - Curr Z
 ; 	r6 - Past Z
@@ -594,8 +595,9 @@ MarsMdl_ReadModel:
 .swap_me:
 		bra	.page_2
 		add	#-8,r7
-
 .first_face:
+; ****
+
 		add	#8,r8			; Next Zlist entry
 	rept sizeof_polygn/4			; Copy words manually
 		mov	@r2+,r0

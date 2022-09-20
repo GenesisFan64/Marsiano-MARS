@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD/32X shared constants
+; MD/32X shared constants and values
 ; ----------------------------------------------------------------
 
 ; ====================================================================
@@ -62,8 +62,8 @@ sizeof_marsspr	ds.l 0
 ; On the 32X Side:
 ; 	mov	#RAM_Mars_DreqRead+DREQ_LABEL,r1
 ;
-; Call System_MarsUpdate DURING Display to transfer your
-; changes, then the 32X recieves new data on the NEXT frame.
+; Call System_MarsUpdate DURING display to transfer your
+; changes.
 ; ----------------------------------------------------------------
 
 ; *** List MUST be aligned in 8bytes (end with 0 or 8) ***
