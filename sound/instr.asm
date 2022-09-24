@@ -19,8 +19,14 @@ FmIns_Fm3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
 FmIns_Fm3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
-FmIns_Bass_Oil:	binclude "sound/instr/fm/bass_oil.gsx",$2478,$20
 
+FmIns3_Snare_Alien:
+		binclude "sound/instr/fm/fm3_drumsnare_alien.gsx",$2478,$28
+FmIns3_Kick_Alien:
+		binclude "sound/instr/fm/fm3_drumkick_alien.gsx",$2478,$28
+
+FmIns_Bass_Oil:
+		binclude "sound/instr/fm/bass_oil.gsx",$2478,$20
 FmIns_Organ_Ito:
 		binclude "sound/instr/fm/organ_ito.gsx",$2478,$20
 FmIns_Ding_Baseball:
@@ -41,8 +47,8 @@ FmIns_DrumKick_gem:
 ; ; 		binclude "sound/instr/fm/drum_kick.gsx",$2478,$20
 ; ; FmIns_DrumSnare:
 ; ; 		binclude "sound/instr/fm/drum_snare.gsx",$2478,$20
-; ; ; ; FmIns_DrumCloseHat:
-; ; ; ; 		binclude "sound/instr/fm/drum_closehat.gsx",$2478,$20
+FmIns_ClosedHat:
+		binclude "sound/instr/fm/hats_closed.gsx",$2478,$20
 FmIns_PianoM1:
 		binclude "sound/instr/fm/piano_m1.gsx",$2478,$20
 ; ; FmIns_PianoM116:
@@ -121,8 +127,8 @@ FmIns_Trumpet_1:
 		binclude "sound/instr/fm/trumpet_1.gsx",$2478,$20
 FmIns_Trumpet_2:
 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
-FmIns_Trumpet_kon:
-		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
+; FmIns_Trumpet_kon:
+; 		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
 ; FmIns_Trumpet_puy:
 ; 		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
 FmIns_Trumpet_carnival:

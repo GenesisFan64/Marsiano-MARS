@@ -9,7 +9,7 @@
 ; --------------------------------------------------------
 
 MAX_MODELS	equ 12		; MAX 3D Models
-MAX_SUPERSPR	equ 32		; MAX Number of Super Sprites
+MAX_SUPERSPR	equ 24		; MAX Number of Super Sprites
 
 ; --------------------------------------------------------
 ; Structs

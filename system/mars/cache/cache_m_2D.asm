@@ -14,38 +14,38 @@ CACHE_MSTR_SCRL:
 ; Watchdog interrupt
 ; --------------------------------------------------------
 
-		mov	.tag_FRT,r1
+		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
 
-		mov	#(Cach_WdgBuffWr+$20)-4,r1
-		mov	@r1,r0				; Check U/D first
-		tst	r0,r0
-		bf	.g_draw_ud
-		mov	#$20,r0				; <-- next timer
-		sub	r0,r1
-		mov	@r1,r0				; Check R/L
-		tst	r0,r0
-		bf	.g_draw_lr
-.finish:
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_WdgMode,gbr)
-		mov	#$FFFFFE80,r1			; Stop watchdog
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		rts
-		nop
-		align 4
-.g_draw_ud:
-		bra	wdgbg_draw_ud
-		nop
-.g_draw_lr:
-		bra	wdgbg_draw_lr
-		nop
-
-		align 4
-.tag_FRT:	dc.l _FRT
+; 		mov	#(Cach_WdgBuffWr+$20)-4,r1
+; 		mov	@r1,r0				; Check U/D first
+; 		tst	r0,r0
+; 		bf	.g_draw_ud
+; 		mov	#$20,r0				; <-- next timer
+; 		sub	r0,r1
+; 		mov	@r1,r0				; Check R/L
+; 		tst	r0,r0
+; 		bf	.g_draw_lr
+; .finish:
+; 		mov	#0,r0
+; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
+; 		mov	#$FFFFFE80,r1			; Stop watchdog
+; 		mov.w   #$A518,r0
+; 		mov.w   r0,@r1
+; 		rts
+; 		nop
+; 		align 4
+; .g_draw_ud:
+; 		bra	wdgbg_draw_ud
+; 		nop
+; .g_draw_lr:
+; 		bra	wdgbg_draw_lr
+; 		nop
+;
+; 		align 4
+; .tag_FRT:	dc.l _FRT
 
 ; ; ----------------------------------------
 ; ; Block refill
@@ -187,235 +187,235 @@ CACHE_MSTR_SCRL:
 ; 		align 4
 ; 		ltorg
 
+; ; ----------------------------------------
+; ; Draw timer L/R
+; ; ----------------------------------------
+;
+; wdgbg_draw_lr:
+; 		dt	r0
+; 		mov	r0,@r1
+; 		mov	#Cach_WdBackup_S,r0
+; 		mov	r2,@-r0
+; 		mov	r3,@-r0
+; 		mov	r4,@-r0
+; 		mov	r5,@-r0
+; 		mov	r6,@-r0
+; 		mov	r7,@-r0
+; 		mov	r8,@-r0
+; 		mov	r9,@-r0
+; 		mov	r10,@-r0
+; 		mov	r11,@-r0
+; 		mov	r12,@-r0
+; 		mov	r13,@-r0
+; 		mov	r14,@-r0
+; 		sts	macl,@-r0
+;
+; ; $00 - Layout data (read)
+; ; $04 - FB pos (read)
+; ; $08 - Layout width (next block)
+; ; $0C - FB width (next line)
+; ; $10 - FB FULL size
+; ; $14 - FB base
+; ; $18 - Block data
+; ; $1C - Block counter
+;
+; 		mov	#Cach_WdgBuffRd,r14
+; 		mov	@($14,r14),r13		; r13 - FB base
+; 		mov	@($10,r14),r12		; r12 - FB full size
+; 		mov	@($0C,r14),r11		; r11 - FB width
+; 		mov	@($04,r14),r10		; r10 - FB x/y pos
+; 		mov	@($18,r14),r9		; r9 - Block data
+; 		mov	@($08,r14),r7		; r7 - Layout increment
+; 		mov	@r14,r8			; r8 - Layout data
+; 		mov.b	@r8,r0
+; 		add	r7,r8
+; 		mov	r8,@r14
+; 		mov	#320,r8
+; 		extu.b	r0,r0
+; 		mov	#16*16,r1		; <-- Manual block size
+; 		mulu	r0,r1
+; 		sts	macl,r0
+; 		add	r0,r9
+; 		mov	#16,r7			; <-- Manual block size
+; 		mov	#_framebuffer,r1
+; 		mov	#RAM_Mars_ScrlData,r2
+; .y_loop:
+; 		cmp/ge	r12,r10
+; 		bf	.lne_sz
+; 		sub	r12,r10
+; .lne_sz:
+; 		mov	r10,r5
+; 		mov	#16,r6			; <-- Manual block size
+; 		shlr2	r6
+; .x_loop:
+; 		mov	@r9+,r0
+;
+; 		mov	r2,r4
+; 		add	r5,r4
+; 		mov	r13,r3
+; 		add	r1,r3
+; 		add	r5,r3
+;
+; 		mov	r0,@r3
+; 		mov	r0,@r4
+; 		cmp/ge	r8,r5
+; 		bt	.ex_line
+; 		add	r12,r3
+; 		add	r12,r4
+; 		mov	r0,@r3
+; 		mov	r0,@r4
+; .ex_line:
+; 		dt	r6
+; 		bf/s	.x_loop
+; 		add	#4,r5
+; 		dt	r7
+; 		bf/s	.y_loop
+; 		add	r11,r10
+;
+;
+; 		mov	r10,@($04,r14)	; Save FB pos
+;
+; 		mov	#Cach_WdBackup_L,r0
+; 		lds	@r0+,macl
+; 		mov	@r0+,r14
+; 		mov	@r0+,r13
+; 		mov	@r0+,r12
+; 		mov	@r0+,r11
+; 		mov	@r0+,r10
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+; 		mov	@r0+,r7
+; 		mov	@r0+,r6
+; 		mov	@r0+,r5
+; 		mov	@r0+,r4
+; 		mov	@r0+,r3
+; 		mov	@r0+,r2
+; 		bra	wdgbg_nextwd
+; 		nop
+
+; ; ----------------------------------------
+; ; Draw timer U/D
+; ; ----------------------------------------
+;
+; wdgbg_draw_ud:
+; 		dt	r0
+; 		mov	r0,@r1
+; 		mov	#Cach_WdBackup_S,r0
+; 		mov	r2,@-r0
+; 		mov	r3,@-r0
+; 		mov	r4,@-r0
+; 		mov	r5,@-r0
+; 		mov	r6,@-r0
+; 		mov	r7,@-r0
+; 		mov	r8,@-r0
+; 		mov	r9,@-r0
+; 		mov	r10,@-r0
+; 		mov	r11,@-r0
+; 		mov	r12,@-r0
+; 		mov	r13,@-r0
+; 		mov	r14,@-r0
+; 		sts	macl,@-r0
+;
+; ; $00 - Layout data (read)
+; ; $04 - FB pos (read)
+; ; $08 - Layout width (next block)
+; ; $0C - FB width (next line)
+; ; $10 - FB FULL size
+; ; $14 - FB base
+; ; $18 - Block data
+; ; $1C - Block counter
+;
+; 		mov	#Cach_WdgBuffRd_UD,r14
+; 		mov	@($14,r14),r13		; r13 - FB base
+; 		mov	@($10,r14),r12		; r12 - FB full size
+; 		mov	@($0C,r14),r11		; r11 - FB width
+; 		mov	@($04,r14),r10		; r10 - FB x/y pos
+; 		mov	@($18,r14),r9		; r9 - Block data
+; 		mov	#1,r7			; r7 - Layout increment
+; 		mov	@r14,r8			; r8 - Layout data
+; 		mov.b	@r8,r0
+; 		add	r7,r8
+; 		mov	r8,@r14
+; 		mov	#320,r8
+; 		extu.b	r0,r0
+; 		mov	#16*16,r1		; <-- Manual block size
+; 		mulu	r0,r1
+; 		sts	macl,r0
+; 		add	r0,r9
+; 		mov	#16,r7			; <-- Manual block size
+; 		lds	r10,macl
+; 		mov	#_framebuffer,r1
+; 		mov	#RAM_Mars_ScrlData,r2
+; .y_loopud:
+; 		cmp/ge	r12,r10
+; 		bf	.lne_szud
+; 		sub	r12,r10
+; .lne_szud:
+; 		mov	r10,r5
+; 		mov	#16,r6			; <-- Manual block size
+; 		shlr2	r6
+; .x_loopud:
+; 		mov	@r9+,r0
+;
+; 		mov	r2,r3
+; 		add	r5,r3
+; 		mov	r13,r4
+; 		add	r1,r4
+; 		add	r5,r4
+;
+; 		mov	r0,@r3
+; 		mov	r0,@r4
+; 		cmp/ge	r8,r5
+; 		bt	.exy_lineud
+; 		add	r12,r4
+; 		add	r12,r3
+; 		mov	r0,@r3
+; 		mov	r0,@r4
+; .exy_lineud:
+; 		dt	r6
+; 		bf/s	.x_loopud
+; 		add	#4,r5
+; 		dt	r7
+; 		bf/s	.y_loopud
+; 		add	r11,r10
+; 		sts	macl,r10
+;
+;
+; 		mov	#16,r0
+; 		add	r0,r10
+; 		mov	r10,@($04,r14)	; Save FB pos
+;
+; 		mov	#Cach_WdBackup_L,r0
+; 		lds	@r0+,macl
+; 		mov	@r0+,r14
+; 		mov	@r0+,r13
+; 		mov	@r0+,r12
+; 		mov	@r0+,r11
+; 		mov	@r0+,r10
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+; 		mov	@r0+,r7
+; 		mov	@r0+,r6
+; 		mov	@r0+,r5
+; 		mov	@r0+,r4
+; 		mov	@r0+,r3
+; 		mov	@r0+,r2
+
 ; ----------------------------------------
-; Draw timer L/R
-; ----------------------------------------
 
-wdgbg_draw_lr:
-		dt	r0
-		mov	r0,@r1
-		mov	#Cach_WdBackup_S,r0
-		mov	r2,@-r0
-		mov	r3,@-r0
-		mov	r4,@-r0
-		mov	r5,@-r0
-		mov	r6,@-r0
-		mov	r7,@-r0
-		mov	r8,@-r0
-		mov	r9,@-r0
-		mov	r10,@-r0
-		mov	r11,@-r0
-		mov	r12,@-r0
-		mov	r13,@-r0
-		mov	r14,@-r0
-		sts	macl,@-r0
+; wdgbg_nextwd:
+; 		mov	#$FFFFFE80,r1
+; 		mov.w   #$A518,r0		; OFF
+; 		mov.w   r0,@r1
+; 		or      #$20,r0			; ON
+; 		mov.w   r0,@r1
+; 		mov.w   #$5A20,r0		; Timer for the next WD
+; 		mov.w   r0,@r1
+; 		rts
+; 		nop
+; 		align 4
 
-; $00 - Layout data (read)
-; $04 - FB pos (read)
-; $08 - Layout width (next block)
-; $0C - FB width (next line)
-; $10 - FB FULL size
-; $14 - FB base
-; $18 - Block data
-; $1C - Block counter
-
-		mov	#Cach_WdgBuffRd,r14
-		mov	@($14,r14),r13		; r13 - FB base
-		mov	@($10,r14),r12		; r12 - FB full size
-		mov	@($0C,r14),r11		; r11 - FB width
-		mov	@($04,r14),r10		; r10 - FB x/y pos
-		mov	@($18,r14),r9		; r9 - Block data
-		mov	@($08,r14),r7		; r7 - Layout increment
-		mov	@r14,r8			; r8 - Layout data
-		mov.b	@r8,r0
-		add	r7,r8
-		mov	r8,@r14
-		mov	#320,r8
-		extu.b	r0,r0
-		mov	#16*16,r1		; <-- Manual block size
-		mulu	r0,r1
-		sts	macl,r0
-		add	r0,r9
-		mov	#16,r7			; <-- Manual block size
-		mov	#_framebuffer,r1
-		mov	#RAM_Mars_ScrlData,r2
-.y_loop:
-		cmp/ge	r12,r10
-		bf	.lne_sz
-		sub	r12,r10
-.lne_sz:
-		mov	r10,r5
-		mov	#16,r6			; <-- Manual block size
-		shlr2	r6
-.x_loop:
-		mov	@r9+,r0
-
-		mov	r2,r4
-		add	r5,r4
-		mov	r13,r3
-		add	r1,r3
-		add	r5,r3
-
-		mov	r0,@r3
-		mov	r0,@r4
-		cmp/ge	r8,r5
-		bt	.ex_line
-		add	r12,r3
-		add	r12,r4
-		mov	r0,@r3
-		mov	r0,@r4
-.ex_line:
-		dt	r6
-		bf/s	.x_loop
-		add	#4,r5
-		dt	r7
-		bf/s	.y_loop
-		add	r11,r10
-
-
-		mov	r10,@($04,r14)	; Save FB pos
-
-		mov	#Cach_WdBackup_L,r0
-		lds	@r0+,macl
-		mov	@r0+,r14
-		mov	@r0+,r13
-		mov	@r0+,r12
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		mov	@r0+,r4
-		mov	@r0+,r3
-		mov	@r0+,r2
-		bra	wdgbg_nextwd
-		nop
-
-; ----------------------------------------
-; Draw timer U/D
-; ----------------------------------------
-
-wdgbg_draw_ud:
-		dt	r0
-		mov	r0,@r1
-		mov	#Cach_WdBackup_S,r0
-		mov	r2,@-r0
-		mov	r3,@-r0
-		mov	r4,@-r0
-		mov	r5,@-r0
-		mov	r6,@-r0
-		mov	r7,@-r0
-		mov	r8,@-r0
-		mov	r9,@-r0
-		mov	r10,@-r0
-		mov	r11,@-r0
-		mov	r12,@-r0
-		mov	r13,@-r0
-		mov	r14,@-r0
-		sts	macl,@-r0
-
-; $00 - Layout data (read)
-; $04 - FB pos (read)
-; $08 - Layout width (next block)
-; $0C - FB width (next line)
-; $10 - FB FULL size
-; $14 - FB base
-; $18 - Block data
-; $1C - Block counter
-
-		mov	#Cach_WdgBuffRd_UD,r14
-		mov	@($14,r14),r13		; r13 - FB base
-		mov	@($10,r14),r12		; r12 - FB full size
-		mov	@($0C,r14),r11		; r11 - FB width
-		mov	@($04,r14),r10		; r10 - FB x/y pos
-		mov	@($18,r14),r9		; r9 - Block data
-		mov	#1,r7			; r7 - Layout increment
-		mov	@r14,r8			; r8 - Layout data
-		mov.b	@r8,r0
-		add	r7,r8
-		mov	r8,@r14
-		mov	#320,r8
-		extu.b	r0,r0
-		mov	#16*16,r1		; <-- Manual block size
-		mulu	r0,r1
-		sts	macl,r0
-		add	r0,r9
-		mov	#16,r7			; <-- Manual block size
-		lds	r10,macl
-		mov	#_framebuffer,r1
-		mov	#RAM_Mars_ScrlData,r2
-.y_loopud:
-		cmp/ge	r12,r10
-		bf	.lne_szud
-		sub	r12,r10
-.lne_szud:
-		mov	r10,r5
-		mov	#16,r6			; <-- Manual block size
-		shlr2	r6
-.x_loopud:
-		mov	@r9+,r0
-
-		mov	r2,r3
-		add	r5,r3
-		mov	r13,r4
-		add	r1,r4
-		add	r5,r4
-
-		mov	r0,@r3
-		mov	r0,@r4
-		cmp/ge	r8,r5
-		bt	.exy_lineud
-		add	r12,r4
-		add	r12,r3
-		mov	r0,@r3
-		mov	r0,@r4
-.exy_lineud:
-		dt	r6
-		bf/s	.x_loopud
-		add	#4,r5
-		dt	r7
-		bf/s	.y_loopud
-		add	r11,r10
-		sts	macl,r10
-
-
-		mov	#16,r0
-		add	r0,r10
-		mov	r10,@($04,r14)	; Save FB pos
-
-		mov	#Cach_WdBackup_L,r0
-		lds	@r0+,macl
-		mov	@r0+,r14
-		mov	@r0+,r13
-		mov	@r0+,r12
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		mov	@r0+,r4
-		mov	@r0+,r3
-		mov	@r0+,r2
-
-; ----------------------------------------
-
-wdgbg_nextwd:
-		mov	#$FFFFFE80,r1
-		mov.w   #$A518,r0		; OFF
-		mov.w   r0,@r1
-		or      #$20,r0			; ON
-		mov.w   r0,@r1
-		mov.w   #$5A20,r0		; Timer for the next WD
-		mov.w   r0,@r1
-		rts
-		nop
-		align 4
-
-		ltorg
+; 		ltorg
 
 ; 	; NEXT ENTER
 ; 		mov.l   #$FFFFFE80,r1
@@ -434,10 +434,10 @@ wdgbg_nextwd:
 ; 		mov	#$FFFFFE80,r1		; Stop watchdog
 ; 		mov.w   #$A518,r0
 ; 		mov.w   r0,@r1
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
+		rts
+		nop
+		align 4
+		ltorg
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -634,40 +634,6 @@ MarsVideo_DrwMapData:
 		align 4
 		ltorg
 
-; --------------------------------------------------------
-; MarsVideo_DrwMapData
-; --------------------------------------------------------
-
-		align 4
-MarsVideo_DrawScrl:
-		mov	#_DMAOPERATION,r5
-		mov	#_DMASOURCE1,r4
-		mov	#0,r0
-		mov	r0,@r5
-		mov	#%0101101011100000,r0
-		mov	r0,@($0C,r4)
-		mov	r1,r0
-		mov	r0,@r4
-		mov	r2,r0			; <-- TODO: point fbdata here
-		mov	r0,@($04,r4)
-		mov	r3,r0
-		mov	r0,@($08,r4)
-		mov	#%0101101011100001,r0
-		mov	r0,@($0C,r4)
-		mov	#1,r0
-		mov	r0,@r5
-.wait_dma:	mov	@($C,r4),r0		; Still on DMA?
-		tst	#%10,r0
-		bt	.wait_dma
-		mov	#0,r0
-		mov	r0,@r5
-		mov	#%0101101011100000,r0
-		mov	r0,@($C,r4)
-		rts
-		nop
-		align 4
-		ltorg
-
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Drawing routines for the Super-sprites
@@ -688,6 +654,9 @@ MarsVideo_DrawScrl:
 ;
 ; Breaks:
 ; ALL
+;
+; Note:
+; Make sure the pixel data is set to Cache-thru (|TH)
 ; --------------------------------------------------------
 
 		align 4
@@ -892,101 +861,6 @@ MarsVideo_NxtSuprSpr:
 		align 4
 		ltorg
 
-; ; --------------------------------------------------------
-; ; MarsVideo_SaveBgSSpr
-; ;
-; ; Reads framebuffer data using boxes made
-; ; by MarsVideo_MkSprBoxes
-; ;
-; ; Call this BEFORE drawing the sprites.
-; ; --------------------------------------------------------
-;
-; 		align 4
-; MarsVideo_SaveBgSSpr:
-; 		mov	#Cach_SprBoxList,r14
-; 		mov	#RAM_Mars_ScrlBuff,r13
-; 		mov	@(scrl_fbpos_y,r13),r0
-; 		mov	#_framebuffer,r1
-; 		mov	@(scrl_fbdata,r13),r9
-; 		add	r1,r9
-; 		mov	@(scrl_intrl_w,r13),r11
-; 		mov	#-4,r2
-; 		mov	@(scrl_fbpos,r13),r10
-; 		and	r2,r0
-; 		mov	@(scrl_intrl_size,r13),r12
-; 		mulu	r0,r11
-; 		sts	macl,r1
-; 		mov	#RAM_Mars_ScrlCopy,r13	; <- Cache'd
-; 		add	r1,r10
-; 		cmp/ge	r12,r10
-; 		bf	.ygood
-; 		sub	r12,r10
-; .ygood:
-; 		and	r2,r10
-;
-; .next_save:
-; 		mov	@r14,r0
-; 		cmp/pl	r0
-; 		bt	.last
-;
-; 		mov	r10,r4
-; 		mov	r0,r5
-; 		mov	r0,r6
-; 		mov	r0,r7
-; 		mov	r0,r8
-; ; 		xor	r0,r0
-; ; 		mov	r0,@r14
-; 		mov	#$7F,r0
-; 		shlr16	r5
-; 		shlr16	r7
-; 		shlr8	r7
-; 		and	r0,r5
-; 		and	r0,r7
-; 		shll2	r5
-; 		shll2	r7
-; 		shlr8	r8
-; 		mov	#$FF,r0
-; 		and	r0,r6
-; 		and	r0,r8
-;
-; 		sub	r6,r8
-; 		cmp/pl	r8
-; 		bf	.spr_out
-; 		mulu	r11,r6
-; 		sts	macl,r0
-; 		add	r0,r4
-; .y_lp:
-; 		mov	r5,r1
-; 		mov	r4,r2
-; 		add	r5,r2
-; .x_lp:
-; 		cmp/gt	r12,r2
-; 		bf	.x_keep
-; 		sub	r12,r2
-; .x_keep:
-; 		mov	r9,r3
-; 		add	r2,r3
-; 		mov	@r3,r0		; GRAB pixels
-; ; 		or	r13,r0
-; 		mov	r0,@r13		; save into backup data
-; 		add	#4,r13
-; 		add	#4,r1		; Next pixels
-; 		cmp/ge	r7,r1
-; 		bf/s	.x_lp
-; 		add	#4,r2		; Next dest X
-;
-; 		add	#1,r6
-; 		dt	r8
-; 		bf/s	.y_lp
-; 		add	r11,r4
-; .spr_out:
-; 		bra	.next_save
-; 		add 	#4,r14
-; .last:
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
 
 ; --------------------------------------------------------
 ; MarsVideo_DrawBgSSpr
@@ -1077,6 +951,7 @@ MarsVideo_DrawBgSSpr:
 		sts	mach,r13
 		add	r2,r13
 		mov	@r13+,r0
+; 		or	r13,r0
 
 		mov	r9,r3
 		add	r2,r3
@@ -1104,49 +979,117 @@ MarsVideo_DrawBgSSpr:
 		align 4
 		ltorg
 
-; ; --------------------------------------------------------
-; ; MarsVideo_StorSuperSpr_W
+; --------------------------------------------------------
+; ; MarsVideo_DrawBgSSpr
+; ;
+; ; Call this BEFORE updating Sprite info
 ; ; --------------------------------------------------------
 ;
-; MarsVideo_StorSuperSpr_W:
-;  		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
-; 		mov	#RAM_Mars_SprStorage,r13
+; 		align 4
+; MarsVideo_DrawBgSSpr:
+; 		mov	#Cach_SprBoxList,r14
+;
+; 		mov	#Cach_Intrl_Size,r12
+; 		mov	#Cach_FbPos,r10
+; 		mov	#Cach_Intrl_W,r11
+; 		mov	#Cach_FbPos_Y,r0
+; 		mov	@r0,r0
+; 		mov	#Cach_FbData,r9
+; 		mov	@r9,r9
+; 		mov	#_framebuffer,r1
+; 		mov	@r11,r11
+; 		mov	#-4,r2
+; 		mov	@r10,r10
+; 		add	r1,r9
+; 		mov	@r12,r12
+;
+; ; 		mov	#RAM_Mars_ScrlBuff,r13
+; ; 		mov	@(scrl_fbpos_y,r13),r0
+; ; 		mov	#_framebuffer,r1
+; ; 		mov	@(scrl_fbdata,r13),r9
+; ; 		add	r1,r9
+; ; 		mov	@(scrl_intrl_w,r13),r11
+; ; 		mov	#-4,r2
+; ; 		mov	@(scrl_fbpos,r13),r10
+; ; 		and	r2,r0
+; ; 		mov	@(scrl_intrl_size,r13),r12
+;
+; 		mulu	r0,r11
+; 		sts	macl,r1
+; 		mov	#RAM_Mars_ScrlData,r0
+; 		add	r1,r10
+; 		cmp/ge	r12,r10
+; 		bf	.ygood
+; 		sub	r12,r10
+; .ygood:
+; 		and	r2,r10
+; 		lds	r0,mach
+;
 ; .next_save:
-; 		mov	@(marsspr_data,r14),r12
-; 		nop
-; 		tst	r12,r12
+; 		mov	@r14,r0
+; 		cmp/pl	r0
 ; 		bt	.last
-; 		mov.w	@(marsspr_dwidth,r14),r0
-; 		extu.w	r0,r11
-; 		mov.w	@(marsspr_indx,r14),r0
-; 		extu.b	r0,r7
+; 		mov	r10,r4
+; 		mov	r0,r5
+; 		mov	r0,r6
+; 		mov	r0,r7
+; 		mov	r0,r8
+; 		xor	r0,r0
+; 		mov	r0,@r14
+; 		mov	#$7F,r0
+; 		shlr16	r5
+; 		shlr16	r7
+; 		shlr8	r7
+; 		and	r0,r5
+; 		and	r0,r7
+; 		shll2	r5
+; 		shll2	r7
+; 		shlr8	r8
+; 		mov	#$FF,r0
+; 		and	r0,r6
+; 		and	r0,r8
+; 		sub	r6,r8
+; 		cmp/pl	r8
+; 		bf	.spr_out
+; 		mulu	r11,r6
+; 		sts	macl,r0
+; 		add	r0,r4
 ;
-; 		mov	#48,r9
-; .y_tex:
-; 		mov	r12,r10
-; 		mov	#32,r8
-; 		shlr	r8
-; .x_tex:
-; 		mov.b	@r10+,r0
-; 		bt	*
+; 		mov	#320,r6
+; .y_lp:
+; 		mov	r5,r1
+; 		mov	r4,r2
+; 		add	r5,r2
+; .x_lp:
+; 		cmp/gt	r12,r2
+; 		bf	.x_keep
+; 		sub	r12,r2
+; .x_keep:
+; 		sts	mach,r13
+; 		add	r2,r13
+; 		mov	@r13+,r0
+; ; 		or	r13,r0
 ;
-; ; 		add	r7,r6
-; ; 		mov.b	@r10+,r0
-; ; 		add	r7,r0
-; ; 		shll8	r6
-; ; 		or	r6,r0
-;
-; 		mov.w	r0,@r13
+; 		mov	r9,r3
+; 		add	r2,r3
+; 		mov	r0,@r3
+; 		cmp/ge	r6,r2
+; 		bt	.x_lrg
+; 		add	r12,r3
+; 		add	r12,r13
+; 		mov	r0,@r3
+; 		mov	r0,@r13
+; .x_lrg:
+; 		add	#4,r1
+; 		cmp/ge	r7,r1
+; 		bf/s	.x_lp
+; 		add	#4,r2
 ; 		dt	r8
-; 		bf/s	.x_tex
-; 		add	#2,r13
-; 		dt	r9
-; 		bf/s	.y_tex
-; 		add	r11,r12
-;
+; 		bf/s	.y_lp
+; 		add	r11,r4
 ; .spr_out:
 ; 		bra	.next_save
-; 		add 	#sizeof_marsspr,r14
+; 		add 	#4,r14
 ; .last:
 ; 		rts
 ; 		nop
@@ -1154,32 +1097,43 @@ MarsVideo_DrawBgSSpr:
 ; 		ltorg
 
 ; ; --------------------------------------------------------
-; ; MarsVideo_DrawSuperSpr_W
+; ; MarsVideo_DrwSprData
 ; ; --------------------------------------------------------
 ;
 ; 		align 4
-; MarsVideo_DrawSuperSpr_W:
+; MarsVideo_DrwSprData:
 ;  		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
-; 		mov	#RAM_Mars_ScrlBuff,r13
-; 		mov	@(scrl_fbpos_y,r13),r0
-; 		mov	#_overwrite,r1
-; 		mov	@(scrl_fbdata,r13),r9
+; 		mov	#RAM_Mars_SprPixels,r13
+; 		mov	#Cach_Intrl_Size,r12
+; 		mov	#Cach_FbPos,r10
+; 		mov	#Cach_Intrl_W,r11
+; 		mov	#Cach_FbPos_Y,r0
+; 		mov	@r0,r0
+; 		mov	#Cach_FbData,r9
+; 		mov	@r9,r9
+; 		mov	#_framebuffer,r1
+; 		mov	@r11,r11
+; 		mov	#-4,r2
+; 		mov	@r10,r10
 ; 		add	r1,r9
-; 		mov	@(scrl_intrl_w,r13),r11
+; 		mov	@r12,r12
 ; 		mulu	r0,r11
-; 		mov	@(scrl_fbpos,r13),r10
 ; 		sts	macl,r0
-; 		mov	@(scrl_intrl_size,r13),r12
 ; 		add	r0,r10
-; 		mov	#-2,r0
-; 		and	r0,r10
+; 		cmp/ge	r12,r10
+; 		bf	.next_save2
+; 		sub	r12,r10
+; .next_save2:
 ; 		lds	r9,mach
-; 		mov	#RAM_Mars_SprStorage,r9
+; 		mov	@(marsGbl_XShift,gbr),r0	; *** Xpos&1 add
+; 		and	#1,r0
+; 		add	r0,r13
 ;
 ; .next_save:
 ; 		mov	@(marsspr_data,r14),r0
 ; 		tst	r0,r0
 ; 		bt	.last
+; 		nop
 ; 		mov	@(marsspr_x,r14),r5	; XXXX YYYY
 ; 		exts.w	r5,r6
 ; 		mov	@(marsspr_xfrm,r14),r7	; ?? ?? XX YY
@@ -1190,6 +1144,8 @@ MarsVideo_DrawBgSSpr:
 ; 		extu.b	r7,r7
 ; 		add	r5,r7
 ; 		add	r6,r8
+; 		add	#2,r7		; +2
+;
 ; ; 		mov.w	@(marsspr_x,r14),r0
 ; ; 		exts.w	r0,r5
 ; ; 		mov.w	@(marsspr_y,r14),r0
@@ -1201,11 +1157,7 @@ MarsVideo_DrawBgSSpr:
 ; ; 		add	r5,r7
 ; ; 		add	r6,r8
 ;
-;
-; ; 		and	r0,r6
-; ; 		and	r0,r8
-;
-; 		mov	#320+2,r1
+; 		mov	#320+2,r1	; + 2
 ; 		mov	#224,r2
 ; 		cmp/pl	r7
 ; 		bf	.spr_out
@@ -1232,53 +1184,63 @@ MarsVideo_DrawBgSSpr:
 ; 		mov	r2,r8
 ; .yr_l:
 ;
-; 		mov	#-2,r0
-; 		and	r0,r5
-; 		and	r0,r7
+; 	; r4 - Current TopLeft
+; 	; r5 - X left
+; 	; r6 - 320
+; 	; r7 - X right
+; 	; r8 - Y counter
+; 	; r9 - *FREE*
+; 	; r10 - TopLeft position (GLOBAL)
+; 	; r11 - Internal Width
+; 	; r12 - Internal W*H
+; 	; r13 - Pixel data
+; 	; mach - Framebuffer base
 ;
-; 		mov	r5,r4
+; 		mov	#320,r2
+; 		mulu	r6,r2
+; 		sts	macl,r1
+; 		add	r5,r1
+;
+; 		mov	r10,r4
 ; 		mulu	r11,r6
 ; 		sts	macl,r0
 ; 		add	r0,r4
-; 		add	r10,r4
+; 		add	r5,r4
+; 		mov	#-2,r0
+; 		and	r0,r4
+; 		and	r0,r5
+; 		and	r0,r7
 ;
 ; 		sub	r6,r8
 ; 		cmp/pl	r8
 ; 		bf	.spr_out
-; 		mov	#320,r6
+; 		mov	r2,r6
 ; .y_lp:
-; 	;  r5 - X left AND 2
-; 	;  r6 - 320
-; 	;  r7 - X right
-; 	;  r8 - Y size
-; 	;  r9 - Scroll TopLeft pos
-; 	; r10 - Scroll BASE
-; 	; r11 - Scroll Width
-; 	; r12 - Scroll FULL Size W*H
-;
-; 		mov	#320,r3
-; 		mov	r5,r1
-; 		mov	r4,r2
-; .x_lp:
-; 		cmp/gt	r12,r2
+; 		cmp/gt	r12,r4
 ; 		bf	.y_keep
-; 		sub	r12,r2
+; 		sub	r12,r4
 ; .y_keep:
-; 		mov.w	@r9+,r0
-; ; 		mov.w	#$1020,r0
+; 		mov	r4,r1
+; 		mov	r5,r2
+; .x_lp:
+; 		mov.b	@r13+,r0
+; 		shll8	r0
+; 		mov.b	@r13+,r3
+; 		extu.b	r3,r3
+; 		or	r13,r0
 ;
 ; 		sts	mach,r3
-; 		add	r2,r3
+; 		add	r1,r3
 ; 		mov.w	r0,@r3
-; 		cmp/ge	r6,r2
-; 		bt	.x_lrg
+; 		cmp/ge	r6,r1
+; 		bt 	.x_hdn
 ; 		add	r12,r3
 ; 		mov.w	r0,@r3
-; .x_lrg:
-; 		add	#2,r1
-; 		cmp/ge	r7,r1
-; 		bf/s	.x_lp
+; .x_hdn:
 ; 		add	#2,r2
+; 		cmp/ge	r7,r2
+; 		bf/s	.x_lp
+; 		add	#2,r1
 ; 		dt	r8
 ; 		bf/s	.y_lp
 ; 		add	r11,r4
@@ -1322,7 +1284,7 @@ Cach_WdBackup_L		ds.l 14
 Cach_WdBackup_S		ds.l 0		; <-- read backwards
 Cach_BlkRefill		ds.l 10
 Cach_BlkRefill_S	ds.l 0		; <-- read backwards
-Cach_DrawTimers		ds.l 4		; Screen draw-request timers, write $02 to these
+; Cach_DrawTimers		ds.l 4		; Screen draw-request timers, write $02 to these
 Cach_FbData		ds.l 1		; *** KEEP THIS ORDER
 Cach_FbPos		ds.l 1
 Cach_FbPos_Y		ds.l 1
@@ -1330,7 +1292,7 @@ Cach_Intrl_W		ds.l 1
 Cach_Intrl_H		ds.l 1
 Cach_Intrl_Size		ds.l 1		; ***
 Cach_SprBoxList		ds.l MAX_SUPERSPR
-RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2			; Scrolling buffers
+; RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2			; Scrolling buffers
 
 ; --------------------------------------------------------
 .end:		phase CACHE_MSTR_SCRL+.end&$1FFF

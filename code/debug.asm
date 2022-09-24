@@ -70,6 +70,8 @@ MD_DebugMenu:
 		move.b	#%000,(RAM_VdpRegs+$B).l
 		move.b	#0,(RAM_VdpRegs+7).l
 		bsr	Video_Update
+		move.w	#200+32,d1
+		bsr	Sound_GlbBeats
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -720,11 +722,11 @@ MD_DebugMenu:
 .task_00:
 		lea	MasterTrkList(pc),a0
 		move.w	(RAM_CurrTrack).w,d7
-		lsl.w	#4,d7
-		lea	(a0,d7.w),a0
-		move.w	$C(a0),d1
+		lsl.w	#3,d7
+		move.w	4(a0,d7.w),d1
 		moveq	#0,d2
-		move.w	$E(a0),d3
+		move.w	6(a0,d7.w),d3
+		move.l	(a0,d7.w),a0
 		bsr	Sound_TrkPlay
 		move.w	#1,(RAM_GemaUpd).w
 		bra.s	.cleanup
@@ -1208,14 +1210,23 @@ MD_DebugMenu:
 ;
 ; ; test playlist
 MasterTrkList:
-	dc.l GemaPat_BeMine,GemaBlk_BeMine,GemaIns_BeMine
-	dc.w $A,%000
-	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
+	dc.l GemaTrkData_MOVEME
+	dc.w 7,%000
+	dc.l GemaTrkData_Nadie_MARS
 	dc.w 6,%001
-	dc.l GemaPat_Test2,GemaBlk_Test2,GemaIns_Test2
-	dc.w 2,%001
-	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
-	dc.w 2,%001
+	dc.l GemaTrkData_BeMine
+	dc.w $A,%000
+	dc.l GemaTrkData_Nadie_MD
+	dc.w 6,%001
+	dc.l GemaTrkData_WeGot
+	dc.w 3,%001
+
+; 	dc.w
+; 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
+; 	dc.w 6,%001
+
+; 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
+; 	dc.w 2,%001
 
 	align 2
 

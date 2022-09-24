@@ -1,8 +1,8 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 32X Sound
+; 32X Sound (For SLAVE CPU ONLY)
 ;
-; Playback code is located on cache_slv.asm
+; Playback code (the PWM interrupt) is located at cache_slv.asm
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -33,17 +33,12 @@ sizeof_sndchn	ds.l 0
 		finish
 
 ; ====================================================================
-
-; *** The main PWM playback code (PWM interrupt) and the
-; channel list is located on the cache.asm file. ***
-
-; ====================================================================
 ; --------------------------------------------------------
 ; Init Sound PWM
 ;
-; Cycle register formula for
-; NTSC: ((((23011361<<1)/SAMPLE_RATE+1)>>1)+1)
-; PAL:  ((((22801467<<1)/SAMPLE_RATE+1)>>1)+1)
+; Cycle register formulas:
+; NTSC ((((23011361<<1)/SAMPLE_RATE+1)>>1)+1)
+; PAL  ((((22801467<<1)/SAMPLE_RATE+1)>>1)+1)
 ;
 ; NOTE: The CLICK sound after calling this is normal.
 ; --------------------------------------------------------
@@ -78,11 +73,11 @@ MarsSound_Init:
 ; plays.
 ;
 ; Input:
-; r1 | Channel
+; r1 | Channel (0-6)
 ; r2 | Start address (SH2 AREA)
 ; r3 | End address (SH2 AREA)
 ; r4 | Loop address (SH2 AREA, ignored if loop bit isn't set)
-; r5 | Pitch ($xxxxxx.xx, $100 default speed)
+; r5 | Starting pitch ($xxxxxx.xx, $100 default speed)
 ; r6 | Volume (0-High)
 ; r7 | Flags: %xxxxslLR
 ;      LR - Enable output to these speakers
@@ -139,8 +134,8 @@ MarsSound_SetPwm:
 ; Sets pitch data of a channel slot
 ;
 ; Input:
-; r1 | Channel
-; r2 | Pitch ($xxxxxx.xx) $100 default speed
+; r1 | Channel (0-6)
+; r2 | Pitch ($xxxxxx.xx, $100 default speed)
 ;
 ; Breaks:
 ; r8,macl
@@ -168,7 +163,7 @@ MarsSound_SetPwmPitch:
 ; Changes the volume of a channel slot
 ;
 ; Input:
-; r1 | Channel
+; r1 | Channel (0-6)
 ; r2 | Volume (in reverse: higher value is low)
 ;
 ; Breaks:
@@ -197,7 +192,7 @@ MarsSound_SetVolume:
 ; Turns ON or OFF Current PWM slot
 ;
 ; Input:
-; r1 | Channel
+; r1 | Channel (0-6)
 ; r2 | Enable/Disable
 ;
 ; Breaks:

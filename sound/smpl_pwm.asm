@@ -95,3 +95,26 @@ SmpIns_Piano:
 	align 4
 .end:
 
+
+; MOVEME
+SmpIns_MoveMe_Hit:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/moveme_hit.wav",$2C
+	align 4
+.end:
+SmpIns_MoveMe_Brass:
+	gSmpHead .end-.start,3078
+.start:	binclude "sound/instr/smpl/moveme_brass.wav",$2C
+	align 4
+.end:
+SmpIns_Kick:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/sauron_kick.wav",$2C
+	align 4
+.end:
+SmpIns_Snare:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/snare_lobo.wav",$2C
+	align 4
+.end:
+

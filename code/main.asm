@@ -117,12 +117,12 @@ MD_Mode0:
 		bsr	Sound_TrkStop
 		move.w	#200+32,d1
 		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_Nadie_MARS),a0
+		lea	(GemaTrkData_MOVEME),a0
 ; 		lea	(GemaTrkData_Nadie_MD),a0
 		moveq	#0,d0
-		move.w	#6,d1
+		move.w	#7,d1
 		moveq	#0,d2
-		move.w	#%01,d3
+		move.w	#0,d3
 		bsr	Sound_TrkPlay
 
 	; Set Fade-in settings
@@ -165,7 +165,7 @@ MD_Mode0:
 .not_mode:
 
 ; 		lea	str_Stats(pc),a0
-; 		move.l	#locate(0,8,4),d0
+; 		move.l	#locate(0,2,2),d0
 ; 		bsr	Video_Print
 		lea	(RAM_MdDreq+Dreq_Objects),a0
 		add.w	#8*2,mdl_x_rot(a0)
@@ -405,7 +405,7 @@ SuperSpr_Init:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
-; 		or.l	#TH,d1
+		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
 		move.w	#$C0,marsspr_x(a0)
@@ -416,7 +416,7 @@ SuperSpr_Init:
 
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
-; 		or.l	#TH,d1
+		or.l	#TH,d1
 		adda	#sizeof_marsspr,a0
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)
@@ -428,7 +428,7 @@ SuperSpr_Init:
 
 		move.l	#SuperSpr_Test,d0
 		move.l	d0,d1
-; 		or.l	#TH,d1
+		or.l	#TH,d1
 		adda	#sizeof_marsspr,a0
 		move.l	d1,marsspr_data(a0)
 		move.w	#64,marsspr_dwidth(a0)

@@ -12,6 +12,8 @@ ASCII_FONT_e:
 		align $8000
 ART_TEST3D:	binclude "data/bg/md/test_3d/md_bg_art.bin"
 ART_TEST3D_e:
+
+		align $8000
 Art_level0:	binclude "data/maps/level0/art.bin"
 Art_level0_e:
 
