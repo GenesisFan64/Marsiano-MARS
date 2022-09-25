@@ -910,7 +910,7 @@ MarsVideo_DrawBgSSpr:
 
 .next_save:
 		mov	@r14,r0
-		cmp/pl	r0
+		cmp/pz	r0
 		bt	.last
 		mov	r10,r4
 		mov	r0,r5

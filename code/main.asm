@@ -45,7 +45,7 @@ MD_Mode0:
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-; 		bsr	Mode_Init
+		bsr	Mode_Init
 		bsr	Video_PrintInit
 
 	; 3D TEST
