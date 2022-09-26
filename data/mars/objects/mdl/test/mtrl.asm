@@ -1,3 +1,3 @@
-	 dc.l Textr_smoke|TH
-	 dc.w 264
+	 dc.l Textr_pecsi|TH
+	 dc.w 512
 	 dc.w 0

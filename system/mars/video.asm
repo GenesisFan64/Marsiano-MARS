@@ -13,8 +13,8 @@
 ; SDRAM
 MAX_SCRNBUFF	equ $28000	; MAX SDRAM for each Screen mode
 MAX_SSPRSPD	equ 4		; Maximum pixel "speed" for Super Sprites (box size)
-MAX_FACES	equ 700		; MAX polygon faces for 3D models
-MAX_SVDP_PZ	equ 700+16	; MAX polygon pieces to draw
+MAX_FACES	equ 800		; MAX polygon faces for 3D models
+MAX_SVDP_PZ	equ 800+16	; MAX polygon pieces to draw
 MAX_ZDIST	equ -$1000	; Maximum 3D field distance (-Z)
 
 ; FRAMEBUFFER
@@ -926,7 +926,7 @@ MarsVideo_DmaDraw:
 		ltorg
 
 ; --------------------------------------------------------
-; MarsVideo_Bg_DrawScrl_LR
+; MarsVideo_Bg_DrawScrl
 ;
 ; Input:
 ; r14 | Background buffer
@@ -938,7 +938,7 @@ MarsVideo_DmaDraw:
 ; --------------------------------------------------------
 
 		align 4
-MarsVideo_Bg_DrawScrl_LR:
+MarsVideo_Bg_DrawScrl:
 		sts	pr,@-r15
 
 		mov	#_framebuffer,r0
@@ -978,6 +978,21 @@ MarsVideo_Bg_DrawScrl_LR:
 		bsr	.draw_l
 		nop
 .no_l:
+		mov	#Cach_DrawTimers+8,r1
+		mov	@r1,r0
+		tst	r0,r0
+		bt	.no_d
+		bsr	.draw_d
+		nop
+.no_d:
+		mov	#Cach_DrawTimers+$C,r1
+		mov	@r1,r0
+		tst	r0,r0
+		bt	.no_u
+		bsr	.draw_u
+		nop
+.no_u:
+
 		lds	@r15+,pr
 		rts
 		nop
@@ -1077,65 +1092,7 @@ MarsVideo_Bg_DrawScrl_LR:
 		mov	@r15+,r8
 		rts
 		nop
-		align 4
-		ltorg
 
-; --------------------------------------------------------
-; MarsVideo_Bg_DrawScrl_UD
-;
-; Input:
-; r14 | Background buffer
-; r13 | Scrolling-area buffer
-; r12 | Draw timers
-;
-; Breaks:
-; ALL
-; --------------------------------------------------------
-
-		align 4
-MarsVideo_Bg_DrawScrl_UD:
-		sts	pr,@-r15
-
-		mov	#_framebuffer,r0
-		mov	@(scrl_fbdata,r13),r1
-		add	r0,r1
-		mov	@(scrl_intrl_w,r13),r11		; r11 - FB width
-		lds	r1,mach				; mach - FB base
-		mov	@(scrl_fbpos_y,r13),r0
-		mov	#-$10,r1			; <-- CUSTOM BLOCK SIZE
-		mov	@(scrl_fbpos,r13),r10		; r10 - FB x/y pos
-		and	r1,r0
-		mov	@(md_bg_blk,r14),r9		; r9 - Block data
-		mulu	r0,r11
-		mov.w	@(md_bg_w,r14),r0		; r7 - Layout increment
-		extu.w	r0,r7
-		mov	@(scrl_intrl_size,r13),r12	; r12 - FB full size
-		sts	macl,r0
-		add	r0,r10
-		and	r1,r10
-		mov	@(md_bg_low,r14),r8		; r8 - Layout data
-		mov	#RAM_Mars_ScrlData,r13
-		cmp/ge	r12,r10
-		bf	.fb_y
-		sub	r12,r10
-.fb_y:
-		mov	#Cach_DrawTimers+8,r1
-		mov	@r1,r0
-		tst	r0,r0
-		bt	.no_d
-		bsr	.draw_d
-		nop
-.no_d:
-		mov	#Cach_DrawTimers+$C,r1
-		mov	@r1,r0
-		tst	r0,r0
-		bt	.no_u
-		bsr	.draw_u
-		nop
-.no_u:
-		lds	@r15+,pr
-		rts
-		nop
 ; DOWN/UP
 .draw_d:
 		dt	r0
@@ -1229,8 +1186,161 @@ MarsVideo_Bg_DrawScrl_UD:
 		mov	@r15+,r8
 		rts
 		nop
+
 		align 4
 		ltorg
+
+; ; --------------------------------------------------------
+; ; MarsVideo_Bg_DrawScrl_UD
+; ;
+; ; Input:
+; ; r14 | Background buffer
+; ; r13 | Scrolling-area buffer
+; ; r12 | Draw timers
+; ;
+; ; Breaks:
+; ; ALL
+; ; --------------------------------------------------------
+;
+; 		align 4
+; MarsVideo_Bg_DrawScrl_UD:
+; 		sts	pr,@-r15
+;
+; 		mov	#_framebuffer,r0
+; 		mov	@(scrl_fbdata,r13),r1
+; 		add	r0,r1
+; 		mov	@(scrl_intrl_w,r13),r11		; r11 - FB width
+; 		lds	r1,mach				; mach - FB base
+; 		mov	@(scrl_fbpos_y,r13),r0
+; 		mov	#-$10,r1			; <-- CUSTOM BLOCK SIZE
+; 		mov	@(scrl_fbpos,r13),r10		; r10 - FB x/y pos
+; 		and	r1,r0
+; 		mov	@(md_bg_blk,r14),r9		; r9 - Block data
+; 		mulu	r0,r11
+; 		mov.w	@(md_bg_w,r14),r0		; r7 - Layout increment
+; 		extu.w	r0,r7
+; 		mov	@(scrl_intrl_size,r13),r12	; r12 - FB full size
+; 		sts	macl,r0
+; 		add	r0,r10
+; 		and	r1,r10
+; 		mov	@(md_bg_low,r14),r8		; r8 - Layout data
+; 		mov	#RAM_Mars_ScrlData,r13
+; 		cmp/ge	r12,r10
+; 		bf	.fb_y
+; 		sub	r12,r10
+; .fb_y:
+; 		mov	#Cach_DrawTimers+8,r1
+; 		mov	@r1,r0
+; 		tst	r0,r0
+; 		bt	.no_d
+; 		bsr	.draw_d
+; 		nop
+; .no_d:
+; 		mov	#Cach_DrawTimers+$C,r1
+; 		mov	@r1,r0
+; 		tst	r0,r0
+; 		bt	.no_u
+; 		bsr	.draw_u
+; 		nop
+; .no_u:
+; 		lds	@r15+,pr
+; 		rts
+; 		nop
+; ; DOWN/UP
+; .draw_d:
+; 		dt	r0
+; 		mov	r0,@r1
+; 		mov.w	@(md_bg_yinc_d,r14),r0		; r7 - Layout increment
+; 		exts.w	r0,r2
+; 		mov	#224,r1
+; 		bra	.go_du
+; 		nop
+; .draw_u:
+; 		dt	r0
+; 		mov	r0,@r1
+; 		mov.w	@(md_bg_yinc_u,r14),r0		; r7 - Layout increment
+; 		exts.w	r0,r2
+; 		mov	#0,r1
+; .go_du:
+; 		mulu	r1,r11
+; 		sts	macl,r0
+; 		mov	r10,r6
+; 		add	r0,r6
+; ; 		mov	#-$10,r0
+; ; 		and	r0,r6			; r6 - curr out pos
+; 		mov	r8,@-r15
+; 		mov.w	@(md_bg_xinc_l,r14),r0		; r7 - Layout increment
+; 		exts.w	r0,r1
+; 		mov	#16,r3		; <-- MANUAL BLOCK SIZE
+; 		mulu	r3,r1
+; 		sts	macl,r0
+; 		shlr8	r0
+; 		add	r0,r8
+; 		mulu	r3,r2
+; 		sts	macl,r0
+; 		shlr8	r0
+; 		mulu	r7,r0
+; 		sts	macl,r0
+; 		add	r0,r8
+; 		mov	#((320+16)/16),r1
+; .yd_blk:
+; 		mov	r6,@-r15
+; 		mov	r1,@-r15
+; 		mov	r9,r5
+; 		mov.b	@r8,r0
+; 		extu.b	r0,r0		; BYTE
+; 		mov	#16*16,r3
+; 		mulu	r3,r0
+; 		sts	macl,r0
+; 		mov	r9,r5
+; 		add	r0,r5
+; ;
+; 		mov	#16,r3
+; .yd_lne:
+; 		cmp/ge	r12,r6
+; 		bf	.yd_res
+; 		sub	r12,r6
+; .yd_res:
+; 		mov	#16/4,r4
+; .xd_lne:
+; 		mov	@r5+,r0
+; 		lds	r0,macl
+; 		sts	mach,r1
+; 		add	r6,r1
+; 		mov	r13,r2
+; 		add	r6,r2
+; 		mov	r0,@r1
+; 		add	#4,r6
+; 		mov	r0,@r2
+; 		mov	#320,r0
+; 		cmp/ge	r0,r6
+; 		bt	.xd_ex
+; 		sts	macl,r0
+; 		add	r12,r1
+; 		mov	r0,@r1
+; 		add	r12,r2
+; 		mov	r0,@r2
+; 		nop
+; .xd_ex:
+; 		dt	r4
+; 		bf	.xd_lne
+; 		add	#-16,r6	; bring point back
+; 		dt	r3
+; 		bf/s	.yd_lne
+; 		add	r11,r6
+;
+; 		mov	@r15+,r1
+; 		mov	@r15+,r6
+; 		mov	#16,r0
+; 		add	r0,r6
+; 		dt	r1
+; 		bf/s	.yd_blk
+; 		add	#1,r8
+; 		mov	@r15+,r8
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
 
 ; ----------------------------------------------------------------
 ; Super Sprites

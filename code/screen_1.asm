@@ -39,43 +39,30 @@ RAM_EmiTimer	ds.w 1
 ; Code start
 ; ------------------------------------------------------
 
-MD_Mode0:
+MD_2DMODE:
 ; 		bra	MD_DebugMenu
+		move.w	#$2700,sr
 
+
+	; Testing track
+		moveq	#0,d0
+		bsr	Sound_TrkStop
+		move.w	#200+32,d1
+		bsr	Sound_GlbBeats
+		lea	(GemaTrkData_MOVEME),a0
+; 		lea	(GemaTrkData_Nadie_MD),a0
+		moveq	#0,d0
+		move.w	#7,d1
+		moveq	#0,d2
+		move.w	#0,d3
+		bsr	Sound_TrkPlay
+
+MD_2DMODE_FROM:
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
 		bsr	Mode_Init
 		bsr	Video_PrintInit
-
-	; 3D TEST
-; 		move.l	#Art_Test3D,d0			; Genesis VDP graphics
-; 		move.w	#$20,d1
-; 		move.w	#Art_Test3D_e-Art_Test3D,d2
-; 		bsr	Video_LoadArt
-; 		lea	(Map_Test3D),a0			; 16-color palette
-; 		move.l	#locate(1,0,0),d0		; Genesis VDP graphics
-; 		move.l	#mapsize(320,224),d1
-; 		moveq	#1,d2
-; 		bsr	Video_LoadMap
-; 		lea	(Pal_Test3D),a0			; 16-color palette
-; 		moveq	#0,d0
-; 		move.w	#16,d1
-; 		bsr	Video_FadePal
-; 		lea	(RAM_MdDreq+Dreq_Objects),a0
-; 		move.l	#MarsObj_test|TH,mdl_data(a0)
-; 		move.w	#-$800,mdl_z_pos(a0)
-; 		lea	str_Page4(pc),a0	; Print text
-; 		move.l	#locate(0,2,2),d0
-; 		bsr	Video_Print
-; 		lea	(MDLDATA_PAL_TEST),a0
-; 		moveq	#0,d0
-; 		move.w	#256,d1
-; 		moveq	#1,d2
-; 		bsr	Video_FadePal_Mars
-; 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
-; 		clr.w	(RAM_MdMarsPalFd).w
-; 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 
 	; MAP TESTING
 		move.l	#Art_level0,d0			; Genesis VDP graphics
@@ -112,19 +99,6 @@ MD_Mode0:
 ; 		move.w	#$2000|$50,(a0)+
 ; 		move.w	#$80+$50,(a0)+
 
-	; Testing track
-		moveq	#0,d0
-		bsr	Sound_TrkStop
-		move.w	#200+32,d1
-		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_MOVEME),a0
-; 		lea	(GemaTrkData_Nadie_MD),a0
-		moveq	#0,d0
-		move.w	#7,d1
-		moveq	#0,d2
-		move.w	#0,d3
-		bsr	Sound_TrkPlay
-
 	; Set Fade-in settings
 		move.w	#1,(RAM_FadeMdIncr).w
 		move.w	#2,(RAM_FadeMarsIncr).w
@@ -153,24 +127,13 @@ MD_Mode0:
 		bne.s	.loop
 
 		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyMode,d7
+		btst	#bitJoyZ,d7
 		beq.s	.not_mode
 
 		bsr	.fade_out
-		bsr 	System_WaitFrame	; Send first DREQ
-		moveq	#2,d0			; and set this psd-graphics mode
-		bsr	Video_Mars_GfxMode
-		bsr	.fade_in
-
+		bra	MD_3DMODE
 .not_mode:
 
-; 		lea	str_Stats(pc),a0
-; 		move.l	#locate(0,2,2),d0
-; 		bsr	Video_Print
-		lea	(RAM_MdDreq+Dreq_Objects),a0
-		add.w	#8*2,mdl_x_rot(a0)
-; 		add.w	#8*2,mdl_y_rot(a0)
-; 		add.w	#8*5,mdl_z_rot(a0)
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyUp,d7
 		beq.s	.z_up2
@@ -426,18 +389,18 @@ SuperSpr_Init:
 		move.b	#48,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
 
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		adda	#sizeof_marsspr,a0
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$10,marsspr_x(a0)
-		move.w	#$10,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-		move.b	#1,marsspr_yfrm(a0)
+; 		move.l	#SuperSpr_Test,d0
+; 		move.l	d0,d1
+; 		or.l	#TH,d1
+; 		adda	#sizeof_marsspr,a0
+; 		move.l	d1,marsspr_data(a0)
+; 		move.w	#64,marsspr_dwidth(a0)
+; 		move.w	#$10,marsspr_x(a0)
+; 		move.w	#$10,marsspr_y(a0)
+; 		move.b	#32,marsspr_xs(a0)
+; 		move.b	#48,marsspr_ys(a0)
+; 		move.w	#$80,marsspr_indx(a0)
+; 		move.b	#1,marsspr_yfrm(a0)
 
 ; 		move.l	#SuperSpr_Test,d0
 ; 		move.l	d0,d1

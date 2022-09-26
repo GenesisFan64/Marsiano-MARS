@@ -54,7 +54,8 @@ Md_TopCode_e:
 
 RamCode_Boot:
 		phase RAMCODE_USER
-		include "code/main.asm"
+		include "code/screen_1.asm"
+		include "code/screen_2.asm"
 		include "code/debug.asm"
 		dephase
 .here:

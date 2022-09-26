@@ -70,8 +70,7 @@ MD_DebugMenu:
 		move.b	#%000,(RAM_VdpRegs+$B).l
 		move.b	#0,(RAM_VdpRegs+7).l
 		bsr	Video_Update
-		move.w	#200+32,d1
-		bsr	Sound_GlbBeats
+
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -720,6 +719,12 @@ MD_DebugMenu:
 
 ; d0 - Track slot
 .task_00:
+		move.w	(RAM_CurrTrack).w,d7
+		add.w	d7,d7
+		lea	MasterTrkBeats(pc),a0
+		move.w	(a0,d7.w),d1
+		bsr	Sound_GlbBeats
+
 		lea	MasterTrkList(pc),a0
 		move.w	(RAM_CurrTrack).w,d7
 		lsl.w	#3,d7
@@ -1209,6 +1214,22 @@ MD_DebugMenu:
 ; 		bra	Sound_GlbBeats
 ;
 ; ; test playlist
+
+
+MasterTrkBeats:
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+20
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+	dc.w 200+32
+
 MasterTrkList:
 	dc.l GemaTrkData_MOVEME
 	dc.w 7,%000
@@ -1220,13 +1241,17 @@ MasterTrkList:
 	dc.w 6,%001
 	dc.l GemaTrkData_WeGot
 	dc.w 3,%001
+	dc.l GemaTrkData_Mecano
+	dc.w 3,0
+
+; 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
+; 	dc.w 2,%001
 
 ; 	dc.w
 ; 	dc.l GemaPat_Test,GemaBlk_Test,GemaIns_Test
 ; 	dc.w 6,%001
 
-; 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
-; 	dc.w 2,%001
+
 
 	align 2
 

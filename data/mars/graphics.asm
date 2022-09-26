@@ -29,9 +29,9 @@ TestMars_Yui:
 ; 		binclude "data/mars/tests/direct/frame2_art.bin"
 ; 		align 4
 
-Textr_smoke:
-		binclude "data/mars/objects/mtrl/smoke_art.bin"
-		align 4
+; Textr_smoke:
+; 		binclude "data/mars/objects/mtrl/smoke_art.bin"
+; 		align 4
 
 Textr_pecsi:
 		binclude "data/mars/objects/mtrl/pecsi_art.bin"

@@ -18,9 +18,9 @@ CACHE_MSTR_PLGN:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-; 		mov.w	@(marsGbl_WdgHold,gbr),r0
-; 		cmp/eq	#1,r0
-; 		bt	.exit
+		mov.w	@(marsGbl_WdgHold,gbr),r0
+		cmp/eq	#1,r0
+		bt	.exit
 		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($07)?
 		cmp/eq	#7,r0
 		bf	maindrw_tasks
@@ -140,11 +140,6 @@ slvplgn_01:
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
 .has_pz:
-		mov	@(marsGbl_PlyPzList_R,gbr),r0
-		mov	r0,r1
-		mov	@(marsGbl_PlyPzList_W,gbr),r0
-		cmp/eq	r0,r1
-		bt	g_return
 		mov	r3,@-r15			; Save all these regs
 		mov	r4,@-r15
 		mov	r5,@-r15
@@ -162,6 +157,9 @@ slvplgn_01:
 drwtsk1_newpz:
 		mov	@(marsGbl_PlyPzList_R,gbr),r0
 		mov	r0,r14
+; 		mov	@(marsGbl_PlyPzList_W,gbr),r0
+; 		cmp/eq	r0,r14
+; 		bt	g_return
 		mov	@(plypz_ytb,r14),r9	; Start grabbing StartY/EndY positions
 		exts.w	r9,r10			; r10 - Bottom
 		shlr16	r9
@@ -759,12 +757,12 @@ MarsVideo_SlicePlgn:
 		mov	r8,@-r0
 		mov	r9,@-r0
 		mov	r11,@-r0
-; 		mov	#1,r0
-; 		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
 		bsr	put_piece
 		nop
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
 		mov	#Cach_Bkup_LPZ,r0
 		mov	@r0+,r11
 		mov	@r0+,r9

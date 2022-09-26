@@ -1556,19 +1556,19 @@ mstr_gfx1_loop:
 		jsr	@r0
 		mov	#0,r4
 
-; 		mov	#$200,r1
-; 		mov	#0,r2
-; 		mov	#0,r3
-; 		mov	#512,r4
-; 		mov	#240,r5
-; 		mov	#512*240,r6
-; 		mov	#Cach_Intrl_Size,r7
-; 		mov	#MarsVideo_CopySprBgPos,r0
-; 		jsr	@r0
-; 		nop
-; 		mov	#MarsVideo_DrawSuperSpr_M,r0	; Draw Super Sprites
-; 		jsr	@r0
-; 		nop
+		mov	#$200,r1
+		mov	#0,r2
+		mov	#0,r3
+		mov	#512,r4
+		mov	#240,r5
+		mov	#512*240,r6
+		mov	#Cach_Intrl_Size,r7
+		mov	#MarsVideo_MkSprCoords,r0	; Screen settings for SuperSpr boxes
+		jsr	@r0
+		nop
+		mov	#MarsVideo_DrawSuperSpr_M,r0
+		jsr	@r0
+		nop
 
 		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0
@@ -1603,7 +1603,12 @@ mstr_gfx2_hblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
-		xor	r0,r0				; Cleanup our screen RAM
+		mov	#_sysreg+comm14,r1
+.slv_init:	mov.w	@r1,r0
+		and	#%0001111,r0
+		tst	r0,r0
+		bf	.slv_init
+		xor	r0,r0
 		mov	#RAM_Mars_ScrnBuff,r1
 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
 .clr_scrn:
@@ -1686,10 +1691,6 @@ mstr_gfx2_loop:
 		mov.w	@r1,r0
 		or	#$01,r0					; Slave task $01
 		mov.w	r0,@r1
-		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Draw L/R here, Slave does U/D
-		mov	#RAM_Mars_ScrlBuff,r13
-		bsr	MarsVideo_Bg_DrawScrl_LR
-		nop
 
 ;  testme 2
 		mov	#RAM_Mars_ScrlBuff,r14
@@ -1712,22 +1713,24 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_ShowScrlBg,r0
 		jsr	@r0
 		nop
-;  testme 1
-		mov	#_sysreg+comm14,r1		; Wait for Slave
-.wait_slv:
-		mov.w	@r1,r0
-		and	#%1111,r0
-		tst	r0,r0
-		bf	.wait_slv
+
 		mov	#MarsVideo_DrawSuperSpr_M,r0
 		jsr	@r0
 		nop
+;  testme 1
 		mov	#0,r1
 		mov	#224,r2
 		mov	#FBVRAM_PATCH,r3
 		mov	#MarsVideo_FixTblShift,r0	; HW: Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move.
 		nop
+
+		mov	#_sysreg+comm14,r1		; Wait for Slave
+.wait_slv:
+		mov.w	@r1,r0
+		and	#%1111,r0
+		tst	r0,r0
+		bf	.wait_slv
 		mov	#_vdpreg,r1			; Make frame...
 .waitv:
 		mov.b	@(vdpsts,r1),r0
@@ -1774,9 +1777,20 @@ mstr_gfx3_hblk:
 mstr_gfx3_init_1:
 		mov	#_sysreg+comm14,r1
 .slv_init:	mov.w	@r1,r0
-		and	#%01111111,r0
+		and	#%0001111,r0
 		tst	r0,r0
 		bf	.slv_init
+		xor	r0,r0
+		mov	#RAM_Mars_ScrnBuff,r1
+		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
+.clr_scrn:
+		mov	r0,@r1
+		dt	r2
+		bf/s	.clr_scrn
+		add	#4,r1
+		xor	r0,r0
+		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
+
 		mov	#CACHE_MSTR_PLGN,r1
 		mov	#(CACHE_MSTR_PLGN_E-CACHE_MSTR_PLGN)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -2342,9 +2356,9 @@ slave_loop:
 
 		align 4
 slv_task_1:
-		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Move this scrolling area
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Draw L/R here, Slave does U/D
 		mov	#RAM_Mars_ScrlBuff,r13
-		bsr	MarsVideo_Bg_DrawScrl_UD
+		bsr	MarsVideo_Bg_DrawScrl
 		nop
 
 		bra	slv_exit

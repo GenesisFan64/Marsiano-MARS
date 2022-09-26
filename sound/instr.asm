@@ -129,8 +129,8 @@ FmIns_Trumpet_2:
 		binclude "sound/instr/fm/trumpet_2.gsx",$2478,$20
 ; FmIns_Trumpet_kon:
 ; 		binclude "sound/instr/fm/trumpet_kon.gsx",$2478,$20
-; FmIns_Trumpet_puy:
-; 		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
+FmIns_Trumpet_puy:
+		binclude "sound/instr/fm/trumpet_puy.gsx",$2478,$20
 FmIns_Trumpet_carnival:
 		binclude "sound/instr/fm/trumpet_carnivl.gsx",$2478,$20
 

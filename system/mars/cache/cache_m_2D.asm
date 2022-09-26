@@ -709,7 +709,7 @@ MarsVideo_NxtSuprSpr:
 		cmp/ge	r0,r6
 		bt	.spr_out
 	; XR / YB
-; 		mov	#224,r0
+		mov	#224,r0
 		cmp/ge	r0,r8
 		bf	.yb_e
 		mov	r0,r8
