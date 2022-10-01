@@ -1,9 +1,8 @@
 ; ====================================================================
 ; FM instrument patches
 ;
-; This must be located at the 900000 area.
-;
-; And the 68K BANK set to 0 currently.
+; This must be located at the 880000 area.
+; 68K BANK 0 only
 ; ====================================================================
 
 ; Savestate FM data is located at: $2478
@@ -13,11 +12,11 @@
 ; Special FM ins: $28
 
 ; FM3 Special
-FmIns_Fm3_OpenHat:
+FmIns3_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
-FmIns_Fm3_ClosedHat:
+FmIns3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
-FmIns_Fm3_Explosion:
+FmIns3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
 
 FmIns3_Snare_Alien:

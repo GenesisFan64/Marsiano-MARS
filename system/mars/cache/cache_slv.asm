@@ -842,16 +842,16 @@ mdlrd_rotate:
 ; ------------------------------------------------
 
 			align 4
-MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
-MarsSnd_PwmControl	ds.b $38			; 8 bytes per channel.
-MarsSnd_RvMode		ds.l 1				; ROM RV protection flag
 Cach_BkupPnt_L		ds.l 8				; **
 Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards
 Cach_BkupS_L		ds.l 5				; **
 Cach_BkupS_S		ds.l 0				; <-- Reads backwards
 Cach_SlvStack_L		ds.l 10				; **
 Cach_SlvStack_S		ds.l 0				; <-- Reads backwards
+MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
+Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
+MarsSnd_PwmControl	ds.b 8*7			; 8 bytes per channel.
+MarsSnd_RvMode		ds.l 1				; ROM RV protection flag
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

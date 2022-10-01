@@ -30,9 +30,9 @@ Z80_TOP:
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-ZSET_WTUNE	equ -27		; Manual frequency adjustment for DAC WAVE playback
+ZSET_WTUNE	equ -25		; Manual frequency adjustment for DAC WAVE playback
 ZSET_TESTME	equ 0		; Set to 1 to "hear"-test the DAC playback
-MAX_INS		equ 19		; Max usable instruments for EACH track slot
+MAX_INS		equ 16		; Max usable instruments for EACH track slot
 
 ; --------------------------------------------------------
 ; Structs
@@ -987,14 +987,15 @@ track_out:
 		or	a
 		jr	z,.nochip
 		ld	(ix+chnl_Note),-2
+		ld	(ix+chnl_Vol),64
 		ld	a,(ix+chnl_Flags)
 		ld	a,1
 		ld	(ix+chnl_Flags),a
 .nochip:
 		add	ix,de
 		djnz	.clrfe
-		ld	a,1
-		ld	(marsUpd),a
+; 		ld	a,1
+; 		ld	(marsUpd),a
 		ret
 
 ; --------------------------------------------------------
@@ -2680,10 +2681,8 @@ setupchip:
 
 gema_init:
 		call	dac_off
-		ld	b,0		; Reset bank
-		ld	hl,0
-		call	showRom
-		ld	(hl),a
+		ld	a,0
+		ld	(marsUpd),a
 		ld	hl,dWaveBuff	; hl - Wave buffer START
 		ld	de,dWaveBuff+1	; de - Wave next byte
 		ld	bc,100h-1	; bc - length for copying
@@ -2711,6 +2710,17 @@ gema_init:
 		call	fm_send_1
 		inc	e
 		call	fm_send_1
+		ld	hl,6000h
+		ld	a,1
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
+		ld	(hl),a
 
 	; set each tracks' settings
 		ld	iy,trkBuff_0
@@ -2722,6 +2732,7 @@ gema_init:
 		ld	hl,trkData_1
 		ld	e,MAX_TRKCHN
 		ld	d,8*16
+		call	.set_it
 .set_it:
 		ld	(iy+trk_CachNotes),l
 		ld	(iy+(trk_CachNotes+1)),h

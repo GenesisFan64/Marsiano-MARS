@@ -21,10 +21,11 @@ sizeof_mdsnd	ds.l 0
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-; 		align $80
+		align $80
 Sound_Init:
-		move.w	#$0100,(z80_bus).l		; Request Z80 stop
-		move.b	#1,(z80_reset).l		; Z80 reset
+		move.w	#$2700,sr
+		move.w	#$0100,(z80_bus).l		; Get Z80 bus
+		move.w	#$0100,(z80_reset).l		; Z80 reset
 .wait:
 		btst	#0,(z80_bus).l
 		bne.s	.wait
@@ -40,10 +41,12 @@ Sound_Init:
 .copy:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copy
-		move.b	#1,(z80_reset).l
+		move.w	#0,(z80_reset).l		; Reset cancel
 		nop
 		nop
 		nop
+		nop
+		move.w	#$100,(z80_reset).l
 		move.w	#0,(z80_bus).l			; Start Z80
 		rts
 
@@ -230,6 +233,7 @@ Sound_DMA_Resume:
 ; d6-d7,a5-a6
 ; --------------------------------------------------------
 
+; ***
 Sound_TrkPlay:
 		bsr	sndReq_Enter
 		move.w	#$00,d7		; Command $00
@@ -318,7 +322,7 @@ Sound_TrkTicks:
 ; --------------------------------------------------------
 ; Sound_GlbBeats
 ;
-; Set GLOBAL Sub-beats (not tempo...)
+; Set GLOBAL Sub-beats (different from a tempo...)
 ;
 ; Input:
 ; d0 | BYTE - Track slot

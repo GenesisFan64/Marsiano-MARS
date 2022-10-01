@@ -22,5 +22,5 @@ MapPal_M:	binclude "data/maps/level0/pal_m.bin"
 		align 2
 
 TestSupSpr_Pal:
-		binclude "data/mars/tests/sprites/sprites_pal.bin"
+		binclude "data/sprites/mars/nicole/sprites_pal.bin"
 		align 2

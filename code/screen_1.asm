@@ -32,6 +32,7 @@ RAM_ThisSpeed	ds.l 1
 RAM_EmiFrame	ds.w 1
 RAM_EmiAnim	ds.w 1
 RAM_EmiTimer	ds.w 1
+RAM_KeepSong	ds.w 1
 		finish
 
 ; ====================================================================
@@ -41,21 +42,7 @@ RAM_EmiTimer	ds.w 1
 
 MD_2DMODE:
 ; 		bra	MD_DebugMenu
-		move.w	#$2700,sr
-
-
-	; Testing track
-		moveq	#0,d0
-		bsr	Sound_TrkStop
-		move.w	#200+32,d1
-		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_MOVEME),a0
-; 		lea	(GemaTrkData_Nadie_MD),a0
-		moveq	#0,d0
-		move.w	#7,d1
-		moveq	#0,d2
-		move.w	#0,d3
-		bsr	Sound_TrkPlay
+; 		move.w	#$2700,sr
 
 MD_2DMODE_FROM:
 		move.w	#$2700,sr
@@ -80,16 +67,17 @@ MD_2DMODE_FROM:
 		bsr	Video_FadePal_Mars
 		lea	(TestSupSpr_Pal),a0
 		move.w	#128,d0
-		move.w	#32,d1
+		move.w	#128,d1
 		moveq	#1,d2
 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 		move.l	#$10000,(RAM_ThisSpeed).l
 		move.w	#0,(RAM_MapX).l
-		move.w	#0,(RAM_MapY).l
-		bsr	.update_pos
+		move.w	#$A8,(RAM_MapY).l
+
 		bsr	MdMap_Init
+		bsr	.update_pos
 		bsr	Level_PickMap
 		bsr	SuperSpr_Init
 		bsr	MdMap_DrawAll
@@ -107,13 +95,29 @@ MD_2DMODE_FROM:
 		move.w	#1,(RAM_FadeMdReq).w
 		move.w	#1,(RAM_FadeMarsReq).w
 		move.b	#%000,(RAM_VdpRegs+$B).l
-		move.b	#$10,(RAM_VdpRegs+7).l
+		move.b	#0,(RAM_VdpRegs+7).l
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-
 		bsr 	System_WaitFrame	; Send first DREQ
 		moveq	#2,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
+
+	; Testing track
+; 		tst.w	(RAM_KeepSong).w
+; 		bne.s	.oof
+; 		move.w	#1,(RAM_KeepSong).w
+		moveq	#0,d0
+		bsr	Sound_TrkStop
+		move.w	#200+32,d1
+		bsr	Sound_GlbBeats
+		lea	(GemaTrkData_MOVEME),a0
+; 		lea	(GemaTrkData_Nadie_MD),a0
+		moveq	#0,d0
+		moveq	#7,d1
+		moveq	#0,d2
+		moveq	#0,d3
+		bsr	Sound_TrkPlay
+; .oof:
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -122,9 +126,9 @@ MD_2DMODE_FROM:
 
 .loop:
 		bsr	MdMap_Update
-		bsr	System_WaitFrame
+.ploop:		bsr	System_WaitFrame
 		bsr	Video_RunFade
-		bne.s	.loop
+		bne.s	.ploop
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyZ,d7
@@ -370,24 +374,25 @@ SuperSpr_Init:
 		move.l	d0,d1
 		or.l	#TH,d1
 		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$C0,marsspr_x(a0)
-		move.w	#$60,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
+		move.w	#512,marsspr_dwidth(a0)
+		move.w	#(320/2)-(64/2),marsspr_x(a0)
+		move.w	#(224/2)-(72/2),marsspr_y(a0)
+		move.b	#64,marsspr_xs(a0)
+		move.b	#72,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
+		move.b	#1,marsspr_yfrm(a0)
 
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		adda	#sizeof_marsspr,a0
-		move.l	d1,marsspr_data(a0)
-		move.w	#64,marsspr_dwidth(a0)
-		move.w	#$60,marsspr_x(a0)
-		move.w	#$50,marsspr_y(a0)
-		move.b	#32,marsspr_xs(a0)
-		move.b	#48,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
+; 		move.l	#SuperSpr_Test,d0
+; 		move.l	d0,d1
+; 		or.l	#TH,d1
+; 		adda	#sizeof_marsspr,a0
+; 		move.l	d1,marsspr_data(a0)
+; 		move.w	#64,marsspr_dwidth(a0)
+; 		move.w	#$60,marsspr_x(a0)
+; 		move.w	#$50,marsspr_y(a0)
+; 		move.b	#32,marsspr_xs(a0)
+; 		move.b	#48,marsspr_ys(a0)
+; 		move.w	#$80,marsspr_indx(a0)
 
 ; 		move.l	#SuperSpr_Test,d0
 ; 		move.l	d0,d1
@@ -435,12 +440,13 @@ SuperSpr_Main:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
 		sub.w	#1,(RAM_EmiTimer).w
 		bpl.s	.wspr
-		move.w	#14,(RAM_EmiTimer).w
+		move.w	#6,(RAM_EmiTimer).w
 
 		move.b	marsspr_xfrm(a0),d0
 		add.w	#1,d0
-		and.w	#1,d0
+		and.w	#%111,d0
 		move.b	d0,marsspr_xfrm(a0)
+
 		adda	#sizeof_marsspr,a0
 		move.b	marsspr_yfrm(a0),d0
 		add.w	#1,d0

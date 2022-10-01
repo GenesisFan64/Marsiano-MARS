@@ -1,12 +1,12 @@
 ** Marsiano-MARS **
 
-A GameBase/Engine/Library for making Sega 32X Games in assembly using all CPUs:
+This is now being used to develop a new TECH DEMO for the 32X, If this project get popular enough this will become a Game Base again.
 
-- 68k for the game logic
+- 68k for the main logic
 
-- Z80 for the sound including PWM
+- Z80 handles thes sound including PWM
 
-- SH2 for the 2D+3D visuals and extra sound channels. MASTER does the graphics, SLAVE does the sound and sometimes helps MASTER
+- MASTER SH2 controls the visuals (2D+3D), SLAVE SH2 does the PWM playback and sometimes helps MASTER
 
 
 This is also being used to research bugs and limitations of the real hardware that current emulators ignore... see hwnotes.txt for details.

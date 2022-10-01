@@ -35,7 +35,7 @@ testme macro color
 ; Settings
 ; ----------------------------------------------------------------
 
-SH2_DEBUG	equ 1			; Set to 1 too see if CPUs are active using comm counters (0 and 1)
+SH2_DEBUG	equ 0			; Set to 1 too see if CPUs are active using comm counters (0 and 1)
 STACK_MSTR	equ CS3|$40000
 STACK_SLV	equ CS3|$3F000
 
@@ -485,6 +485,11 @@ m_irq_cmd:
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
+		nop
+		nop
+		nop
+		nop
+		nop
 		rts
 		nop
 		align 4
@@ -610,6 +615,11 @@ m_irq_vres:
 		mov	#_sysreg,r1
 		mov	#"M_OK",r0
 		mov	r0,@(comm0,r1)
+		nop
+		nop
+		nop
+		nop
+		nop
 		rte
 		nop
 		align 4
@@ -754,29 +764,30 @@ s_irq_cmd:
 	; First we recieve changes from Z80
 	; using comm8  for data
 	;  and  comm14 for busy/clock bits (bits 7,6)
+
 		mov	#_sysreg+comm8,r1	; Input
 		mov	#MarsSnd_PwmControl,r2	; Output
 		mov	#_sysreg+comm14,r3	; control comm
+		nop
 .wait_1:
 		mov.b	@r3,r0
-		tst	#%10000000,r0		; Z80 enter/exit
+		and	#%11110000,r0
+		tst	#%10000000,r0		; Chain exit?
 		bt	.exit_c
-		tst	#%01000000,r0		; wait CLOCK
+		tst	#%01000000,r0		; Wait PASS
 		bt	.wait_1
 .copy_1:
 		mov	@r1,r0
 		mov	r0,@r2
 		add	#4,r2
-		mov.b	@r3,r0			; CLK done
+		mov.b	@r3,r0			; PASSed.
 		and	#%10111111,r0
-		mov.b	r0,@r3
 		bra	.wait_1
-		nop
+		mov.b	r0,@r3
 .exit_c:
 
-	; Now loop for channels that need updating
-	;
-	; TODO: rushed... but it works.
+	; ***
+	; Now update the PWM's
 		mov	#0,r1				; r1 - Current PWM slot
 		mov	#MarsSnd_PwmControl,r14
 		mov	#MAX_PWMCHNL,r10
@@ -929,6 +940,9 @@ s_irq_cmd:
 		bra	.next_chnl
 		add	#1,r14		; next PWM entry
 .end_chnls:
+		mov	#_sysreg+comm14,r1
+		xor	r0,r0
+		mov.b	r0,@r1
 	; ---------------------------------
 	; *** END of PWM driver for GEMA
 	; ---------------------------------
@@ -951,6 +965,11 @@ s_irq_cmd:
 		mov	@r15+,r3
 		mov	@r15+,r2
 .no_cmdtask:
+		nop
+		nop
+		nop
+		nop
+		nop
 		rts
 		nop
 		align 4
@@ -1012,6 +1031,12 @@ s_irq_vres:
 		mov	r0,@($30,r1)
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
+		mov	#_DMASOURCE1,r1
+		mov	#0,r0
+		mov	r0,@($30,r1)
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r1)
+
 		mov	#_sysreg,r1
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
@@ -1024,6 +1049,11 @@ s_irq_vres:
 		mov	#_sysreg,r1
 		mov	#"S_OK",r0
 		mov	r0,@(comm4,r1)
+		nop
+		nop
+		nop
+		nop
+		nop
 		rte
 		nop
 		align 4
@@ -1244,14 +1274,6 @@ SH2_M_Entry:
 ; software-rendered backgrounds, sprites and polygons.
 ; ----------------------------------------------------------------
 
-; HARDWARE NOTE: If the 68k and/or Z80 requested any of both
-; CMD interrupts in the middle of Soft-Reset (RESET button) the
-; interrupt will get stuck on "pending" and any new requests will
-; not gonna happen.
-; The workaround is to write intmask to 0 then set back again the
-; interrupt bits that you are going to use.
-; (this applies for BOTH SH2)
-
 SH2_M_HotStart:
 		mov	#$FFFFFE80,r1
 		mov.w	#$A518,r0		; Disable Watchdog
@@ -1269,22 +1291,17 @@ SH2_M_HotStart:
 		mov.w	r0,@r2
 		mov	#9,r0
 		mov.b	r0,@r1
-		bsr	Mars_ClearCacheRam
-		nop
 		mov	#_sysreg,r1
+    		xor	r0,r0
+		mov.w	r0,@(vresintclr,r1)
+		mov.w	r0,@(vintclr,r1)
+		mov.w	r0,@(hintclr,r1)
+		mov.w	r0,@(cmdintclr,r1)
+		mov.w	r0,@(pwmintclr,r1)
 		mov.w	@r1,r0
 		or	#CMDIRQ_ON,r0
 		mov.w	r0,@r1
-;     		mov	#0,r0
-; 		mov.w	r0,@(vresintclr,r1)
-; 		mov.w	r0,@(vintclr,r1)
-; 		mov.w	r0,@(hintclr,r1)
-; 		mov.w	r0,@(cmdintclr,r1)
-; 		mov.w	r0,@(pwmintclr,r1)
-		mov	#_sysreg+comm8,r1
-		mov.w	@r1,r0
-.wait_md:	tst	r0,r0
-		bf	.wait_md
+
 		mov	#_sysreg+comm14,r1
 .wait_slv:	mov.w	@r1,r0
 		tst	r0,r0
@@ -1687,10 +1704,10 @@ mstr_gfx2_loop:
 ; 		nop
 ; 		mov	#%00001001,r0				; Cache two-way mode + Enable
 ; 		mov.w	r0,@r3
-		mov	#_sysreg+comm14,r1			; Wait for Slave
-		mov.w	@r1,r0
+		mov	#_sysreg+comm14+1,r1			; Wait for Slave
+		mov.b	@r1,r0
 		or	#$01,r0					; Slave task $01
-		mov.w	r0,@r1
+		mov.b	r0,@r1
 
 ;  testme 2
 		mov	#RAM_Mars_ScrlBuff,r14
@@ -1732,10 +1749,10 @@ mstr_gfx2_loop:
 		tst	r0,r0
 		bf	.wait_slv
 		mov	#_vdpreg,r1			; Make frame...
-.waitv:
-		mov.b	@(vdpsts,r1),r0
-		tst	#VBLK,r0
-		bf	.waitv
+; .waitv:
+; 		mov.b	@(vdpsts,r1),r0
+; 		tst	#VBLK,r0
+; 		bf	.waitv
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -1844,9 +1861,10 @@ mstr_gfx3_loop:
 		mov.w	@(marsGbl_PolyBuffNum,gbr),r0		; Swap Read/Write sections
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
-		mov.w	@r4,r0
+		mov	#_sysreg+comm14+1,r4
+		mov.b	@r4,r0
 		or	#$02,r0				; Slave task $02
-		mov.w	r0,@r4
+		mov.b	r0,@r4
 		mov	#_vdpreg,r1
 .wait_fb_i:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
 		tst	#2,r0
@@ -2269,38 +2287,23 @@ SH2_S_HotStart:
 		mov.w	r0,@r2
 		mov	#9,r0
 		mov.b	r0,@r1
-		mov	#Mars_ClearCacheRam,r0
-		jsr	@r0
-		nop
 		mov	#CACHE_SLAVE,r1
 		mov	#(CACHE_SLAVE_E-CACHE_SLAVE)/4,r2
 		mov	#Mars_LoadCacheRam,r0
 		jsr	@r0
 		nop
-		mov	#0,r0			; Stop ALL active PWM channels
-		mov	#MarsSnd_PwmChnls,r1
-		mov	#MAX_PWMCHNL,r2
-		mov	#sizeof_sndchn,r3
-.clr_enbl:
-		mov	r0,@(mchnsnd_enbl,r1)
-		dt	r2
-		bf/s	.clr_enbl
-		add	r3,r1
 		mov	#_sysreg,r1
-		mov.w	@r1,r0
-		or	#CMDIRQ_ON|PWMIRQ_ON,r0
-; 		or	#CMDIRQ_ON,r0
-		mov.w	r0,@r1
-    		mov	#0,r0
+    		xor	r0,r0
 		mov.w	r0,@(vresintclr,r1)
 		mov.w	r0,@(vintclr,r1)
 		mov.w	r0,@(hintclr,r1)
 		mov.w	r0,@(cmdintclr,r1)
 		mov.w	r0,@(pwmintclr,r1)
-		mov	#_sysreg+comm10,r1
 		mov.w	@r1,r0
-.wait_md:	tst	r0,r0
-		bf	.wait_md
+		or	#CMDIRQ_ON|PWMIRQ_ON,r0
+; 		or	#CMDIRQ_ON,r0
+		mov.w	r0,@r1
+
 		mov	#_sysreg+comm12,r1
 .wait_mst:	mov.w	@r1,r0
 		tst	r0,r0

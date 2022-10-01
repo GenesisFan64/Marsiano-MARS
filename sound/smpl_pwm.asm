@@ -103,18 +103,23 @@ SmpIns_MoveMe_Hit:
 	align 4
 .end:
 SmpIns_MoveMe_Brass:
-	gSmpHead .end-.start,3078
-.start:	binclude "sound/instr/smpl/moveme_brass.wav",$2C
+	gSmpHead .end-.start,6478
+.start:	binclude "sound/instr/smpl/brass_moveme.wav",$2C
 	align 4
 .end:
 SmpIns_Kick:
 	gSmpHead .end-.start,0
-.start:	binclude "sound/instr/smpl/sauron_kick.wav",$2C
+.start:	binclude "sound/instr/smpl/kick_moveme.wav",$2C
 	align 4
 .end:
 SmpIns_Snare:
 	gSmpHead .end-.start,0
-.start:	binclude "sound/instr/smpl/snare_lobo.wav",$2C
+.start:	binclude "sound/instr/smpl/snare_moveme.wav",$2C
 	align 4
 .end:
 
+SmpIns_MyTime:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/mytime.wav",$2C
+	align 4
+.end:

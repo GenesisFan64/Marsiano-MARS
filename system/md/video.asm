@@ -1862,11 +1862,11 @@ MdMap_DrawAll:
 		moveq	#0,d5
 		move.w	d1,d5
 		and.w	#-$10,d5
-		lsr.w	#3,d5
-		and.w	#$FFF,d5
+		lsl.w	#4,d5
+		and.w	#$F00,d5
 
 		add.w	d5,d6
-		add.w	md_bg_vpos(a6),d6	; <-- TODO: X/Y increment
+		add.w	md_bg_vpos(a6),d6
 		move.w	d6,d5
 		rol.w	#2,d6
 		and.w	#%11,d6
@@ -1892,7 +1892,7 @@ MdMap_DrawAll:
 		move.w	md_bg_vram(a6),d2	; d2 - VRAM cell pos
 		swap	d3
 		move.w	#4,d3			; d3 - X wrap | X next block
-		move.w	#$3FFF,d4		; d4 - Y wrap | Y next block + bits
+		move.w	#$0FFF,d4		; d4 - Y wrap | Y next block + bits
 		swap	d4
 		move.w	#$100,d4
 		move.w	d5,d0
@@ -1910,7 +1910,7 @@ MdMap_DrawAll:
 	; a0 - Block-data read
 
 	; d7 - X loop        | Y loop
-	; d6 - VDP 2nd Write | X/Y VDP pos
+	; d6 - VDP 2nd Write | X/Y VDP pos + addr bits
 	; d5 - X loop-save   | X VDP current
 	; d4 - Y wrap        | Y next block pos
 	; d3 - X wrap        | X next block pos
@@ -1942,10 +1942,15 @@ MdMap_DrawAll:
 		adda	#1,a1
 		swap	d5
 		dbf	d5,.x_loop
-		move.l	d4,d0
-		swap	d0
+
+		move.w	d6,d0
+		and.w	#$3000,d0
 		add.w	d4,d6		; <-- next VDP Y block
-		and.w	d0,d6
+		swap	d4
+		and.w	d4,d6
+		or.w	d0,d6
+		swap	d4
+
 		move.w	md_bg_w(a6),d0 ; ***
 		adda	d0,a4
 		adda	d0,a3

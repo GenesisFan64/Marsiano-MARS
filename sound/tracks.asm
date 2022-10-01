@@ -88,7 +88,7 @@ GemaSfxPat_Boom:
 	binclude "sound/tracks/sfxpack_patt.bin"
 	align 2
 GemaSfxIns_Boom:
-	gInsFm3 0,FmIns_Fm3_Explosion
+	gInsFm3 0,FmIns3_Explosion
 	gInsPsgN 0,$00,$00,$00,$00,$02,%110
 	gInsFm 0,FmIns_Ding_toy
 
@@ -108,20 +108,19 @@ GemaTrkData_MOVEME:
 	align 2
 .ins:
 	gInsPwm 0,SmpIns_MoveMe_Hit,%10
-	gInsFm -12,FmIns_Piano_Aqua
+	gInsFm 0,FmIns_Bass_Duck
 	gInsPwm 0,SmpIns_MoveMe_Brass,%11
 	gInsFm 0,FmIns_ClosedHat
 	gInsPsgN 0,$00,$00,$00,$00,$04,%110
 	gInsFm -12,FmIns_HBeat_tom
-	gInsFm3 0,FmIns3_Snare_Alien
-	gInsFm -38,FmIns_DrumKick_gem
-	gInsFm -12,FmIns_Trumpet_carnival
-	gInsPsgN 0,$00,$00,$00,$00,$0C,%101
-	gInsPsg 0,$10,$20,$00,$02,$0C
-	gInsNull
-	gInsNull
-	gInsNull
-	gInsNull
+	gInsPwm 0,SmpIns_Snare,%10
+	gInsPwm 0,SmpIns_Kick,%10;gInsFm -38,FmIns_DrumKick_gem
+	gInsFm -12,FmIns_Trumpet_carnival;FmIns_Trumpet_2
+	gInsPsg 0,$20,$20,$10,$01,$08;gInsFm -12,FmIns_Ding_Baseball;
+	gInsFm3 0,FmIns3_OpenHat
+	gInsPwm -17,SmpIns_MyTime,%10
+	gInsPsg +12,$20,$10,$10,$0C,$0C
+	gInsPsg 0,$00,$00,$00,$00,$06
 	gInsNull
 	gInsNull
 	gInsNull
@@ -143,7 +142,7 @@ GemaTrkData_Nadie_MARS:
 	gInsFm -36,FmIns_Piano_Aqua
 	gInsFm -12,FmIns_HBeat_tom
 	gInsPwm -12,SmpIns_PKick,%00
-	gInsPsg 0,$50,$60,$00,$06,$10
+	gInsPsg 0,$50,$70,$00,$06,$08
 	gInsFm 0,FmIns_Trumpet_1
 	gInsPwm 0,SmpIns_Piano,%00
 	gInsPwm -12,SmpIns_PTom,%00
@@ -162,7 +161,7 @@ GemaIns_BeMine:
 	gInsPwm -17,SmpIns_Brass1_Hi,%01
 	gInsPwm -17,SmpIns_Brass1_Low,%01
 	gInsFm  -24,FmIns_Bass_groove
-	gInsFm3   0,FmIns_Fm3_OpenHat
+	gInsFm3   0,FmIns3_OpenHat
 	gInsPwm -17,SmpIns_Snare_jam,0
 	gInsPwm -17,SmpIns_Kick_jam,0
 	gInsPwm -17,SmpIns_SnrTom_1,0
@@ -199,11 +198,11 @@ GemaTrkData_Nadie_MD:
 	gInsFm -36,FmIns_Piano_Aqua
 	gInsFm -12,FmIns_HBeat_tom
 	gInsFm -37,FmIns_DrumKick_gem
-	gInsPsg 0,$50,$60,$00,$06,$10
+	gInsPsg 0,$50,$70,$00,$06,$08
 	gInsFm 0,FmIns_Trumpet_1
 	gInsNull
-	gInsFm3 0,FmIns_Fm3_ClosedHat
-	gInsFm3 0,FmIns_Fm3_OpenHat
+	gInsFm3 0,FmIns3_ClosedHat
+	gInsFm3 0,FmIns3_OpenHat
 
 GemaTrkData_WeGot:
 	dc.l GemaPat_WeGot
@@ -220,7 +219,7 @@ GemaIns_WeGot:
 	gInsFm 0,FmIns_Bass_groove_2
 	gInsDac -36,DacIns_wegot_kick,0
 	gInsFm 0,FmIns_Bass_club
-	gInsFm3 0,FmIns_Fm3_OpenHat
+	gInsFm3 0,FmIns3_OpenHat
 	gInsPsg 0,$20,$40,$10,$01,$04
 	gInsDac -36,DacIns_wegot_crash,0
 	gInsPsgN 0,$00,$00,$00,$00,$10,%100

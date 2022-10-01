@@ -569,8 +569,8 @@ Mode_Init:
 .clr:
 		move.w	d4,(a4)+
 		dbf	d5,.clr
-		move.w	#0,d0
-		bsr	Video_Mars_GfxMode
+; 		move.w	#0,d0		; causes freeze
+; 		bsr	Video_Mars_GfxMode
 		rts
 
 ; --------------------------------------------------------

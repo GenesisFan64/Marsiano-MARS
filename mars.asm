@@ -70,9 +70,12 @@ RamCode_Boot:
 
 		align 4
 		phase $880000+*
-		include "system/md/sub_dreq.asm"	; <-- DREQ only works on 880000
-Z80_CODE:	include "system/md/z_driver.asm"	; <-- Reads once
+Z80_CODE:	include "system/md/z_driver.asm"	; Called once
 Z80_CODE_END:
+		include "system/md/sub_dreq.asm"	; DREQ transfer only works on 880000
+		include "sound/tracks.asm"		; GEMA: Track data
+		include "sound/instr.asm"		; GEMA: FM instruments
+		include "sound/smpl_dac.asm"		; GEMA: DAC samples
 		dephase
 		align 2
 
@@ -87,9 +90,6 @@ Z80_CODE_END:
 
 		phase $900000+*			; Currently only this one.
 MDBNK0_START:
-		include "sound/tracks.asm"	; <-- Sound data
-		include "sound/instr.asm"	;  --
-		include "sound/smpl_dac.asm"	;  --
 		include "data/md_bank0.asm"	; <-- 68K banked data
 MDBNK0_END:
 		dephase
@@ -161,6 +161,7 @@ MARS_RAMDATA_E:
 
 		phase CS1+*
 		align 4
+		include "sound/smpl_pwm.asm"		; GEMA: PWM samples
 		include "data/mars_rom.asm"
 		dephase
 

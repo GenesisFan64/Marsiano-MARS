@@ -38,5 +38,5 @@ Textr_pecsi:
 		align 4
 
 SuperSpr_Test:
-	binclude "data/mars/tests/sprites/sprites_art.bin"
+	binclude "data/sprites/mars/nicole/sprites_art.bin"
 	align 4
