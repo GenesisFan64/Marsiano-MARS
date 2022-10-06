@@ -5,7 +5,7 @@
 ; ----------------------------------------------------------------
 
 		struct RAM_MdGlobal
-RAM_MdGlbl_Null	ds.l 1
+RAM_Glbl_Scrn	ds.w 1
 sizeof_mdglbl	ds.l 0
 		finish
 

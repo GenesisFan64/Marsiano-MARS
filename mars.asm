@@ -25,8 +25,19 @@
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		move.l	#RamCode_Boot,d0		; Transfer USER code and jump into it
-		jmp	(System_JumpRamCode).l
+		move.w	#1,(RAM_Glbl_Scrn).w
+.next_mode:
+		moveq	#0,d0
+		move.w	(RAM_Glbl_Scrn).w,d0
+		lsl.w	#2,d0
+		move.l	.pick_boot(pc,d0.w),d0
+		jsr	(System_JumpRamCode).l
+		bra.s	.next_mode
+.pick_boot:
+		dc.l RamCode_Scrn1
+		dc.l RamCode_Scrn2
+		dc.l RamCode_Debug
+		dc.l RamCode_Scrn1
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -52,16 +63,12 @@ Md_TopCode_e:
 ; RAM code sections for 68K
 ; --------------------------------------------------------
 
-RamCode_Boot:
-		phase RAMCODE_USER
+RamCode_Scrn1:
 		include "code/screen_1.asm"
+RamCode_Scrn2:
 		include "code/screen_2.asm"
+RamCode_Debug:
 		include "code/debug.asm"
-		dephase
-.here:
-	if MOMPASS=6
-		message "THIS RAM-BANK uses: \{.here-RamCode_Boot}"
-	endif
 
 ; ====================================================================
 ; --------------------------------------------------------

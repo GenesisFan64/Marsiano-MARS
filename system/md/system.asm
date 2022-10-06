@@ -183,7 +183,8 @@ System_MarsUpdate:
 ; jump into it.
 ;
 ; Input:
-; d0 - Location of the RAM code
+; d0 - Location of the RAM code to copy
+;      in the 880000/900000 areas
 ; --------------------------------------------------------
 
 System_JumpRamCode:
@@ -569,7 +570,7 @@ Mode_Init:
 .clr:
 		move.w	d4,(a4)+
 		dbf	d5,.clr
-; 		move.w	#0,d0		; causes freeze
+; 		move.w	#0,d0			; causes freeze
 ; 		bsr	Video_Mars_GfxMode
 		rts
 

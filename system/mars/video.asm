@@ -11,11 +11,11 @@
 ; --------------------------------------------------------
 
 ; SDRAM
-MAX_SCRNBUFF	equ $28000	; MAX SDRAM for each Screen mode
+MAX_SCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
 MAX_SSPRSPD	equ 4		; Maximum pixel "speed" for Super Sprites (box size)
-MAX_FACES	equ 800		; MAX polygon faces for 3D models
-MAX_SVDP_PZ	equ 800+16	; MAX polygon pieces to draw
-MAX_ZDIST	equ -$1000	; Maximum 3D field distance (-Z)
+MAX_FACES	equ 980		; MAX polygon faces for 3D models
+MAX_SVDP_PZ	equ 980+96	; MAX polygon pieces to draw
+MAX_ZDIST	equ -$C00	; Maximum 3D field distance (-Z)
 
 ; FRAMEBUFFER
 FBVRAM_BLANK	equ $1F800	; Location for the BLANK line
@@ -50,17 +50,6 @@ scrl_fbdata	ds.l 1		; Screen data location on framebuffer
 scrl_xpos	ds.l 1		; $0000.0000
 scrl_ypos	ds.l 1		; $0000.0000
 sizeof_mscrl	ds.l 0
-		finish
-
-; Current camera view values
-		struct 0
-cam_x_pos	ds.l 1		; X position $000000.00
-cam_y_pos	ds.l 1		; Y position $000000.00
-cam_z_pos	ds.l 1		; Z position $000000.00
-cam_x_rot	ds.l 1		; X rotation $000000.00
-cam_y_rot	ds.l 1		; Y rotation $000000.00
-cam_z_rot	ds.l 1		; Z rotation $000000.00
-sizeof_camera	ds.l 0
 		finish
 
 		struct 0

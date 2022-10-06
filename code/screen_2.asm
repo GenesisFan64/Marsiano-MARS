@@ -1,11 +1,13 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Default gamemode
+; 3D Part
 ; ----------------------------------------------------------------
+
+		phase RAMCODE_USER
 
 ; ====================================================================
 ; ------------------------------------------------------
-; Variables
+; Settings
 ; ------------------------------------------------------
 
 ; TEST_MAINSPD	equ $04
@@ -15,10 +17,12 @@
 ; Structs
 ; ------------------------------------------------------
 
-; 		struct 0
-; strc_xpos	ds.w 1
-; strc_ypos	ds.w 1
-; 		finish
+		struct 0
+field_data	ds.l 1
+field_x		ds.w 1
+field_z		ds.w 1
+sizeof_mdfield	ds.l 0
+		finish
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -26,12 +30,7 @@
 ; ------------------------------------------------------
 
 		struct RAM_ModeBuff
-; RAM_MapX	ds.l 1
-; RAM_MapY	ds.l 1
-; RAM_ThisSpeed	ds.l 1
-; RAM_EmiFrame	ds.w 1
-; RAM_EmiAnim	ds.w 1
-; RAM_EmiTimer	ds.w 1
+RAM_FieldBuff	ds.b sizeof_mdfield
 		finish
 
 ; ====================================================================
@@ -40,8 +39,6 @@
 ; ------------------------------------------------------
 
 MD_3DMODE:
-; 		bra	MD_DebugMenu
-
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
@@ -62,9 +59,6 @@ MD_3DMODE:
 		moveq	#0,d0
 		move.w	#16,d1
 		bsr	Video_FadePal
-		lea	(RAM_MdDreq+Dreq_Objects),a0
-		move.l	#MarsObj_test|TH,mdl_data(a0)
-		move.w	#-$1000,mdl_z_pos(a0)
 		lea	(MDLDATA_PAL_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
@@ -74,18 +68,21 @@ MD_3DMODE:
 		clr.w	(RAM_MdMarsPalFd).w
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 
+	; Read MAP
+		bsr	MdlMap_Init
+
 ; 	; Testing track
-; 		moveq	#0,d0
-; 		bsr	Sound_TrkStop
-; 		move.w	#200+32,d1
-; 		bsr	Sound_GlbBeats
-; 		lea	(GemaTrkData_MOVEME),a0
-; ; 		lea	(GemaTrkData_Nadie_MD),a0
-; 		moveq	#0,d0
-; 		move.w	#7,d1
-; 		moveq	#0,d2
-; 		move.w	#0,d3
-; 		bsr	Sound_TrkPlay
+		moveq	#0,d0
+		bsr	Sound_TrkStop
+		move.w	#200+32,d1
+		bsr	Sound_GlbBeats
+		lea	(GemaTrkData_MOVEME),a0
+; 		lea	(GemaTrkData_Nadie_MD),a0
+		moveq	#0,d0
+		move.w	#7,d1
+		moveq	#0,d2
+		move.w	#0,d3
+		bsr	Sound_TrkPlay
 
 	; Set Fade-in settings
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -115,34 +112,24 @@ MD_3DMODE:
 		bne.s	.loop
 
 		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyZ,d7
+		btst	#bitJoyMode,d7
 		beq.s	.not_mode
-
 		bsr	.fade_out
-		bra	MD_2DMODE_FROM
-
+		move.w	#0,(RAM_Glbl_Scrn).w
+		rts
 .not_mode:
 
-		lea	str_Stats(pc),a0
+		lea	str_Stats2(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
-		lea	(RAM_MdDreq+Dreq_Objects),a0
-		add.w	#8*2,mdl_x_rot(a0)
-; 		add.w	#8*2,mdl_y_rot(a0)
-; 		add.w	#8*5,mdl_z_rot(a0)
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyUp,d7
-		beq.s	.z_up2
-		sub.w	#$10,mdl_z_pos(a0)
-.z_up2:
-		btst	#bitJoyDown,d7
-		beq.s	.z_dw2
-		add.w	#$10,mdl_z_pos(a0)
-.z_dw2:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyStart,d7
-		beq	.loop
-		bra	MD_DebugMenu
+		bsr	MdlMap_Loop
+
+
+		bra	.loop
+; 		move.w	(Controller_1+on_press),d7
+; 		btst	#bitJoyStart,d7
+; 		beq	.loop
+; 		bra	MD_DebugMenu
 
 ; ====================================================================
 ; ----------------------------------------------
@@ -176,6 +163,140 @@ MD_3DMODE:
 ; Subroutines
 ; ------------------------------------------------------
 
+MdlMap_Init:
+		lea	(RAM_FieldBuff),a5
+		move.l	#MarsMap_00,field_data(a5)
+		clr.l	cam_x_pos(a6)
+; 		clr.l	cam_y_pos(a6)
+		clr.l	cam_z_pos(a6)
+		clr.l	cam_x_rot(a6)
+		clr.l	cam_y_rot(a6)
+		clr.l	cam_z_rot(a6)
+		move.w	#$0E,field_x(a5)
+		move.w	#$10,field_z(a5)
+		bsr	MdlMap_Build
+		lea	(RAM_MdDreq+Dreq_ObjCam),a6
+		move.l	#-$80,cam_y_pos(a6)
+
+MdlMap_Loop:
+		lea	(RAM_MdDreq+Dreq_ObjCam),a6
+		lea	(RAM_FieldBuff),a5
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyUp,d7
+		beq.s	.z_up2
+		add.l	#$10,cam_z_pos(a6)
+.z_up2:
+		btst	#bitJoyDown,d7
+		beq.s	.z_dw2
+		sub.l	#$10,cam_z_pos(a6)
+.z_dw2:
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyLeft,d7
+		beq.s	.z_up3
+		sub.l	#$10,cam_x_pos(a6)
+.z_up3:
+		btst	#bitJoyRight,d7
+		beq.s	.z_dw3
+		add.l	#$10,cam_x_pos(a6)
+.z_dw3:
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyA,d7
+		beq.s	.z_rl
+		sub.l	#$10,cam_x_rot(a6)
+.z_rl:
+		btst	#bitJoyB,d7
+		beq.s	.z_rr
+		add.l	#$10,cam_x_rot(a6)
+.z_rr:
+		move.w	(Controller_1+on_hold),d7
+		btst	#bitJoyX,d7
+		beq.s	.z2_rl
+		add.l	#$10,cam_y_rot(a6)
+.z2_rl:
+		btst	#bitJoyY,d7
+		beq.s	.z2_rr
+		sub.l	#$10,cam_y_rot(a6)
+.z2_rr:
+
+		move.l	cam_z_pos(a6),d7
+		and.w	#-$400,d7
+		beq.s	.z_upd
+		moveq	#1,d0
+		tst.w	d7
+		bmi.s	.z_up
+		neg.w	d0
+.z_up:
+		add.w	d0,field_z(a5)
+		bsr.s	MdlMap_Build
+
+.z_upd:
+		move.l	cam_x_pos(a6),d7
+		and.w	#-$400,d7
+		beq.s	.x_upd
+		moveq	#1,d0
+		tst.w	d7
+		bpl.s	.x_up
+		neg.w	d0
+.x_up:
+		add.w	d0,field_x(a5)
+		bsr.s	MdlMap_Build
+.x_upd:
+		and.l	#$3FF,cam_x_pos(a6)
+		and.l	#$3FF,cam_z_pos(a6)
+		rts
+
+; a6 - camera
+; a5 - field buffer
+MdlMap_Build:
+		lea	(RAM_MdDreq+Dreq_Objects),a4
+		move.l	field_data(a5),a3
+		move.l	(a3)+,a1
+		move.w	field_z(a5),d1
+		lsl.w	#6,d1
+		move.w	field_x(a5),d0
+		add.w	d0,d0
+		adda	d1,a3
+		adda	d0,a3
+
+; 		moveq	#-$400,d1
+; 		move.w	#-$800,d2
+; 		bsr	.column
+		move.w	#0,d1
+		move.w	#-$800,d2
+		bsr.s	.column
+		adda	#2,a3
+		move.w	#$400,d1
+		move.w	#-$800,d2
+; 		bra.s	.column
+
+.column:
+		move.l	a3,a2
+		move.w	(a2),d0
+		lsl.w	#2,d0
+		move.l	(a1,d0.w),mdl_data(a4)
+		move.w	d1,mdl_x_pos(a4)
+		move.w	d2,mdl_z_pos(a4)
+		adda	#sizeof_mdlobj,a4
+		add.w	#$400,d2
+		adda	#$40,a2
+
+		move.w	(a2),d0
+		lsl.w	#2,d0
+		move.l	(a1,d0.w),mdl_data(a4)
+		move.w	d1,mdl_x_pos(a4)
+		move.w	d2,mdl_z_pos(a4)
+		adda	#sizeof_mdlobj,a4
+		add.w	#$400,d2
+		adda	#$40,a2
+
+		move.w	(a2),d0
+		lsl.w	#2,d0
+		move.l	(a1,d0.w),mdl_data(a4)
+		move.w	d1,mdl_x_pos(a4)
+		move.w	d2,mdl_z_pos(a4)
+		adda	#sizeof_mdlobj,a4
+		rts
+
 ; ====================================================================
 ; ------------------------------------------------------
 ; VBlank
@@ -203,3 +324,101 @@ MD_3DMODE:
 ; 		include "data/md/sprites/emi_plc.asm"
 ; 		align 2
 
+str_Stats2:
+		dc.b "\\l \\l \\l",$A,$A
+		dc.b "\\w \\w \\w",0
+		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_pos
+		dc.l RAM_MdDreq+Dreq_ObjCam+cam_z_pos
+		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_rot
+
+		dc.l RAM_FieldBuff+field_x
+		dc.l RAM_FieldBuff+field_z
+		dc.l sysmars_reg+comm0
+; 		dc.l RAM_Framecount
+
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b "\\w \\w \\w \\w",$A,$A
+; 		dc.b "\\l",0
+; 		dc.l sysmars_reg+comm0
+; 		dc.l sysmars_reg+comm2
+; 		dc.l sysmars_reg+comm4
+; 		dc.l sysmars_reg+comm6
+; 		dc.l sysmars_reg+comm8
+; 		dc.l sysmars_reg+comm10
+; 		dc.l sysmars_reg+comm12
+; 		dc.l sysmars_reg+comm14
+; 		dc.l RAM_Framecount
+		align 2
+
+MarsMap_00:
+		include "data/maps/mars/mcity/map_data.asm"
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		dc.l 0
+		align 2
+
+; ====================================================================
+
+.here:
+	if MOMPASS=6
+		message "THIS RAM-CODE ends at: \{.here}"
+	endif
+		dephase

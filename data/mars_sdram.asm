@@ -9,10 +9,7 @@
 ; use ROM (mars_rom.asm) instead, those are RV-protected on SH2
 ; ----------------------------------------------------------------
 
-	align 4
+		align 4
 
-; --------------------------------------------------------
-; Models
-; --------------------------------------------------------
-
-	include "data/mars/objects/mdl/test/head.asm"
+		dc.b "SDRAM DATA--"
+		align 4

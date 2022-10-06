@@ -1,7 +1,13 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Default gamemode
+; 2D Part
 ; ----------------------------------------------------------------
+
+		phase RAMCODE_USER
+; ====================================================================
+; ------------------------------------------------------
+; Settings
+; ------------------------------------------------------
 
 TEST_SPEED	equ	$02<<16
 TEST_SPRSPD	equ	$02
@@ -457,9 +463,9 @@ MD_DebugMenu:
 		or.w	#$8000,(RAM_CurrPage).w
 		clr.w	(RAM_CurrSelc).w
 
-		lea	(RAM_MdDreq+Dreq_Objects),a0
-		move.l	#MarsObj_test|TH,mdl_data(a0)
-		move.w	#-$800,mdl_z_pos(a0)
+; 		lea	(RAM_MdDreq+Dreq_Objects),a0
+; 		move.l	#MarsObj_test|TH,mdl_data(a0)
+; 		move.w	#-$800,mdl_z_pos(a0)
 ; 		move.w	#$4000,mdl_y_pos(a0)
 		lea	str_Page4(pc),a0	; Print text
 		move.l	#locate(0,2,2),d0
@@ -1573,3 +1579,10 @@ str_Stats:
 ; 		include "data/md/sprites/emi_plc.asm"
 ; 		align 2
 
+; ====================================================================
+
+.here:
+	if MOMPASS=6
+		message "THIS RAM-CODE ends at: \{.here}"
+	endif
+		dephase

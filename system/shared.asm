@@ -31,6 +31,17 @@ mdl_flags	ds.w 1
 sizeof_mdlobj	ds.l 0
 		finish
 
+; 3D Camera
+		struct 0
+cam_x_pos	ds.l 1		; X position $000000.00
+cam_y_pos	ds.l 1		; Y position $000000.00
+cam_z_pos	ds.l 1		; Z position $000000.00
+cam_x_rot	ds.l 1		; X rotation $000000.00
+cam_y_rot	ds.l 1		; Y rotation $000000.00
+cam_z_rot	ds.l 1		; Z rotation $000000.00
+sizeof_camera	ds.l 0
+		finish
+
 ; "Super" sprites:
 ; RAM_MdDreq+Dreq_SuperSpr
 ;
@@ -71,6 +82,7 @@ sizeof_marsspr	ds.l 0
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
 Dreq_BgExBuff	ds.b $80				; Buffer for current screen mode (NOTE: manual size)
+Dreq_ObjCam	ds.b sizeof_camera
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
 Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0

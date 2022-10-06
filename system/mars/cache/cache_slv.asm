@@ -259,6 +259,10 @@ MarsMdl_MdlLoop:
 		mov	#RAM_Mars_Objects,r14
 		mov	#MAX_MODELS,r13
 .loop:
+		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
+		mov	#MAX_FACES,r1
+		cmp/ge	r1,r0
+		bt	.skip
 		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
 		cmp/pl	r0
 		bf	.invlid
@@ -266,13 +270,10 @@ MarsMdl_MdlLoop:
 		jsr	@r0
 		mov	r13,@-r15
 		mov	@r15+,r13
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
-		mov	#MAX_FACES,r1
-		cmp/ge	r1,r0
-		bf	.invlid
-		mov	r1,r0
-		bra	.skip
-		mov	r0,@(marsGbl_CurrNumFaces,gbr)
+
+; 		mov	r1,r0
+; 		bra	.skip
+; 		mov	r0,@(marsGbl_CurrNumFaces,gbr)
 .invlid:
 		dt	r13
 		bf/s	.loop
@@ -351,6 +352,8 @@ MarsMdl_ReadModel:
 		cmp/ge	r1,r0
 		bf	.can_build
 .no_model:
+		mov	.tag_maxfaces,r0
+		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		bra	.exit_model
 		nop
 		align 4
@@ -677,9 +680,9 @@ mdlrd_setpoint:
 		mov	@(cam_x_pos,r11),r5
 		mov	@(cam_y_pos,r11),r6
 		mov	@(cam_z_pos,r11),r7
-		shlr8	r5
-		shlr8	r6
-		shlr8	r7
+		shlr	r5
+		shlr	r6
+		shlr	r7
 		exts	r5,r5
 		exts	r6,r6
 		exts	r7,r7
@@ -690,35 +693,34 @@ mdlrd_setpoint:
 		mov	r2,r5
 		mov	r4,r6
   		mov 	@(cam_x_rot,r11),r0
-  		shlr2	r0
-  		shlr	r0
+;   		shlr2	r0
+;   		shlr	r0
   		bsr	mdlrd_rotate
-		shlr8	r0
+		shlr2	r0
    		mov	r7,r2
    		mov	r8,r4
    		mov	r3,r5
   		mov	r8,r6
   		mov 	@(cam_y_rot,r11),r0
-  		shlr2	r0
-  		shlr	r0
+;   		shlr2	r0
+;   		shlr	r0
   		bsr	mdlrd_rotate
-		shlr8	r0
+		shlr2	r0
    		mov	r8,r4
    		mov	r2,r5
    		mov	r7,r6
    		mov 	@(cam_z_rot,r11),r0
-  		shlr2	r0
-  		shlr	r0
+;   		shlr2	r0
+;   		shlr	r0
   		bsr	mdlrd_rotate
-		shlr8	r0
+		shlr2	r0
    		mov	r7,r2
    		mov	r8,r3
 
 	; Weak perspective projection
 	; this is the best I got,
 	; It breaks on large faces
-		mov 	#_JR,r8
-		mov	#256<<17,r7
+		mov	#320<<16,r7
 		neg	r4,r0		; reverse Z
 		cmp/pl	r0
 		bt	.inside
@@ -737,10 +739,11 @@ mdlrd_setpoint:
 		bra	.zmulti
 		nop
 .inside:
-		mov 	r0,@r8
-		mov 	r7,@(4,r8)
+		mov 	#_JR,r9
+		mov 	r0,@r9
+		mov 	r7,@(4,r9)
 		nop
-		mov 	@(4,r8),r7
+		mov 	@(4,r9),r7
 		dmuls	r7,r2
 		sts	mach,r0
 		sts	macl,r2

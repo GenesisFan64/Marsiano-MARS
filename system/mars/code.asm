@@ -35,7 +35,7 @@ testme macro color
 ; Settings
 ; ----------------------------------------------------------------
 
-SH2_DEBUG	equ 0			; Set to 1 too see if CPUs are active using comm counters (0 and 1)
+SH2_DEBUG	equ 1			; Set to 1 too see if CPUs are active using comm counters (0 and 1)
 STACK_MSTR	equ CS3|$40000
 STACK_SLV	equ CS3|$3F000
 
@@ -1848,15 +1848,28 @@ mstr_gfx3_loop:
 		stc	sr,@-r15
 		mov	#$F0,r0
 		ldc	r0,sr
-		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy Dreq models into a safe place
-		mov	#RAM_Mars_Objects,r2			; to prevent BUS problems.
-		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3	; <-- LONG size
-.copy_safe:
+
+	; Copy CAMERA and OBJECTS for Slave
+		mov	#RAM_Mars_DreqRead+Dreq_ObjCam,r1
+		mov	#RAM_Mars_ObjCamera,r2
+		mov	#(sizeof_camera)/4,r3
+.copy_cam:
 		mov	@r1+,r0
 		mov	r0,@r2
 		dt	r3
-		bf/s	.copy_safe
+		bf/s	.copy_cam
 		add	#4,r2
+
+		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1
+		mov	#RAM_Mars_Objects,r2
+		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
+.copy_obj:
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.copy_obj
+		add	#4,r2
+
 		ldc	@r15+,sr
 		mov.w	@(marsGbl_PolyBuffNum,gbr),r0		; Swap Read/Write sections
 		xor	#1,r0
@@ -2467,8 +2480,8 @@ RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
 RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
-RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS
-RAM_Mars_ObjCamera	ds.b sizeof_camera			; 3D Camera buffer
+RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; Slave's Objects
+RAM_Mars_ObjCamera	ds.b sizeof_camera			; Slave's Camera
 RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES			; Zpos, polygondata
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1					; Number of polygons to process

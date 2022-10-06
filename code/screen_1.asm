@@ -1,11 +1,13 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Default gamemode
+; 2D Part
 ; ----------------------------------------------------------------
+
+		phase RAMCODE_USER
 
 ; ====================================================================
 ; ------------------------------------------------------
-; Variables
+; Settings
 ; ------------------------------------------------------
 
 TEST_MAINSPD	equ $04
@@ -41,10 +43,6 @@ RAM_KeepSong	ds.w 1
 ; ------------------------------------------------------
 
 MD_2DMODE:
-; 		bra	MD_DebugMenu
-; 		move.w	#$2700,sr
-
-MD_2DMODE_FROM:
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
@@ -74,7 +72,7 @@ MD_2DMODE_FROM:
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 		move.l	#$10000,(RAM_ThisSpeed).l
 		move.w	#0,(RAM_MapX).l
-		move.w	#$A8,(RAM_MapY).l
+		move.w	#$9C,(RAM_MapY).l
 
 		bsr	MdMap_Init
 		bsr	.update_pos
@@ -131,11 +129,11 @@ MD_2DMODE_FROM:
 		bne.s	.ploop
 
 		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyZ,d7
+		btst	#bitJoyMode,d7
 		beq.s	.not_mode
-
 		bsr	.fade_out
-		bra	MD_3DMODE
+		move.w	#1,(RAM_Glbl_Scrn).w
+		rts
 .not_mode:
 
 		move.w	(Controller_1+on_hold),d7
@@ -200,7 +198,8 @@ MD_2DMODE_FROM:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq	.loop
-		bra	MD_DebugMenu
+		move.w	#2,(RAM_Glbl_Scrn).w
+		rts
 
 
 .update_pos:
@@ -380,7 +379,8 @@ SuperSpr_Init:
 		move.b	#64,marsspr_xs(a0)
 		move.b	#72,marsspr_ys(a0)
 		move.w	#$80,marsspr_indx(a0)
-		move.b	#1,marsspr_yfrm(a0)
+		move.b	#0,marsspr_xfrm(a0)
+		move.b	#0,marsspr_yfrm(a0)
 
 ; 		move.l	#SuperSpr_Test,d0
 ; 		move.l	d0,d1
@@ -438,21 +438,20 @@ SuperSpr_Init:
 
 SuperSpr_Main:
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		sub.w	#1,(RAM_EmiTimer).w
-		bpl.s	.wspr
-		move.w	#6,(RAM_EmiTimer).w
 
-		move.b	marsspr_xfrm(a0),d0
-		add.w	#1,d0
-		and.w	#%111,d0
-		move.b	d0,marsspr_xfrm(a0)
-
-		adda	#sizeof_marsspr,a0
-		move.b	marsspr_yfrm(a0),d0
-		add.w	#1,d0
-		and.w	#%11,d0
-		move.b	d0,marsspr_yfrm(a0)
-.wspr:
+; 		sub.w	#1,(RAM_EmiTimer).w
+; 		bpl.s	.wspr
+; 		move.w	#6,(RAM_EmiTimer).w
+; 		move.b	marsspr_xfrm(a0),d0
+; 		add.w	#1,d0
+; 		and.w	#%111,d0
+; 		move.b	d0,marsspr_xfrm(a0)
+; 		adda	#sizeof_marsspr,a0
+; 		move.b	marsspr_yfrm(a0),d0
+; 		add.w	#1,d0
+; 		and.w	#%11,d0
+; 		move.b	d0,marsspr_yfrm(a0)
+; .wspr:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyX,d7
 		beq	.not_hold3
@@ -461,12 +460,19 @@ SuperSpr_Main:
 		and.w	#%11,marsspr_flags(a0)
 .not_hold3:
 		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyY,d7
+		btst	#bitJoyZ,d7
 		beq	.not_hold4
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		add.b	#1,marsspr_yfrm(a0)
-		and.b	#%11,marsspr_yfrm(a0)
+		add.b	#1,marsspr_xfrm(a0)
+		and.b	#%111,marsspr_xfrm(a0)
 .not_hold4:
+		move.w	(Controller_1+on_press),d7
+		btst	#bitJoyY,d7
+		beq	.not_hold5
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+		add.b	#1,marsspr_yfrm(a0)
+		and.b	#%111,marsspr_yfrm(a0)
+.not_hold5:
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyB,d7
@@ -610,3 +616,10 @@ Level_PickMap:
 ; 		include "data/md/sprites/emi_plc.asm"
 ; 		align 2
 
+; ====================================================================
+
+.here:
+	if MOMPASS=6
+		message "THIS RAM-CODE ends at: \{.here}"
+	endif
+		dephase
