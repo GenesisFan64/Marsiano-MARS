@@ -172,11 +172,11 @@ MdlMap_Init:
 		clr.l	cam_x_rot(a6)
 		clr.l	cam_y_rot(a6)
 		clr.l	cam_z_rot(a6)
-		move.w	#$0E,field_x(a5)
-		move.w	#$10,field_z(a5)
+		move.w	#$0D,field_x(a5)
+		move.w	#$12,field_z(a5)
 		bsr	MdlMap_Build
 		lea	(RAM_MdDreq+Dreq_ObjCam),a6
-		move.l	#-$80,cam_y_pos(a6)
+		move.l	#-$40,cam_y_pos(a6)
 
 MdlMap_Loop:
 		lea	(RAM_MdDreq+Dreq_ObjCam),a6
@@ -258,38 +258,35 @@ MdlMap_Build:
 		adda	d1,a3
 		adda	d0,a3
 
-; 		moveq	#-$400,d1
-; 		move.w	#-$800,d2
-; 		bsr	.column
+	; FRONT
+	; - X X
+	; - X X
+	; - X -
+		adda	#2,a3
+		move.l	a3,a2
 		move.w	#0,d1
 		move.w	#-$800,d2
-		bsr.s	.column
+		bsr	.mk_pz
+		adda	#$40,a3
+		add.w	#$400,d2
+		bsr	.mk_pz
+		adda	#$40,a3
+		add.w	#$400,d2
+		bsr	.mk_pz
+		move.l	a2,a3
 		adda	#2,a3
 		move.w	#$400,d1
 		move.w	#-$800,d2
-; 		bra.s	.column
-
-.column:
-		move.l	a3,a2
-		move.w	(a2),d0
-		lsl.w	#2,d0
-		move.l	(a1,d0.w),mdl_data(a4)
-		move.w	d1,mdl_x_pos(a4)
-		move.w	d2,mdl_z_pos(a4)
-		adda	#sizeof_mdlobj,a4
+		bsr	.mk_pz
+		adda	#$40,a3
 		add.w	#$400,d2
-		adda	#$40,a2
+; 		bsr.s	.mk_pz
+; 		adda	#$40,a3
+; 		add.w	#$400,d2
+; 		bsr.s	.mk_pz
 
-		move.w	(a2),d0
-		lsl.w	#2,d0
-		move.l	(a1,d0.w),mdl_data(a4)
-		move.w	d1,mdl_x_pos(a4)
-		move.w	d2,mdl_z_pos(a4)
-		adda	#sizeof_mdlobj,a4
-		add.w	#$400,d2
-		adda	#$40,a2
-
-		move.w	(a2),d0
+.mk_pz:
+		move.w	(a3),d0
 		lsl.w	#2,d0
 		move.l	(a1,d0.w),mdl_data(a4)
 		move.w	d1,mdl_x_pos(a4)
@@ -325,15 +322,16 @@ MdlMap_Build:
 ; 		align 2
 
 str_Stats2:
-		dc.b "\\l \\l \\l",$A,$A
-		dc.b "\\w \\w \\w",0
+		dc.b "\\l \\l \\l \\w",$A,$A
+		dc.b "\\w \\w \\w \\w",0
 		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_pos
 		dc.l RAM_MdDreq+Dreq_ObjCam+cam_z_pos
 		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_rot
-
+		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm2
+		dc.l sysmars_reg+comm4
 		dc.l RAM_FieldBuff+field_x
 		dc.l RAM_FieldBuff+field_z
-		dc.l sysmars_reg+comm0
 ; 		dc.l RAM_Framecount
 
 ; 		dc.b "\\w \\w \\w \\w",$A
@@ -350,6 +348,7 @@ str_Stats2:
 ; 		dc.l RAM_Framecount
 		align 2
 
+		align 4
 MarsMap_00:
 		include "data/maps/mars/mcity/map_data.asm"
 		dc.l 0

@@ -79,6 +79,7 @@ MD_2DMODE:
 		bsr	Level_PickMap
 		bsr	SuperSpr_Init
 		bsr	MdMap_DrawAll
+
 ; 		lea	(RAM_Sprites),a0
 ; 		move.w	#$80+$30,(a0)+
 ; 		move.w	#$0F00,(a0)+
@@ -96,9 +97,7 @@ MD_2DMODE:
 		move.b	#0,(RAM_VdpRegs+7).l
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-		bsr 	System_WaitFrame	; Send first DREQ
-		moveq	#2,d0			; and set this psd-graphics mode
-		bsr	Video_Mars_GfxMode
+
 
 	; Testing track
 ; 		tst.w	(RAM_KeepSong).w
@@ -116,6 +115,10 @@ MD_2DMODE:
 		moveq	#0,d3
 		bsr	Sound_TrkPlay
 ; .oof:
+
+		bsr 	System_WaitFrame	; Send first DREQ
+		moveq	#2,d0			; and set this psd-graphics mode
+		bsr	Video_Mars_GfxMode
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -512,33 +515,33 @@ SuperSpr_Main:
 
 .not_hold2:
 
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyA,d7
-		beq.s	.not_hold
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.w	marsspr_xs(a0),d0
-		move.w	marsspr_ys(a0),d1
-		moveq	#TEST_MAINSPD,d2
-		moveq	#TEST_MAINSPD,d3
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyRight,d7
-		beq.s	.nor_s2
-		add.w	d2,d0
-.nor_s2:
-		btst	#bitJoyLeft,d7
-		beq.s	.nol_s2
-		sub.w	d2,d0
-.nol_s2:
-		btst	#bitJoyDown,d7
-		beq.s	.nod_s2
-		add.w	d3,d1
-.nod_s2:
-		btst	#bitJoyUp,d7
-		beq.s	.nou_s2
-		sub.w	d3,d1
-.nou_s2:
-		move.w	d0,marsspr_xs(a0)
-		move.w	d1,marsspr_ys(a0)
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyA,d7
+; 		beq.s	.not_hold
+; 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
+; 		move.w	marsspr_xs(a0),d0
+; 		move.w	marsspr_ys(a0),d1
+; 		moveq	#TEST_MAINSPD,d2
+; 		moveq	#TEST_MAINSPD,d3
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyRight,d7
+; 		beq.s	.nor_s2
+; 		add.w	d2,d0
+; .nor_s2:
+; 		btst	#bitJoyLeft,d7
+; 		beq.s	.nol_s2
+; 		sub.w	d2,d0
+; .nol_s2:
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.nod_s2
+; 		add.w	d3,d1
+; .nod_s2:
+; 		btst	#bitJoyUp,d7
+; 		beq.s	.nou_s2
+; 		sub.w	d3,d1
+; .nou_s2:
+; 		move.w	d0,marsspr_xs(a0)
+; 		move.w	d1,marsspr_ys(a0)
 .not_hold:
 
 		add.w	#1,(RAM_EmiFrame).w

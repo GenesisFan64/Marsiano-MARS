@@ -1,5 +1,5 @@
 MarsMapPz_02_main:
-		dc.w 202,330
+		dc.w 226,354
 		dc.l .vert,.face,.vrtx,.mtrl
 .vert:		binclude "data/maps/mars/mcity/pz/02_main_vert.bin"
 .face:		binclude "data/maps/mars/mcity/pz/02_main_face.bin"

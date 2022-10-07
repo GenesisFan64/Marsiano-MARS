@@ -56,6 +56,7 @@ marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model da
 marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1	; Current watchdog task
 marsGbl_WdgHold		ds.w 1	; Watchdog pause
+marsGbl_WdgReady	ds.w 1
 marsGbl_WdgDivLock	ds.w 1	; Tell Watchdog we are mid-division.
 marsGbl_PolyBuffNum	ds.w 1	; Polygon-list swap number
 marsGbl_PlyPzCntr	ds.w 1	; Number of graphic pieces to draw
@@ -1286,9 +1287,8 @@ SH2_M_HotStart:
 		nop
 		nop
 		nop
-		xor	r0,r0
-		mov	#_sysreg+comm12,r2
-		mov.w	r0,@r2
+		nop
+		nop
 		mov	#9,r0
 		mov.b	r0,@r1
 		mov	#_sysreg,r1
@@ -1542,6 +1542,15 @@ mstr_gfx1_hblk:
 ; -------------------------------
 
 mstr_gfx1_init_1:
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
+		mov	#_sysreg+comm14,r1
+.slv_init:	mov.w	@r1,r0
+		and	#%00001111,r0
+		tst	r0,r0
+		bf	.slv_init
+
 		mov	#CACHE_MSTR_SCRL,r1		; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -1620,9 +1629,12 @@ mstr_gfx2_hblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 		mov	#_sysreg+comm14,r1
 .slv_init:	mov.w	@r1,r0
-		and	#%0001111,r0
+		and	#%00001111,r0
 		tst	r0,r0
 		bf	.slv_init
 		xor	r0,r0
@@ -1633,7 +1645,6 @@ mstr_gfx2_init_1:
 		dt	r2
 		bf/s	.clr_scrn
 		add	#4,r1
-
 		mov	#CACHE_MSTR_SCRL,r1			; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -1792,9 +1803,12 @@ mstr_gfx3_hblk:
 ; -------------------------------
 
 mstr_gfx3_init_1:
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 		mov	#_sysreg+comm14,r1
 .slv_init:	mov.w	@r1,r0
-		and	#%0001111,r0
+		and	#%00001111,r0
 		tst	r0,r0
 		bf	.slv_init
 		xor	r0,r0
@@ -1838,13 +1852,13 @@ mstr_gfx3_loop:
 		mov	#_sysreg+comm14,r4
 .slv_busy:
 		mov.w	@r1,r0
-		and	#%1111,r0
+		and	#%00001111,r0
 		cmp/eq	#3,r0			; MODE $03?
 		bf	mstr_ready
 		mov.w	@r4,r0
 		and	#%00001111,r0
 		tst	r0,r0
-		bf	mstr_ready;.slv_busy
+		bf	mstr_ready		; .slv_busy
 		stc	sr,@-r15
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -1884,6 +1898,7 @@ mstr_gfx3_loop:
 		bf	.wait_fb_i
 		mov	#$A5,r0				; VDPFILL: Pre-start at $A5
 		mov.w	r0,@(6,r1)
+
 		mov	#RAM_Mars_SVdpDrwList,r0	; Reset DDA Start/End/Read/Write points
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
@@ -1892,6 +1907,7 @@ mstr_gfx3_loop:
 		mov	r0,@(marsGbl_PlyPzList_End,gbr)
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)	; And pieces counter
+		mov.w	r0,@(marsGbl_WdgReady,gbr)
 		mov	#7,r0				; Start on last mode
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 		mov	#224,r0				; Lines to clear (WdgMode $07)
@@ -1946,7 +1962,8 @@ mstr_gfx3_loop:
 		bf/s	.loop
 		add	#8,r14				; Move to next entry
 .skip:
-; 		testme 1
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgReady,gbr)
 .wait_pz: 	mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces remaining?
 		tst	r0,r0
 		bf	.wait_pz
@@ -1957,15 +1974,9 @@ mstr_gfx3_loop:
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
 		mov	#_vdpreg,r1
-.wait_fb:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
-		tst	#2,r0
-		bf	.wait_fb
-.wait_sv:	mov.w	@($A,r1),r0			; Wait until FB is free
+.wait_sv:	mov.w	@($A,r1),r0			; Wait until FB is unlocked
 		tst	#2,r0
 		bf	.wait_sv
-.waitv:		mov.b	@(vdpsts,r1),r0			; Check for framedrop
-		tst	#VBLK,r0
-		bf	.waitv
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -2295,9 +2306,8 @@ SH2_S_HotStart:
 		nop
 		nop
 		nop
-		xor	r0,r0
-		mov	#_sysreg+comm14,r2
-		mov.w	r0,@r2
+		nop
+		nop
 		mov	#9,r0
 		mov.b	r0,@r1
 		mov	#CACHE_SLAVE,r1

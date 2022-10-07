@@ -260,10 +260,10 @@ MD_Init:
 		btst	#15,d0
 		bne.s	.hotstart
 		lea	(sysmars_reg).l,a5
-.wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master active?
-		bne.s	.wm
-.ws:		cmp.l	#"S_OK",comm4(a5)	; SH2 Slave active?
-		bne.s	.ws
+; .wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master active?
+; 		bne.s	.wm
+; .ws:		cmp.l	#"S_OK",comm4(a5)	; SH2 Slave active?
+; 		bne.s	.ws
 .hotstart:
 		lea	($FFFF0000),a0		; Cleanup our RAM
 		move.l	#sizeof_mdram,d1

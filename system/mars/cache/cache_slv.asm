@@ -259,10 +259,10 @@ MarsMdl_MdlLoop:
 		mov	#RAM_Mars_Objects,r14
 		mov	#MAX_MODELS,r13
 .loop:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
-		mov	#MAX_FACES,r1
-		cmp/ge	r1,r0
-		bt	.skip
+; 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
+; 		mov	#MAX_FACES,r1
+; 		cmp/ge	r1,r0
+; 		bt	.skip
 		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
 		cmp/pl	r0
 		bf	.invlid
@@ -285,7 +285,10 @@ MarsMdl_MdlLoop:
 		bt	.page_2
 		mov 	#RAM_Mars_PlgnNum_1,r1
 .page_2:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
+		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
+		mov	#MAX_FACES,r2
+		cmp/ge	r2,r0
+		bt	*
 		mov	r0,@r1
 		lds	@r15+,pr
 		rts
@@ -352,8 +355,6 @@ MarsMdl_ReadModel:
 		cmp/ge	r1,r0
 		bf	.can_build
 .no_model:
-		mov	.tag_maxfaces,r0
-		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
 		bra	.exit_model
 		nop
 		align 4

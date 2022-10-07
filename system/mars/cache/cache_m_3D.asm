@@ -135,6 +135,9 @@ slvplgn_01:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
+		mov.w	@(marsGbl_WdgReady,gbr),r0
+		tst	r0,r0
+		bt	.exit
 		mov	#0,r0
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 .exit:		bra	drwtask_exit
@@ -563,7 +566,7 @@ drwsld_nextpz:
 		mov	r0,@(plypz_type,r14)
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
 		add	#sizeof_plypz,r14		; And set new point
-		cmp/ge	r0,r14
+		cmp/gt	r0,r14
 		bf	.reset_rd
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r14
@@ -574,7 +577,7 @@ drwsld_nextpz:
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		bra	drwtask_return
-		mov	#$10,r2			; Timer for next watchdog
+		mov	#$20,r2			; Timer for next watchdog
 
 ; --------------------------------
 ; Task $00
@@ -757,12 +760,8 @@ MarsVideo_SlicePlgn:
 		mov	r8,@-r0
 		mov	r9,@-r0
 		mov	r11,@-r0
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
 		bsr	put_piece
 		nop
-		mov	#0,r0
-		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
 		mov	#Cach_Bkup_LPZ,r0
 		mov	@r0+,r11
 		mov	@r0+,r9
@@ -954,6 +953,8 @@ set_right:
 	; r10 - Top Y, gets updated after calling put_piece
 
 put_piece:
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Tell watchdog we are mid-write
 		mov	@(4,r2),r8	; Left DDA's Y
 		mov	@(4,r3),r9	; Right DDA's Y
 		sub	r10,r8
@@ -1050,18 +1051,19 @@ put_piece:
 	; next piece
 		add	#sizeof_plypz,r1
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		cmp/ge	r0,r1
+		cmp/gt	r0,r1
 		bf	.dontres
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r1
 .dontres:
 		mov	r1,r0
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
-
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0
 		add	#1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 .bad_piece:
+		mov	#0,r0
+		mov.w	r0,@(marsGbl_WdgHold,gbr)	; Unlock.
 		rts
 		nop
 		align 4

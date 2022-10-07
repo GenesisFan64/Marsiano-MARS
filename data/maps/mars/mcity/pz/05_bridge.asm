@@ -1,5 +1,5 @@
 MarsMapPz_05_bridge:
-		dc.w 721,2326
+		dc.w 553,1993
 		dc.l .vert,.face,.vrtx,.mtrl
 .vert:		binclude "data/maps/mars/mcity/pz/05_bridge_vert.bin"
 .face:		binclude "data/maps/mars/mcity/pz/05_bridge_face.bin"
