@@ -1264,16 +1264,16 @@ Video_DmaBlast:
 ; --------------------------------------------------------
 
 Video_Mars_GfxMode:
-		move.w	d0,d6
-		and.w	#%00000111,d6			; Current limit: 8 modes
-		or.w	#$C0,d6
-		move.w	(sysmars_reg+comm12).l,d7	; Grab current comm12
-		and.w	#$FF00,d7			; Clear our byte
-		or.w	d6,d7				; merge changes
-		move.w	d7,(sysmars_reg+comm12).l	; Write into it.
-.wait:		move.w	(sysmars_reg+comm12).l,d7
+		move.w	d0,d7
+		and.w	#%00000111,d7			; Current limit: 8 Master modes
+		or.w	#$C0,d7
+		move.b	d7,(sysmars_reg+comm12+1).l
+.wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master to finish init
 		and.w	#%11000000,d7
 		bne.s	.wait
+.wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for any Slave tasks too.
+		and.w	#%00001111,d7
+		bne.s	.wait_slv
 		rts
 
 ; --------------------------------------------------------

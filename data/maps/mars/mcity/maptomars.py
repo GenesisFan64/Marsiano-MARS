@@ -23,7 +23,7 @@ import os
 # 
 # CHANGE: me.transform(EXPORT_GLOBAL_MATRIX @ ob_mat)
 # TO:     me.transform(EXPORT_GLOBAL_MATRIX)
-SCALE_SIZE	  = 0x80#0x100
+SCALE_SIZE	  = 0x100
 
 # reserved names for textures
 TAG_NOMATERIAL	  = "MARSNULL"		# random color mode
@@ -526,13 +526,13 @@ for curr_rdpz in range(0,num_pz):
   # generate include
   out_head.write("MarsMapPz_"+mappz_list[curr_pz]+":\n")
   out_head.write("\t\tdc.w "+str(used_triangles+used_quads)+","+str(num_vert)+"\n") # numof_faces, numof_vertices
-  out_head.write("\t\tdc.l .vert,.face,.vrtx,.mtrl\n")
+  out_head.write("\t\tdc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl\n")
   out_head.write('.vert:\t\tbinclude "data/maps/mars/mcity/pz/'+mappz_list[curr_pz]+'_vert.bin"\n')
   out_head.write('.face:\t\tbinclude "data/maps/mars/mcity/pz/'+mappz_list[curr_pz]+'_face.bin"\n')
   out_head.write('.vrtx:\t\tbinclude "data/maps/mars/mcity/pz/'+mappz_list[curr_pz]+'_vrtx.bin"\n')
   out_head.write('.mtrl:\t\tinclude "data/maps/mars/mcity/pz/'+mappz_list[curr_pz]+'_mtrl.asm"\n')
-  out_head.write("\t\talign 4\n")
-  
+  out_mtrl.write("\t\talign 4\n")
+
   model_file.close()
   material_file.close()
   out_vertices.close()

@@ -270,10 +270,6 @@ MarsMdl_MdlLoop:
 		jsr	@r0
 		mov	r13,@-r15
 		mov	@r15+,r13
-
-; 		mov	r1,r0
-; 		bra	.skip
-; 		mov	r0,@(marsGbl_CurrNumFaces,gbr)
 .invlid:
 		dt	r13
 		bf/s	.loop
@@ -286,9 +282,6 @@ MarsMdl_MdlLoop:
 		mov 	#RAM_Mars_PlgnNum_1,r1
 .page_2:
 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
-		mov	#MAX_FACES,r2
-		cmp/ge	r2,r0
-		bt	*
 		mov	r0,@r1
 		lds	@r15+,pr
 		rts
@@ -303,45 +296,7 @@ MarsMdl_MdlLoop:
 		align 4
 MarsMdl_ReadModel:
 		sts	pr,@-r15
-; 		mov	@(mdl_animdata,r14),r13
-; 		cmp/pl	r13
-; 		bf	.no_anim
-; 		mov	@(mdl_animtimer,r14),r0
-; 		add	#-1,r0
-; 		cmp/pl 	r0
-; 		bt	.wait_camanim
-; 		mov	@r13+,r2
-; 		mov	@(mdl_animframe,r14),r0
-; 		add	#1,r0
-; 		cmp/eq	r2,r0
-; 		bf	.on_frames
-; 		xor	r0,r0
-; .on_frames:
-; 		mov	r0,r1
-; 		mov	r0,@(mdl_animframe,r14)
-; 		mov	#$18,r0
-; 		mulu	r0,r1
-; 		sts	macl,r0
-; 		add	r0,r13
-; 		mov	@r13+,r1
-; 		mov	@r13+,r2
-; 		mov	@r13+,r3
-; 		mov	@r13+,r4
-; 		mov	@r13+,r5
-; 		mov	@r13+,r6
-; ; 		neg	r4,r4
-; 		mov	r1,@(mdl_x_pos,r14)
-; 		mov	r2,@(mdl_y_pos,r14)
-; 		mov	r3,@(mdl_z_pos,r14)
-; 		mov	r4,@(mdl_x_rot,r14)
-; 		mov	r5,@(mdl_y_rot,r14)
-; 		mov	r6,@(mdl_z_rot,r14)
-; 		mov	@(mdl_animspd,r14),r0		; TODO: make a timer setting
-; .wait_camanim:
-; 		mov	r0,@(mdl_animtimer,r14)
-; .no_anim:
 
-	; Now start reading
 		mov	#Cach_CurrPlygn,r13		; r13 - temporal face output
 		mov	@(mdl_data,r14),r12		; r12 - model header
 		mov 	@(8,r12),r11			; r11 - face data
@@ -350,9 +305,9 @@ MarsMdl_ReadModel:
 		mov	@(marsGbl_CurrZList,gbr),r0	;  r8 - Zlist for sorting
 		mov	r0,r8
 .next_face:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
+		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of face storage?
 		mov	.tag_maxfaces,r1
-		cmp/ge	r1,r0
+		cmp/gt	r1,r0
 		bf	.can_build
 .no_model:
 		bra	.exit_model
@@ -364,6 +319,7 @@ MarsMdl_ReadModel:
 
 .can_build:
 		mov.w	@r11+,r4		; Read type
+		nop
 		mov	#3,r7			; r7 - Current polygon type: triangle (3)
 		mov	r4,r0
 		shlr8	r0
@@ -381,10 +337,9 @@ MarsMdl_ReadModel:
 		mov	@($C,r12),r6		; r6 - Material data
 		mov	r13,r5			; r5 - Go to UV section
 		add 	#polygn_srcpnts,r5
-		mov	r7,r3			; r3 - copy of current face points (3 or 4)
 	rept 3
 		mov.w	@r11+,r0		; Read UV index
-		extu	r0,r0
+		extu.w	r0,r0
 		shll2	r0
 		mov	@(r6,r0),r0
 		mov.w	r0,@(2,r5)
@@ -392,29 +347,33 @@ MarsMdl_ReadModel:
 		mov.w	r0,@r5
 		add	#4,r5
 	endm
-		mov	#3,r0			; Triangle?
-		cmp/eq	r0,r7
+		mov	r7,r0			; Triangle?
+		cmp/eq	#3,r0
 		bt	.alluvdone		; If yes, skip this
+		nop
 		mov.w	@r11+,r0		; Read extra UV index
-		extu	r0,r0
+		extu.w	r0,r0
 		shll2	r0
 		mov	@(r6,r0),r0
 		mov.w	r0,@(2,r5)
 		shlr16	r0
 		mov.w	r0,@r5
 .alluvdone:
+		mov	#-1,r5
+		extu.b	r5,r5			; $FF
 		mov	@(mdl_option,r14),r0
 		extu.b	r0,r0
-; 		and	#$FF,r0
 		mov	r0,r1
 		mov	r4,r0
-		mov	.tag_andmtrl,r5
 		and	r5,r0
 		shll2	r0
-		shll	r0
 		mov	@($10,r12),r6
+		shll	r0
 		add	r0,r6
-		mov	#$C000,r0		; grab special bits
+; 		mov	#$C000,r0
+		mov	#$60,r0		; grab special bits ($C000)
+		shll	r0
+		shll8	r0
 		and	r0,r4
 		shll16	r4
 		mov	@(4,r6),r0
@@ -426,8 +385,6 @@ MarsMdl_ReadModel:
 		bra	.go_faces
 		nop
 		align 4
-.tag_andmtrl:
-		dc.l $3FFF
 
 ; --------------------------------
 ; Set texture material
@@ -439,7 +396,10 @@ MarsMdl_ReadModel:
 ; 		and	#$FF,r0
 		mov	r0,r1
 		mov	r4,r0
-		mov	#$E000,r5
+; 		mov	#$E000,r5
+		mov	#$70,r5		; $E000
+		shll	r5
+		shll8	r5
 		and	r5,r4
 		shll16	r4
 		add	r1,r4
@@ -466,11 +426,11 @@ MarsMdl_ReadModel:
 		mov 	r11,@-r0
 		mov 	r12,@-r0
 		mov 	r13,@-r0
-		mov	.tag_xl,r8
+		mov	#-(320/2)>>1,r8
+		shll	r8
+		mov	#-(224/2),r11
 		neg	r8,r9
-		mov	#-112,r11
 		neg	r11,r12
-		mov	#$7FFFFFFF,r5
 		mov	#-1,r13		; $FFFFFFFF
 
 	; Do 3 points
@@ -490,10 +450,12 @@ MarsMdl_ReadModel:
 		mov	r2,@r1
 		mov	r3,@(4,r1)
 		add	#8,r1
+		nop
 	endm
 		mov	#3,r0			; Triangle?
 		cmp/eq	r0,r7
 		bt	.alldone		; If yes, skip this
+		nop
 		mov	#0,r0
 		mov.w 	@r6+,r0
 		mov	#$C,r4
@@ -533,8 +495,8 @@ MarsMdl_ReadModel:
 		bt	.go_fout
 ; 		cmp/pz	r6			; *** front z
 ; 		bt	.go_fout
-
-		mov	#MAX_ZDIST,r0		; Draw distance
+		mov	#MAX_ZDIST>>8,r0	; Draw distance
+		shll8	r0
 		cmp/ge	r0,r5
 		bf	.go_fout
 		mov	#-(SCREEN_WIDTH/2),r0
@@ -552,7 +514,6 @@ MarsMdl_ReadModel:
 .go_fout:	bra	.face_out
 		nop
 		align 4
-.tag_xl:	dc.l -160
 
 ; --------------------------------
 
@@ -623,7 +584,7 @@ MarsMdl_ReadModel:
 		rts
 		nop
 		align 4
-		ltorg
+; 		ltorg
 
 ; ----------------------------------------
 ; Modify position to current point
@@ -669,9 +630,9 @@ mdlrd_setpoint:
 		exts.w	r0,r6
 		mov.w	@(mdl_z_pos,r14),r0
 		exts.w	r0,r7
- 		shar	r5
- 		shar	r6
- 		shar	r7
+;  		shar	r5
+;  		shar	r6
+;  		shar	r7
 		add 	r5,r2
 		add 	r6,r3
 		add 	r7,r4
@@ -681,9 +642,9 @@ mdlrd_setpoint:
 		mov	@(cam_x_pos,r11),r5
 		mov	@(cam_y_pos,r11),r6
 		mov	@(cam_z_pos,r11),r7
-		shlr	r5
-		shlr	r6
-		shlr	r7
+; 		shlr	r5
+; 		shlr	r6
+; 		shlr	r7
 		exts	r5,r5
 		exts	r6,r6
 		exts	r7,r7
@@ -729,14 +690,14 @@ mdlrd_setpoint:
 		shlr2	r7
 		shlr2	r7
 ; 		shlr	r7
-		dmuls	r7,r2
-		sts	mach,r0
-		sts	macl,r2
-		xtrct	r0,r2
-		dmuls	r7,r3
-		sts	mach,r0
-		sts	macl,r3
-		xtrct	r0,r3
+; 		dmuls	r7,r2
+; 		sts	mach,r0
+; 		sts	macl,r2
+; 		xtrct	r0,r2
+; 		dmuls	r7,r3
+; 		sts	mach,r0
+; 		sts	macl,r3
+; 		xtrct	r0,r3
 		bra	.zmulti
 		nop
 .inside:
@@ -745,6 +706,7 @@ mdlrd_setpoint:
 		mov 	r7,@(4,r9)
 		nop
 		mov 	@(4,r9),r7
+.zmulti:
 		dmuls	r7,r2
 		sts	mach,r0
 		sts	macl,r2
@@ -753,7 +715,7 @@ mdlrd_setpoint:
 		sts	mach,r0
 		sts	macl,r3
 		xtrct	r0,r3
-.zmulti:
+
 		mov	#Cach_BkupPnt_L,r0
 		mov	@r0+,r11
 		mov	@r0+,r10
@@ -852,10 +814,10 @@ Cach_BkupS_L		ds.l 5				; **
 Cach_BkupS_S		ds.l 0				; <-- Reads backwards
 Cach_SlvStack_L		ds.l 10				; **
 Cach_SlvStack_S		ds.l 0				; <-- Reads backwards
+MarsSnd_RvMode		ds.l 1				; ROM RV protection flag
+MarsSnd_PwmControl	ds.b 8*7			; 8 bytes per channel.
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
 Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
-MarsSnd_PwmControl	ds.b 8*7			; 8 bytes per channel.
-MarsSnd_RvMode		ds.l 1				; ROM RV protection flag
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

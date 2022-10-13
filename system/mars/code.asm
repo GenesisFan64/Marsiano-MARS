@@ -19,7 +19,7 @@
 		phase CS3	; Now we are at SDRAM
 		cpu SH7600	; Should be SH7095 but this CPU mode works.
 
-; CPU TEST MACRO
+; CPU METER MACRO
 testme macro color
 		mov	#color,r1
 		mov	#_vdpreg,r2
@@ -1542,15 +1542,6 @@ mstr_gfx1_hblk:
 ; -------------------------------
 
 mstr_gfx1_init_1:
-		mov.l   #$FFFFFE80,r1
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		mov	#_sysreg+comm14,r1
-.slv_init:	mov.w	@r1,r0
-		and	#%00001111,r0
-		tst	r0,r0
-		bf	.slv_init
-
 		mov	#CACHE_MSTR_SCRL,r1		; Load CACHE code
 		mov	#(CACHE_MSTR_SCRL_E-CACHE_MSTR_SCRL)/4,r2
 		mov	#Mars_LoadCacheRam,r0
@@ -1629,14 +1620,16 @@ mstr_gfx2_hblk:
 ; -------------------------------
 
 mstr_gfx2_init_1:
-		mov.l   #$FFFFFE80,r1
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
 		mov	#_sysreg+comm14,r1
-.slv_init:	mov.w	@r1,r0
+.slv_wait:	mov.w	@r1,r0
 		and	#%00001111,r0
 		tst	r0,r0
-		bf	.slv_init
+		bf	.slv_wait
+		mov	#_vdpreg,r1
+.wait_fb:	mov.w	@(vdpsts,r1),r0
+		tst	#2,r0
+		bf	.wait_fb
+
 		xor	r0,r0
 		mov	#RAM_Mars_ScrnBuff,r1
 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
@@ -1702,22 +1695,8 @@ mstr_gfx2_loop:
  		mov	#MarsVideo_DrawBgSSpr,r0	; Draw backup BG using OLD values
 		jsr	@r0
 		nop
-; 		mov	#_CCR,r3
-; 		mov	#%00010000,r0			; Cache purge + Disable
-; 		mov.w	r0,@r3
-; 		nop					; So the sprite data can be Cache'd
-; 		nop
-; 		nop
-; 		nop
-; 		nop
-; 		nop
-; 		nop
-; 		nop
-; 		mov	#%00001001,r0				; Cache two-way mode + Enable
-; 		mov.w	r0,@r3
-		mov	#_sysreg+comm14+1,r1			; Wait for Slave
-		mov.b	@r1,r0
-		or	#$01,r0					; Slave task $01
+		mov	#_sysreg+comm14+1,r1		; Slave task $01
+		mov	#1,r0
 		mov.b	r0,@r1
 
 ;  testme 2
@@ -1752,18 +1731,17 @@ mstr_gfx2_loop:
 		mov	#MarsVideo_FixTblShift,r0	; HW: Fix those broken lines that
 		jsr	@r0				; the Xshift register can't move.
 		nop
-
 		mov	#_sysreg+comm14,r1		; Wait for Slave
 .wait_slv:
 		mov.w	@r1,r0
-		and	#%1111,r0
+		and	#%00001111,r0
 		tst	r0,r0
 		bf	.wait_slv
 		mov	#_vdpreg,r1			; Make frame...
-; .waitv:
-; 		mov.b	@(vdpsts,r1),r0
-; 		tst	#VBLK,r0
-; 		bf	.waitv
+.waitv:
+		mov.b	@(vdpsts,r1),r0
+		tst	#VBLK,r0
+		bf	.waitv
 		mov.b	@(framectl,r1),r0
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
@@ -1803,14 +1781,6 @@ mstr_gfx3_hblk:
 ; -------------------------------
 
 mstr_gfx3_init_1:
-		mov.l   #$FFFFFE80,r1
-		mov.w   #$A518,r0
-		mov.w   r0,@r1
-		mov	#_sysreg+comm14,r1
-.slv_init:	mov.w	@r1,r0
-		and	#%00001111,r0
-		tst	r0,r0
-		bf	.slv_init
 		xor	r0,r0
 		mov	#RAM_Mars_ScrnBuff,r1
 		mov	#(end_scrn02-RAM_Mars_ScrnBuff)/4,r2
@@ -1819,8 +1789,8 @@ mstr_gfx3_init_1:
 		dt	r2
 		bf/s	.clr_scrn
 		add	#4,r1
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
+; 		xor	r0,r0
+; 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
 
 		mov	#CACHE_MSTR_PLGN,r1
 		mov	#(CACHE_MSTR_PLGN_E-CACHE_MSTR_PLGN)/4,r2
@@ -1848,33 +1818,16 @@ mstr_gfx3_init_cont:
 ; -------------------------------
 
 mstr_gfx3_loop:
-		mov	#_sysreg+comm12,r1
 		mov	#_sysreg+comm14,r4
-.slv_busy:
-		mov.w	@r1,r0
-		and	#%00001111,r0
-		cmp/eq	#3,r0			; MODE $03?
-		bf	mstr_ready
+.wait_me:
 		mov.w	@r4,r0
 		and	#%00001111,r0
 		tst	r0,r0
-		bf	mstr_ready		; .slv_busy
+		bf	.slv_busy		; .slv_busy
 		stc	sr,@-r15
 		mov	#$F0,r0
 		ldc	r0,sr
-
-	; Copy CAMERA and OBJECTS for Slave
-		mov	#RAM_Mars_DreqRead+Dreq_ObjCam,r1
-		mov	#RAM_Mars_ObjCamera,r2
-		mov	#(sizeof_camera)/4,r3
-.copy_cam:
-		mov	@r1+,r0
-		mov	r0,@r2
-		dt	r3
-		bf/s	.copy_cam
-		add	#4,r2
-
-		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1
+		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy CAMERA and OBJECTS for Slave
 		mov	#RAM_Mars_Objects,r2
 		mov	#(sizeof_mdlobj*MAX_MODELS)/4,r3
 .copy_obj:
@@ -1883,22 +1836,36 @@ mstr_gfx3_loop:
 		dt	r3
 		bf/s	.copy_obj
 		add	#4,r2
-
-		ldc	@r15+,sr
+		mov	#RAM_Mars_DreqRead+Dreq_ObjCam,r1
+		mov	#RAM_Mars_ObjCamera,r2
+		mov	#sizeof_camera/4,r3
+.copy_cam:
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.copy_cam
+		add	#4,r2
 		mov.w	@(marsGbl_PolyBuffNum,gbr),r0		; Swap Read/Write sections
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
-		mov	#_sysreg+comm14+1,r4
-		mov.b	@r4,r0
-		or	#$02,r0				; Slave task $02
+		mov	#_sysreg+comm14+1,r4			; Slave task $02
+		mov	#2,r0
 		mov.b	r0,@r4
+	if SH2_DEBUG
+		mov	#_sysreg+comm0,r1		; DEBUG counter
+		xor	r0,r0
+		mov.b	r0,@r1
+	endif
+		ldc	@r15+,sr
+.slv_busy:
+
+	; Start with the polygons
 		mov	#_vdpreg,r1
 .wait_fb_i:	mov.w	@(vdpsts,r1),r0			; Wait until framebuffer is unlocked
 		tst	#2,r0
 		bf	.wait_fb_i
 		mov	#$A5,r0				; VDPFILL: Pre-start at $A5
 		mov.w	r0,@(6,r1)
-
 		mov	#RAM_Mars_SVdpDrwList,r0	; Reset DDA Start/End/Read/Write points
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
 		mov	r0,@(marsGbl_PlyPzList_W,gbr)
@@ -1919,15 +1886,14 @@ mstr_gfx3_loop:
 		mov	#MarsVideo_MakeNametbl,r0
 		jsr	@r0
 		mov	#0,r4
-
 		mov	#0,r1
 		mov	#$10,r2
 		mov	#Mars_SetWatchdog,r0
 		jsr	@r0
 		nop
 
-	; While doing this: the watchdog is
-	; drawing the polygons using the "pieces" list
+	; The watchdog is now active checking for pieces
+	; to draw.
 	;
 	; r14 - Polygon pointers list
 	; r13 - Number of polygons to build
@@ -2496,6 +2462,7 @@ RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES			; Zpos, polygondata
 RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
 RAM_Mars_PlgnNum_0	ds.l 1					; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
+; RAM_Mars_VertOut	ds.l 4*MAX_FACES
 sizeof_scrn04		ds.l 0
 			finish
 	if MOMPASS=6

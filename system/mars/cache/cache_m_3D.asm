@@ -501,7 +501,7 @@ drwsld_nxtline:
 		and	r0,r12
 		mov	r12,r0
 		sub	r11,r0
-		cmp/pl	r0
+		cmp/pz	r0		; <-- TODO: cambiar a pl si freezea
 		bf	drwsld_updline
 
 .wait:		mov.w	@(10,r13),r0
@@ -566,7 +566,7 @@ drwsld_nextpz:
 		mov	r0,@(plypz_type,r14)
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
 		add	#sizeof_plypz,r14		; And set new point
-		cmp/gt	r0,r14
+		cmp/ge	r0,r14
 		bf	.reset_rd
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r14

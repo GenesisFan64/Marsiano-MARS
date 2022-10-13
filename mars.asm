@@ -25,19 +25,8 @@
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		move.w	#1,(RAM_Glbl_Scrn).w
-.next_mode:
-		moveq	#0,d0
-		move.w	(RAM_Glbl_Scrn).w,d0
-		lsl.w	#2,d0
-		move.l	.pick_boot(pc,d0.w),d0
-		jsr	(System_JumpRamCode).l
-		bra.s	.next_mode
-.pick_boot:
-		dc.l RamCode_Scrn1
-		dc.l RamCode_Scrn2
-		dc.l RamCode_Debug
-		dc.l RamCode_Scrn1
+		move.w	#1,(RAM_Glbl_Scrn).w		; *** TEMPORAL ***
+		jmp	(Md_ReadModes).l
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -50,6 +39,19 @@ minfo_ram_s:
 		include	"system/md/sound.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
+Md_ReadModes:
+		moveq	#0,d0
+		move.w	(RAM_Glbl_Scrn).w,d0
+		lsl.w	#2,d0
+		move.l	.pick_boot(pc,d0.w),d0
+		jsr	(System_JumpRamCode).l
+		bra.s	Md_ReadModes
+.pick_boot:
+		dc.l RamCode_Scrn1
+		dc.l RamCode_Scrn2
+		dc.l RamCode_Debug
+		dc.l RamCode_Scrn1
+
 	if MOMPASS=6
 .here:		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
 	endif

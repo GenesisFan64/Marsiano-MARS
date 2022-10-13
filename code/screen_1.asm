@@ -46,8 +46,8 @@ MD_2DMODE:
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-		bsr	Mode_Init
 		bsr	Video_PrintInit
+		bsr	Mode_Init
 
 	; MAP TESTING
 		move.l	#Art_level0,d0			; Genesis VDP graphics
@@ -97,7 +97,7 @@ MD_2DMODE:
 		move.b	#0,(RAM_VdpRegs+7).l
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-
+		bsr 	System_WaitFrame	; Send first DREQ
 
 	; Testing track
 ; 		tst.w	(RAM_KeepSong).w
@@ -116,7 +116,6 @@ MD_2DMODE:
 		bsr	Sound_TrkPlay
 ; .oof:
 
-		bsr 	System_WaitFrame	; Send first DREQ
 		moveq	#2,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
 
@@ -130,6 +129,10 @@ MD_2DMODE:
 .ploop:		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.ploop
+
+; 		lea	str_Stats3(pc),a0
+; 		move.l	#locate(0,0,10),d0
+; 		bsr	Video_Print
 
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyMode,d7
@@ -607,6 +610,21 @@ Level_PickMap:
 ;
 ; Small stuff goes here
 ; ------------------------------------------------------
+
+; str_Stats3:
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b "\\w \\w \\w \\w",$A,$A
+; 		dc.b "\\l",0
+; 		dc.l sysmars_reg+comm0
+; 		dc.l sysmars_reg+comm2
+; 		dc.l sysmars_reg+comm4
+; 		dc.l sysmars_reg+comm6
+; 		dc.l sysmars_reg+comm8
+; 		dc.l sysmars_reg+comm10
+; 		dc.l sysmars_reg+comm12
+; 		dc.l sysmars_reg+comm14
+; 		dc.l RAM_Framecount
+; 		align 2
 
 ; Pal_Emily:
 ; 		dc.w 0

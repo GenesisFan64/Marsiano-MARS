@@ -570,7 +570,15 @@ Mode_Init:
 .clr:
 		move.w	d4,(a4)+
 		dbf	d5,.clr
-; 		move.w	#0,d0			; causes freeze
+
+		lea	(RAM_MdDreq+Dreq_Objects),a4	; Patch
+		move.w	#MAX_MODELS-1,d5
+.clr_mdls:
+		move.l	d4,mdl_data(a4)
+		adda	#sizeof_mdlobj,a4
+		dbf	d5,.clr_mdls
+
+; 		move.w	#0,d0
 ; 		bsr	Video_Mars_GfxMode
 		rts
 

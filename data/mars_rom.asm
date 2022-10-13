@@ -45,5 +45,4 @@ MapFg_M:	binclude "data/maps/level0/fg_main.bin"
 		align 4
 ; MCity_Pz_Null:
 ; 		include "data/maps/mars/mcity/mdl/pz_null/head.asm"
-		include "data/maps/mars/mcity/map_incl.asm"
-		align 4
+

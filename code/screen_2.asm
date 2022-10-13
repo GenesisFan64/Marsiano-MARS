@@ -10,7 +10,8 @@
 ; Settings
 ; ------------------------------------------------------
 
-; TEST_MAINSPD	equ $04
+MAPPZ_SIZE	equ $1000
+SET_MAPSPD	equ $10
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -51,8 +52,8 @@ MD_3DMODE:
 		move.w	#Art_Test3D_e-Art_Test3D,d2
 		bsr	Video_LoadArt
 		lea	(Map_Test3D),a0			; 16-color palette
-		move.l	#locate(1,0,0),d0		; Genesis VDP graphics
-		move.l	#mapsize(320,224),d1
+		move.l	#locate(1,0,0),d0
+		move.l	#mapsize(512,224),d1
 		moveq	#1,d2
 		bsr	Video_LoadMap
 		lea	(Pal_Test3D),a0			; 16-color palette
@@ -96,9 +97,13 @@ MD_3DMODE:
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
 
-		bsr 	System_WaitFrame	; Send first DREQ
 		moveq	#3,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
+
+
+		bsr	Video_Mars_WaitFrame
+		bsr	Video_Mars_WaitFrame
+		bsr	Video_Mars_WaitFrame
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -173,53 +178,71 @@ MdlMap_Init:
 		clr.l	cam_y_rot(a6)
 		clr.l	cam_z_rot(a6)
 		move.w	#$0D,field_x(a5)
-		move.w	#$12,field_z(a5)
+		move.w	#$0F,field_z(a5)
 		bsr	MdlMap_Build
 		lea	(RAM_MdDreq+Dreq_ObjCam),a6
-		move.l	#-$40,cam_y_pos(a6)
+		move.l	#-$70,cam_y_pos(a6)
 
 MdlMap_Loop:
 		lea	(RAM_MdDreq+Dreq_ObjCam),a6
 		lea	(RAM_FieldBuff),a5
 		move.w	(Controller_1+on_hold),d7
+		move.l	#SET_MAPSPD,d6
+		move.l	d6,d5
+; 		lsr.l	#2,d5
+		move.w	(RAM_HorScroll+2).l,d4
 		btst	#bitJoyUp,d7
 		beq.s	.z_up2
-		add.l	#$10,cam_z_pos(a6)
+		add.l	d6,cam_z_pos(a6)
 .z_up2:
 		btst	#bitJoyDown,d7
 		beq.s	.z_dw2
-		sub.l	#$10,cam_z_pos(a6)
+		sub.l	d6,cam_z_pos(a6)
 .z_dw2:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyLeft,d7
 		beq.s	.z_up3
-		sub.l	#$10,cam_x_pos(a6)
+		sub.l	d6,cam_x_pos(a6)
 .z_up3:
 		btst	#bitJoyRight,d7
 		beq.s	.z_dw3
-		add.l	#$10,cam_x_pos(a6)
+		add.l	d6,cam_x_pos(a6)
 .z_dw3:
-		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyA,d7
 		beq.s	.z_rl
-		sub.l	#$10,cam_x_rot(a6)
+		sub.l	d6,cam_x_rot(a6)
+		add.w	d5,d4
 .z_rl:
 		btst	#bitJoyB,d7
 		beq.s	.z_rr
-		add.l	#$10,cam_x_rot(a6)
+		add.l	d6,cam_x_rot(a6)
+		sub.w	d5,d4
 .z_rr:
-		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyX,d7
 		beq.s	.z2_rl
-		add.l	#$10,cam_y_rot(a6)
+		add.l	d6,cam_y_rot(a6)
 .z2_rl:
 		btst	#bitJoyY,d7
 		beq.s	.z2_rr
-		sub.l	#$10,cam_y_rot(a6)
+		sub.l	d6,cam_y_rot(a6)
 .z2_rr:
 
+		btst	#bitJoyZ,d7
+		beq.s	.z_rld
+		sub.l	d6,cam_y_pos(a6)
+.z_rld:
+		btst	#bitJoyC,d7
+		beq.s	.z_rrd
+		add.l	d6,cam_y_pos(a6)
+.z_rrd:
+		move.w	(sysmars_reg+comm14),d0
+		and.w	#%1111,d0
+		bne.s	.busy
+		move.w	d4,(RAM_HorScroll+2).l
+.busy:
+
 		move.l	cam_z_pos(a6),d7
-		and.w	#-$400,d7
+		and.w	#-MAPPZ_SIZE,d7
 		beq.s	.z_upd
 		moveq	#1,d0
 		tst.w	d7
@@ -227,11 +250,9 @@ MdlMap_Loop:
 		neg.w	d0
 .z_up:
 		add.w	d0,field_z(a5)
-		bsr.s	MdlMap_Build
-
 .z_upd:
 		move.l	cam_x_pos(a6),d7
-		and.w	#-$400,d7
+		and.w	#-MAPPZ_SIZE,d7
 		beq.s	.x_upd
 		moveq	#1,d0
 		tst.w	d7
@@ -239,11 +260,12 @@ MdlMap_Loop:
 		neg.w	d0
 .x_up:
 		add.w	d0,field_x(a5)
-		bsr.s	MdlMap_Build
+
+
 .x_upd:
-		and.l	#$3FF,cam_x_pos(a6)
-		and.l	#$3FF,cam_z_pos(a6)
-		rts
+		and.l	#MAPPZ_SIZE-1,cam_x_pos(a6)
+		and.l	#MAPPZ_SIZE-1,cam_z_pos(a6)
+; 		rts
 
 ; a6 - camera
 ; a5 - field buffer
@@ -258,35 +280,48 @@ MdlMap_Build:
 		adda	d1,a3
 		adda	d0,a3
 
-	; FRONT
-	; - X X
-	; - X X
-	; - X -
-		adda	#2,a3
-		move.l	a3,a2
+; - X X
+; - X X
+; - - -
+.front_m:
+		move.w	#-(MAPPZ_SIZE),d2
+		moveq	#2-1,d3
+.next_m:
 		move.w	#0,d1
-		move.w	#-$800,d2
+		move.l	a3,a2
+		adda	#2,a2
+		bsr	.mk_pz
+		adda	#2,a2
+		add.w	#MAPPZ_SIZE,d1
 		bsr	.mk_pz
 		adda	#$40,a3
-		add.w	#$400,d2
-		bsr	.mk_pz
-		adda	#$40,a3
-		add.w	#$400,d2
-		bsr	.mk_pz
-		move.l	a2,a3
-		adda	#2,a3
-		move.w	#$400,d1
-		move.w	#-$800,d2
-		bsr	.mk_pz
-		adda	#$40,a3
-		add.w	#$400,d2
-; 		bsr.s	.mk_pz
-; 		adda	#$40,a3
-; 		add.w	#$400,d2
-; 		bsr.s	.mk_pz
+		add.w	#MAPPZ_SIZE,d2
+		dbf	d3,.next_m
+		rts
 
+; 		move.l	a2,a3
+; 		adda	#$40+$02,a3
+; 		moveq	#0,d1
+; 		move.w	#-(MAPPZ_SIZE),d2
+; 		bsr	.mk_pz
+; 		adda	#2,a3
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+; 		move.l	a2,a3
+; 		adda	#$40+$02,a3
+; 		moveq	#0,d1
+; 		move.w	#-(MAPPZ_SIZE),d2
+; 		bsr	.mk_pz
+; 		adda	#2,a3
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+
+
+; d1 - X pos
+; d2 - Z pos
+; (a2) - Piece id
 .mk_pz:
-		move.w	(a3),d0
+		move.w	(a2),d0
 		lsl.w	#2,d0
 		move.l	(a1,d0.w),mdl_data(a4)
 		move.w	d1,mdl_x_pos(a4)
@@ -322,6 +357,21 @@ MdlMap_Build:
 ; 		align 2
 
 str_Stats2:
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b "\\w \\w \\w \\w",$A,$A
+; 		dc.b "\\l",0
+; 		dc.l sysmars_reg+comm0
+; 		dc.l sysmars_reg+comm2
+; 		dc.l sysmars_reg+comm4
+; 		dc.l sysmars_reg+comm6
+; 		dc.l sysmars_reg+comm8
+; 		dc.l sysmars_reg+comm10
+; 		dc.l sysmars_reg+comm12
+; 		dc.l sysmars_reg+comm14
+; 		dc.l RAM_Framecount
+; 		align 2
+
+; str_Stats2:
 		dc.b "\\l \\l \\l \\w",$A,$A
 		dc.b "\\w \\w \\w \\w",0
 		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_pos
