@@ -533,7 +533,7 @@ if a != 0:
 # generate include
 out_head.write("MarsObj_"+object_name+":\n")
 out_head.write("\t\tdc.w "+str(used_triangles+used_quads)+","+str(num_vert)+"\n") # numof_faces, numof_vertices
-out_head.write("\t\tdc.l .vert,.face,.vrtx,.mtrl\n")
+out_head.write("\t\tdc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl\n")
 out_head.write('.vert:\t\tbinclude "data/mars/objects/mdl/'+object_name+'/vert.bin"\n')
 out_head.write('.face:\t\tbinclude "data/mars/objects/mdl/'+object_name+'/face.bin"\n')
 out_head.write('.vrtx:\t\tbinclude "data/mars/objects/mdl/'+object_name+'/vrtx.bin"\n')

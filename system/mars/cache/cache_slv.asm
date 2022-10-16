@@ -232,464 +232,477 @@ s_irq_pwm:
 ; 3D Section
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-; MarsMdl_MdlLoop
+; ; --------------------------------------------------------
+; ; MarsMdl_MdlLoop
+; ;
+; ; Call this to start building the 3D objects
+; ; --------------------------------------------------------
 ;
-; Call this to start building the 3D objects
-; --------------------------------------------------------
-
-		align 4
-MarsMdl_MdlLoop:
-		sts	pr,@-r15
-		mov 	#RAM_Mars_Polygons_0,r1
-		mov	#RAM_Mars_PlgnList_0,r2
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.go_mdl
-		mov 	#RAM_Mars_Polygons_1,r1
-		mov	#RAM_Mars_PlgnList_1,r2
-.go_mdl:
-		mov	r1,r0
-		mov	r0,@(marsGbl_CurrFacePos,gbr)
-		mov	r2,r0
-		mov	r0,@(marsGbl_CurrZList,gbr)
-		mov	r0,@(marsGbl_CurrZTop,gbr)
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
-		mov	#RAM_Mars_Objects,r14
-		mov	#MAX_MODELS,r13
-.loop:
+; 		align 4
+; MarsMdl_MdlLoop:
+; 		sts	pr,@-r15
+; 		mov 	#RAM_Mars_Polygons_0,r1
+; 		mov	#RAM_Mars_PlgnList_0,r2
+; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
+; 		tst     #1,r0
+; 		bt	.go_mdl
+; 		mov 	#RAM_Mars_Polygons_1,r1
+; 		mov	#RAM_Mars_PlgnList_1,r2
+; .go_mdl:
+; 		mov	r1,r0
+; 		mov	r0,@(marsGbl_CurrFacePos,gbr)
+; 		mov	r2,r0
+; 		mov	r0,@(marsGbl_CurrZList,gbr)
+; 		mov	r0,@(marsGbl_CurrZTop,gbr)
+; 		xor	r0,r0
+; 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
+; 		mov	#RAM_Mars_Objects,r14
+; 		mov	#MAX_MODELS,r13
+; .loop:
+; 		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
+; 		cmp/pl	r0
+; 		bf	.invlid
+; 		mov	#MarsMdl_ReadModel,r0
+; 		jsr	@r0
+; 		mov	r13,@-r15
+; 		mov	@r15+,r13
+; .invlid:
+; 		dt	r13
+; 		bf/s	.loop
+; 		add	#sizeof_mdlobj,r14
+; .skip:
+; 		mov 	#RAM_Mars_PlgnNum_0,r1
+; 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
+; 		tst     #1,r0
+; 		bt	.page_2
+; 		mov 	#RAM_Mars_PlgnNum_1,r1
+; .page_2:
 ; 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
-; 		mov	#MAX_FACES,r1
-; 		cmp/ge	r1,r0
-; 		bt	.skip
-		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
-		cmp/pl	r0
-		bf	.invlid
-		mov	#MarsMdl_ReadModel,r0
-		jsr	@r0
-		mov	r13,@-r15
-		mov	@r15+,r13
-.invlid:
-		dt	r13
-		bf/s	.loop
-		add	#sizeof_mdlobj,r14
-.skip:
-		mov 	#RAM_Mars_PlgnNum_0,r1
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
-		tst     #1,r0
-		bt	.page_2
-		mov 	#RAM_Mars_PlgnNum_1,r1
-.page_2:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of space to store faces?
-		mov	r0,@r1
-		lds	@r15+,pr
-		rts
-		nop
-		align 4
-		ltorg
-
-; ------------------------------------------------
-; Read model
-; ------------------------------------------------
-
-		align 4
-MarsMdl_ReadModel:
-		sts	pr,@-r15
-
-		mov	#Cach_CurrPlygn,r13		; r13 - temporal face output
-		mov	@(mdl_data,r14),r12		; r12 - model header
-		mov 	@(8,r12),r11			; r11 - face data
-		mov 	@(4,r12),r10			; r10 - vertice data (X,Y,Z)
-		mov.w	@r12,r9				;  r9 - Number of faces used on model
-		mov	@(marsGbl_CurrZList,gbr),r0	;  r8 - Zlist for sorting
-		mov	r0,r8
-.next_face:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of face storage?
-		mov	.tag_maxfaces,r1
-		cmp/gt	r1,r0
-		bf	.can_build
-.no_model:
-		bra	.exit_model
-		nop
-		align 4
-.tag_maxfaces:	dc.l	MAX_FACES
-
-; --------------------------------
-
-.can_build:
-		mov.w	@r11+,r4		; Read type
-		nop
-		mov	#3,r7			; r7 - Current polygon type: triangle (3)
-		mov	r4,r0
-		shlr8	r0
-		tst	#PLGN_TRI,r0		; Model face uses triangle?
-		bf	.set_tri
-		add	#1,r7			; Face is quad, r7 = 4 points
-.set_tri:
-		cmp/pl	r4			; Faces uses texture? ($8xxx)
-		bt	.solid_type
-
-; --------------------------------
-; Set texture material
-; --------------------------------
-
-		mov	@($C,r12),r6		; r6 - Material data
-		mov	r13,r5			; r5 - Go to UV section
-		add 	#polygn_srcpnts,r5
-	rept 3
-		mov.w	@r11+,r0		; Read UV index
-		extu.w	r0,r0
-		shll2	r0
-		mov	@(r6,r0),r0
-		mov.w	r0,@(2,r5)
-		shlr16	r0
-		mov.w	r0,@r5
-		add	#4,r5
-	endm
-		mov	r7,r0			; Triangle?
-		cmp/eq	#3,r0
-		bt	.alluvdone		; If yes, skip this
-		nop
-		mov.w	@r11+,r0		; Read extra UV index
-		extu.w	r0,r0
-		shll2	r0
-		mov	@(r6,r0),r0
-		mov.w	r0,@(2,r5)
-		shlr16	r0
-		mov.w	r0,@r5
-.alluvdone:
-		mov	#-1,r5
-		extu.b	r5,r5			; $FF
-		mov	@(mdl_option,r14),r0
-		extu.b	r0,r0
-		mov	r0,r1
-		mov	r4,r0
-		and	r5,r0
-		shll2	r0
-		mov	@($10,r12),r6
-		shll	r0
-		add	r0,r6
-; 		mov	#$C000,r0
-		mov	#$60,r0		; grab special bits ($C000)
-		shll	r0
-		shll8	r0
-		and	r0,r4
-		shll16	r4
-		mov	@(4,r6),r0
-		or	r0,r4
-		add	r1,r4
-		mov	r4,@(polygn_type,r13)
-		mov	@r6,r0
-		mov	r0,@(polygn_mtrl,r13)
-		bra	.go_faces
-		nop
-		align 4
-
-; --------------------------------
-; Set texture material
-; --------------------------------
-
-.solid_type:
-		mov	@(mdl_option,r14),r0
-		extu.b	r0,r0
-; 		and	#$FF,r0
-		mov	r0,r1
-		mov	r4,r0
-; 		mov	#$E000,r5
-		mov	#$70,r5		; $E000
-		shll	r5
-		shll8	r5
-		and	r5,r4
-		shll16	r4
-		add	r1,r4
-		mov	r4,@(polygn_type,r13)		; Set type 0 (tri) or quad (1)
-		extu.b	r0,r0
-; 		and	#$FF,r0
-		mov	r0,@(polygn_mtrl,r13)		; Set pixel color (0-255)
-
-; --------------------------------
-; Read faces
-; --------------------------------
-
-.go_faces:
-		mov	r13,r1
-		add 	#polygn_points,r1
-		mov	r11,r6
-		mov	r7,r0
-		shll	r0
-		add	r0,r11
-
-		mov	#Cach_BkupS_S,r0
-		mov 	r8,@-r0
-		mov 	r9,@-r0
-		mov 	r11,@-r0
-		mov 	r12,@-r0
-		mov 	r13,@-r0
-		mov	#-(320/2)>>1,r8
-		shll	r8
-		mov	#-(224/2),r11
-		neg	r8,r9
-		neg	r11,r12
-		mov	#-1,r13		; $FFFFFFFF
-
-	; Do 3 points
-	rept 3
-		mov	#0,r0
-		mov.w 	@r6+,r0
-		mov	#$C,r4
-		mulu	r4,r0
-		sts	macl,r0
-		mov	r10,r4
-		add 	r0,r4
-		mov	@r4,r2
-		mov	@(4,r4),r3
-		mov	@(8,r4),r4
-		bsr	mdlrd_setpoint
-		nop
-		mov	r2,@r1
-		mov	r3,@(4,r1)
-		add	#8,r1
-		nop
-	endm
-		mov	#3,r0			; Triangle?
-		cmp/eq	r0,r7
-		bt	.alldone		; If yes, skip this
-		nop
-		mov	#0,r0
-		mov.w 	@r6+,r0
-		mov	#$C,r4
-		mulu	r4,r0
-		sts	macl,r0
-		mov	r10,r4
-		add 	r0,r4
-		mov	@r4,r2
-		mov	@(4,r4),r3
-		mov	@(8,r4),r4
-		bsr	mdlrd_setpoint
-		nop
-		mov	r2,@r1
-		mov	r3,@(4,r1)
-.alldone:
-		mov	r8,r1
-		mov	r9,r2
-		mov	r11,r3
-		mov	r12,r4
-		mov	r13,r6
-
-		mov	#Cach_BkupS_L,r0
-		mov	@r0+,r13
-		mov	@r0+,r12
-		mov	@r0+,r11
-		mov	@r0+,r9
-		mov	@r0+,r8
-
-	; NOTE: if you don't like how the perspective works
-	; change this instruction depending how you want to ignore
-	; faces closer to the camera:
-	;
-	; r5 - Back Z point, keep affine limitations
-	; r6 - Front Z point, skip face but larger faces are affected
-
-		cmp/pz	r5			; *** back z
-		bt	.go_fout
-; 		cmp/pz	r6			; *** front z
-; 		bt	.go_fout
-		mov	#MAX_ZDIST>>8,r0	; Draw distance
-		shll8	r0
-		cmp/ge	r0,r5
-		bf	.go_fout
-		mov	#-(SCREEN_WIDTH/2),r0
-		cmp/gt	r0,r1
-		bf	.go_fout
-		neg	r0,r0
-		cmp/ge	r0,r2
-		bt	.go_fout
-		mov	#-(SCREEN_HEIGHT/2),r0
-		cmp/gt	r0,r3
-		bf	.go_fout
-		neg	r0,r0
-		cmp/ge	r0,r4
-		bf	.face_ok
-.go_fout:	bra	.face_out
-		nop
-		align 4
-
-; --------------------------------
-
-.face_ok:
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Add 1 face to the list
-		add	#1,r0
-		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
-		mov	@(marsGbl_CurrFacePos,gbr),r0
-		mov	r0,r1
-		mov	r13,r2
-		mov	r5,@r8				; Store current Z to Zlist
-		mov	r1,@(4,r8)			; And it's address
-
-; ****
-; 	Sort this face
-; 	r7 - Curr Z
-; 	r6 - Past Z
-		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
-		cmp/eq	#1,r0
-		bt	.first_face
-		cmp/eq	#2,r0
-		bt	.first_face
-		mov	r8,r7
-		add	#-8,r7
-		mov	@(marsGbl_CurrZTop,gbr),r0
-		mov	r0,r6
-.page_2:
-		cmp/ge	r6,r7
-		bf	.first_face
-		mov	@(8,r7),r4
-		mov	@r7,r5
-		cmp/eq	r4,r5
-		bt	.first_face
-		cmp/gt	r4,r5
-		bf	.swap_me
-		mov	@r7,r4
-		mov	@(8,r7),r5
-		mov	r5,@r7
-		mov	r4,@(8,r7)
-		mov	@(4,r7),r4
-		mov	@($C,r7),r5
-		mov	r5,@(4,r7)
-		mov	r4,@($C,r7)
-.swap_me:
-		bra	.page_2
-		add	#-8,r7
-.first_face:
-; ****
-
-		add	#8,r8			; Next Zlist entry
-	rept sizeof_polygn/4			; Copy words manually
-		mov	@r2+,r0
-		mov	r0,@r1
-		add	#4,r1
-	endm
-		mov	r1,r0
-		mov	r0,@(marsGbl_CurrFacePos,gbr)
-.face_out:
-		dt	r9
-		bt	.finish_this
-		bra	.next_face
-		nop
-.finish_this:
-		mov	r8,r0
-		mov	r0,@(marsGbl_CurrZList,gbr)
-.exit_model:
-		lds	@r15+,pr
-		rts
-		nop
-		align 4
+; 		mov	r0,@r1
+; 		lds	@r15+,pr
+; 		rts
+; 		nop
+; 		align 4
 ; 		ltorg
-
-; ----------------------------------------
-; Modify position to current point
-; ----------------------------------------
-
-		align 4
-mdlrd_setpoint:
-		mov	#Cach_BkupPnt_S,r0
-		sts	pr,@-r0
-		mov 	r5,@-r0
-		mov 	r6,@-r0
-		mov 	r7,@-r0
-		mov 	r8,@-r0
-		mov 	r9,@-r0
-		mov 	r10,@-r0
-		mov 	r11,@-r0
-
-	; Object rotation
-		mov	r2,r5			; r5 - X
-		mov	r4,r6			; r6 - Z
-  		mov.w 	@(mdl_x_rot,r14),r0
-  		bsr	mdlrd_rotate
-  		shlr2	r0
-   		mov	r7,r2
-   		mov	r3,r5
-  		mov	r8,r6
-  		mov.w	@(mdl_z_rot,r14),r0
-  		shlr	r0
-  		bsr	mdlrd_rotate
-  		shlr2	r0
-   		mov	r8,r4
-   		mov	r2,r5
-   		mov	r7,r6
-   		mov.w	@(mdl_y_rot,r14),r0
-  		shlr	r0
-  		bsr	mdlrd_rotate
-  		shlr2	r0
-   		mov	r7,r2
-   		mov	r8,r3
-		mov.w	@(mdl_x_pos,r14),r0
-		exts.w	r0,r5
-		mov.w	@(mdl_y_pos,r14),r0
-		exts.w	r0,r6
-		mov.w	@(mdl_z_pos,r14),r0
-		exts.w	r0,r7
-;  		shar	r5
-;  		shar	r6
-;  		shar	r7
-		add 	r5,r2
-		add 	r6,r3
-		add 	r7,r4
-
-	; Include camera changes
-		mov 	#RAM_Mars_ObjCamera,r11
-		mov	@(cam_x_pos,r11),r5
-		mov	@(cam_y_pos,r11),r6
-		mov	@(cam_z_pos,r11),r7
-; 		shlr	r5
-; 		shlr	r6
-; 		shlr	r7
-		exts	r5,r5
-		exts	r6,r6
-		exts	r7,r7
-		sub 	r5,r2
-		sub 	r6,r3
-		add 	r7,r4
-
-		mov	r2,r5
-		mov	r4,r6
-  		mov 	@(cam_x_rot,r11),r0
+;
+; ; ------------------------------------------------
+; ; Read model
+; ; ------------------------------------------------
+;
+; 		align 4
+; MarsMdl_ReadModel:
+; 		sts	pr,@-r15
+;
+; 		mov	#Cach_CurrPlygn,r13		; r13 - temporal face output
+; 		mov	@(mdl_data,r14),r12		; r12 - model header
+; 		mov 	@(8,r12),r11			; r11 - face data
+; 		mov 	@(4,r12),r10			; r10 - vertice data (X,Y,Z)
+; 		mov.w	@r12,r9				;  r9 - Number of faces used on model
+; 		mov	@(marsGbl_CurrZList,gbr),r0	;  r8 - Zlist for sorting
+; 		mov	r0,r8
+; .next_face:
+; 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Ran out of face storage?
+; 		mov	.tag_maxfaces,r1
+; 		cmp/gt	r1,r0
+; 		bf	.can_build
+; .no_model:
+; 		bra	.exit_model
+; 		nop
+; 		align 4
+; .tag_maxfaces:	dc.l	MAX_FACES
+;
+; ; --------------------------------
+;
+; .can_build:
+; 		mov.w	@r11+,r4		; Read type
+; 		nop
+; 		mov	#3,r7			; r7 - Current polygon type: triangle (3)
+; 		mov	r4,r0
+; 		shlr8	r0
+; 		tst	#PLGN_TRI,r0		; Model face uses triangle?
+; 		bf	.set_tri
+; 		add	#1,r7			; Face is quad, r7 = 4 points
+; .set_tri:
+; 		cmp/pl	r4			; Faces uses texture? ($8xxx)
+; 		bt	.solid_type
+;
+; ; --------------------------------
+; ; Set texture material
+; ; --------------------------------
+;
+; 		mov	@($C,r12),r6		; r6 - Material data
+; 		mov	r13,r5			; r5 - Go to UV section
+; 		add 	#polygn_srcpnts,r5
+; 	rept 3
+; 		mov.w	@r11+,r0		; Read UV index
+; 		extu.w	r0,r0
+; 		shll2	r0
+; 		mov	@(r6,r0),r0
+; 		mov.w	r0,@(2,r5)
+; 		shlr16	r0
+; 		mov.w	r0,@r5
+; 		add	#4,r5
+; 	endm
+; 		mov	r7,r0			; Triangle?
+; 		cmp/eq	#3,r0
+; 		bt	.alluvdone		; If yes, skip this
+; 		nop
+; 		mov.w	@r11+,r0		; Read extra UV index
+; 		extu.w	r0,r0
+; 		shll2	r0
+; 		mov	@(r6,r0),r0
+; 		mov.w	r0,@(2,r5)
+; 		shlr16	r0
+; 		mov.w	r0,@r5
+; .alluvdone:
+; 		mov	#-1,r5
+; 		extu.b	r5,r5			; $FF
+; 		mov	@(mdl_option,r14),r0
+; 		extu.b	r0,r0
+; 		mov	r0,r1
+; 		mov	r4,r0
+; 		and	r5,r0
+; 		shll2	r0
+; 		mov	@($10,r12),r6
+; 		shll	r0
+; 		add	r0,r6
+; ; 		mov	#$C000,r0
+; 		mov	#$60,r0		; grab special bits ($C000)
+; 		shll	r0
+; 		shll8	r0
+; 		and	r0,r4
+; 		shll16	r4
+; 		mov	@(4,r6),r0
+; 		or	r0,r4
+; 		add	r1,r4
+; 		mov	r4,@(polygn_type,r13)
+; 		mov	@r6,r0
+; 		mov	r0,@(polygn_mtrl,r13)
+; 		bra	.go_faces
+; 		nop
+; 		align 4
+;
+; ; --------------------------------
+; ; Set texture material
+; ; --------------------------------
+;
+; .solid_type:
+; 		mov	@(mdl_option,r14),r0
+; 		extu.b	r0,r0
+; ; 		and	#$FF,r0
+; 		mov	r0,r1
+; 		mov	r4,r0
+; ; 		mov	#$E000,r5
+; 		mov	#$70,r5		; $E000
+; 		shll	r5
+; 		shll8	r5
+; 		and	r5,r4
+; 		shll16	r4
+; 		add	r1,r4
+; 		mov	r4,@(polygn_type,r13)		; Set type 0 (tri) or quad (1)
+; 		extu.b	r0,r0
+; ; 		and	#$FF,r0
+; 		mov	r0,@(polygn_mtrl,r13)		; Set pixel color (0-255)
+;
+; ; --------------------------------
+; ; Read faces
+; ; --------------------------------
+;
+; .go_faces:
+; 		mov	r13,r1
+; 		add 	#polygn_points,r1
+; 		mov	r11,r6
+; 		mov	r7,r0
+; 		shll	r0
+; 		add	r0,r11
+;
+; 		mov	#Cach_BkupS_S,r0
+; 		mov 	r8,@-r0
+; 		mov 	r9,@-r0
+; 		mov 	r11,@-r0
+; 		mov 	r12,@-r0
+; 		mov 	r13,@-r0
+; 		mov	#-(320/2)>>1,r8
+; 		shll	r8
+; 		mov	#-(224/2),r11
+; 		neg	r8,r9
+; 		neg	r11,r12
+; 		mov	#-1,r13		; $FFFFFFFF
+;
+; 	; Do 3 points
+; 	rept 3
+; 		mov	#0,r0
+; 		mov.w 	@r6+,r0
+; 		mov	#$C,r4
+; 		mulu	r4,r0
+; 		sts	macl,r0
+; 		mov	r10,r4
+; 		add 	r0,r4
+; 		mov	@r4,r2
+; 		mov	@(4,r4),r3
+; 		mov	@(8,r4),r4
+; 		bsr	mdlrd_setpoint
+; 		nop
+; 		mov	r2,@r1
+; 		mov	r3,@(4,r1)
+; 		add	#8,r1
+; 		nop
+; 	endm
+; 		mov	#3,r0			; Triangle?
+; 		cmp/eq	r0,r7
+; 		bt	.alldone		; If yes, skip this
+; 		nop
+; 		mov	#0,r0
+; 		mov.w 	@r6+,r0
+; 		mov	#$C,r4
+; 		mulu	r4,r0
+; 		sts	macl,r0
+; 		mov	r10,r4
+; 		add 	r0,r4
+; 		mov	@r4,r2
+; 		mov	@(4,r4),r3
+; 		mov	@(8,r4),r4
+; 		bsr	mdlrd_setpoint
+; 		nop
+; 		mov	r2,@r1
+; 		mov	r3,@(4,r1)
+; .alldone:
+; 		mov	r8,r1
+; 		mov	r9,r2
+; 		mov	r11,r3
+; 		mov	r12,r4
+; 		mov	r13,r6
+;
+; 		mov	#Cach_BkupS_L,r0
+; 		mov	@r0+,r13
+; 		mov	@r0+,r12
+; 		mov	@r0+,r11
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+;
+; 	; NOTE: if you don't like how the perspective works
+; 	; change this instruction depending how you want to ignore
+; 	; faces closer to the camera:
+; 	;
+; 	; r5 - Back Z point, keep affine limitations
+; 	; r6 - Front Z point, skip face but larger faces are affected
+;
+; 		cmp/pz	r5			; *** back z
+; 		bt	.go_fout
+; ; 		cmp/pz	r6			; *** front z
+; ; 		bt	.go_fout
+; 		mov	#MAX_ZDIST>>8,r0	; Draw distance
+; 		shll8	r0
+; 		cmp/ge	r0,r5
+; 		bf	.go_fout
+; 		mov	#-(SCREEN_WIDTH/2),r0
+; 		cmp/gt	r0,r1
+; 		bf	.go_fout
+; 		neg	r0,r0
+; 		cmp/ge	r0,r2
+; 		bt	.go_fout
+; 		mov	#-(SCREEN_HEIGHT/2),r0
+; 		cmp/gt	r0,r3
+; 		bf	.go_fout
+; 		neg	r0,r0
+; 		cmp/ge	r0,r4
+; 		bf	.face_ok
+; .go_fout:	bra	.face_out
+; 		nop
+; 		align 4
+;
+; ; --------------------------------
+;
+; .face_ok:
+; 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0	; Add 1 face to the list
+; 		add	#1,r0
+; 		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
+; 		mov	@(marsGbl_CurrFacePos,gbr),r0
+; 		mov	r0,r1
+; 		mov	r13,r2
+; 		mov	r5,@r8				; Store current Z to Zlist
+; 		mov	r1,@(4,r8)			; And it's address
+;
+; ; ****
+; ; 	Sort this face
+; ; 	r7 - Curr Z
+; ; 	r6 - Past Z
+; 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
+; 		cmp/eq	#1,r0
+; 		bt	.first_face
+; 		cmp/eq	#2,r0
+; 		bt	.first_face
+; 		mov	r8,r7
+; 		add	#-8,r7
+; 		mov	@(marsGbl_CurrZTop,gbr),r0
+; 		mov	r0,r6
+; .page_2:
+; 		cmp/ge	r6,r7
+; 		bf	.first_face
+; 		mov	@(8,r7),r4
+; 		mov	@r7,r5
+; 		cmp/eq	r4,r5
+; 		bt	.first_face
+; 		cmp/gt	r4,r5
+; 		bf	.swap_me
+; 		mov	@r7,r4
+; 		mov	@(8,r7),r5
+; 		mov	r5,@r7
+; 		mov	r4,@(8,r7)
+; 		mov	@(4,r7),r4
+; 		mov	@($C,r7),r5
+; 		mov	r5,@(4,r7)
+; 		mov	r4,@($C,r7)
+; .swap_me:
+; 		bra	.page_2
+; 		add	#-8,r7
+; .first_face:
+; ; ****
+;
+; 		add	#8,r8			; Next Zlist entry
+; 	rept sizeof_polygn/4			; Copy words manually
+; 		mov	@r2+,r0
+; 		mov	r0,@r1
+; 		add	#4,r1
+; 	endm
+; 		mov	r1,r0
+; 		mov	r0,@(marsGbl_CurrFacePos,gbr)
+; .face_out:
+; 		dt	r9
+; 		bt	.finish_this
+; 		bra	.next_face
+; 		nop
+; .finish_this:
+; 		mov	r8,r0
+; 		mov	r0,@(marsGbl_CurrZList,gbr)
+; .exit_model:
+; 		lds	@r15+,pr
+; 		rts
+; 		nop
+; 		align 4
+; ; 		ltorg
+;
+; ; ----------------------------------------
+; ; Modify position to current point
+; ; ----------------------------------------
+;
+; 		align 4
+; mdlrd_setpoint:
+; 		mov	#Cach_BkupPnt_S,r0
+; 		sts	pr,@-r0
+; 		mov 	r5,@-r0
+; 		mov 	r6,@-r0
+; 		mov 	r7,@-r0
+; 		mov 	r8,@-r0
+; 		mov 	r9,@-r0
+; 		mov 	r10,@-r0
+; 		mov 	r11,@-r0
+;
+; 	; Object rotation
+; 		mov	r2,r5			; r5 - X
+; 		mov	r4,r6			; r6 - Z
+;   		mov.w 	@(mdl_x_rot,r14),r0
+;   		bsr	mdlrd_rotate
 ;   		shlr2	r0
+;    		mov	r7,r2
+;    		mov	r3,r5
+;   		mov	r8,r6
+;   		mov.w	@(mdl_z_rot,r14),r0
 ;   		shlr	r0
-  		bsr	mdlrd_rotate
-		shlr2	r0
-   		mov	r7,r2
-   		mov	r8,r4
-   		mov	r3,r5
-  		mov	r8,r6
-  		mov 	@(cam_y_rot,r11),r0
+;   		bsr	mdlrd_rotate
 ;   		shlr2	r0
+;    		mov	r8,r4
+;    		mov	r2,r5
+;    		mov	r7,r6
+;    		mov.w	@(mdl_y_rot,r14),r0
 ;   		shlr	r0
-  		bsr	mdlrd_rotate
-		shlr2	r0
-   		mov	r8,r4
-   		mov	r2,r5
-   		mov	r7,r6
-   		mov 	@(cam_z_rot,r11),r0
+;   		bsr	mdlrd_rotate
 ;   		shlr2	r0
-;   		shlr	r0
-  		bsr	mdlrd_rotate
-		shlr2	r0
-   		mov	r7,r2
-   		mov	r8,r3
-
-	; Weak perspective projection
-	; this is the best I got,
-	; It breaks on large faces
-		mov	#320<<16,r7
-		neg	r4,r0		; reverse Z
-		cmp/pl	r0
-		bt	.inside
-		mov	#1,r0
-		shlr2	r7
-		shlr2	r7
-; 		shlr	r7
+;    		mov	r7,r2
+;    		mov	r8,r3
+; 		mov.w	@(mdl_x_pos,r14),r0
+; 		exts.w	r0,r5
+; 		mov.w	@(mdl_y_pos,r14),r0
+; 		exts.w	r0,r6
+; 		mov.w	@(mdl_z_pos,r14),r0
+; 		exts.w	r0,r7
+; ;  		shar	r5
+; ;  		shar	r6
+; ;  		shar	r7
+; 		add 	r5,r2
+; 		add 	r6,r3
+; 		add 	r7,r4
+;
+; 	; Include camera changes
+; 		mov 	#RAM_Mars_ObjCamera,r11
+; 		mov	@(cam_x_pos,r11),r5
+; 		mov	@(cam_y_pos,r11),r6
+; 		mov	@(cam_z_pos,r11),r7
+; ; 		shlr	r5
+; ; 		shlr	r6
+; ; 		shlr	r7
+; 		exts	r5,r5
+; 		exts	r6,r6
+; 		exts	r7,r7
+; 		sub 	r5,r2
+; 		sub 	r6,r3
+; 		add 	r7,r4
+;
+; 		mov	r2,r5
+; 		mov	r4,r6
+;   		mov 	@(cam_x_rot,r11),r0
+; ;   		shlr2	r0
+; ;   		shlr	r0
+;   		bsr	mdlrd_rotate
+; 		shlr2	r0
+;    		mov	r7,r2
+;    		mov	r8,r4
+;    		mov	r3,r5
+;   		mov	r8,r6
+;   		mov 	@(cam_y_rot,r11),r0
+; ;   		shlr2	r0
+; ;   		shlr	r0
+;   		bsr	mdlrd_rotate
+; 		shlr2	r0
+;    		mov	r8,r4
+;    		mov	r2,r5
+;    		mov	r7,r6
+;    		mov 	@(cam_z_rot,r11),r0
+; ;   		shlr2	r0
+; ;   		shlr	r0
+;   		bsr	mdlrd_rotate
+; 		shlr2	r0
+;    		mov	r7,r2
+;    		mov	r8,r3
+;
+; 	; Weak perspective projection
+; 	; this is the best I got,
+; 	; It breaks on large faces
+; 		mov	#320<<16,r7
+; 		neg	r4,r0		; reverse Z
+; 		cmp/pl	r0
+; 		bt	.inside
+; 		mov	#1,r0
+; 		shlr2	r7
+; 		shlr2	r7
+; ; 		shlr	r7
+; ; 		dmuls	r7,r2
+; ; 		sts	mach,r0
+; ; 		sts	macl,r2
+; ; 		xtrct	r0,r2
+; ; 		dmuls	r7,r3
+; ; 		sts	mach,r0
+; ; 		sts	macl,r3
+; ; 		xtrct	r0,r3
+; 		bra	.zmulti
+; 		nop
+; .inside:
+; 		mov 	#_JR,r9
+; 		mov 	r0,@r9
+; 		mov 	r7,@(4,r9)
+; 		nop
+; 		mov 	@(4,r9),r7
+; .zmulti:
 ; 		dmuls	r7,r2
 ; 		sts	mach,r0
 ; 		sts	macl,r2
@@ -698,118 +711,102 @@ mdlrd_setpoint:
 ; 		sts	mach,r0
 ; 		sts	macl,r3
 ; 		xtrct	r0,r3
-		bra	.zmulti
-		nop
-.inside:
-		mov 	#_JR,r9
-		mov 	r0,@r9
-		mov 	r7,@(4,r9)
-		nop
-		mov 	@(4,r9),r7
-.zmulti:
-		dmuls	r7,r2
-		sts	mach,r0
-		sts	macl,r2
-		xtrct	r0,r2
-		dmuls	r7,r3
-		sts	mach,r0
-		sts	macl,r3
-		xtrct	r0,r3
-
-		mov	#Cach_BkupPnt_L,r0
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		lds	@r0+,pr
-
-	; Set the most far points
-	; for each direction (X,Y,Z)
-		cmp/gt	r13,r4
-		bf	.save_z2
-		mov	r4,r13
-.save_z2:
-		cmp/gt	r5,r4
-		bt	.save_z
-		mov	r4,r5
-.save_z:
-		cmp/gt	r8,r2
-		bf	.x_lw
-		mov	r2,r8
-.x_lw:
-		cmp/gt	r9,r2
-		bt	.x_rw
-		mov	r2,r9
-.x_rw:
-		cmp/gt	r11,r3
-		bf	.y_lw
-		mov	r3,r11
-.y_lw:
-		cmp/gt	r12,r3
-		bt	.y_rw
-		mov	r3,r12
-.y_rw:
-		rts
-		nop
-		align 4
-		ltorg
-
-; ------------------------------
-; Rotate point
 ;
-; Entry:
-; r5: x
-; r6: y
-; r0: theta
+; 		mov	#Cach_BkupPnt_L,r0
+; 		mov	@r0+,r11
+; 		mov	@r0+,r10
+; 		mov	@r0+,r9
+; 		mov	@r0+,r8
+; 		mov	@r0+,r7
+; 		mov	@r0+,r6
+; 		mov	@r0+,r5
+; 		lds	@r0+,pr
 ;
-; Returns:
-; r7: (x  cos @) + (y sin @)
-; r8: (x -sin @) + (y cos @)
-; ------------------------------
-
-		align 4
-mdlrd_rotate:
-    		mov	#$7FF,r7
-    		and	r7,r0
-   		shll2	r0
-		mov	#sin_table,r7
-		mov	#sin_table+$800,r8
-		mov	@(r0,r7),r9
-		mov	@(r0,r8),r10
-
-		dmuls	r5,r10		; x cos @
-		sts	macl,r7
-		sts	mach,r0
-		xtrct	r0,r7
-		dmuls	r6,r9		; y sin @
-		sts	macl,r8
-		sts	mach,r0
-		xtrct	r0,r8
-		add	r8,r7
-
-		neg	r9,r9
-		dmuls	r5,r9		; x -sin @
-		sts	macl,r8
-		sts	mach,r0
-		xtrct	r0,r8
-		dmuls	r6,r10		; y cos @
-		sts	macl,r9
-		sts	mach,r0
-		xtrct	r0,r9
-		add	r9,r8
- 		rts
-		nop
-		align 4
-		ltorg
+; 	; Set the most far points
+; 	; for each direction (X,Y,Z)
+; 		cmp/gt	r13,r4
+; 		bf	.save_z2
+; 		mov	r4,r13
+; .save_z2:
+; 		cmp/gt	r5,r4
+; 		bt	.save_z
+; 		mov	r4,r5
+; .save_z:
+; 		cmp/gt	r8,r2
+; 		bf	.x_lw
+; 		mov	r2,r8
+; .x_lw:
+; 		cmp/gt	r9,r2
+; 		bt	.x_rw
+; 		mov	r2,r9
+; .x_rw:
+; 		cmp/gt	r11,r3
+; 		bf	.y_lw
+; 		mov	r3,r11
+; .y_lw:
+; 		cmp/gt	r12,r3
+; 		bt	.y_rw
+; 		mov	r3,r12
+; .y_rw:
+; 		rts
+; 		nop
+; 		align 4
+; 		ltorg
+;
+; ; ------------------------------
+; ; Rotate point
+; ;
+; ; Entry:
+; ; r5: x
+; ; r6: y
+; ; r0: theta
+; ;
+; ; Returns:
+; ; r7: (x  cos @) + (y sin @)
+; ; r8: (x -sin @) + (y cos @)
+; ; ------------------------------
+;
+; 		align 4
+; mdlrd_rotate:
+;     		mov	#$7FF,r7
+;     		and	r7,r0
+;    		shll2	r0
+; 		mov	#sin_table,r7
+; 		mov	#sin_table+$800,r8
+; 		mov	@(r0,r7),r9
+; 		mov	@(r0,r8),r10
+;
+; 		dmuls	r5,r10		; x cos @
+; 		sts	macl,r7
+; 		sts	mach,r0
+; 		xtrct	r0,r7
+; 		dmuls	r6,r9		; y sin @
+; 		sts	macl,r8
+; 		sts	mach,r0
+; 		xtrct	r0,r8
+; 		add	r8,r7
+;
+; 		neg	r9,r9
+; 		dmuls	r5,r9		; x -sin @
+; 		sts	macl,r8
+; 		sts	mach,r0
+; 		xtrct	r0,r8
+; 		dmuls	r6,r10		; y cos @
+; 		sts	macl,r9
+; 		sts	mach,r0
+; 		xtrct	r0,r9
+; 		add	r9,r8
+;  		rts
+; 		nop
+; 		align 4
+; 		ltorg
 
 ; ------------------------------------------------
 
 			align 4
-Cach_BkupPnt_L		ds.l 8				; **
-Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards
+; Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
+; Cach_BkupPnt_L		ds.l 8				; **
+; Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards
 Cach_BkupS_L		ds.l 5				; **
 Cach_BkupS_S		ds.l 0				; <-- Reads backwards
 Cach_SlvStack_L		ds.l 10				; **
@@ -817,7 +814,6 @@ Cach_SlvStack_S		ds.l 0				; <-- Reads backwards
 MarsSnd_RvMode		ds.l 1				; ROM RV protection flag
 MarsSnd_PwmControl	ds.b 8*7			; 8 bytes per channel.
 MarsSnd_PwmChnls	ds.b sizeof_sndchn*MAX_PWMCHNL
-Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
 
 ; ------------------------------------------------
 .end:		phase CACHE_SLAVE+.end&$1FFF

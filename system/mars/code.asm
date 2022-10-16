@@ -1818,12 +1818,17 @@ mstr_gfx3_init_cont:
 ; -------------------------------
 
 mstr_gfx3_loop:
+		mov	#_sysreg+comm12,r3
 		mov	#_sysreg+comm14,r4
 .wait_me:
+		mov.w	@r3,r0
+		and	#%1111,r0
+		cmp/eq	#3,r0			; <-- Stop processing on mode change
+		bf	mstr_ready
 		mov.w	@r4,r0
 		and	#%00001111,r0
 		tst	r0,r0
-		bf	.slv_busy		; .slv_busy
+		bf	.wait_me		; .slv_busy
 		stc	sr,@-r15
 		mov	#$F0,r0
 		ldc	r0,sr
@@ -1912,9 +1917,10 @@ mstr_gfx3_loop:
 		cmp/pl	r13
 		bf	.skip
 .loop:
-		mov	@(4,r14),r0			; Get location of the polygon
+		mov	@r14,r0				; Get location of the polygon
 		cmp/pl	r0				; Zero?
 		bf	.invalid			; if yes, skip
+
 		mov	r14,@-r15
 		mov	r13,@-r15
 		mov	r0,r14
@@ -1926,8 +1932,12 @@ mstr_gfx3_loop:
 .invalid:
 		dt	r13				; Decrement numof_polygons
 		bf/s	.loop
-		add	#8,r14				; Move to next entry
+		add	#4,r14				; Move to next entry
 .skip:
+; 		mov	#MarsMdl_MdlLoop,r0
+; 		jsr	@r0
+; 		nop
+
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_WdgReady,gbr)
 .wait_pz: 	mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces remaining?
@@ -2367,6 +2377,7 @@ slv_task_2:
 		mov	#MarsMdl_MdlLoop,r0
 		jsr	@r0
 		nop
+
 		bra	slv_exit
 		nop
 		align 4
@@ -2452,17 +2463,17 @@ RAM_Mars_ScrlData	ds.b ((320+16)*(224+16))+320
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff
-RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ		; Sprites / Polygon pieces
-RAM_Mars_SVdpDrwList_e	ds.l 0					; (END point label)
-RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES
+RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Sprites / Polygon pieces
+RAM_Mars_SVdpDrwList_e	ds.l 0				; (END point label)
+RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES	; Read/Write polygon data
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
-RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; Slave's Objects
-RAM_Mars_ObjCamera	ds.b sizeof_camera			; Slave's Camera
-RAM_Mars_PlgnList_0	ds.l 2*MAX_FACES			; Zpos, polygondata
-RAM_Mars_PlgnList_1	ds.l 2*MAX_FACES
-RAM_Mars_PlgnNum_0	ds.l 1					; Number of polygons to process
+RAM_Mars_ZStorage	ds.l 2*MAX_FACES		; Z data storage (WRITE only)
+RAM_Mars_PlgnList_0	ds.l MAX_FACES			; Polygon pointers list
+RAM_Mars_PlgnList_1	ds.l MAX_FACES
+RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
-; RAM_Mars_VertOut	ds.l 4*MAX_FACES
+RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Slave's Objects
+RAM_Mars_ObjCamera	ds.b sizeof_camera		; Slave's Camera
 sizeof_scrn04		ds.l 0
 			finish
 	if MOMPASS=6

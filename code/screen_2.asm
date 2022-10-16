@@ -71,6 +71,10 @@ MD_3DMODE:
 
 	; Read MAP
 		bsr	MdlMap_Init
+; 		lea	(RAM_MdDreq+Dreq_Objects),a0
+; 		move.l	#MarsObj_test|TH,mdl_data(a0)
+; 		move.w	#-$800,mdl_z_pos(a0)
+; 		move.w	#0,mdl_y_pos(a0)
 
 ; 	; Testing track
 		moveq	#0,d0
@@ -99,11 +103,6 @@ MD_3DMODE:
 
 		moveq	#3,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
-
-
-		bsr	Video_Mars_WaitFrame
-		bsr	Video_Mars_WaitFrame
-		bsr	Video_Mars_WaitFrame
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -184,6 +183,9 @@ MdlMap_Init:
 		move.l	#-$70,cam_y_pos(a6)
 
 MdlMap_Loop:
+; 		lea	(RAM_MdDreq+Dreq_Objects),a6
+; 		add.w	#8*4,mdl_x_rot(a6)
+
 		lea	(RAM_MdDreq+Dreq_ObjCam),a6
 		lea	(RAM_FieldBuff),a5
 		move.w	(Controller_1+on_hold),d7
@@ -270,6 +272,7 @@ MdlMap_Loop:
 ; a6 - camera
 ; a5 - field buffer
 MdlMap_Build:
+;  rts
 		lea	(RAM_MdDreq+Dreq_Objects),a4
 		move.l	field_data(a5),a3
 		move.l	(a3)+,a1
