@@ -49,11 +49,6 @@ marsGbl_PlyPzList_R	ds.l 1	; Current graphic piece to draw
 marsGbl_PlyPzList_W	ds.l 1	; Current graphic piece to write
 marsGbl_PlyPzList_Start	ds.l 1	; Polygon pieces list Start point
 marsGbl_PlyPzList_End	ds.l 1	; Polygon pieces list End point
-marsGbl_CurrRdPlgn	ds.l 1	; Current polygon to read for slicing
-marsGbl_CurrZList	ds.l 1	; Current Zsort entry
-marsGbl_CurrZTop	ds.l 1	; Current Zsort list
-marsGbl_CurrFacePos	ds.l 1	; Current top face of the list while reading model data
-marsGbl_CurrNumFaces	ds.w 1	; and the number of faces stored on that list
 marsGbl_WdgMode		ds.w 1	; Current watchdog task
 marsGbl_WdgHold		ds.w 1	; Watchdog pause
 marsGbl_WdgReady	ds.w 1
@@ -1916,11 +1911,12 @@ mstr_gfx3_loop:
 		mov	@r13,r13
 		cmp/pl	r13
 		bf	.skip
+	; Sorting goes here...
+		add	#4,r14
 .loop:
 		mov	@r14,r0				; Get location of the polygon
 		cmp/pl	r0				; Zero?
 		bf	.invalid			; if yes, skip
-
 		mov	r14,@-r15
 		mov	r13,@-r15
 		mov	r0,r14
@@ -1932,14 +1928,15 @@ mstr_gfx3_loop:
 .invalid:
 		dt	r13				; Decrement numof_polygons
 		bf/s	.loop
-		add	#4,r14				; Move to next entry
+		add	#8,r14				; Move to next entry
 .skip:
+		mov	#1,r0
+		mov.w	r0,@(marsGbl_WdgReady,gbr)
 ; 		mov	#MarsMdl_MdlLoop,r0
 ; 		jsr	@r0
 ; 		nop
 
-		mov	#1,r0
-		mov.w	r0,@(marsGbl_WdgReady,gbr)
+
 .wait_pz: 	mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces remaining?
 		tst	r0,r0
 		bf	.wait_pz
@@ -2467,9 +2464,8 @@ RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Sprites / Polygon pieces
 RAM_Mars_SVdpDrwList_e	ds.l 0				; (END point label)
 RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES	; Read/Write polygon data
 RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
-RAM_Mars_ZStorage	ds.l 2*MAX_FACES		; Z data storage (WRITE only)
-RAM_Mars_PlgnList_0	ds.l MAX_FACES			; Polygon pointers list
-RAM_Mars_PlgnList_1	ds.l MAX_FACES
+RAM_Mars_PlgnList_0	ds.l MAX_FACES*2		; Polygon order list: Zpos, pointer
+RAM_Mars_PlgnList_1	ds.l MAX_FACES*2
 RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
 RAM_Mars_PlgnNum_1	ds.l 1
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Slave's Objects

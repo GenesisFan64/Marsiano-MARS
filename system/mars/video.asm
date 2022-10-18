@@ -13,8 +13,8 @@
 ; SDRAM
 MAX_SCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
 MAX_SSPRSPD	equ 4		; Supersprite box increment: Size+this (maximum SuSprites speed)
-MAX_FACES	equ 800		; MAX polygon faces for 3D models
-MAX_SVDP_PZ	equ 800+128	; MAX polygon pieces to draw
+MAX_FACES	equ 700		; MAX polygon faces for 3D models
+MAX_SVDP_PZ	equ 700+128	; MAX polygon pieces to draw
 MAX_ZDIST	equ -$F80	; Maximum 3D field distance (-Z)
 
 ; FRAMEBUFFER
@@ -1843,25 +1843,22 @@ MarsMdl_MdlLoop:
 		sts	pr,@-r15
 		mov	#0,r11
 		mov 	#RAM_Mars_Polygons_0,r13
-; 		mov	#RAM_Mars_PlgnList_0,r1
+		mov	#RAM_Mars_PlgnList_0,r12
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0
 		tst     #1,r0
 		bt	.go_mdl
 		mov 	#RAM_Mars_Polygons_1,r13
-; 		mov	#RAM_Mars_PlgnList_1,r1
+		mov	#RAM_Mars_PlgnList_1,r12
 .go_mdl:
-; 		mov	r1,r0
-; 		mov	r0,@(marsGbl_CurrZList,gbr)
-; 		mov	r0,@(marsGbl_CurrZTop,gbr)
-		xor	r0,r0
-		mov.w	r0,@(marsGbl_CurrNumFaces,gbr)
-; 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r14
 		mov	#RAM_Mars_Objects,r14
 		mov	#MAX_MODELS,r10
 .loop:
 		mov	@(mdl_data,r14),r0		; Object model data == 0 or -1?
 		cmp/pl	r0
 		bf	.invlid
+		mov	#MAX_FACES,r0
+		cmp/ge	r0,r11
+		bt	.invlid
 		mov	#MarsMdl_ReadModel,r0
 		jsr	@r0
 		mov	r10,@-r15
@@ -1883,33 +1880,88 @@ MarsMdl_MdlLoop:
 .page_2:
 		mov	r11,@r12	; Save faces counter
 
-	; r14 - Polygon DATA
-	; r13 - Polygon LIST
-; 		mov	r13,r1
-; 		mov	r11,r12
-; 		dt	r12
-; .move_face:
-; 		mov	@r1,r0
 ;
-; 		mov	@r2
+; r14 - **
+; r13 - Polygon LIST (-Z,pointer)
+; r12 - **
+; r11 - Number of faces (MAIN)
+; r10 - **
 
-	; temporal copypaste faces
 		cmp/pl	r11
-		bf	.no_face
-.next:
-		mov	r14,@r13
-		add	#sizeof_polygn,r14
-		dt	r11
-		bf/s	.next
-		add	#4,r13
-.no_face:
+		bf	.exit
+.roll:
+		mov	r11,r10
+		mov	r13,r14
+		mov	@r14,r1		; r1 - Start value
+.srch:
+		mov	@r14,r0
+		cmp/gt	r1,r0
+		bt	.higher
+		mov	r0,r1
+		mov	r14,r2		; r2 - target pointer
+.higher:
+		dt	r10
+		bf/s	.srch
+		add	#8,r14
 
+		mov	r2,r5
+		mov	r13,r6
+		mov	@r5+,r1
+		mov	@r5+,r2
+		mov	@r6+,r3
+		mov	@r6+,r4
+		mov	r2,@-r6
+		mov	r1,@-r6
+		mov	r4,@-r5
+		mov	r3,@-r5
+
+; 		bra *
+; 		nop
+
+		dt	r11
+		bf/s	.roll
+		add	#8,r13
+.exit:
 
 		lds	@r15+,pr
 		rts
 		nop
 		align 4
 		ltorg
+
+; 	BUBBLE SORT
+; r14 - **
+; r13 - Polygon LIST (-Z,pointer)
+; r12 - **
+; r11 - Number of faces (MAIN)
+; r10 - **
+; 		dt	r11
+; 		cmp/pl	r11
+; 		bf	.exit
+; .roll:
+; 		xor	r14,r14
+; 		mov	r13,r12
+; 		mov	r11,r10
+; .next:
+; 		mov	r12,r0
+; 		mov	@r0+,r1		; Z top
+; 		mov	@r0+,r2
+; 		mov	@r0+,r3		; Z bottom
+; 		mov	@r0+,r4
+; 		cmp/gt	r3,r1
+; 		bf	.higher
+; 		mov	r2,@-r0
+; 		mov	r1,@-r0
+; 		mov	r4,@-r0
+; 		mov	r3,@-r0
+; 		add	#1,r14
+; .higher:
+; 		dt	r10
+; 		bf/s	.next
+; 		add	#8,r12
+; 		tst	r14,r14
+; 		bf	.roll
+; .exit:
 
 ; ; ****
 ; ; 	Sort this face
@@ -1966,7 +2018,6 @@ MarsMdl_MdlLoop:
 		align 4
 MarsMdl_ReadModel:
 		sts	pr,@-r15
-		mov	#RAM_Mars_ZStorage,r12
 		mov	@(mdl_data,r14),r10	; r10 - Model header
 		nop
 		mov.w	@r10,r9			;  r9 - Number of polygons of this model
@@ -1976,10 +2027,11 @@ MarsMdl_ReadModel:
 		nop
 .next_face:
 		mov	#MAX_FACES,r0
-		cmp/ge	r0,r9
+		cmp/ge	r0,r11
 		bf	.valid
-		bra	*
-		nop
+		rts
+		mov	r0,r11
+		align 4
 .valid:
 		mov.w	@r8+,r0
 		mov	r0,r5			; r5 - Face type
@@ -2056,6 +2108,7 @@ MarsMdl_ReadModel:
 .mk_face:
 		xor	r0,r0
 		mov	r0,@r12
+		mov	r0,@(4,r12)
 		mov	r4,r1			; r1 - OUTPUT face (X/Y) points
 		add 	#polygn_points,r1
 		mov	r6,r0
@@ -2185,7 +2238,6 @@ MarsMdl_ReadModel:
 		cmp/ge	r5,r3
 		bt	.bad_face
 
-
 	; *** Validate face
 		add	#sizeof_polygn,r13	; Next X/Y polygon
 		add	#8,r12			; Next Z storage
@@ -2197,6 +2249,37 @@ MarsMdl_ReadModel:
 		bra	.next_face
 		nop
 .exit:
+; 		mov.w	@r10,r9			;  r9 - Number of polygons of this model
+; 		extu.w	r9,r9
+;
+; 		dt	r9
+; 		cmp/pl	r9
+; 		bf	.exitn
+; .roll:
+; 		xor	r8,r8
+; 		mov	r12,r7
+; 		mov	r9,r10
+; .next:
+; 		mov	r7,r0
+; 		mov	@r0+,r1		; Z top
+; 		mov	@r0+,r2
+; 		mov	@r0+,r3		; Z bottom
+; 		mov	@r0+,r4
+; 		cmp/gt	r3,r1
+; 		bf	.higher
+; 		mov	r2,@-r0
+; 		mov	r1,@-r0
+; 		mov	r4,@-r0
+; 		mov	r3,@-r0
+; 		add	#1,r8
+; .higher:
+; 		dt	r10
+; 		bf/s	.next
+; 		add	#8,r7
+; 		tst	r8,r8
+; 		bf	.roll
+; .exitn:
+
 		lds	@r15+,pr
 		rts
 		nop
@@ -2211,15 +2294,15 @@ MarsMdl_ReadModel:
 ; r3 - Y
 ; r4 - Z
 mdlrd_setpoint:
-		mov	#Cach_BkupPnt_S,r0
-		sts	pr,@-r0
-		mov 	r5,@-r0
-		mov 	r6,@-r0
-		mov 	r7,@-r0
-		mov 	r8,@-r0
-		mov 	r9,@-r0
-		mov 	r10,@-r0
-		mov 	r11,@-r0
+; 		mov	#Cach_BkupPnt_S,r0
+		sts	pr,@-r15
+		mov 	r5,@-r15
+		mov 	r6,@-r15
+		mov 	r7,@-r15
+		mov 	r8,@-r15
+		mov 	r9,@-r15
+		mov 	r10,@-r15
+		mov 	r11,@-r15
 
 	; Object rotation
 		mov	r2,r5			; r5 - X
@@ -2303,29 +2386,22 @@ mdlrd_setpoint:
 	; this is the best I got,
 	; It breaks on large faces
 		mov	#320<<16,r7
-		neg	r4,r0		; reverse Z
-		cmp/pl	r0
+		neg	r4,r8		; reverse Z
+		cmp/pl	r8
 		bt	.inside
-		mov	#1,r0
 		shlr2	r7
-		shlr2	r7
-; 		shlr	r7
-; 		dmuls	r7,r2
-; 		sts	mach,r0
-; 		sts	macl,r2
-; 		xtrct	r0,r2
-; 		dmuls	r7,r3
-; 		sts	mach,r0
-; 		sts	macl,r3
-; 		xtrct	r0,r3
 		bra	.zmulti
-		nop
+		shlr2	r7
 .inside:
+; 		mov	#1,r0	; *** MASTER ONLY
+; 		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 		mov 	#_JR,r9
-		mov 	r0,@r9
+		mov 	r8,@r9
 		mov 	r7,@(4,r9)
 		nop
 		mov 	@(4,r9),r7
+; 		xor	r0,r0	; *** MASTER ONLY
+; 		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 .zmulti:
 		dmuls	r7,r2
 		sts	mach,r0
@@ -2336,15 +2412,15 @@ mdlrd_setpoint:
 		sts	macl,r3
 		xtrct	r0,r3
 
-		mov	#Cach_BkupPnt_L,r0
-		mov	@r0+,r11
-		mov	@r0+,r10
-		mov	@r0+,r9
-		mov	@r0+,r8
-		mov	@r0+,r7
-		mov	@r0+,r6
-		mov	@r0+,r5
-		lds	@r0+,pr
+; 		mov	#Cach_BkupPnt_L,r0
+		mov	@r15+,r11
+		mov	@r15+,r10
+		mov	@r15+,r9
+		mov	@r15+,r8
+		mov	@r15+,r7
+		mov	@r15+,r6
+		mov	@r15+,r5
+		lds	@r15+,pr
 
 ; 	; Set the most far points
 ; 	; for each direction (X,Y,Z)
@@ -2940,7 +3016,9 @@ mdlrd_rotate:
 ; 		align 4
 ; 		ltorg
 ;
-		align 4
-Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
-Cach_BkupPnt_L		ds.l 8				; **
-Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards
+
+; moved to cache_slv.asm
+; 		align 4
+; Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
+; Cach_BkupPnt_L		ds.l 8				; **
+; Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards

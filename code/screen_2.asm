@@ -298,6 +298,7 @@ MdlMap_Build:
 		add.w	#MAPPZ_SIZE,d1
 		bsr	.mk_pz
 		adda	#$40,a3
+
 		add.w	#MAPPZ_SIZE,d2
 		dbf	d3,.next_m
 		rts

@@ -1021,9 +1021,9 @@ put_piece:
 		shlr16	r5
 		xtrct	r5,r0
 		mov	r0,@(plypz_src_yl,r1)
-
 ; 		mov	r2,@(plypz_src_yl,r1)
 ; 		mov	r3,@(plypz_src_yr,r1)
+
 		mov	@(4,r8),r0
 		mov	@(4,r7),r5
 		mov	r0,@(plypz_src_yl_dx,r1)
@@ -1051,7 +1051,7 @@ put_piece:
 	; next piece
 		add	#sizeof_plypz,r1
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		cmp/gt	r0,r1
+		cmp/ge	r0,r1
 		bf	.dontres
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
 		mov	r0,r1

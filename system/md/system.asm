@@ -578,8 +578,8 @@ Mode_Init:
 		adda	#sizeof_mdlobj,a4
 		dbf	d5,.clr_mdls
 
-; 		move.w	#0,d0
-; 		bsr	Video_Mars_GfxMode
+		move.w	#0,d0
+		bsr	Video_Mars_GfxMode
 		rts
 
 ; --------------------------------------------------------

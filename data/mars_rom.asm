@@ -47,5 +47,5 @@ MapFg_M:	binclude "data/maps/level0/fg_main.bin"
 		align 4
 
 ; MarsObj_test:
-		include "data/mars/objects/mdl/test/head.asm"
+; 		include "data/mars/objects/mdl/test/head.asm"
 

@@ -804,7 +804,6 @@ s_irq_pwm:
 ; ------------------------------------------------
 
 			align 4
-; Cach_CurrPlygn		ds.b sizeof_polygn		; Current reading polygon
 ; Cach_BkupPnt_L		ds.l 8				; **
 ; Cach_BkupPnt_S		ds.l 0				; <-- Reads backwards
 Cach_BkupS_L		ds.l 5				; **

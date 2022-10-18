@@ -447,6 +447,7 @@ Video_LoadMap:
 ; for the font.
 ;
 ; *** ON VBLANK OR DISPLAY OFF ONLY ***
+; *** MAKE SURE SH2 ISNT USING ROM ***
 ; --------------------------------------------------------
 
 Video_PrintInit:
@@ -1129,10 +1130,12 @@ Video_Copy:
 ; d1 | WORD - VRAM location
 ; d2 | WORD - Size
 ;
-; *** For faster transfers call this during VBlank ***
-;
 ; Breaks:
 ; d5-d7,a4-a6
+;
+; *** For faster transfers call this during VBlank ***
+; *** MAKE SURE SH2 IS NOT IN THE MIDDLE OF READING
+; ROM ***
 ; --------------------------------------------------------
 
 Video_LoadArt:
@@ -1268,12 +1271,12 @@ Video_Mars_GfxMode:
 		and.w	#%00000111,d7			; Current limit: 8 Master modes
 		or.w	#$C0,d7
 		move.b	d7,(sysmars_reg+comm12+1).l
-.wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master to finish init
-		and.w	#%11000000,d7
-		bne.s	.wait
-.wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for any Slave tasks too.
+.wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for Slave
 		and.w	#%00001111,d7
 		bne.s	.wait_slv
+.wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master
+		and.w	#%11000000,d7
+		bne.s	.wait
 		rts
 
 ; --------------------------------------------------------

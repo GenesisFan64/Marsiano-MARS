@@ -46,8 +46,8 @@ MD_2DMODE:
 		move.w	#$2700,sr
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-		bsr	Video_PrintInit
 		bsr	Mode_Init
+		bsr	Video_PrintInit
 
 	; MAP TESTING
 		move.l	#Art_level0,d0			; Genesis VDP graphics
