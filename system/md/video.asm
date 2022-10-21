@@ -447,7 +447,7 @@ Video_LoadMap:
 ; for the font.
 ;
 ; *** ON VBLANK OR DISPLAY OFF ONLY ***
-; *** MAKE SURE SH2 ISNT USING ROM ***
+; *** MAKE SURE SH2 IS NOT READING ROM DATA ***
 ; --------------------------------------------------------
 
 Video_PrintInit:
@@ -1284,10 +1284,7 @@ Video_Mars_GfxMode:
 ; --------------------------------------------------------
 
 Video_Mars_WaitFrame:
-		bset	#5,(sysmars_reg+comm12+1).l
-; 		move.w	(sysmars_reg+comm12).l,d7	; Set R bit
-; 		bset	#5,d7
-; 		move.w	d7,(sysmars_reg+comm12).l
+		bset	#5,(sysmars_reg+comm12+1).l	; Set R bit
 .wait:
 ; 		move.w	(vdp_ctrl),d7
 ; 		btst	#bitVBlk,d7

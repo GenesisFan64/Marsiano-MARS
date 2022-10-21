@@ -1818,13 +1818,17 @@ mstr_gfx3_loop:
 .wait_me:
 		mov.w	@r3,r0
 		and	#%1111,r0
-		cmp/eq	#3,r0			; <-- Stop processing on mode change
-		bf	mstr_ready
+		cmp/eq	#3,r0
+		bt	.mk_me
+		bra	mstr_ready		; <-- Stop processing on mode change
+		nop
+		align 4
+.mk_me:
 		mov.w	@r4,r0
-		and	#%00001111,r0
+		and	#%00001111,r0		; Slave busy?
 		tst	r0,r0
-		bf	.wait_me		; .slv_busy
-		stc	sr,@-r15
+		bf	.wait_me
+		stc	sr,@-r15		; Disable interrupts
 		mov	#$F0,r0
 		ldc	r0,sr
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy CAMERA and OBJECTS for Slave
@@ -1845,10 +1849,10 @@ mstr_gfx3_loop:
 		dt	r3
 		bf/s	.copy_cam
 		add	#4,r2
-		mov.w	@(marsGbl_PolyBuffNum,gbr),r0		; Swap Read/Write sections
+		mov.w	@(marsGbl_PolyBuffNum,gbr),r0	; Swap Read/Write sections FIRST
 		xor	#1,r0
 		mov.w	r0,@(marsGbl_PolyBuffNum,gbr)
-		mov	#_sysreg+comm14+1,r4			; Slave task $02
+		mov	#_sysreg+comm14+1,r4		; Request Slave task $02: Build the models
 		mov	#2,r0
 		mov.b	r0,@r4
 	if SH2_DEBUG
@@ -1857,7 +1861,6 @@ mstr_gfx3_loop:
 		mov.b	r0,@r1
 	endif
 		ldc	@r15+,sr
-.slv_busy:
 
 	; Start with the polygons
 		mov	#_vdpreg,r1
@@ -1892,11 +1895,57 @@ mstr_gfx3_loop:
 		jsr	@r0
 		nop
 
-	; The watchdog is now active checking for pieces
-	; to draw.
-	;
-	; r14 - Polygon pointers list
-	; r13 - Number of polygons to build
+	; The watchdog is now active
+
+; SELECTION SORT for the READ buffer --quick copypaste---
+; r14 - ***
+; r13 - Polygon LIST top
+; r12 - **
+; r11 - Number of faces (MAIN)
+; r10 - **
+		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
+		tst     #1,r0				; Check for which buffer to use
+		bt	.page_22
+		mov 	#RAM_Mars_PlgnList_0,r13
+		bra	.cont_plgn2
+		mov	#RAM_Mars_PlgnNum_0,r11
+.page_22:
+		mov 	#RAM_Mars_PlgnList_1,r13
+		mov	#RAM_Mars_PlgnNum_1,r11
+.cont_plgn2:
+		mov	@r11,r11
+		cmp/pl	r11
+		bf	.exit
+.roll:
+		mov	r11,r10
+		mov	r13,r14
+		mov	@r14,r1		; r1 - Start value
+.srch:
+		mov	@r14,r0
+		cmp/gt	r1,r0
+		bt	.higher
+		mov	r0,r1		; Update LOW r1 value
+		mov	r14,r5		; Save LOWER pointer
+.higher:
+		dt	r10
+		bf/s	.srch
+		add	#8,r14
+		mov	@r5+,r1		; Swap Z and pointers
+		mov	@r5+,r2
+		mov	@r13+,r3
+		mov	@r13+,r4
+		mov	r2,@-r13
+		mov	r1,@-r13
+		mov	r4,@-r5
+		mov	r3,@-r5
+		dt	r11
+		bf/s	.roll
+		add	#8,r13
+.exit:
+
+
+
+
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
 		tst     #1,r0				; Check for which buffer to use
 		bt	.page_2
@@ -1936,21 +1985,20 @@ mstr_gfx3_loop:
 ; 		jsr	@r0
 ; 		nop
 
-
 .wait_pz: 	mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces remaining?
 		tst	r0,r0
 		bf	.wait_pz
 .wait_wdg:	mov.w	@(marsGbl_WdgMode,gbr),r0	; Watchdog finished?
 		tst	r0,r0
 		bf	.wait_wdg
-		mov.l   #$FFFFFE80,r1
+		mov.l   #$FFFFFE80,r1			; Disable watchdog
 		mov.w   #$A518,r0
 		mov.w   r0,@r1
 		mov	#_vdpreg,r1
-.wait_sv:	mov.w	@($A,r1),r0			; Wait until FB is unlocked
+.wait_sv:	mov.w	@($A,r1),r0			; Check if FB is locked
 		tst	#2,r0
 		bf	.wait_sv
-		mov.b	@(framectl,r1),r0
+		mov.b	@(framectl,r1),r0		; Frameswap request
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
 
@@ -2383,11 +2431,9 @@ slv_task_2:
 
 ; JMP only
 slv_exit:
-		mov	#_sysreg+comm14,r4	; Finish task
-		mov	#$FF00,r1
-		mov.w	@r4,r0
-		and	r1,r0
-		mov.w	r0,@r4
+		mov	#_sysreg+comm14+1,r4	; Finish task
+		xor	r0,r0
+		mov.b	r0,@r4
 		bra	slave_loop
 		nop
 		align 4

@@ -20,8 +20,8 @@ SET_MAPSPD	equ $10
 
 		struct 0
 field_data	ds.l 1
-field_x		ds.w 1
-field_z		ds.w 1
+; field_x		ds.w 1
+; field_z		ds.w 1
 sizeof_mdfield	ds.l 0
 		finish
 
@@ -32,6 +32,14 @@ sizeof_mdfield	ds.l 0
 
 		struct RAM_ModeBuff
 RAM_FieldBuff	ds.b sizeof_mdfield
+RAM_HorCopy	ds.w 1
+RAM_CamData	ds.l 1
+RAM_CamFrame	ds.l 1
+RAM_CamTimer	ds.l 1
+RAM_CamSpeed	ds.l 1
+RAM_Cam_Xpos	ds.l 1
+RAM_Cam_Ypos	ds.l 1
+RAM_Cam_Zpos	ds.l 1
 		finish
 
 ; ====================================================================
@@ -70,7 +78,12 @@ MD_3DMODE:
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 
 	; Read MAP
+		move.l	#MapCamera_0,d0			; Animation
+		moveq	#1,d1
+		bsr	MdMdl_SetNewCamera
 		bsr	MdlMap_Init
+
+
 ; 		lea	(RAM_MdDreq+Dreq_Objects),a0
 ; 		move.l	#MarsObj_test|TH,mdl_data(a0)
 ; 		move.w	#-$800,mdl_z_pos(a0)
@@ -100,9 +113,16 @@ MD_3DMODE:
 		move.b	#$10,(RAM_VdpRegs+7).l
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
-
 		moveq	#3,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
+		bsr	System_WaitFrame	; Wait first frames...
+		moveq	#2-1,d7
+.pre_w:
+		bset	#5,(sysmars_reg+comm12+1).l
+.pre_wl:
+		btst	#5,(sysmars_reg+comm12+1).l
+		bne.s	.pre_wl
+		dbf	d7,.pre_w
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -168,20 +188,18 @@ MD_3DMODE:
 ; ------------------------------------------------------
 
 MdlMap_Init:
+		lea	(RAM_MdDreq+Dreq_ObjCam),a6
 		lea	(RAM_FieldBuff),a5
 		move.l	#MarsMap_00,field_data(a5)
-		clr.l	cam_x_pos(a6)
-; 		clr.l	cam_y_pos(a6)
-		clr.l	cam_z_pos(a6)
+		bsr	MdlMap_Build
+		bsr	MdMdl_CamAnimate
+		bpl.s	MdlMap_Loop
+		clr.l	(RAM_Cam_Xpos).l
+		clr.l	(RAM_Cam_Ypos).l
+		clr.l	(RAM_Cam_Zpos).l
 		clr.l	cam_x_rot(a6)
 		clr.l	cam_y_rot(a6)
 		clr.l	cam_z_rot(a6)
-		move.w	#$0D,field_x(a5)
-		move.w	#$0F,field_z(a5)
-		bsr	MdlMap_Build
-		lea	(RAM_MdDreq+Dreq_ObjCam),a6
-		move.l	#-$70,cam_y_pos(a6)
-
 MdlMap_Loop:
 ; 		lea	(RAM_MdDreq+Dreq_Objects),a6
 ; 		add.w	#8*4,mdl_x_rot(a6)
@@ -191,24 +209,24 @@ MdlMap_Loop:
 		move.w	(Controller_1+on_hold),d7
 		move.l	#SET_MAPSPD,d6
 		move.l	d6,d5
-; 		lsr.l	#2,d5
-		move.w	(RAM_HorScroll+2).l,d4
+		lsr.l	#2,d5
+		move.w	(RAM_HorCopy).l,d4
 		btst	#bitJoyUp,d7
 		beq.s	.z_up2
-		add.l	d6,cam_z_pos(a6)
+		add.l	d6,(RAM_Cam_Zpos).l;cam_z_pos(a6)
 .z_up2:
 		btst	#bitJoyDown,d7
 		beq.s	.z_dw2
-		sub.l	d6,cam_z_pos(a6)
+		sub.l	d6,(RAM_Cam_Zpos).l;cam_z_pos(a6)
 .z_dw2:
 		move.w	(Controller_1+on_hold),d7
 		btst	#bitJoyLeft,d7
 		beq.s	.z_up3
-		sub.l	d6,cam_x_pos(a6)
+		sub.l	d6,(RAM_Cam_Xpos).l;cam_X_pos(a6)
 .z_up3:
 		btst	#bitJoyRight,d7
 		beq.s	.z_dw3
-		add.l	d6,cam_x_pos(a6)
+		add.l	d6,(RAM_Cam_Xpos).l;cam_X_pos(a6)
 .z_dw3:
 		btst	#bitJoyA,d7
 		beq.s	.z_rl
@@ -231,42 +249,54 @@ MdlMap_Loop:
 
 		btst	#bitJoyZ,d7
 		beq.s	.z_rld
-		sub.l	d6,cam_y_pos(a6)
+		sub.l	d6,(RAM_Cam_Ypos).l
 .z_rld:
 		btst	#bitJoyC,d7
 		beq.s	.z_rrd
-		add.l	d6,cam_y_pos(a6)
+		add.l	d6,(RAM_Cam_Ypos).l
 .z_rrd:
-		move.w	(sysmars_reg+comm14),d0
-		and.w	#%1111,d0
+		move.w	d4,(RAM_HorCopy).l
+		btst	#5,(sysmars_reg+comm12+1).l
 		bne.s	.busy
-		move.w	d4,(RAM_HorScroll+2).l
+		move.w	(RAM_HorCopy).l,(RAM_HorScroll+2).l
+		bset	#5,(sysmars_reg+comm12+1).l
 .busy:
+		bsr	MdMdl_CamAnimate
 
-		move.l	cam_z_pos(a6),d7
-		and.w	#-MAPPZ_SIZE,d7
-		beq.s	.z_upd
-		moveq	#1,d0
-		tst.w	d7
-		bmi.s	.z_up
-		neg.w	d0
-.z_up:
-		add.w	d0,field_z(a5)
-.z_upd:
-		move.l	cam_x_pos(a6),d7
-		and.w	#-MAPPZ_SIZE,d7
-		beq.s	.x_upd
-		moveq	#1,d0
-		tst.w	d7
-		bpl.s	.x_up
-		neg.w	d0
-.x_up:
-		add.w	d0,field_x(a5)
+; 		move.l	cam_z_pos(a6),d7
+; 		and.w	#-MAPPZ_SIZE,d7
+; 		beq.s	.z_upd
+; 		moveq	#1,d0
+; 		tst.w	d7
+; 		bmi.s	.z_up
+; 		neg.w	d0
+; .z_up:
+; 		add.w	d0,field_z(a5)
+; .z_upd:
+; 		move.l	cam_x_pos(a6),d7
+; ; 		add.w	#MAPPZ_SIZE/2,d7
+; 		and.w	#-MAPPZ_SIZE,d7
+; 		beq.s	.x_upd
+; 		moveq	#1,d0
+; 		tst.w	d7
+; 		bpl.s	.x_up
+; 		neg.w	d0
+; .x_up:
+; 		add.w	d0,field_x(a5)
+;
+;
+; .x_upd:
 
+		move.l	(RAM_Cam_Xpos).w,d0
+		move.l	(RAM_Cam_Zpos).w,d1
+		and.l	#MAPPZ_SIZE-1,d0
+		and.l	#MAPPZ_SIZE-1,d1
+		move.l	d0,cam_x_pos(a6)
+		move.l	d1,cam_z_pos(a6)
 
-.x_upd:
-		and.l	#MAPPZ_SIZE-1,cam_x_pos(a6)
-		and.l	#MAPPZ_SIZE-1,cam_z_pos(a6)
+		move.l	(RAM_Cam_Ypos).w,d0
+		move.l	d0,cam_y_pos(a6)
+
 ; 		rts
 
 ; a6 - camera
@@ -276,50 +306,63 @@ MdlMap_Build:
 		lea	(RAM_MdDreq+Dreq_Objects),a4
 		move.l	field_data(a5),a3
 		move.l	(a3)+,a1
-		move.w	field_z(a5),d1
+
+		move.l	(RAM_Cam_Zpos),d1
+		move.l	(RAM_Cam_Xpos),d0
+		lsr.l	#8,d0
+		lsr.l	#8,d1
+		lsr.l	#4,d0
+		lsr.l	#4,d1
+; 		neg.w	d0
+		neg.w	d1
+		add.w	#$0D,d0
+		add.w	#$0D+1,d1
+; 		move.w	field_z(a5),d1
+; 		move.w	field_x(a5),d0
 		lsl.w	#6,d1
-		move.w	field_x(a5),d0
 		add.w	d0,d0
 		adda	d1,a3
 		adda	d0,a3
 
-; - X X
-; - X X
+		move.l	cam_x_rot(a6),d0
+		lsr.w	#8,d0
+		lsr.w	#2,d0
+		and.w	#%110,d0
+		move.w	.views(pc,d0.w),d0
+		jmp	.views(pc,d0.w)
+.views:
+		dc.w .front_r-.views
+		dc.w .front_r-.views
+		dc.w .front_r-.views
+		dc.w .front_r-.views
+
+; X X X
+; X X X
+; X X X
 ; - - -
-.front_m:
-		move.w	#-(MAPPZ_SIZE),d2
-		moveq	#2-1,d3
-.next_m:
-		move.w	#0,d1
-		move.l	a3,a2
-		adda	#2,a2
-		bsr	.mk_pz
-		adda	#2,a2
+; - - -
+.front_r:
+		move.w	#-(MAPPZ_SIZE),d3
+		move.w	#-MAPPZ_SIZE,d1
+		bsr.s	.do_clmn
+		adda	#2,a3
 		add.w	#MAPPZ_SIZE,d1
+		bsr.s	.do_clmn
+		adda	#2,a3
+		add.w	#MAPPZ_SIZE,d1
+; 		bsr.s	.do_clmn
+
+; 		rts
+.do_clmn:
+		move.l	a3,a2
+		move.w	d3,d2
 		bsr	.mk_pz
-		adda	#$40,a3
-
 		add.w	#MAPPZ_SIZE,d2
-		dbf	d3,.next_m
-		rts
-
-; 		move.l	a2,a3
-; 		adda	#$40+$02,a3
-; 		moveq	#0,d1
-; 		move.w	#-(MAPPZ_SIZE),d2
+		adda	#$40,a2
 ; 		bsr	.mk_pz
-; 		adda	#2,a3
-; 		add.w	#MAPPZ_SIZE,d1
-; 		bsr	.mk_pz
-; 		move.l	a2,a3
-; 		adda	#$40+$02,a3
-; 		moveq	#0,d1
-; 		move.w	#-(MAPPZ_SIZE),d2
-; 		bsr	.mk_pz
-; 		adda	#2,a3
-; 		add.w	#MAPPZ_SIZE,d1
-; 		bsr	.mk_pz
-
+; 		add.w	#MAPPZ_SIZE,d2
+; 		adda	#$40,a2
+; 		bra	.mk_pz
 
 ; d1 - X pos
 ; d2 - Z pos
@@ -331,6 +374,110 @@ MdlMap_Build:
 		move.w	d1,mdl_x_pos(a4)
 		move.w	d2,mdl_z_pos(a4)
 		adda	#sizeof_mdlobj,a4
+		rts
+
+; 		move.w	#-MAPPZ_SIZE,d1
+; 		move.l	a3,a2
+; ; 		adda	#2,a2
+; 		bsr	.mk_pz
+; 		adda	#2,a2
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+; 		adda	#2,a2
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+;
+; 		adda	#$40,a3
+; 		add.w	#MAPPZ_SIZE,d2
+; 		dbf	d3,.next_m
+; 		rts
+
+; ; - - -
+; ; - X X
+; ; - X X
+; .front_d:
+; 		move.w	#0,d2
+; 		adda	#$40,a3
+; 		moveq	#2-1,d3
+; .next_dm:
+; 		move.w	#0,d1
+; 		move.l	a3,a2
+; 		adda	#2,a2
+; 		bsr	.mk_pz
+; 		adda	#2,a2
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+; 		adda	#$40,a3
+;
+; 		add.w	#MAPPZ_SIZE,d2
+; 		dbf	d3,.next_dm
+; 		rts
+
+; 		move.l	a2,a3
+; 		adda	#$40+$02,a3
+; 		moveq	#0,d1
+; 		move.w	#-(MAPPZ_SIZE),d2
+; 		bsr	.mk_pz
+; 		adda	#2,a3
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+; 		move.l	a2,a3
+; 		adda	#$40+$02,a3
+; 		moveq	#0,d1
+; 		move.w	#-(MAPPZ_SIZE),d2
+; 		bsr	.mk_pz
+; 		adda	#2,a3
+; 		add.w	#MAPPZ_SIZE,d1
+; 		bsr	.mk_pz
+
+; ------------------------------------------------------
+; Camera
+; ------------------------------------------------------
+
+MdMdl_SetNewCamera:
+; 		clr.l	(RAM_Cam_Xpos).l
+; 		clr.l	(RAM_Cam_Ypos).l
+; 		clr.l	(RAM_Cam_Zpos).l
+; 		clr.l	(RAM_Cam_Xrot).l
+; 		clr.l	(RAM_Cam_Yrot).l
+; 		clr.l	(RAM_Cam_Zrot).l
+		moveq	#0,d4
+		move.l	d4,(RAM_CamFrame).l
+		move.l	d4,(RAM_CamTimer).l
+		move.l	d1,(RAM_CamSpeed).l
+		move.l	d0,(RAM_CamData).l
+		rts
+
+MdMdl_CamAnimate:
+		lea	(RAM_MdDreq+Dreq_ObjCam),a6
+		move.l	(RAM_CamData).l,d0			; If 0 == No animation
+		beq.s	.no_camanim
+		sub.l	#1,(RAM_CamTimer).l
+		bpl.s	.no_camanim
+		move.l	(RAM_CamSpeed).l,(RAM_CamTimer).l	; TEMPORAL timer
+		move.l	d0,a1
+		move.l	(a1)+,d1
+		move.l	(RAM_CamFrame).l,d0
+		add.l	#1,d0
+		cmp.l	d1,d0
+		bne.s	.on_frames
+		moveq	#-1,d0
+		rts
+.on_frames:
+		move.l	d0,(RAM_CamFrame).l
+		mulu.w	#$18,d0
+		adda	d0,a1
+		move.l	(a1)+,(RAM_Cam_Xpos).l
+		move.l	(a1)+,(RAM_Cam_Ypos).l
+		move.l	(a1)+,(RAM_Cam_Zpos).l
+		move.l	(a1)+,cam_x_rot(a6)
+		move.l	(a1)+,cam_y_rot(a6)
+		move.l	(a1)+,cam_z_rot(a6)
+		lsr.l	#7,d1
+		neg.w	d1
+		move.w	d1,(RAM_HorCopy).l
+.no_camanim:
+		moveq	#0,d0
 		rts
 
 ; ====================================================================
@@ -376,30 +523,13 @@ str_Stats2:
 ; 		align 2
 
 ; str_Stats2:
-		dc.b "\\l \\l \\l \\w",$A,$A
-		dc.b "\\w \\w \\w \\w",0
-		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_pos
-		dc.l RAM_MdDreq+Dreq_ObjCam+cam_z_pos
+		dc.b "\\l",$A
+		dc.b "\\l",$A
+		dc.b "\\l \\w",0
 		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_rot
+		dc.l RAM_MdDreq+Dreq_ObjCam+cam_y_rot
+		dc.l RAM_MdDreq+Dreq_ObjCam+cam_z_rot
 		dc.l sysmars_reg+comm0
-		dc.l sysmars_reg+comm2
-		dc.l sysmars_reg+comm4
-		dc.l RAM_FieldBuff+field_x
-		dc.l RAM_FieldBuff+field_z
-; 		dc.l RAM_Framecount
-
-; 		dc.b "\\w \\w \\w \\w",$A
-; 		dc.b "\\w \\w \\w \\w",$A,$A
-; 		dc.b "\\l",0
-; 		dc.l sysmars_reg+comm0
-; 		dc.l sysmars_reg+comm2
-; 		dc.l sysmars_reg+comm4
-; 		dc.l sysmars_reg+comm6
-; 		dc.l sysmars_reg+comm8
-; 		dc.l sysmars_reg+comm10
-; 		dc.l sysmars_reg+comm12
-; 		dc.l sysmars_reg+comm14
-; 		dc.l RAM_Framecount
 		align 2
 
 		align 4
@@ -467,6 +597,10 @@ MarsMap_00:
 		dc.l 0
 		dc.l 0
 		align 2
+
+MapCamera_0:
+		binclude "data/maps/mars/mcity/anim/mcity_anim.bin"
+		align 4
 
 ; ====================================================================
 

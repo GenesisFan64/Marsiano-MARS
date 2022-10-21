@@ -8,7 +8,7 @@
 ; Settings
 ; --------------------------------------------------------
 
-MAX_MODELS	equ 12		; MAX 3D Models
+MAX_MODELS	equ 16		; MAX 3D Models
 MAX_SUPERSPR	equ 24		; MAX Number of Super Sprites
 
 ; --------------------------------------------------------

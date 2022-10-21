@@ -13,9 +13,9 @@
 ; SDRAM
 MAX_SCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
 MAX_SSPRSPD	equ 4		; Supersprite box increment: Size+this (maximum SuSprites speed)
-MAX_FACES	equ 700		; MAX polygon faces for 3D models
-MAX_SVDP_PZ	equ 700+128	; MAX polygon pieces to draw
-MAX_ZDIST	equ -$F80	; Maximum 3D field distance (-Z)
+MAX_FACES	equ 980		; MAX polygon faces for 3D models
+MAX_SVDP_PZ	equ 980+96	; MAX polygon pieces to draw
+MAX_ZDIST	equ -$1C00	; Maximum 3D field distance (-Z)
 
 ; FRAMEBUFFER
 FBVRAM_BLANK	equ $1F800	; Location for the BLANK line
@@ -1880,124 +1880,51 @@ MarsMdl_MdlLoop:
 .page_2:
 		mov	r11,@r12	; Save faces counter
 
+; *** MOVED SORTING TO MASTER
+
+; ; SELECTION SORT
+; ; r14 - Polygon LIST temporal
+; ; r13 - Polygon LIST top
+; ; r12 - **
+; ; r11 - Number of faces (MAIN)
+; ; r10 - **
 ;
-; r14 - **
-; r13 - Polygon LIST (-Z,pointer)
-; r12 - **
-; r11 - Number of faces (MAIN)
-; r10 - **
-
-		cmp/pl	r11
-		bf	.exit
-.roll:
-		mov	r11,r10
-		mov	r13,r14
-		mov	@r14,r1		; r1 - Start value
-.srch:
-		mov	@r14,r0
-		cmp/gt	r1,r0
-		bt	.higher
-		mov	r0,r1
-		mov	r14,r2		; r2 - target pointer
-.higher:
-		dt	r10
-		bf/s	.srch
-		add	#8,r14
-
-		mov	r2,r5
-		mov	r13,r6
-		mov	@r5+,r1
-		mov	@r5+,r2
-		mov	@r6+,r3
-		mov	@r6+,r4
-		mov	r2,@-r6
-		mov	r1,@-r6
-		mov	r4,@-r5
-		mov	r3,@-r5
-
-; 		bra *
-; 		nop
-
-		dt	r11
-		bf/s	.roll
-		add	#8,r13
-.exit:
+; 		cmp/pl	r11
+; 		bf	.exit
+; .roll:
+; 		mov	r11,r10
+; 		mov	r13,r14
+; 		mov	@r14,r1		; r1 - Start value
+; .srch:
+; 		mov	@r14,r0
+; 		cmp/gt	r1,r0
+; 		bt	.higher
+; 		mov	r0,r1		; Update LOW r1 value
+; 		mov	r14,r5		; Save LOWER pointer
+; .higher:
+; 		dt	r10
+; 		bf/s	.srch
+; 		add	#8,r14
+;
+; ; 		mov	r13,r6
+; 		mov	@r5+,r1		; Swap Z and pointers
+; 		mov	@r5+,r2
+; 		mov	@r13+,r3
+; 		mov	@r13+,r4
+; 		mov	r2,@-r13
+; 		mov	r1,@-r13
+; 		mov	r4,@-r5
+; 		mov	r3,@-r5
+; 		dt	r11
+; 		bf/s	.roll
+; 		add	#8,r13
+; .exit:
 
 		lds	@r15+,pr
 		rts
 		nop
 		align 4
 		ltorg
-
-; 	BUBBLE SORT
-; r14 - **
-; r13 - Polygon LIST (-Z,pointer)
-; r12 - **
-; r11 - Number of faces (MAIN)
-; r10 - **
-; 		dt	r11
-; 		cmp/pl	r11
-; 		bf	.exit
-; .roll:
-; 		xor	r14,r14
-; 		mov	r13,r12
-; 		mov	r11,r10
-; .next:
-; 		mov	r12,r0
-; 		mov	@r0+,r1		; Z top
-; 		mov	@r0+,r2
-; 		mov	@r0+,r3		; Z bottom
-; 		mov	@r0+,r4
-; 		cmp/gt	r3,r1
-; 		bf	.higher
-; 		mov	r2,@-r0
-; 		mov	r1,@-r0
-; 		mov	r4,@-r0
-; 		mov	r3,@-r0
-; 		add	#1,r14
-; .higher:
-; 		dt	r10
-; 		bf/s	.next
-; 		add	#8,r12
-; 		tst	r14,r14
-; 		bf	.roll
-; .exit:
-
-; ; ****
-; ; 	Sort this face
-; ; 	r7 - Curr Z
-; ; 	r6 - Past Z
-; 		mov.w	@(marsGbl_CurrNumFaces,gbr),r0
-; 		cmp/eq	#1,r0
-; 		bt	.first_face
-; 		cmp/eq	#2,r0
-; 		bt	.first_face
-; 		mov	r8,r7
-; 		add	#-8,r7
-; 		mov	@(marsGbl_CurrZTop,gbr),r0
-; 		mov	r0,r6
-; .page_2:
-; 		cmp/ge	r6,r7
-; 		bf	.first_face
-; 		mov	@(8,r7),r4
-; 		mov	@r7,r5
-; 		cmp/eq	r4,r5
-; 		bt	.first_face
-; 		cmp/gt	r4,r5
-; 		bf	.swap_me
-; 		mov	@r7,r4
-; 		mov	@(8,r7),r5
-; 		mov	r5,@r7
-; 		mov	r4,@(8,r7)
-; 		mov	@(4,r7),r4
-; 		mov	@($C,r7),r5
-; 		mov	r5,@(4,r7)
-; 		mov	r4,@($C,r7)
-; .swap_me:
-; 		bra	.page_2
-; 		add	#-8,r7
-; .first_face:
-; ; ****
 
 ; ------------------------------------------------
 ; Read model
@@ -2018,6 +1945,16 @@ MarsMdl_MdlLoop:
 		align 4
 MarsMdl_ReadModel:
 		sts	pr,@-r15
+; 		mov	#RAM_Mars_ObjCamera,r4
+;
+; 		mov	@(mdl_x_pos,r14),r0
+; 		mov	@(cam_x_pos,r14),r4
+; 		mov	#$1000*2,r1
+; 		add	r4,r0
+; 		cmp/ge	r1,r0
+; 		bt	.dont_bld
+
+
 		mov	@(mdl_data,r14),r10	; r10 - Model header
 		nop
 		mov.w	@r10,r9			;  r9 - Number of polygons of this model
@@ -2029,8 +1966,9 @@ MarsMdl_ReadModel:
 		mov	#MAX_FACES,r0
 		cmp/ge	r0,r11
 		bf	.valid
+.dont_bld:
 		rts
-		mov	r0,r11
+		nop
 		align 4
 .valid:
 		mov.w	@r8+,r0
@@ -2131,7 +2069,7 @@ MarsMdl_ReadModel:
 		add	#8,r1
 		mov	@r12,r0
 		cmp/ge	r0,r4
-		bt	.fc_tri			; ** bt .higher
+		bt	.fc_tri	; ** bt .higher
 		mov	r4,@r12
 .fc_tri:
 	rept 3
@@ -2151,11 +2089,10 @@ MarsMdl_ReadModel:
 		add	#8,r1
 		mov	@r12,r0
 		cmp/ge	r0,r4
-		dc.w $8900			; ** bt .higher
+		dc.w $8900	; ** bt .higher
 		mov	r4,@r12
 ;.higher:
 	endm
-
 
 	; *** Z-offscreen check***
 		mov	#MAX_ZDIST>>8,r1
@@ -2165,26 +2102,6 @@ MarsMdl_ReadModel:
 		cmp/ge	r1,r0
 		bf	.bad_face
 		mov	r13,@(4,r12)
-
-; 		mov	r12,r1
-; 		mov	#MAX_ZDIST>>8,r2
-; 		shll8	r2
-; 		mov	#-1,r3
-; 		shlr	r3		; $7FFFFFFF
-; 		mov	r6,r4
-; .nxt_z:
-; 		mov	@r1,r0
-; 		cmp/ge	r3,r0
-; 		bt	.z_low
-; 		mov	r0,r3
-; .z_low:
-; 		dt	r4
-; 		bf/s	.nxt_z
-; 		add	#4,r1
-; 		cmp/pz	r3
-; 		bt	.bad_face
-; 		cmp/ge	r2,r3
-; 		bf	.bad_face
 
 ; 	; *** X/Y-offscreen check***
 		lds	r6,mach
@@ -2358,8 +2275,6 @@ mdlrd_setpoint:
 		mov	r2,r5
 		mov	r4,r6
   		mov 	@(cam_x_rot,r11),r0
-;   		shlr2	r0
-;   		shlr	r0
   		bsr	mdlrd_rotate
 		shlr2	r0
    		mov	r7,r2
@@ -2367,16 +2282,12 @@ mdlrd_setpoint:
    		mov	r3,r5
   		mov	r8,r6
   		mov 	@(cam_y_rot,r11),r0
-;   		shlr2	r0
-;   		shlr	r0
   		bsr	mdlrd_rotate
 		shlr2	r0
    		mov	r8,r4
    		mov	r2,r5
    		mov	r7,r6
    		mov 	@(cam_z_rot,r11),r0
-;   		shlr2	r0
-;   		shlr	r0
   		bsr	mdlrd_rotate
 		shlr2	r0
    		mov	r7,r2
