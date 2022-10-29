@@ -20,7 +20,7 @@ CACHE_MSTR_PLGN:
 		mov.b	r0,@(7,r1)
 		mov.w	@(marsGbl_WdgHold,gbr),r0
 		cmp/eq	#1,r0
-		bt	.exit
+		bt	.exit_wdg
 		mov.w	@(marsGbl_WdgMode,gbr),r0	; Framebuffer clear request ($07)?
 		cmp/eq	#7,r0
 		bf	maindrw_tasks
@@ -36,31 +36,30 @@ CACHE_MSTR_PLGN:
 		mov.w   @(6,r1),r0			; SVDP-fill address
 		add     #$5B,r0				; <-- Pre-increment
 		mov.w   r0,@(6,r1)
-		mov.w   #328/2,r0			; SVDP-fill size (320 pixels)
+		mov.w   #328/2,r0			; SVDP-fill size (320+ pixels)
 		mov.w   r0,@(4,r1)
 		mov.w	#$0000,r0			; SVDP-fill pixel data
 		mov.w   r0,@(8,r1)			; now SVDP-fill is working.
-		mov	#$FFFFFE80,r1
-		mov.w   #$A518,r0			; OFF
-		mov.w   r0,@r1
-		or      #$20,r0				; ON
-		mov.w   r0,@r1
-		mov.w   #$5A10,r0			; Timer before next watchdog
-		mov.w   r0,@r1
 		mov	#Cach_ClrLines,r1		; Decrement a line to progress
 		mov	@r1,r0
 		dt	r0
-		bf/s	.on_clr
-		mov	r0,@r1
-		mov	#1,r0				; If finished: set task $01
+		bf/s	.exit_wdg
+		mov	r0,@r1				; Write new value before branch
+		mov	#1,r0				; Finished: Set task $01
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 .on_clr:
 		rts
 		nop
 		align 4
-.exit:		mov	r2,@-r15
-		bra	drwtask_exit
-		mov	#$10,r2
+.exit_wdg:
+		mov.l   #$FFFFFE80,r1
+		mov.w   #$A518,r0		; OFF
+		mov.w   r0,@r1
+		or      #$20,r0			; ON
+		mov.w   r0,@r1
+		mov.w   #$5A10,r0		; Timer: $10
+		rts
+		mov.w   r0,@r1
 		align 4
 		ltorg
 
@@ -77,7 +76,7 @@ maindrw_tasks:
 		nop
 		align 4
 .list:
-		dc.l slvplgn_00		;
+		dc.l slvplgn_00		; NULL task, exit.
 		dc.l slvplgn_01		; Main drawing routine
 		dc.l slvplgn_02		; Resume from solid color
 
@@ -85,7 +84,7 @@ maindrw_tasks:
 ; Task $02
 ; --------------------------------
 
-; NOTE: It only resumes from solid_color
+; NOTE: Only resumes from solid_color
 
 slvplgn_02:
 		mov	r2,@-r15
@@ -135,13 +134,14 @@ slvplgn_01:
 		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Any pieces to draw?
 		cmp/pl	r0
 		bt	.has_pz
-		mov.w	@(marsGbl_WdgReady,gbr),r0
+		mov.w	@(marsGbl_WdgReady,gbr),r0	; Finished with the pieces?
 		tst	r0,r0
 		bt	.exit
-		mov	#0,r0
+		mov	#0,r0				; Watchdog out.
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
 .exit:		bra	drwtask_exit
 		mov	#$10,r2
+		align 4
 .has_pz:
 		mov	r3,@-r15			; Save all these regs
 		mov	r4,@-r15
@@ -185,7 +185,7 @@ drwtsk1_newpz:
 		align 4
 .no_pz:
 		bra	drwtask_exit
-		nop
+		mov	#$10,r2
 		align 4
 .valid_y:
 		mov	@(plypz_xl,r14),r1
@@ -322,18 +322,18 @@ drwsld_nxtline_tex:
 		mov	tag_width,r0		; XR point > 320?
 		cmp/gt	r0,r3
 		bf	.tr_fix
-		mov	r0,r3				; Force XR to 320
+		mov	r0,r3			; Force XR to 320
 .tr_fix:
-		cmp/pz	r1				; XL point < 0?
+		cmp/pz	r1			; XL point < 0?
 		bt	.tl_fix
-		neg	r1,r2				; Fix texture positions
+		neg	r1,r2			; Fix texture positions
 		dmuls	r6,r2
 		sts	macl,r0
 		add	r0,r5
 		dmuls	r8,r2
 		sts	macl,r0
 		add	r0,r7
-		xor	r1,r1				; And reset XL to 0
+		xor	r1,r1			; And reset XL to 0
 .tl_fix:
 
 	; start
@@ -360,6 +360,11 @@ drwsld_nxtline_tex:
 		add 	r0,r10			; Add Y
 		add 	r1,r10			; Add X
 		mov	@(plypz_mtrl,r14),r1
+		mov	#_vdpreg,r2		; Any pending SVDP fill?
+.w_fb:
+		mov.w	@($A,r2),r0
+		tst	#2,r0
+		bf	.w_fb
 .tex_xloop:
 		mov	r7,r2
 		shlr16	r2
@@ -459,15 +464,15 @@ drwtsk_solidmode:
 		tst	#2,r0
 		bf	.wait
 drwsld_nxtline:
-		mov	r9,r0
+		cmp/pz	r9			; Y pos < 0?
+		bf	drwsld_updline
+		mov	#SCREEN_HEIGHT,r0	; Y pos > 224?
+		cmp/gt	r0,r9
+		bt	drwsld_nextpz
+		mov	r9,r0			; r10-r9 < 0?
 		add	r10,r0
 		cmp/pl	r0
 		bf	drwsld_nextpz
-		cmp/pz	r9
-		bf	drwsld_updline
-		mov	#SCREEN_HEIGHT,r0
-		cmp/gt	r0,r9
-		bt	drwsld_nextpz
 
 		mov	r1,r11
 		mov	r3,r12
@@ -475,6 +480,9 @@ drwsld_nxtline:
 		shlr16	r12
 		exts.w	r11,r11
 		exts.w	r12,r12
+		mov	#-2,r0		; Make WORD aligned now.
+		and	r0,r11
+		and	r0,r12
 		mov	r12,r0
 		sub	r11,r0
 		cmp/pz	r0
@@ -483,46 +491,38 @@ drwsld_nxtline:
 		mov	r11,r12
 		mov	r0,r11
 .revers:
-		mov	#SCREEN_WIDTH-2,r0
-		cmp/pl	r12
+		mov	#SCREEN_WIDTH,r0
+		cmp/pl	r12		; XR < 0?
 		bf	drwsld_updline
-		cmp/gt	r0,r11
+		cmp/ge	r0,r11		; XL > 320?
 		bt	drwsld_updline
-		cmp/gt	r0,r12
+		cmp/ge	r0,r12		; XR > 320?
 		bf	.r_fix
-		mov	r0,r12
+		mov	r0,r12		; MAX XR
 .r_fix:
-		cmp/pl	r11
+		cmp/pl	r11		; XL < 0?
 		bt	.l_fix
-		xor	r11,r11
+		xor	r11,r11		; MIN XL
 .l_fix:
-		mov	#-2,r0
-		and	r0,r11
-		and	r0,r12
-		mov	r12,r0
-		sub	r11,r0
-		cmp/pz	r0		; <-- TODO: cambiar a pl si freezea
-		bf	drwsld_updline
-
-.wait:		mov.w	@(10,r13),r0
+		mov.w	@(10,r13),r0	; Pending SVDP fill?
 		tst	#2,r0
-		bf	.wait
+		bf	.l_fix
 		mov	r12,r0
 		sub	r11,r0
 		mov	r0,r12
-		shlr	r0
-		mov.w	r0,@(4,r13)	; length
+		shlr	r0		; Len: (XR-XL)/2
+		mov.w	r0,@(4,r13)	; Set SVDP-FILL len
 		mov	r11,r0
 		shlr	r0
 		mov	r9,r5
 		add	#1,r5
 		shll8	r5
-		add	r5,r0
-		mov.w	r0,@(6,r13)	; address
+		add	r5,r0		; Address: (XL/2)*((Y+1)*$200)/2
+		mov.w	r0,@(6,r13)	; Set SVDP-FILL address
 		mov	r6,r0
 		shll8	r0
-		or	r6,r0
-		mov.w	r0,@(8,r13)	; Set data
+		or	r6,r0		; Data: xxxx
+		mov.w	r0,@(8,r13)	; Set pixels, SVDP-Fill begins
 ; .wait:	mov.w	@(10,r13),r0
 ; 		tst	#2,r0
 ; 		bf	.wait
@@ -530,12 +530,12 @@ drwsld_nxtline:
 ; 	If the line is too large, leave it to VDP
 ; 	and exit watchdog, we will come back on
 ; 	next trigger.
-		mov	#$28,r0
-		cmp/gt	r0,r12
+		mov	#$28,r0				; If line > $28, leave the SVDP filling
+		cmp/gt	r0,r12				; and wait for the next watchdog
 		bf	drwsld_updline
-		mov	#2,r0
+		mov	#2,r0				; Set next mode on Resume
 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-		mov	#Cach_LnDrw_S,r0
+		mov	#Cach_LnDrw_S,r0		; Save ALL these regs for comeback
 		mov	r1,@-r0
 		mov	r2,@-r0
 		mov	r3,@-r0
@@ -551,10 +551,11 @@ drwsld_nxtline:
 		mov	r13,@-r0
 		mov	r14,@-r0
 		bra	drwtask_return
-		mov	#$08,r2			; Exit and re-enter
+		mov	#$10,r2			; Exit for now
+; otherwise...
 drwsld_updline:
-		add	r2,r1
-		add	r4,r3
+		add	r2,r1			; Next X dst
+		add	r4,r3			; Next Y dst
 		dt	r10
 		bf/s	drwsld_nxtline
 		add	#1,r9
@@ -564,20 +565,20 @@ drwsld_updline:
 drwsld_nextpz:
 		xor	r0,r0
 		mov	r0,@(plypz_type,r14)
+		nop
 		mov	@(marsGbl_PlyPzList_End,gbr),r0
-		add	#sizeof_plypz,r14		; And set new point
-		cmp/ge	r0,r14
-		bf	.reset_rd
+		add	#sizeof_plypz,r14		; Do next piece
+		cmp/ge	r0,r14				; If EOL, go back to the beginning.
+		bf/s	.reset_rd
+		mov	r14,r0				; ** pre-jump copy r14 to r0
 		mov	@(marsGbl_PlyPzList_Start,gbr),r0
-		mov	r0,r14
 .reset_rd:
-		mov	r14,r0
 		mov	r0,@(marsGbl_PlyPzList_R,gbr)
-		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece
+		mov.w	@(marsGbl_PlyPzCntr,gbr),r0	; Decrement piece counter
 		add	#-1,r0
 		mov.w	r0,@(marsGbl_PlyPzCntr,gbr)
 		bra	drwtask_return
-		mov	#$20,r2			; Timer for next watchdog
+		mov	#$10,r2				; Timer for next watchdog
 
 ; --------------------------------
 ; Task $00

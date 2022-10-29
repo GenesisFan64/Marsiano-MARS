@@ -1894,58 +1894,10 @@ mstr_gfx3_loop:
 		mov	#Mars_SetWatchdog,r0
 		jsr	@r0
 		nop
+	; *** Watchdog is now active
 
-	; The watchdog is now active
-
-; SELECTION SORT for the READ buffer --quick copypaste---
-; r14 - ***
-; r13 - Polygon LIST top
-; r12 - **
-; r11 - Number of faces (MAIN)
-; r10 - **
-		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
-		tst     #1,r0				; Check for which buffer to use
-		bt	.page_22
-		mov 	#RAM_Mars_PlgnList_0,r13
-		bra	.cont_plgn2
-		mov	#RAM_Mars_PlgnNum_0,r11
-.page_22:
-		mov 	#RAM_Mars_PlgnList_1,r13
-		mov	#RAM_Mars_PlgnNum_1,r11
-.cont_plgn2:
-		mov	@r11,r11
-		cmp/pl	r11
-		bf	.exit
-.roll:
-		mov	r11,r10
-		mov	r13,r14
-		mov	@r14,r1		; r1 - Start value
-.srch:
-		mov	@r14,r0
-		cmp/gt	r1,r0
-		bt	.higher
-		mov	r0,r1		; Update LOW r1 value
-		mov	r14,r5		; Save LOWER pointer
-.higher:
-		dt	r10
-		bf/s	.srch
-		add	#8,r14
-		mov	@r5+,r1		; Swap Z and pointers
-		mov	@r5+,r2
-		mov	@r13+,r3
-		mov	@r13+,r4
-		mov	r2,@-r13
-		mov	r1,@-r13
-		mov	r4,@-r5
-		mov	r3,@-r5
-		dt	r11
-		bf/s	.roll
-		add	#8,r13
-.exit:
-
-
-
-
+; r14 - Polygon LIST
+; r13 - Number of faces (MAIN)
 		mov.w   @(marsGbl_PolyBuffNum,gbr),r0	; Start drawing polygons from the READ buffer
 		tst     #1,r0				; Check for which buffer to use
 		bt	.page_2
@@ -1954,30 +1906,59 @@ mstr_gfx3_loop:
 		mov	#RAM_Mars_PlgnNum_0,r13
 .page_2:
 		mov 	#RAM_Mars_PlgnList_1,r14
-; 		nop
+		bra	.cont_plgn			; Make jump equal
 		mov	#RAM_Mars_PlgnNum_1,r13
+		nop
 .cont_plgn:
 		mov	@r13,r13
 		cmp/pl	r13
 		bf	.skip
-	; Sorting goes here...
-		add	#4,r14
+		mov	r14,r12		; r12 - PlgnList copy
+		mov	r13,r11		; r11 - PlgnNum copy
+.roll:
+		mov	r12,r10
+		mov	@r10,r7		; r1 - Start value
+		mov	r10,r8		; Set Lower pointer
+		mov	r11,r9
+		nop
+.srch:
+		mov	@r10,r0
+		cmp/gt	r7,r0
+		bt	.higher
+		mov	r0,r7		; Update LOW r1 value
+		mov	r10,r8		; Save NEW Lower pointer
+.higher:
+		dt	r9
+		bf/s	.srch
+		add	#8,r10
+		mov	@r8+,r1		; Swap Z and pointers
+		mov	@r8+,r2
+		mov	@r12+,r3
+		mov	@r12+,r4
+		mov	r2,@-r12
+		mov	r1,@-r12
+		mov	r4,@-r8
+		mov	r3,@-r8
+		dt	r11
+		bf/s	.roll
+		add	#8,r12
+.exit:
+		add	#4,r14			; r14: point to polygon indexes
 .loop:
-		mov	@r14,r0				; Get location of the polygon
-		cmp/pl	r0				; Zero?
-		bf	.invalid			; if yes, skip
+		mov	@r14,r0
+		cmp/pl	r0			; Zero?
+		bf	.invalid
 		mov	r14,@-r15
-		mov	r13,@-r15
 		mov	r0,r14
 		mov 	#MarsVideo_SlicePlgn,r0
 		jsr	@r0
-		nop
+		mov	r13,@-r15
 		mov	@r15+,r13
 		mov	@r15+,r14
 .invalid:
-		dt	r13				; Decrement numof_polygons
+		dt	r13			; Decrement numof_polygons
 		bf/s	.loop
-		add	#8,r14				; Move to next entry
+		add	#8,r14			; Move to next entry
 .skip:
 		mov	#1,r0
 		mov.w	r0,@(marsGbl_WdgReady,gbr)

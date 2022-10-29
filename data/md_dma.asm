@@ -8,13 +8,11 @@
 		align $8000
 ASCII_FONT:	binclude "system/md/data/font.bin"
 ASCII_FONT_e:
-
 		align $8000
-ART_TEST3D:	binclude "data/bg/md/test_3d/md_bg_art.bin"
+ART_TEST3D:	binclude "data/maps/3D/md_bg/md_bg_art.bin"
 ART_TEST3D_e:
-
 		align $8000
-Art_level0:	binclude "data/maps/level0/art.bin"
+Art_level0:	binclude "data/maps/2D/level0/art.bin"
 Art_level0_e:
 
 

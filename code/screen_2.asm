@@ -11,7 +11,7 @@
 ; ------------------------------------------------------
 
 MAPPZ_SIZE	equ $1000
-SET_MAPSPD	equ $10
+SET_MAPSPD	equ $20
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -68,7 +68,7 @@ MD_3DMODE:
 		moveq	#0,d0
 		move.w	#16,d1
 		bsr	Video_FadePal
-		lea	(MDLDATA_PAL_TEST),a0
+		lea	(PalMars_MarsCity),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#1,d2
@@ -83,23 +83,16 @@ MD_3DMODE:
 		bsr	MdMdl_SetNewCamera
 		bsr	MdlMap_Init
 
-
-; 		lea	(RAM_MdDreq+Dreq_Objects),a0
-; 		move.l	#MarsObj_test|TH,mdl_data(a0)
-; 		move.w	#-$800,mdl_z_pos(a0)
-; 		move.w	#0,mdl_y_pos(a0)
-
-; 	; Testing track
+	; Testing track
 		moveq	#0,d0
 		bsr	Sound_TrkStop
-		move.w	#200+32,d1
+		move.w	#200+32,d1		; 160+
 		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_MOVEME),a0
-; 		lea	(GemaTrkData_Nadie_MD),a0
+		lea	(GemaTrk_BodyOver),a0
 		moveq	#0,d0
-		move.w	#7,d1
+		move.w	#6,d1
 		moveq	#0,d2
-		move.w	#0,d3
+		move.w	#%0001,d3		;
 		bsr	Sound_TrkPlay
 
 	; Set Fade-in settings
@@ -115,14 +108,15 @@ MD_3DMODE:
 		bsr	Video_Update
 		moveq	#3,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
-		bsr	System_WaitFrame	; Wait first frames...
-		moveq	#2-1,d7
-.pre_w:
-		bset	#5,(sysmars_reg+comm12+1).l
-.pre_wl:
-		btst	#5,(sysmars_reg+comm12+1).l
-		bne.s	.pre_wl
-		dbf	d7,.pre_w
+
+		bsr	System_WaitFrame	; Send first DREQ
+; 		moveq	#2-1,d7
+; .pre_w:
+; 		bset	#5,(sysmars_reg+comm12+1).l
+; .pre_wl:
+; 		btst	#5,(sysmars_reg+comm12+1).l
+; 		bne.s	.pre_wl
+; 		dbf	d7,.pre_w
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -143,9 +137,9 @@ MD_3DMODE:
 		rts
 .not_mode:
 
-		lea	str_Stats2(pc),a0
-		move.l	#locate(0,2,2),d0
-		bsr	Video_Print
+; 		lea	str_Stats2(pc),a0
+; 		move.l	#locate(0,2,2),d0
+; 		bsr	Video_Print
 		bsr	MdlMap_Loop
 
 
@@ -200,6 +194,8 @@ MdlMap_Init:
 		clr.l	cam_x_rot(a6)
 		clr.l	cam_y_rot(a6)
 		clr.l	cam_z_rot(a6)
+		move.l	#-$80,(RAM_Cam_Ypos).l
+
 MdlMap_Loop:
 ; 		lea	(RAM_MdDreq+Dreq_Objects),a6
 ; 		add.w	#8*4,mdl_x_rot(a6)
@@ -293,7 +289,6 @@ MdlMap_Loop:
 		and.l	#MAPPZ_SIZE-1,d1
 		move.l	d0,cam_x_pos(a6)
 		move.l	d1,cam_z_pos(a6)
-
 		move.l	(RAM_Cam_Ypos).w,d0
 		move.l	d0,cam_y_pos(a6)
 
@@ -309,7 +304,7 @@ MdlMap_Build:
 
 		move.l	(RAM_Cam_Zpos),d1
 		move.l	(RAM_Cam_Xpos),d0
-		lsr.l	#8,d0
+		lsr.l	#8,d0	; *** MANUAL SETTING
 		lsr.l	#8,d1
 		lsr.l	#4,d0
 		lsr.l	#4,d1
@@ -473,7 +468,13 @@ MdMdl_CamAnimate:
 		move.l	(a1)+,cam_x_rot(a6)
 		move.l	(a1)+,cam_y_rot(a6)
 		move.l	(a1)+,cam_z_rot(a6)
-		lsr.l	#7,d1
+
+	; Quick BG move
+		move.l	cam_x_rot(a6),d1
+		move.l	cam_z_rot(a6),d0
+		add.l	d0,d0
+		add.l	d0,d1
+		lsr.l	#2,d1
 		neg.w	d1
 		move.w	d1,(RAM_HorCopy).l
 .no_camanim:
@@ -534,64 +535,7 @@ str_Stats2:
 
 		align 4
 MarsMap_00:
-		include "data/maps/mars/mcity/map_data.asm"
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
+		include "data/maps/3D/mcity/map_data.asm"
 		dc.l 0
 		dc.l 0
 		dc.l 0
@@ -599,7 +543,7 @@ MarsMap_00:
 		align 2
 
 MapCamera_0:
-		binclude "data/maps/mars/mcity/anim/mcity_anim.bin"
+		binclude "data/maps/3D/mcity/anim/mcity_anim.bin"
 		align 4
 
 ; ====================================================================

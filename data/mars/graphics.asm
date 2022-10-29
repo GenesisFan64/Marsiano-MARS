@@ -10,7 +10,7 @@
 
 		align 4
 Textr_marscity:
-		binclude "data/maps/mars/mcity/mtrl/marscity_art.bin"
+		binclude "data/maps/3D/mcity/mtrl/marscity_art.bin"
 		align 4
 Textr_pecsi:
 		binclude "data/mars/objects/mtrl/pecsi_art.bin"

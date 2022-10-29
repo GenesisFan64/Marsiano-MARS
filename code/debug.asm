@@ -1,6 +1,8 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 2D Part
+; DEBUG MODE
+;
+; TODO: Its broken.
 ; ----------------------------------------------------------------
 
 		phase RAMCODE_USER
@@ -297,11 +299,11 @@ MD_DebugMenu:
 		bsr	Video_Print
 		move.w	#1,d0
 		bsr	Video_Mars_GfxMode
-		lea	(PalData_Mars_Test),a0
-		moveq	#0,d0
-		move.w	#256,d1
-		moveq	#0,d2
-		bsr	Video_FadePal_Mars
+; 		lea	(PalData_Mars_Test),a0
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		moveq	#0,d2
+; 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_MdMarsPalFd).w
 		clr.w	(RAM_MdDreq+Dreq_Palette).w
 		bsr	.fade_in
@@ -373,11 +375,11 @@ MD_DebugMenu:
 ; 		bsr	System_MarsUpdate
 		move.w	#2,d0
 		bsr	Video_Mars_GfxMode
-		lea	(PalData_Mars_Test),a0
-		moveq	#0,d0
-		move.w	#256,d1
-		moveq	#0,d2
-		bsr	Video_FadePal_Mars
+; 		lea	(PalData_Mars_Test),a0
+; 		moveq	#0,d0
+; 		move.w	#256,d1
+; 		moveq	#0,d2
+; 		bsr	Video_FadePal_Mars
 ; 		lea	PAL_TESTBOARD(pc),a0
 ; 		moveq	#0,d0
 ; 		move.w	#$20,d1
@@ -473,7 +475,7 @@ MD_DebugMenu:
 
 		bsr	System_MarsUpdate
 
-		lea	(MDLDATA_PAL_TEST),a0
+		lea	(PalMars_MarsCity),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
@@ -1239,16 +1241,16 @@ MasterTrkBeats:
 MasterTrkList:
 	dc.l GemaTrkData_MOVEME
 	dc.w 7,%000
-	dc.l GemaTrkData_Nadie_MARS
-	dc.w 6,%001
-	dc.l GemaTrkData_BeMine
-	dc.w $A,%000
-	dc.l GemaTrkData_Nadie_MD
-	dc.w 6,%001
-	dc.l GemaTrkData_WeGot
-	dc.w 3,%001
-	dc.l GemaTrkData_Mecano
-	dc.w 3,0
+; 	dc.l GemaTrkData_Nadie_MARS
+; 	dc.w 6,%001
+; 	dc.l GemaTrkData_BeMine
+; 	dc.w $A,%000
+; 	dc.l GemaTrkData_Nadie_MD
+; 	dc.w 6,%001
+; 	dc.l GemaTrkData_WeGot
+; 	dc.w 3,%001
+; 	dc.l GemaTrkData_Mecano
+; 	dc.w 3,0
 
 ; 	dc.l GemaPat_Test3,GemaBlk_Test3,GemaIns_Test3
 ; 	dc.w 2,%001

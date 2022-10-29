@@ -16,8 +16,8 @@
 ; Main
 ; ----------------------------------------------------------------
 
-		lea	(Md_TopCode+$880000),a0		; Transfer common 68K code
-		lea	($FF0000),a1			; at the top of RAM
+		lea	(Md_TopCode+$880000),a0			; Transfer common 68K code
+		lea	($FF0000),a1				; at the top of RAM
 		move.w	#((Md_TopCode_e-Md_TopCode))-1,d0
 .copyme:
 		move.b	(a0)+,(a1)+
@@ -25,12 +25,12 @@
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		move.w	#1,(RAM_Glbl_Scrn).w		; *** TEMPORAL ***
+		move.w	#1,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
 		jmp	(Md_ReadModes).l
 
 ; ====================================================================
 ; --------------------------------------------------------
-; All shared routines at the top of RAM
+; TOP 68K code
 ; --------------------------------------------------------
 
 Md_TopCode:
@@ -42,6 +42,7 @@ minfo_ram_s:
 Md_ReadModes:
 		moveq	#0,d0
 		move.w	(RAM_Glbl_Scrn).w,d0
+		and.w	#%0111,d0		; <-- current limit
 		lsl.w	#2,d0
 		move.l	.pick_boot(pc,d0.w),d0
 		jsr	(System_JumpRamCode).l
@@ -50,7 +51,11 @@ Md_ReadModes:
 		dc.l RamCode_Scrn1
 		dc.l RamCode_Scrn2
 		dc.l RamCode_Debug
-		dc.l RamCode_Scrn1
+		dc.l RamCode_Debug
+		dc.l RamCode_Debug
+		dc.l RamCode_Debug
+		dc.l RamCode_Debug
+		dc.l RamCode_Debug
 
 	if MOMPASS=6
 .here:		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
@@ -62,7 +67,7 @@ Md_TopCode_e:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; RAM code sections for 68K
+; Screen modes
 ; --------------------------------------------------------
 
 RamCode_Scrn1:
@@ -97,9 +102,9 @@ Z80_CODE_END:
 ; BANK 0
 ; ---------------------------------------------
 
-		phase $900000+*			; Currently only this one.
+		phase $900000+*			; ** Currently this one only.
 MDBNK0_START:
-		include "data/md_bank0.asm"	; <-- 68K banked data
+		include "data/md_bank0.asm"	; <-- 68K ONLY bank data
 MDBNK0_END:
 		dephase
 ; 		org $100000-4			; Fill this bank and
@@ -142,7 +147,7 @@ MDBNK0_END:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD DMA data: BANK-free but requres RV=1
+; MD DMA data: Requires RV bit set to 1, BANK-free
 ; ----------------------------------------------------------------
 
 		align 4
@@ -150,7 +155,7 @@ MDBNK0_END:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; SH2 RAM CODE
+; SH2 SDRAM CODE
 ; ----------------------------------------------------------------
 
 		align 4
@@ -164,7 +169,7 @@ MARS_RAMDATA_E:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; 32X data for SH2's ROM view
+; SH2's ROM view
 ; This section will be gone if RV bit is set to 1
 ; --------------------------------------------------------
 

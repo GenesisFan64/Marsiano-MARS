@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 32X ROM HEADER
+; OLD Header for Genesis to boot
 ; ----------------------------------------------------------------
 
 		dc.l 0			; Stack point
@@ -31,9 +31,9 @@
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
-		dc.l RAM_MdMarsHInt		; RAM jump for HBlank (JMP xxxx xxxx)
+		dc.l RAM_MdMarsHInt	; RAM jump for HBlank (JMP xxxx xxxx)
 		dc.l MD_ErrorTrap
-		dc.l RAM_MdMarsVInt		; RAM jump for VBlank (JMP xxxx xxxx)
+		dc.l RAM_MdMarsVInt	; RAM jump for VBlank (JMP xxxx xxxx)
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
@@ -87,13 +87,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; NEW header for 32X
-;
-; These new jumps are for the 68K if
-; the 32X is currently active, must point to the $880000/$900000
-; areas
-;
-; NOTE:
-; Disable ALL interrupts if you are using the RV bit
 ; ----------------------------------------------------------------
 
 		jmp	($880000|MARS_Entry).l
@@ -168,8 +161,8 @@
 		dc.l MARS_RAMDATA			; RAM-code location *Set to 0 if SH2 code points to ROM*
 		dc.l 0					; Zero again.
 		dc.l MARS_RAMDATA_e-MARS_RAMDATA	; RAM-code size (END-START) *Set to 4 if SH2 code points to ROM*
-		dc.l SH2_M_Entry			; Master SH2 PC (SH2 map area)
-		dc.l SH2_S_Entry			; Slave SH2 PC (SH2 map area)
+		dc.l SH2_M_Entry			; Master SH2 PC (SH2 area)
+		dc.l SH2_S_Entry			; Slave SH2 PC (SH2 area)
 		dc.l SH2_Master				; Master SH2 default VBR
 		dc.l SH2_Slave				; Slave SH2 default VBR
 		binclude "system/mars/data/security.bin"; All the securty/boot code
@@ -280,7 +273,7 @@ MD_Init:
 		move.l	#$80048104,(a6)		; Default top VDP regs
 		moveq	#0,d0			; Clear both Master and Slave comm's
 		move.l	d0,comm12(a5)
-		move.l	#$FF,d1			; Small delay.
+		move.l	#$FF,d1			; Small delay...
 .wait_1:
 		move.l	#$FF,d0
 .wait_2:

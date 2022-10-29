@@ -8,19 +8,12 @@
 ; ----------------------------------------------------------------
 
 		align 2
-PalData_Mars_Test:
-		binclude "data/mars/tests/test_pal.bin"
-		align 2
-MDLDATA_PAL_TEST:
-		binclude "data/maps/mars/mcity/mtrl/marscity_pal.bin"
-		align 2
-; TestMars_YuiP:
-; 		binclude "data/mars/tests/yui_mars_pal.bin"
-; 		align 2
-
-MapPal_M:	binclude "data/maps/level0/pal_m.bin"
+PalMars_MarsCity:
+		binclude "data/maps/3D/mcity/mtrl/marscity_pal.bin"
 		align 2
 
+MapPal_M:	binclude "data/maps/2D/level0/pal_m.bin"
+		align 2
 TestSupSpr_Pal:
 		binclude "data/sprites/mars/nicole/sprites_pal.bin"
 		align 2

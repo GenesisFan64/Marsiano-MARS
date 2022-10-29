@@ -374,9 +374,9 @@ while reading:
         vertex_list[c+2]=a
         vertex_list[c+3]=b
       
-      x=int(x_curr[0])-1
-      y=int(y_curr[0])-1
-      z=int(z_curr[0])-1
+      x=(int(x_curr[0])-1)*0x0C
+      y=(int(y_curr[0])-1)*0x0C
+      z=(int(z_curr[0])-1)*0x0C
       outx_l = x >> 8 & 0xFF
       outx_r = x & 0xFF
       outy_l = y >> 8 & 0xFF
@@ -466,10 +466,10 @@ while reading:
         vertex_list[c+2]=a
         vertex_list[c+3]=b
 
-      x=int(x_curr[0])-1
-      y=int(y_curr[0])-1
-      z=int(z_curr[0])-1
-      q=int(q_curr[0])-1
+      x=int(int(x_curr[0])-1)*0x0C
+      y=int(int(y_curr[0])-1)*0x0C
+      z=int(int(z_curr[0])-1)*0x0C
+      q=int(int(q_curr[0])-1)*0x0C
       outx_l = x >> 8 & 0xFF
       outx_r = x & 0xFF
       outy_l = y >> 8 & 0xFF

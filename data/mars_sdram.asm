@@ -10,7 +10,3 @@
 ; ----------------------------------------------------------------
 
 		align 4
-
-; 		align 4
-; 		include "data/maps/mars/mcity/map_incl.asm"
-; 		align 4

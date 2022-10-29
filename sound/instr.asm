@@ -18,6 +18,8 @@ FmIns3_ClosedHat:
 		binclude "sound/instr/fm/fm3_closedhat.gsx",$2478,$28
 FmIns3_Explosion:
 		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
+FmIns3_Cowbell:
+		binclude "sound/instr/fm/fm3_cowbell.gsx",$2478,$28
 
 FmIns3_Snare_Alien:
 		binclude "sound/instr/fm/fm3_drumsnare_alien.gsx",$2478,$28
