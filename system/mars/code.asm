@@ -1748,16 +1748,6 @@ mstr_gfx2_loop:
 ; ============================================================
 ; ---------------------------------------
 ; Mode 4: 3D MODE Polygons-only
-;
-; Objects are divided into read/write
-; buffers:
-;
-; - This CPU draws the polygons from
-; the READ buffer
-; - at the same time the Slave CPU is
-; building the 3d models and
-; sorts the polygons FOR THE NEXT FRAME
-; (NOT current)
 ; ---------------------------------------
 
 		align 4

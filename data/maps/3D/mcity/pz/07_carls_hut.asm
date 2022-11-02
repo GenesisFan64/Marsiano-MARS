@@ -1,5 +1,5 @@
 MarsMapPz_07_carls_hut:
-		dc.w 42,2301
+		dc.w 69,2569
 		dc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl
 .vert:		binclude "data/maps/3D/mcity/pz/07_carls_hut_vert.bin"
 .face:		binclude "data/maps/3D/mcity/pz/07_carls_hut_face.bin"

@@ -1,5 +1,5 @@
 MarsMapPz_02_refsep_n:
-		dc.w 760,1642
+		dc.w 772,1660
 		dc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl
 .vert:		binclude "data/maps/3D/mcity/pz/02_refsep_n_vert.bin"
 .face:		binclude "data/maps/3D/mcity/pz/02_refsep_n_face.bin"

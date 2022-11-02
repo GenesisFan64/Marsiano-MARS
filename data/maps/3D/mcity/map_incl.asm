@@ -8,3 +8,8 @@
 		include "data/maps/3D/mcity/pz/08_sept_r.asm"
 		include "data/maps/3D/mcity/pz/09_phut_n.asm"
 		include "data/maps/3D/mcity/pz/0A_phut_s.asm"
+		include "data/maps/3D/mcity/pz/0B_main_ex.asm"
+		include "data/maps/3D/mcity/pz/0C_sepg_rn.asm"
+		include "data/maps/3D/mcity/pz/0D_sepg_rs.asm"
+		include "data/maps/3D/mcity/pz/0E_sepg_ln.asm"
+		include "data/maps/3D/mcity/pz/0F_sepg_ls.asm"

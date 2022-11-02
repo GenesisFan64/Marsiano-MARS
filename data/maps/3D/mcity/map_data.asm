@@ -13,3 +13,8 @@
 		dc.l MarsMapPz_08_sept_r|TH
 		dc.l MarsMapPz_09_phut_n|TH
 		dc.l MarsMapPz_0A_phut_s|TH
+		dc.l MarsMapPz_0B_main_ex|TH
+		dc.l MarsMapPz_0C_sepg_rn|TH
+		dc.l MarsMapPz_0D_sepg_rs|TH
+		dc.l MarsMapPz_0E_sepg_ln|TH
+		dc.l MarsMapPz_0F_sepg_ls|TH

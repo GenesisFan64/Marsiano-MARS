@@ -80,7 +80,7 @@ MD_3DMODE:
 	; Read MAP
 		move.l	#MapCamera_0,d0			; Animation
 		moveq	#1,d1
-		bsr	MdMdl_SetNewCamera
+; 		bsr	MdMdl_SetNewCamera
 		bsr	MdlMap_Init
 
 	; Testing track
@@ -137,9 +137,9 @@ MD_3DMODE:
 		rts
 .not_mode:
 
-; 		lea	str_Stats2(pc),a0
-; 		move.l	#locate(0,2,2),d0
-; 		bsr	Video_Print
+		lea	str_Stats2(pc),a0
+		move.l	#locate(0,2,2),d0
+		bsr	Video_Print
 		bsr	MdlMap_Loop
 
 
@@ -308,56 +308,105 @@ MdlMap_Build:
 		lsr.l	#8,d1
 		lsr.l	#4,d0
 		lsr.l	#4,d1
-; 		neg.w	d0
 		neg.w	d1
-		add.w	#$0D,d0
-		add.w	#$0D+1,d1
-; 		move.w	field_z(a5),d1
-; 		move.w	field_x(a5),d0
+		add.w	#$0D-1,d0
+		add.w	#$0D,d1
 		lsl.w	#6,d1
 		add.w	d0,d0
 		adda	d1,a3
 		adda	d0,a3
 
-		move.l	cam_x_rot(a6),d0
+		move.l	cam_x_rot(a6),d0	; $0000/$1000
 		lsr.w	#8,d0
-		lsr.w	#2,d0
-		and.w	#%110,d0
-		move.w	.views(pc,d0.w),d0
-		jmp	.views(pc,d0.w)
-.views:
-		dc.w .front_r-.views
-		dc.w .front_r-.views
-		dc.w .front_r-.views
-		dc.w .front_r-.views
+		and.w	#%11110,d0
+		move.w	.list(pc,d0.w),d0
+		jmp	.list(pc,d0.w)
+.list:
+		dc.w .front-.list	; $000
+		dc.w .front-.list	;
+		dc.w .front-.list	;
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	; $800
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	; $1000
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	;
+		dc.w .bottom-.list	; $1800
+		dc.w .front-.list	;
+		dc.w .front-.list	;
+		dc.w .front-.list	;
 
-; X X X
-; X X X
-; X X X
-; - - -
-; - - -
-.front_r:
-		move.w	#-(MAPPZ_SIZE),d3
-		move.w	#-MAPPZ_SIZE,d1
-		bsr.s	.do_clmn
-		adda	#2,a3
-		add.w	#MAPPZ_SIZE,d1
-		bsr.s	.do_clmn
-		adda	#2,a3
-		add.w	#MAPPZ_SIZE,d1
-; 		bsr.s	.do_clmn
 
-; 		rts
+; - l x r -
+; - L X R -
+; - L X R -
+; - - - - -
+; - - - - -
+.front:
+		adda	#2,a3
+		move.w	#-MAPPZ_SIZE*2,d2
+
+		move.w	#-MAPPZ_SIZE,d3	; Start base X
+		move.l	(RAM_Cam_Xpos),d5
+		move.l	(RAM_Cam_Zpos),d4
+		and.l	#MAPPZ_SIZE/2,d4
+		bne.s	.midz
+		adda	#$40,a3
+		add.w	#MAPPZ_SIZE,d2
+.midz:
+		and.l	#MAPPZ_SIZE/2,d5
+		beq.s	.midx
+		adda	#2,a3
+		add.w	#MAPPZ_SIZE,d3
+.midx:
+
+		bsr	.do_clmn
+		adda	#$40,a3
+		add.w	#MAPPZ_SIZE,d2
+		bra	.do_clmn
+
+; - - - - -
+; - - - - -
+; - L X R -
+; - L X R -
+; - l x r -
+.bottom:
+		adda	#($40)+2,a3
+		move.w	#-MAPPZ_SIZE,d2
+
+		move.w	#-MAPPZ_SIZE,d3		; Start base X
+		move.l	(RAM_Cam_Xpos),d5
+		move.l	(RAM_Cam_Zpos),d4
+		and.l	#MAPPZ_SIZE/2,d4
+		bne.s	.midz_b
+		adda	#$40,a3
+		add.w	#MAPPZ_SIZE,d2
+.midz_b:
+		and.l	#MAPPZ_SIZE/2,d5
+		beq.s	.midx_b
+		adda	#2,a3
+		add.w	#MAPPZ_SIZE,d3
+.midx_b:
+		bsr	.do_clmn
+		adda	#$40,a3
+		add.w	#MAPPZ_SIZE,d2
+
+; ****
 .do_clmn:
 		move.l	a3,a2
-		move.w	d3,d2
-		bsr	.mk_pz
-		add.w	#MAPPZ_SIZE,d2
-		adda	#$40,a2
-; 		bsr	.mk_pz
-; 		add.w	#MAPPZ_SIZE,d2
-; 		adda	#$40,a2
-; 		bra	.mk_pz
+		move.w	d3,d1
+		bsr	.mk_pz		; LEFT
+		add.w	#MAPPZ_SIZE,d1
+		adda	#2,a2
+		bsr	.mk_pz		; MID
+		add.w	#MAPPZ_SIZE,d1
+		adda	#2,a2
+; 		bsr.s	.mk_pz		; RIGHT
+; .lpze:
+; 		rts
 
 ; d1 - X pos
 ; d2 - Z pos
@@ -508,7 +557,7 @@ MdMdl_CamAnimate:
 ; 		include "data/md/sprites/emi_plc.asm"
 ; 		align 2
 
-str_Stats2:
+; str_Stats2:
 ; 		dc.b "\\w \\w \\w \\w",$A
 ; 		dc.b "\\w \\w \\w \\w",$A,$A
 ; 		dc.b "\\l",0
@@ -523,13 +572,13 @@ str_Stats2:
 ; 		dc.l RAM_Framecount
 ; 		align 2
 
-; str_Stats2:
+str_Stats2:
 		dc.b "\\l",$A
 		dc.b "\\l",$A
 		dc.b "\\l \\w",0
 		dc.l RAM_MdDreq+Dreq_ObjCam+cam_x_rot
-		dc.l RAM_MdDreq+Dreq_ObjCam+cam_y_rot
-		dc.l RAM_MdDreq+Dreq_ObjCam+cam_z_rot
+		dc.l RAM_Cam_Ypos
+		dc.l RAM_Cam_Zpos
 		dc.l sysmars_reg+comm0
 		align 2
 
