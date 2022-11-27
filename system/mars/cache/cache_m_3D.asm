@@ -319,6 +319,10 @@ drwsld_nxtline_tex:
 
 	; Limit X destination points
 	; and correct the texture's X positions
+
+; 		mov	#1,r0
+; 		or	r0,r3
+
 		mov	tag_width,r0		; XR point > 320?
 		cmp/gt	r0,r3
 		bf	.tr_fix
@@ -327,10 +331,10 @@ drwsld_nxtline_tex:
 		cmp/pz	r1			; XL point < 0?
 		bt	.tl_fix
 		neg	r1,r2			; Fix texture positions
-		dmuls	r6,r2
+		mul	r6,r2
 		sts	macl,r0
 		add	r0,r5
-		dmuls	r8,r2
+		mul	r8,r2
 		sts	macl,r0
 		add	r0,r7
 		xor	r1,r1			; And reset XL to 0
@@ -339,7 +343,6 @@ drwsld_nxtline_tex:
 	; start
 		mov	#-2,r0
 		and	r0,r1
-		add	#1,r3			; XR add
 		and	r0,r3
 		sub 	r1,r3
 		shar	r3
@@ -970,10 +973,10 @@ put_piece:
 		xtrct	r8,r0
 		mov	r0,@(plypz_xl,r1)
 		mov 	r5,@(plypz_xl_dx,r1)
-		dmuls	r9,r5
+		mul	r9,r5
 		mov 	r7,@(plypz_xr_dx,r1)
 		sts	macl,r2
-		dmuls	r9,r7
+		mul	r9,r7
 		sts	macl,r3
 		add 	r2,r4
 		add	r3,r6
@@ -1004,9 +1007,9 @@ put_piece:
 		mov	@(4,r7),r5
 		mov	r0,@(plypz_src_xl_dx,r1)
 		mov	r5,@(plypz_src_xr_dx,r1)
-		dmuls	r9,r0
+		mul	r9,r0
 		sts	macl,r0
-		dmuls	r9,r5
+		mul	r9,r5
 		sts	macl,r5
 		add 	r0,r2
 		add	r5,r3
@@ -1029,9 +1032,9 @@ put_piece:
 		mov	@(4,r7),r5
 		mov	r0,@(plypz_src_yl_dx,r1)
 		mov	r5,@(plypz_src_yr_dx,r1)
-		dmuls	r9,r0
+		mul	r9,r0
 		sts	macl,r0
-		dmuls	r9,r5
+		mul	r9,r5
 		sts	macl,r5
 		add 	r0,r2
 		add	r5,r3

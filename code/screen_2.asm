@@ -80,19 +80,29 @@ MD_3DMODE:
 	; Read MAP
 		move.l	#MapCamera_0,d0			; Animation
 		moveq	#1,d1
-; 		bsr	MdMdl_SetNewCamera
+		bsr	MdMdl_SetNewCamera
 		bsr	MdlMap_Init
 
-	; Testing track
-		moveq	#0,d0
+	; Music
+; 		moveq	#0,d0
+; 		bsr	Sound_TrkStop
+; 		move.w	#200+32,d1		; 160+
+; 		bsr	Sound_GlbBeats
+; 		lea	(GemaTrk_BodyOver),a0
+; 		moveq	#0,d0
+; 		move.w	#6,d1
+; 		moveq	#0,d2
+; 		move.w	#%0001,d3		;
+; 		bsr	Sound_TrkPlay
+		moveq	#0,d0	; OLD
 		bsr	Sound_TrkStop
-		move.w	#200+32,d1		; 160+
+		move.w	#200+32,d1
 		bsr	Sound_GlbBeats
-		lea	(GemaTrk_BodyOver),a0
+		lea	(GemaTrkData_MOVEME),a0
 		moveq	#0,d0
-		move.w	#6,d1
+		moveq	#7,d1
 		moveq	#0,d2
-		move.w	#%0001,d3		;
+		moveq	#0,d3
 		bsr	Sound_TrkPlay
 
 	; Set Fade-in settings
@@ -137,9 +147,9 @@ MD_3DMODE:
 		rts
 .not_mode:
 
-		lea	str_Stats2(pc),a0
-		move.l	#locate(0,2,2),d0
-		bsr	Video_Print
+; 		lea	str_Stats2(pc),a0
+; 		move.l	#locate(0,2,2),d0
+; 		bsr	Video_Print
 		bsr	MdlMap_Loop
 
 
@@ -258,6 +268,16 @@ MdlMap_Loop:
 		bset	#5,(sysmars_reg+comm12+1).l
 .busy:
 		bsr	MdMdl_CamAnimate
+		bpl.s	.loop2
+		clr.l	(RAM_Cam_Xpos).l
+		clr.l	(RAM_Cam_Ypos).l
+		clr.l	(RAM_Cam_Zpos).l
+		clr.l	cam_x_rot(a6)
+		clr.l	cam_y_rot(a6)
+		clr.l	cam_z_rot(a6)
+		move.l	#-$80,(RAM_Cam_Ypos).l
+		clr.l	(RAM_CamData).l
+.loop2:
 
 ; 		move.l	cam_z_pos(a6),d7
 ; 		and.w	#-MAPPZ_SIZE,d7
@@ -590,10 +610,6 @@ MarsMap_00:
 		dc.l 0
 		dc.l 0
 		align 2
-
-MapCamera_0:
-		binclude "data/maps/3D/mcity/anim/mcity_anim.bin"
-		align 4
 
 ; ====================================================================
 

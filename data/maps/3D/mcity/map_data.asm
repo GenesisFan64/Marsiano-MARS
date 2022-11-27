@@ -18,3 +18,10 @@
 		dc.l MarsMapPz_0D_sepg_rs|TH
 		dc.l MarsMapPz_0E_sepg_ln|TH
 		dc.l MarsMapPz_0F_sepg_ls|TH
+		dc.l MarsMapPz_10_gign|TH
+		dc.l MarsMapPz_11_gign|TH
+		dc.l MarsMapPz_12_gign|TH
+		dc.l MarsMapPz_13_gign|TH
+		dc.l MarsMapPz_14_gign|TH
+		dc.l MarsMapPz_15_gign|TH
+		dc.l MarsMapPz_16_gign|TH

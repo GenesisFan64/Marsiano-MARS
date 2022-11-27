@@ -42,3 +42,6 @@ MapBgH_0:	binclude "data/maps/2D/level0/bg_hi.bin"
 		align 2
 MapHead_M:	binclude "data/maps/2D/level0/head_m.bin"
 		align 2
+MapCamera_0:
+		binclude "data/maps/3D/mcity/anim/mcity_anim.bin"
+		align 4

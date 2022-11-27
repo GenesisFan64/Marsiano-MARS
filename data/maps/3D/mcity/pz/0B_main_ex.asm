@@ -1,5 +1,5 @@
 MarsMapPz_0B_main_ex:
-		dc.w 278,3555
+		dc.w 278,3638
 		dc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl
 .vert:		binclude "data/maps/3D/mcity/pz/0B_main_ex_vert.bin"
 .face:		binclude "data/maps/3D/mcity/pz/0B_main_ex_face.bin"

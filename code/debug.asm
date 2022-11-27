@@ -544,16 +544,16 @@ MD_DebugMenu:
 		lea	str_Gema(pc),a0
 		move.l	#locate(0,2,2),d0
 		bsr	Video_Print
-		lea	str_GemaStatus(pc),a0
-		move.l	#locate(0,5,12),d0
-		bsr	Video_Print
+; 		lea	str_GemaStatus(pc),a0
+; 		move.l	#locate(0,5,12),d0
+; 		bsr	Video_Print
 
 		move.w	#0,d0
 		bsr	Video_Mars_GfxMode
 		bsr	.page5_update
 		bsr	.fade_in
 .page5:
-		bsr	.page5_updvars
+; 		bsr	.page5_updvars
 
 	; Controller
 		move.w	(Controller_1+on_press),d7
@@ -1227,20 +1227,23 @@ MD_DebugMenu:
 MasterTrkBeats:
 	dc.w 200+32
 	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+20
-	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+32
-	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+20
+; 	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+32
+; 	dc.w 200+32
 
 MasterTrkList:
+	dc.l GemaTrk_BodyOver
+	dc.w 6,%001
 	dc.l GemaTrkData_MOVEME
 	dc.w 7,%000
+
 ; 	dc.l GemaTrkData_Nadie_MARS
 ; 	dc.w 6,%001
 ; 	dc.l GemaTrkData_BeMine
@@ -1408,7 +1411,7 @@ str_Cursor:	dc.b " ",$A
 		dc.b " ",0
 		align 2
 str_Title:
-		dc.b "Project MARSIANO tester",$A
+		dc.b "OLD DEBUG MENU *BROKEN*",$A
 		dc.b $A
 		dc.b "  Screen 00 BLANK",$A
 		dc.b "  Screen 01 256-SuperSprites w/scale",$A

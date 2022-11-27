@@ -657,14 +657,14 @@ mdlrd_setpoint:
 		bra	.zmulti
 		shlr2	r7
 .inside:
-; 		mov	#1,r0	; *** MASTER ONLY
+; 		mov	#1,r0
 ; 		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 		mov 	#_JR,r9
 		mov 	r8,@r9
 		mov 	r7,@(4,r9)
 		nop
 		mov 	@(4,r9),r7
-; 		xor	r0,r0	; *** MASTER ONLY
+; 		xor	r0,r0
 ; 		mov.w	r0,@(marsGbl_WdgDivLock,gbr)
 .zmulti:
 		dmuls	r7,r2

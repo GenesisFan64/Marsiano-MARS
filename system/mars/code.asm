@@ -1,17 +1,14 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; MARS SH2 SDRAM section, shared for both CPUs
-;
-; Do note that both CPUs doesn't like each other, if both
-; CPUs read/write the same place it will trigger a crash.
 ; ----------------------------------------------------------------
 
 ; *************************************************
 ; communication setup:
 ;
-; comm0-comm7  - ** FREE ***
-; comm8-comm11 - Used to transfer data manually
-;                from Z80 to SH2 side, 68k uses DREQ.
+; comm0-comm7  - ** FREE TO USE ***
+; comm8-comm11 - Used by Z80 for getting it's data
+;                packets
 ; comm12       - Master CPU control
 ; comm14       - Slave CPU control
 ; *************************************************
@@ -202,7 +199,9 @@ SH2_Slave:
 ; ----------------------------------------------------------------
 ; IRQ
 ;
-; r0-r1 are saved first.
+; r0-r1 are safe
+;
+; sr: %xxxxMQIIIIxxST
 ; ----------------------------------------------------------------
 
 		align 4
@@ -210,17 +209,20 @@ master_irq:
 		mov.l	r0,@-r15
 		mov.l	r1,@-r15
 		sts.l	pr,@-r15
+
 		stc	sr,r0
 		shlr2	r0
 		and	#$3C,r0
 		mov	r0,r1
-		mov	#$F0,r0
+		mov.b	#$F0,r0		; ** $F0
+		extu.b	r0,r0
 		ldc	r0,sr
-		mov	#int_m_list,r0
+		mova	int_m_list,r0
 		add	r1,r0
 		mov	@r0,r1
 		jsr	@r1
 		nop
+
 		lds.l	@r15+,pr
 		mov.l	@r15+,r1
 		mov.l	@r15+,r0
@@ -229,11 +231,6 @@ master_irq:
 		align 4
 
 ; ====================================================================
-; ----------------------------------------------------------------
-; IRQ
-;
-; r0-r1 are saved first
-; ----------------------------------------------------------------
 
 slave_irq:
 		mov.l	r0,@-r15
@@ -243,9 +240,10 @@ slave_irq:
 		shlr2	r0
 		and	#$3C,r0
 		mov	r0,r1
-		mov	#$F0,r0
+		mov.b	#$F0,r0		; ** $F0
+		extu.b	r0,r0
 		ldc	r0,sr
-		mov	#int_s_list,r0
+		mova	int_s_list,r0
 		add	r1,r0
 		mov	@r0,r1
 		jsr	@r1
@@ -256,7 +254,6 @@ slave_irq:
 		rte
 		nop
 		align 4
-		ltorg
 
 ; ------------------------------------------------
 ; irq list
@@ -446,6 +443,7 @@ m_irq_cmd:
 		mov	#_sysreg+cmdintclr,r1	; Clear CMD flag
 		mov.w	r0,@r1
 		mov.w	@r1,r0
+
 		mov	r2,@-r15
 		mov	r3,@-r15
 		mov	r4,@-r15
@@ -463,21 +461,13 @@ m_irq_cmd:
 		extu.w	r0,r0
 		mov	r0,@(8,r3)		; Length (set by 68k)
 		mov	r1,@r3			; Source
-		mov	#%0100010011100101,r0	; Transfer mode + DMA enable bit ON + Enable interrupt
+		mov	#%0100010011100101,r0	; Transfer mode + DMA enable + Enable DMA interrupt
 		mov	r0,@($C,r3)		; Dest:Incr(01) Src:Keep(00) Size:Word(01)
 		mov	#1,r0			; _DMAOPERATION = 1
 		mov	r0,@($30,r3)
 		mov.b	@r2,r0			; Tell Genesis we can recieve DREQ data
 		or	#%01000000,r0
 		mov.b	r0,@r2
-; .wait_dma:	mov	@($C,r3),r0		; Still on DMA?
-; 		tst	#%10,r0
-; 		bt	.wait_dma
-; 		mov	#0,r0			; _DMAOPERATION = 0
-; 		mov	r0,@($30,r3)
-; 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable = 0
-; 		mov	r0,@($C,r3)
-; .wait_dis:
 		mov	@r15+,r4
 		mov	@r15+,r3
 		mov	@r15+,r2
@@ -506,7 +496,7 @@ m_irq_dma:
 		bt	.wait_dma
 		mov	#0,r0			; _DMAOPERATION = 0
 		mov	r0,@($30,r1)
-		mov	#%0100010011100000,r0	; Transfer mode but DMA enable OFF
+		mov	#%0100010011100000,r0	; Transfer mode + DMA enable OFF
 		mov	r0,@($C,r1)
 		rts
 		nop
@@ -528,6 +518,7 @@ m_irq_h:
 		nop
 		nop
 		nop
+		nop
 		rts
 		nop
 		align 4
@@ -544,44 +535,18 @@ m_irq_v:
 		mov.b	r0,@(7,r1)
 		mov	#_sysreg+vintclr,r1
 		mov.w	r0,@r1
-
-; 		mov	#_vdpreg,r1			; Check if we got here
-; -		mov.b	@(vdpsts,r1),r0			; too late.
-; 		tst	#VBLK,r0
-; 		bt	-
-; 		xor	r0,r0
-; 		mov.w	r0,@(marsGbl_FrameReady,gbr)
-; 		mov	r2,@-r15
-; 		mov	r3,@-r15
-; 		mov	r4,@-r15
-;  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first
-; 		mov	#_vdpreg+shift,r1		; For the indexed-scrolling mode.
-; 		and	#1,r0
-; 		mov.w	r0,@r1
-; 		mov	#RAM_Mars_DreqRead+Dreq_Palette,r1
-; 		mov	#_palette,r2
-;  		mov	#(256/8),r3
-; .copy_pal:
-; 	rept 4
-; 		mov	@r1+,r0				; Copy as LONGs, works on HW
-; 		mov	r0,@r2
-; 		add	#4,r2
-; 	endm
-; 		dt	r3
-; 		bf	.copy_pal
-; .not_ready:
-; 		mov	#_sysreg+comm12+1,r1		; Clear comm R bit
-; 		mov.b	@r1,r0				; this tells to 68k that the frame is ready.
-; 		and	#%10111111,r0
-; 		mov.b	r0,@r1
-
+		nop
+		nop
+		nop
+		nop
+		nop
 		rts
 		nop
 		align 4
 
 ; =================================================================
 ; ------------------------------------------------
-; Master | VRES Interrupt (RESET button on Genesis)
+; Master | VRES Interrupt (RESET button)
 ; ------------------------------------------------
 
 m_irq_vres:
@@ -645,8 +610,7 @@ s_irq_bad:
 ; Slave | PWM Interrupt
 ; ------------------------------------------------
 
-; check cache_slv.asm
-; s_irq_pwm:
+; moved to cache_slv.asm
 
 ; =================================================================
 ; ------------------------------------------------
@@ -696,11 +660,11 @@ s_irq_cmd:
 		bra	.no_cmdtask
 		nop
 		align 4
-.tag_F0:	dc.l $F0
 .tag_FRT:	dc.l _FRT
 
 ; ---------------------------------
 
+		align 4
 .list:
 		dc.l .no_trnsfrex
 		dc.l .mode_1		; PWM transfer from Z80
@@ -1141,7 +1105,8 @@ Mars_ClearCacheRam:
 		align 4
 Mars_LoadCacheRam:
 		stc	sr,@-r15	; Interrupts OFF
-		mov	#$F0,r0
+		mov.b	#$F0,r0		; ** $F0
+		extu.b	r0,r0
 		ldc	r0,sr
 		mov	#_CCR,r3
 		mov	#%00010000,r0	; Cache purge + Disable
@@ -1181,7 +1146,8 @@ Mars_LoadCacheRam:
 		align 4
 Mars_SetWatchdog:
 		stc	sr,r4
-		mov	#$F0,r0
+		mov.b	#$F0,r0	; ** $F0
+		extu.b	r0,r0
 		ldc 	r0,sr
 		mov.l	#_CCR,r3		; Refresh Cache
 		mov	#%00001000,r0		; Two-way mode
@@ -1346,7 +1312,8 @@ master_loop:
 		tst	#VBLK,r0
 		bf	.waitl
 		stc	sr,@-r15
-		mov	#$F0,r0
+		mov.b	#$F0,r0	; ** $F0
+		extu.b	r0,r0
 		ldc	r0,sr
 		mov	#RAM_Mars_DreqDma,r1		; Copy DREQ data into a safe
 		mov	#RAM_Mars_DreqRead,r2		; location for reading
@@ -1819,7 +1786,8 @@ mstr_gfx3_loop:
 		tst	r0,r0
 		bf	.wait_me
 		stc	sr,@-r15		; Disable interrupts
-		mov	#$F0,r0
+		mov.b	#$F0,r0	; ** $F0
+		extu.b	r0,r0
 		ldc	r0,sr
 		mov	#RAM_Mars_DreqRead+Dreq_Objects,r1	; Copy CAMERA and OBJECTS for Slave
 		mov	#RAM_Mars_Objects,r2

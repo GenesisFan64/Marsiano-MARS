@@ -99,10 +99,6 @@ MD_2DMODE:
 		bsr	Video_Update
 		bsr 	System_WaitFrame	; Send first DREQ
 
-	; Testing track
-; 		tst.w	(RAM_KeepSong).w
-; 		bne.s	.oof
-; 		move.w	#1,(RAM_KeepSong).w
 		moveq	#0,d0
 		bsr	Sound_TrkStop
 		move.w	#200+32,d1
@@ -114,7 +110,6 @@ MD_2DMODE:
 		moveq	#0,d2
 		moveq	#0,d3
 		bsr	Sound_TrkPlay
-; .oof:
 
 		moveq	#2,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
