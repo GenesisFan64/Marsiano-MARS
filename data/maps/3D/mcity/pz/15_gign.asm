@@ -1,5 +1,5 @@
 MarsMapPz_15_gign:
-		dc.w 290,7767
+		dc.w 281,7760
 		dc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl
 .vert:		binclude "data/maps/3D/mcity/pz/15_gign_vert.bin"
 .face:		binclude "data/maps/3D/mcity/pz/15_gign_face.bin"

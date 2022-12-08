@@ -43,7 +43,7 @@ MapFg_M:	binclude "data/maps/2D/level0/fg_main.bin"
 ; --------------------------------------------------------
 
 		align 4
-		include "data/maps/3D/mcity/map_incl.asm"
+		include "data/maps/3D/mcity/mars_data.asm"
 		align 4
 
 ; MarsObj_test:

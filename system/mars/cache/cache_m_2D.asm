@@ -450,8 +450,9 @@ CACHE_MSTR_SCRL:
 ; MarsVideo_DrwMapData
 ;
 ; Input:
-; r14 | Scrolling section (Output)
-; r13 | Background buffer (Input)
+; r14 | Background control buffer
+; r13 | Scrolling section buffer
+; r12 | Pixel storage (Frambuffer or RAM)
 ;
 ; Breaks:
 ; ALL
@@ -462,10 +463,8 @@ MarsVideo_DrwMapData:
 		sts	pr,@-r15
 		mov	r14,@-r15
 		mov	r13,@-r15
-		mov	@(scrl_intrl_size,r13),r12
-		mov	#RAM_Mars_ScrlData,r5
-; 		mov	@(scrl_fbdata,r13),r0
-; 		add	r0,r5
+		lds	r12,mach
+
 		mov	@(md_bg_x,r14),r1
 		shlr16	r1
 		mov	@(md_bg_y,r14),r2
@@ -483,10 +482,10 @@ MarsVideo_DrwMapData:
 		mov.w	@(md_bg_h,r14),r0
 		extu.w	r0,r6
 		mov	@(scrl_intrl_w,r13),r11
-		lds	r5,mach
-		mov	@(scrl_intrl_h,r13),r10
 		mov	#-16,r0			; <- manual size
+		mov	@(scrl_intrl_h,r13),r10
 		and	r0,r1
+		mov	@(scrl_intrl_size,r13),r12
 		and	r0,r2
 
 	; TODO: X/Y map wrap check
@@ -899,7 +898,7 @@ MarsVideo_DrawBgSSpr:
 
 		mulu	r0,r11
 		sts	macl,r1
-		mov	#RAM_Mars_ScrlData,r0
+		mov	#RAM_Mars_ScrlData,r0		; <-- use this area
 		add	r1,r10
 		cmp/ge	r12,r10
 		bf	.ygood
@@ -978,281 +977,6 @@ MarsVideo_DrawBgSSpr:
 		nop
 		align 4
 		ltorg
-
-; --------------------------------------------------------
-; ; MarsVideo_DrawBgSSpr
-; ;
-; ; Call this BEFORE updating Sprite info
-; ; --------------------------------------------------------
-;
-; 		align 4
-; MarsVideo_DrawBgSSpr:
-; 		mov	#Cach_SprBoxList,r14
-;
-; 		mov	#Cach_Intrl_Size,r12
-; 		mov	#Cach_FbPos,r10
-; 		mov	#Cach_Intrl_W,r11
-; 		mov	#Cach_FbPos_Y,r0
-; 		mov	@r0,r0
-; 		mov	#Cach_FbData,r9
-; 		mov	@r9,r9
-; 		mov	#_framebuffer,r1
-; 		mov	@r11,r11
-; 		mov	#-4,r2
-; 		mov	@r10,r10
-; 		add	r1,r9
-; 		mov	@r12,r12
-;
-; ; 		mov	#RAM_Mars_ScrlBuff,r13
-; ; 		mov	@(scrl_fbpos_y,r13),r0
-; ; 		mov	#_framebuffer,r1
-; ; 		mov	@(scrl_fbdata,r13),r9
-; ; 		add	r1,r9
-; ; 		mov	@(scrl_intrl_w,r13),r11
-; ; 		mov	#-4,r2
-; ; 		mov	@(scrl_fbpos,r13),r10
-; ; 		and	r2,r0
-; ; 		mov	@(scrl_intrl_size,r13),r12
-;
-; 		mulu	r0,r11
-; 		sts	macl,r1
-; 		mov	#RAM_Mars_ScrlData,r0
-; 		add	r1,r10
-; 		cmp/ge	r12,r10
-; 		bf	.ygood
-; 		sub	r12,r10
-; .ygood:
-; 		and	r2,r10
-; 		lds	r0,mach
-;
-; .next_save:
-; 		mov	@r14,r0
-; 		cmp/pl	r0
-; 		bt	.last
-; 		mov	r10,r4
-; 		mov	r0,r5
-; 		mov	r0,r6
-; 		mov	r0,r7
-; 		mov	r0,r8
-; 		xor	r0,r0
-; 		mov	r0,@r14
-; 		mov	#$7F,r0
-; 		shlr16	r5
-; 		shlr16	r7
-; 		shlr8	r7
-; 		and	r0,r5
-; 		and	r0,r7
-; 		shll2	r5
-; 		shll2	r7
-; 		shlr8	r8
-; 		mov	#$FF,r0
-; 		and	r0,r6
-; 		and	r0,r8
-; 		sub	r6,r8
-; 		cmp/pl	r8
-; 		bf	.spr_out
-; 		mulu	r11,r6
-; 		sts	macl,r0
-; 		add	r0,r4
-;
-; 		mov	#320,r6
-; .y_lp:
-; 		mov	r5,r1
-; 		mov	r4,r2
-; 		add	r5,r2
-; .x_lp:
-; 		cmp/gt	r12,r2
-; 		bf	.x_keep
-; 		sub	r12,r2
-; .x_keep:
-; 		sts	mach,r13
-; 		add	r2,r13
-; 		mov	@r13+,r0
-; ; 		or	r13,r0
-;
-; 		mov	r9,r3
-; 		add	r2,r3
-; 		mov	r0,@r3
-; 		cmp/ge	r6,r2
-; 		bt	.x_lrg
-; 		add	r12,r3
-; 		add	r12,r13
-; 		mov	r0,@r3
-; 		mov	r0,@r13
-; .x_lrg:
-; 		add	#4,r1
-; 		cmp/ge	r7,r1
-; 		bf/s	.x_lp
-; 		add	#4,r2
-; 		dt	r8
-; 		bf/s	.y_lp
-; 		add	r11,r4
-; .spr_out:
-; 		bra	.next_save
-; 		add 	#4,r14
-; .last:
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
-
-; ; --------------------------------------------------------
-; ; MarsVideo_DrwSprData
-; ; --------------------------------------------------------
-;
-; 		align 4
-; MarsVideo_DrwSprData:
-;  		mov	#RAM_Mars_DreqRead+Dreq_SuperSpr,r14
-; 		mov	#RAM_Mars_SprPixels,r13
-; 		mov	#Cach_Intrl_Size,r12
-; 		mov	#Cach_FbPos,r10
-; 		mov	#Cach_Intrl_W,r11
-; 		mov	#Cach_FbPos_Y,r0
-; 		mov	@r0,r0
-; 		mov	#Cach_FbData,r9
-; 		mov	@r9,r9
-; 		mov	#_framebuffer,r1
-; 		mov	@r11,r11
-; 		mov	#-4,r2
-; 		mov	@r10,r10
-; 		add	r1,r9
-; 		mov	@r12,r12
-; 		mulu	r0,r11
-; 		sts	macl,r0
-; 		add	r0,r10
-; 		cmp/ge	r12,r10
-; 		bf	.next_save2
-; 		sub	r12,r10
-; .next_save2:
-; 		lds	r9,mach
-; 		mov	@(marsGbl_XShift,gbr),r0	; *** Xpos&1 add
-; 		and	#1,r0
-; 		add	r0,r13
-;
-; .next_save:
-; 		mov	@(marsspr_data,r14),r0
-; 		tst	r0,r0
-; 		bt	.last
-; 		nop
-; 		mov	@(marsspr_x,r14),r5	; XXXX YYYY
-; 		exts.w	r5,r6
-; 		mov	@(marsspr_xfrm,r14),r7	; ?? ?? XX YY
-; 		shlr16	r5
-; 		exts.w	r5,r5
-; 		extu.b	r7,r8
-; 		shlr8	r7
-; 		extu.b	r7,r7
-; 		add	r5,r7
-; 		add	r6,r8
-; 		add	#2,r7		; +2
-;
-; ; 		mov.w	@(marsspr_x,r14),r0
-; ; 		exts.w	r0,r5
-; ; 		mov.w	@(marsspr_y,r14),r0
-; ; 		exts.w	r0,r6
-; ; 		mov.b	@(marsspr_xs,r14),r0
-; ; 		exts.b	r0,r7
-; ; 		mov.b	@(marsspr_ys,r14),r0
-; ; 		exts.b	r0,r8
-; ; 		add	r5,r7
-; ; 		add	r6,r8
-;
-; 		mov	#320+2,r1	; + 2
-; 		mov	#224,r2
-; 		cmp/pl	r7
-; 		bf	.spr_out
-; 		cmp/pl	r8
-; 		bf	.spr_out
-; 		cmp/ge	r1,r5
-; 		bt	.spr_out
-; 		cmp/ge	r2,r6
-; 		bt	.spr_out
-; 		cmp/pz	r5
-; 		bt	.xl_l
-; 		xor	r5,r5
-; .xl_l:
-; 		cmp/pz	r6
-; 		bt	.yl_l
-; 		xor	r6,r6
-; .yl_l:
-; 		cmp/gt	r1,r7
-; 		bf	.xr_l
-; 		mov	r1,r7
-; .xr_l:
-; 		cmp/gt	r2,r8
-; 		bf	.yr_l
-; 		mov	r2,r8
-; .yr_l:
-;
-; 	; r4 - Current TopLeft
-; 	; r5 - X left
-; 	; r6 - 320
-; 	; r7 - X right
-; 	; r8 - Y counter
-; 	; r9 - *FREE*
-; 	; r10 - TopLeft position (GLOBAL)
-; 	; r11 - Internal Width
-; 	; r12 - Internal W*H
-; 	; r13 - Pixel data
-; 	; mach - Framebuffer base
-;
-; 		mov	#320,r2
-; 		mulu	r6,r2
-; 		sts	macl,r1
-; 		add	r5,r1
-;
-; 		mov	r10,r4
-; 		mulu	r11,r6
-; 		sts	macl,r0
-; 		add	r0,r4
-; 		add	r5,r4
-; 		mov	#-2,r0
-; 		and	r0,r4
-; 		and	r0,r5
-; 		and	r0,r7
-;
-; 		sub	r6,r8
-; 		cmp/pl	r8
-; 		bf	.spr_out
-; 		mov	r2,r6
-; .y_lp:
-; 		cmp/gt	r12,r4
-; 		bf	.y_keep
-; 		sub	r12,r4
-; .y_keep:
-; 		mov	r4,r1
-; 		mov	r5,r2
-; .x_lp:
-; 		mov.b	@r13+,r0
-; 		shll8	r0
-; 		mov.b	@r13+,r3
-; 		extu.b	r3,r3
-; 		or	r13,r0
-;
-; 		sts	mach,r3
-; 		add	r1,r3
-; 		mov.w	r0,@r3
-; 		cmp/ge	r6,r1
-; 		bt 	.x_hdn
-; 		add	r12,r3
-; 		mov.w	r0,@r3
-; .x_hdn:
-; 		add	#2,r2
-; 		cmp/ge	r7,r2
-; 		bf/s	.x_lp
-; 		add	#2,r1
-; 		dt	r8
-; 		bf/s	.y_lp
-; 		add	r11,r4
-;
-; .spr_out:
-; 		bra	.next_save
-; 		add 	#sizeof_marsspr,r14
-; .last:
-; 		rts
-; 		nop
-; 		align 4
-; 		ltorg
 
 ; --------------------------------------------------------
 ; Quick RAM

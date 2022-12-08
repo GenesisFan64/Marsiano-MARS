@@ -52,7 +52,7 @@ CACHE_MSTR_PLGN:
 		nop
 		align 4
 .exit_wdg:
-		mov.l   #$FFFFFE80,r1
+		mov.w   #$FE80,r1
 		mov.w   #$A518,r0		; OFF
 		mov.w   r0,@r1
 		or      #$20,r0			; ON
@@ -610,7 +610,7 @@ drwtask_return:
 		mov	@r15+,r4
 		mov	@r15+,r3
 drwtask_exit:
-		mov.l   #$FFFFFE80,r1
+		mov.w   #$FE80,r1
 		mov.w   #$A518,r0	; OFF
 		mov.w   r0,@r1
 		or      #$20,r0		; ON

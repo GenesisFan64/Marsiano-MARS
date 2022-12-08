@@ -604,11 +604,7 @@ str_Stats2:
 
 		align 4
 MarsMap_00:
-		include "data/maps/3D/mcity/map_data.asm"
-		dc.l 0
-		dc.l 0
-		dc.l 0
-		dc.l 0
+		include "data/maps/3D/mcity/md_layout.asm"
 		align 2
 
 ; ====================================================================
