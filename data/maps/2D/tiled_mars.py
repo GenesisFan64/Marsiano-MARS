@@ -189,7 +189,7 @@ if a != -1:
 	LAY_WIDTH = int(width[1])
 	LAY_HEIGHT = int(height[1])
 	#print(hex(LAY_WIDTH),hex(LAY_HEIGHT))
-	out_head = open(PROJFOLER+"/"+"head_m.bin","wb")
+	out_head = open(PROJFOLER+"/"+"m_head.bin","wb")
 
 	# make LSL value
 	c = 0x10
@@ -446,8 +446,8 @@ input_file.close()
 
 
 input_file = open(sys.argv[3],"rb")
-out_art    = open(PROJFOLER+"/"+"art_m.bin","wb")
-out_pal    = open(PROJFOLER+"/"+"pal_m.bin","wb")
+out_art    = open(PROJFOLER+"/"+"m_art.bin","wb")
+out_pal    = open(PROJFOLER+"/"+"m_pal.bin","wb")
 
 input_file.seek(0x5)					#$05, palsize
 a = ord(input_file.read(1)) & 0xFF

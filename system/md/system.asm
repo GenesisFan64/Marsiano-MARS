@@ -88,12 +88,12 @@ System_Init:
 ; --------------------------------------------------------
 
 System_WaitFrame:
-		lea	(vdp_ctrl),a6
-.wait_lag:	move.w	(a6),d4
-		btst	#bitVBlk,d4
-		bne.s	.wait_lag
+; 		lea	(vdp_ctrl),a6
+; .wait_lag:	move.w	(a6),d4
+; 		btst	#bitVBlk,d4
+; 		bne.s	.wait_lag
 ; 		bsr	Video_Mars_WaitFrame
-		bsr	System_MarsUpdate
+
 		lea	(vdp_ctrl),a6
 .wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
 		btst	#bitVBlk,d4
@@ -133,15 +133,8 @@ System_WaitFrame:
 		move.w	d7,(a6)
 ; 		jsr	(Video_DmaBlast).l
 		bsr	MdMap_DrawScrl
+		bsr	System_MarsUpdate
 		add.l	#1,(RAM_Framecount).l
-
-; 		lea	(vdp_ctrl),a6
-; ; .wait_in:	move.w	(a6),d4
-; ; 		btst	#bitVBlk,d4
-; ; 		beq.s	.wait_in
-; .wait_out:	move.w	(a6),d4
-; 		btst	#bitVBlk,d4
-; 		bne.s	.wait_out
 
 		rts
 
@@ -624,3 +617,5 @@ HInt_Default:
 ; ----------------------------------------------------------------
 ; System data
 ; ----------------------------------------------------------------
+
+

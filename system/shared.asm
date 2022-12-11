@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD/32X shared constants and values
+; MD/32X shared structs and values
 ; ----------------------------------------------------------------
 
 ; ====================================================================
@@ -32,6 +32,7 @@ sizeof_mdlobj	ds.l 0
 		finish
 
 ; 3D Camera
+; RAM_MdDreq+Dreq_ObjCam
 		struct 0
 cam_x_pos	ds.l 1		; X position $000000.00
 cam_y_pos	ds.l 1		; Y position $000000.00
@@ -45,7 +46,7 @@ sizeof_camera	ds.l 0
 ; "Super" sprites:
 ; RAM_MdDreq+Dreq_SuperSpr
 ;
-; ** = keep the order
+; ** = KEEP the order
 		struct 0
 marsspr_xfrm	ds.b 1		; Animation X frame pos **
 marsspr_yfrm	ds.b 1		; Animation Y frame pos **
@@ -56,9 +57,9 @@ marsspr_y	ds.w 1		; Screen Y position **
 marsspr_dwidth	ds.w 1		; Spritesheet WIDTH
 marsspr_indx	ds.w 1		; Palette index base
 marsspr_flags	ds.w 1		; Sprite flags: %VH (flip)
-marsspr_fill	ds.w 1		; <-- 2 filler bytes: free to use
-marsspr_data	ds.l 1		; Spritesheet DATA location in SH2 area (0 == end-of-spritelist)
-marsspr_map	ds.l 1		; MAP data
+marsspr_fill	ds.w 1		; <-- 2 FILLER bytes: free to use
+marsspr_data	ds.l 1		; Spritesheet address in SH2 area (0 == end-of-supersprites)
+; marsspr_map	ds.l 1		; MAP data
 sizeof_marsspr	ds.l 0
 		finish
 

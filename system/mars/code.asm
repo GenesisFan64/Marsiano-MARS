@@ -1313,7 +1313,7 @@ master_loop:
 		tst	#VBLK,r0
 		bf	.waitl
 		stc	sr,@-r15
-		mov.b	#$F0,r0	; ** $F0
+		mov.b	#$F0,r0				; ** $F0
 		extu.b	r0,r0
 		ldc	r0,sr
 		mov	#RAM_Mars_DreqDma,r1		; Copy DREQ data into a safe

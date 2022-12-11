@@ -20,8 +20,6 @@ SET_MAPSPD	equ $20
 
 		struct 0
 field_data	ds.l 1
-; field_x		ds.w 1
-; field_z		ds.w 1
 sizeof_mdfield	ds.l 0
 		finish
 
@@ -33,6 +31,7 @@ sizeof_mdfield	ds.l 0
 		struct RAM_ModeBuff
 RAM_FieldBuff	ds.b sizeof_mdfield
 RAM_HorCopy	ds.w 1
+RAM_ModelId	ds.w 1
 RAM_CamData	ds.l 1
 RAM_CamFrame	ds.l 1
 RAM_CamTimer	ds.l 1
@@ -78,10 +77,8 @@ MD_3DMODE:
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 
 	; Read MAP
-		move.l	#MapCamera_0,d0			; Animation
-		moveq	#1,d1
-		bsr	MdMdl_SetNewCamera
 		bsr	MdlMap_Init
+		bsr	MdlMap_Load
 
 	; Music
 ; 		moveq	#0,d0
@@ -192,12 +189,7 @@ MD_3DMODE:
 ; ------------------------------------------------------
 
 MdlMap_Init:
-		lea	(RAM_MdDreq+Dreq_ObjCam),a6
-		lea	(RAM_FieldBuff),a5
-		move.l	#MarsMap_00,field_data(a5)
-		bsr	MdlMap_Build
-		bsr	MdMdl_CamAnimate
-		bpl.s	MdlMap_Loop
+		clr.w	(RAM_ModelId).w
 		clr.l	(RAM_Cam_Xpos).l
 		clr.l	(RAM_Cam_Ypos).l
 		clr.l	(RAM_Cam_Zpos).l
@@ -205,7 +197,21 @@ MdlMap_Init:
 		clr.l	cam_y_rot(a6)
 		clr.l	cam_z_rot(a6)
 		move.l	#-$80,(RAM_Cam_Ypos).l
+		rts
 
+MdlMap_Load:
+		move.l	#MapCamera_0,d0			; Animation
+		moveq	#1,d1
+		bsr	MdMdl_SetNewCamera
+
+		lea	(RAM_MdDreq+Dreq_ObjCam),a6
+		lea	(RAM_FieldBuff),a5
+		move.l	#MarsMap_00,field_data(a5)
+		bsr	MdlMap_Build
+		bsr	MdMdl_CamAnimate
+		bpl.s	MdlMap_Loop
+	; *** EVENT
+		bsr.s	MdlMap_Init
 MdlMap_Loop:
 ; 		lea	(RAM_MdDreq+Dreq_Objects),a6
 ; 		add.w	#8*4,mdl_x_rot(a6)

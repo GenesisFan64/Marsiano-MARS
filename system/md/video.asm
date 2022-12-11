@@ -10,6 +10,7 @@ RAM_BgBufferM	equ	RAM_MdDreq+Dreq_BgExBuff	; Relocate MARS layer control
 ; Settings
 ; --------------------------------------------------------
 
+MAX_MDOBJ	equ 16		; Max objects for Genesis
 varNullVram	equ $7FF	; Default Blank cell for some video routines
 varPrintVram	equ $580	; Location of the PRINT text graphics
 varPrintPal	equ 3		; Palette to use for the printable text
@@ -60,6 +61,10 @@ bitMarsBg	equ 6
 
 ; IN SH2 ORDER
 ; still works fine on this side.
+; md_bg_flags: %EM..UDLR
+; UDLR - off-screen update bits
+;    M - Map belongs to Genesis or 32X
+;    E - Enable this map
 
 		struct 0
 md_bg_bw	ds.b 1		; Block Width
@@ -91,10 +96,52 @@ md_bg_y		ds.l 1		; Y pos 0000.0000
 sizeof_mdbg	ds.l 0
 		finish
 
-; md_bg_flags: %EM..UDLR
-; UDLR - off-screen update bits
-;    M - Map belongs to Genesis or 32X
-;    E - Enable this map
+; --------------------------------
+; object struct
+; --------------------------------
+
+		struct 0
+obj_code	ds.l 1		; Object code
+obj_size	ds.l 1		; Object size (see below)
+obj_x		ds.l 1		; Object X Position
+obj_y		ds.l 1		; Object Y Position
+obj_map		ds.l 1		; Object image settings
+obj_x_spd	ds.w 1		; Object X Speed
+obj_y_spd	ds.w 1		; Object Y Speed
+obj_anim_pos	ds.w 1		; Object animation increment (obj_anim + obj_anim_pos)
+obj_anim_id	ds.w 1		; Object animation to read (current|saved)
+obj_anim_spd	ds.b 1		; Object animation delay
+obj_index	ds.b 1		; Object code index
+obj_subid	ds.b 1		; Object SubID
+obj_status	ds.b 1		; Object status
+obj_frame	ds.b 1		; Object display frame
+obj_spwnid	ds.b 1		; Object respawn index (this - 1)
+obj_col		ds.b 1		; Object collision
+obj_null	ds.b 1		; ALIGN
+obj_ram		ds.b $3C	; Object RAM
+sizeof_mdobj	ds.l 0
+		finish
+; 		message "\{sizeof_obj}"
+
+; --------------------------------
+; obj_status
+; --------------------------------
+
+bitobj_flipH	equ	0	; set to flip Sprite Horizontally
+bitobj_flipV	equ	1	; set to flip Sprite Vertically
+bitobj_air	equ	2	; set if floating/jumping
+
+; bitobj_touch	equ	6	; set to get touched by objects
+bitobj_stay	equ	7	; set to stay on-screen
+
+; --------------------------------
+; obj_size
+; --------------------------------
+
+at_u		equ	3
+at_d		equ	2
+at_l		equ	1
+at_r		equ	0
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -102,6 +149,8 @@ sizeof_mdbg	ds.l 0
 ; ----------------------------------------------------------------
 
 			struct RAM_MdVideo
+RAM_Objects		ds.b MAX_MDOBJ*sizeof_mdobj
+RAM_ObjDispList		ds.l MAX_MDOBJ+1	; Objects that want
 RAM_BgBuffer		ds.b sizeof_mdbg*4	; Map backgrounds, back to front.
 RAM_FrameCount		ds.l 1			; Frames counter
 RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
@@ -1509,7 +1558,7 @@ Video_MarsPalFade:
 ; ----------------------------------------------------------------
 ; MAP layout system
 ;
-; Note: uses some RAM'd video registers.
+; Note: uses some RAM'd video registeds.
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -1560,7 +1609,7 @@ MdMap_Init:
 ; 	dc.b blkwidth,blkheight
 ; a1 - Graphics data stored as blocks (SH2 AREA)
 ; a2 - MAIN layout (SH2 AREA)
-; a3 - SUB layout (**If needed later, set to 0)
+; a3 - *** UNUSED, set to 0
 ; a4 - Collision data (68K AREA)
 ;
 ; Uses:
@@ -2352,4 +2401,239 @@ MdMap_DrawScrl:
 		and.w	#$3FFF,d1
 		rol.w	#2,d2
 		and.w	#%11,d2
+		rts
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Objects system
+;
+; MD and MARS
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; Init
+; --------------------------------------------------------
+
+Objects_Init:
+		lea	(RAM_Objects),a4
+		move.w	#(sizeof_mdobj*MAX_MDOBJ)-1,d4
+.clr:
+		clr.b	(a4)+
+		dbf	d4,.clr
+		rts
+
+; --------------------------------------------------------
+; Run
+; --------------------------------------------------------
+
+Objects_Run:
+		lea	(RAM_Objects),a6
+		move.w	#MAX_MDOBJ-1,d7
+.next_one:
+		move.l	obj_code(a6),d4
+		beq.s	.no_code	; Free slot
+		bmi.s	.no_code	; Inactive object
+		movea.l	d4,a5
+		movem.l	d7,-(sp)
+		jsr	(a5)
+		movem.l	(sp)+,d7
+.no_code:
+		adda	#sizeof_mdobj,a6
+		dbf	d7,.next_one
+
+	; Build SUPER Sprites
+		lea	(RAM_ObjDispList),a6
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a5
+		lea	(RAM_BgBufferM),a4
+; 		lea	(RAM_BgBufferM),a4
+		move.w	#MAX_MDOBJ-1,d7
+.next:
+		move.l	(a6),d0
+		beq.s	.finish
+		move.l	d0,a2
+		move.l	obj_map(a2),a0		; Read mapping
+		move.l	(a0)+,marsspr_data(a5)
+		move.w	(a0)+,marsspr_dwidth(a5)
+		move.w	(a0)+,marsspr_indx(a5)
+		move.b	(a0)+,marsspr_xs(a5)
+		move.b	(a0)+,marsspr_ys(a5)
+		move.w	obj_frame(a2),d0	; Read frame
+		ror.w	#8,d0			; Rotate X/Y
+		move.w	d0,marsspr_xfrm(a5)	; Y|X
+		move.w	obj_x(a2),d6
+		move.w	obj_y(a2),d5
+		sub.w	md_bg_x(a4),d6
+		sub.w	md_bg_y(a4),d5
+		move.l	obj_size(a2),d4		; d4 - UDLR sizes
+		move.w	d4,d3			; Grab LR
+		lsr.w	#8,d3
+		lsl.b	#3,d3
+		and.w	#$FF,d3
+		sub.w	d3,d6			; Subtract X
+		swap	d4
+		move.w	d4,d3			; Grab UD
+		lsr.w	#8,d3
+		lsl.b	#3,d3
+		and.w	#$FF,d3
+		sub.w	d3,d5			; Subtract Y
+		move.w	d6,marsspr_x(a5)
+		move.w	d5,marsspr_y(a5)
+
+		clr.l	(a6)			; Clear request
+		adda	#4,a6			; Next slot
+		adda	#sizeof_marsspr,a5	; Next SuperSprite
+		dbf	d7,.next
+
+
+.finish:
+		rts
+
+; ----------------------------------------------------------------
+; Subroutines
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; Object_Display
+;
+; Makes current object visible to the screen.
+;
+; Write a list pointer to obj_map(a6) with these
+; settings:
+;
+; .list:
+; 	dc.l SH2_ADDR|TH ; Spritesheet location, TH opt.
+; 	dc.w 512	 ; Spritesheet WIDTH
+; 	dc.b 64,72	 ; Frame width and height
+; 	dc.w $80	 ; Palette index
+; --------------------------------------------------------
+
+Object_Display:
+		lea	(RAM_ObjDispList),a0
+		move.w	#MAX_MDOBJ-1,d1
+.srch:
+		move.l	(a0),d0
+		beq.s	.this_one
+		dbf	d1,.srch
+.this_one:
+		move.l	a6,(a0)
+		rts
+
+; --------------------------------------------------------
+; Object_Animate
+;
+; Animates the sprite
+;
+; Input
+; d1 | LONG - Animation data
+;
+; Output
+; d0 | WORD - Frame
+;
+; Uses:
+; d2
+; --------------------------------------------------------
+
+; NOTE: to restart an animation
+; clear obj_anim_pos(a6) manually
+
+Object_Animate:
+ 		tst.l	d1
+  		beq.s	.return
+ 		moveq	#0,d2
+ 		move.b	obj_anim_id+1(a6),d2
+ 		cmp.b	obj_anim_id(a6),d2
+ 		beq.s	.sameThing
+ 		move.b	obj_anim_id(a6),obj_anim_id+1(a6)
+ 		clr.w	obj_anim_pos(a6)
+ 		clr.b	obj_anim_spd(a6)
+.sameThing:
+ 		move.b	obj_anim_id(a6),d2
+ 		cmp.b	#-1,d2
+ 		beq.s	.return
+ 		lsl.w	#1,d2
+; 	if MCD
+; 		or.l	#$200000,d1
+; 	else
+; 		btst	#bitMars,(RAM_SysFlags).l
+; 		beq.s	.nobanking
+; 		or.l	#$900000,d1
+; .nobanking:
+; 	endif
+		movea.l	d1,a0
+ 		adda	(a0,d2.w),a0
+
+ 		move.b	(a0)+,d2
+ 		cmp.b	#-1,d2
+ 		beq.s	.keepspd
+ 		sub.b	#1,obj_anim_spd(a6)
+ 		bpl.s	.return
+		move.b	d2,obj_anim_spd(a6)
+.keepspd:
+ 		moveq	#0,d1
+ 		move.w	obj_anim_pos(a6),d2
+ 		move.b	(a0),d1
+ 		adda	d2,a0
+
+ 		and.l	#$FFFF0000,d0
+ 		move.b	(a0),d0
+ 		cmp.b	#-1,d0
+ 		beq.s	.noAnim
+ 		cmp.b	#-2,d0
+ 		beq.s	.goToFrame
+ 		cmp.b	#-3,d0
+ 		beq.s	.lastFrame
+
+ 		move.b	d0,obj_frame(a6)
+ 		add.w	#1,obj_anim_pos(a6)
+.return:
+ 		rts
+
+.noAnim:
+ 		move.w	#1,obj_anim_pos(a6)
+ 		move.w	d1,d0
+ 		move.b	d0,obj_frame(a6)
+		rts
+.lastFrame:
+ 		clr.b	obj_anim_spd(a6)
+		rts
+.goToFrame:
+		clr.w	obj_anim_pos(a6)
+		move.b	1(a0),obj_anim_pos+1(a6)
+		rts
+
+; --------------------------------------------------------
+; Floor collision
+; --------------------------------------------------------
+
+object_ColM_Floor:
+		lea	(RAM_BgBufferM),a5
+		move.l	md_bg_col(a5),d0
+		beq.s	.blank
+		move.l	d0,a4
+		move.w	obj_x(a6),d1
+		move.w	obj_y(a6),d0
+		move.l	obj_size(a6),d2
+
+		swap	d2		; Add Y
+		lsl.b	#3,d2
+		and.w	#$FF,d2
+		add.w	d2,d0
+
+		move.w	md_bg_w(a5),d2
+		asr.w	#4,d0		; /16
+		asr.w	#4,d1
+		mulu.w	d2,d0
+		add.l	d1,d0
+		add.l	d0,a4
+		move.b	(a4),d0
+		beq.s	.blank
+		rts
+.blank:
+		moveq	#0,d0
+		rts
+
+; If != 0
+object_FloorRead:
+		and.w	#-$10,obj_y(a6)
+		move.w	d3,obj_y_spd(a6)
 		rts

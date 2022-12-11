@@ -250,23 +250,23 @@ MD_ErrorTrap:
 MD_Init:
 		move.w	#$2700,sr
 		tst.w	(vdp_ctrl).l
-		btst	#15,d0
-		bne.s	.hotstart
-		lea	(sysmars_reg).l,a5
-; .wm:		cmp.l	#"M_OK",comm0(a5)	; SH2 Master active?
+; 		btst	#15,d0
+; 		bne.s	.hotstart
+; 		lea	(sysmars_reg).l,a5
+; .wm:		cmp.l	#"M_OK",comm0(a5)
 ; 		bne.s	.wm
-; .ws:		cmp.l	#"S_OK",comm4(a5)	; SH2 Slave active?
+; .ws:		cmp.l	#"S_OK",comm4(a5)
 ; 		bne.s	.ws
-.hotstart:
-		lea	($FFFF0000),a0		; Cleanup our RAM
+; .hotstart:
+		lea	($FFFF0000),a0		; Clean our "work" RAM
 		move.l	#sizeof_mdram,d1
 		moveq	#0,d0
 .loop_ram:	move.w	d0,(a0)+
 		cmp.l	d1,a0
 		bcs.s	.loop_ram
-		movem.l	($FF0000),d0-a6		; Clear registers using zeros from RAM
-		lea	(sysmars_reg).l,a5
+		movem.l	($FF0000),d0-a6		; Clean registers using zeros from RAM
 		lea	(vdp_ctrl).l,a6
+		lea	(sysmars_reg).l,a5
 .wait_dma:	move.w	(a6),d7			; Check if our DMA is active.
 		btst	#1,d7
 		bne.s	.wait_dma

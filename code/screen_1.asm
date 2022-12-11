@@ -31,9 +31,9 @@ TEST_MAINSPD	equ $04
 RAM_MapX	ds.l 1
 RAM_MapY	ds.l 1
 RAM_ThisSpeed	ds.l 1
-RAM_EmiFrame	ds.w 1
-RAM_EmiAnim	ds.w 1
-RAM_EmiTimer	ds.w 1
+; RAM_EmiFrame	ds.w 1
+; RAM_EmiAnim	ds.w 1
+; RAM_EmiTimer	ds.w 1
 RAM_KeepSong	ds.w 1
 		finish
 
@@ -48,6 +48,8 @@ MD_2DMODE:
 		bsr	Video_Update
 		bsr	Mode_Init
 		bsr	Video_PrintInit
+		bsr	Objects_Init
+; 		bsr	SuperSpr_Init
 
 	; MAP TESTING
 		move.l	#Art_level0,d0			; Genesis VDP graphics
@@ -72,13 +74,17 @@ MD_2DMODE:
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
 		move.l	#$10000,(RAM_ThisSpeed).l
 		move.w	#0,(RAM_MapX).l
-		move.w	#$9C,(RAM_MapY).l
+		move.w	#0,(RAM_MapY).l
 
 		bsr	MdMap_Init
 		bsr	.update_pos
 		bsr	Level_PickMap
-		bsr	SuperSpr_Init
 		bsr	MdMap_DrawAll
+
+	; Object
+		lea	(RAM_Objects),a6
+		move.l	#ObjMd_Player,obj_code(a6)
+		bsr	Objects_Run
 
 ; 		lea	(RAM_Sprites),a0
 ; 		move.w	#$80+$30,(a0)+
@@ -120,10 +126,14 @@ MD_2DMODE:
 ; ------------------------------------------------------
 
 .loop:
+		bsr	Objects_Run
+		bsr	Map_Camera
 		bsr	MdMap_Update
+
 .ploop:		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.ploop
+
 
 ; 		lea	str_Stats3(pc),a0
 ; 		move.l	#locate(0,0,10),d0
@@ -148,54 +158,54 @@ MD_2DMODE:
 .z_dw2:
 
 
-		bsr	SuperSpr_Main
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyC,d7
-		beq.s	.z_up
-		add.l	#$10000,(RAM_ThisSpeed).l
-		cmp.l	#TEST_MAINSPD<<16,(RAM_ThisSpeed).l
-		ble.s	.z_up
-		move.l	#$10000,(RAM_ThisSpeed).l
-.z_up:
+; 		bsr	SuperSpr_Main
+; 		move.w	(Controller_1+on_press),d7
+; 		btst	#bitJoyC,d7
+; 		beq.s	.z_up
+; 		add.l	#$10000,(RAM_ThisSpeed).l
+; 		cmp.l	#TEST_MAINSPD<<16,(RAM_ThisSpeed).l
+; 		ble.s	.z_up
+; 		move.l	#$10000,(RAM_ThisSpeed).l
+; .z_up:
+;
+; 		move.w	(Controller_1+on_hold),d7
+; 		btst	#bitJoyB,d7
+; 		bne.s	.not_hold3
+;
+; 		move.l	(RAM_ThisSpeed),d0
+; 		move.l	(RAM_ThisSpeed),d1
+; 		move.w	(Controller_1+on_hold),d7
+; 		move.w	d7,d6
+; 		btst	#bitJoyDown,d7
+; 		beq.s	.noz_down
+; ; 		move.w	#0,(RAM_EmiFrame).w
+; ; 		add.w	#1,(RAM_EmiAnim).w
+; 		add.l	d1,(RAM_MapY).w
+; .noz_down:
+; 		move.w	d7,d6
+; 		btst	#bitJoyUp,d6
+; 		beq.s	.noz_up
+; ; 		move.w	#4,(RAM_EmiFrame).w
+; ; 		add.w	#1,(RAM_EmiAnim).w
+; 		sub.l	d1,(RAM_MapY).w
+; .noz_up:
+; 		move.w	d7,d6
+; 		btst	#bitJoyRight,d6
+; 		beq.s	.noz_r
+; ; 		move.w	#8,(RAM_EmiFrame).w
+; ; 		add.w	#1,(RAM_EmiAnim).w
+; 		add.l	d0,(RAM_MapX).w
+; .noz_r:
+; 		move.w	d7,d6
+; 		btst	#bitJoyLeft,d6
+; 		beq.s	.noz_l
+; ; 		move.w	#$C,(RAM_EmiFrame).w
+; ; 		add.w	#1,(RAM_EmiAnim).w
+; 		sub.l	d0,(RAM_MapX).w
+; .noz_l:
 
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyB,d7
-		bne.s	.not_hold3
-
-		move.l	(RAM_ThisSpeed),d0
-		move.l	(RAM_ThisSpeed),d1
-		move.w	(Controller_1+on_hold),d7
-		move.w	d7,d6
-		btst	#bitJoyDown,d7
-		beq.s	.noz_down
-		move.w	#0,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		add.l	d1,(RAM_MapY).w
-.noz_down:
-		move.w	d7,d6
-		btst	#bitJoyUp,d6
-		beq.s	.noz_up
-		move.w	#4,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		sub.l	d1,(RAM_MapY).w
-.noz_up:
-		move.w	d7,d6
-		btst	#bitJoyRight,d6
-		beq.s	.noz_r
-		move.w	#8,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		add.l	d0,(RAM_MapX).w
-.noz_r:
-		move.w	d7,d6
-		btst	#bitJoyLeft,d6
-		beq.s	.noz_l
-		move.w	#$C,(RAM_EmiFrame).w
-		add.w	#1,(RAM_EmiAnim).w
-		sub.l	d0,(RAM_MapX).w
-.noz_l:
-
-		bsr.s	.update_pos
-.not_hold3:
+; 		bsr.s	.update_pos
+; .not_hold3:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq	.loop
@@ -221,27 +231,6 @@ MD_2DMODE:
 		move.w	d2,(RAM_VerScroll+2).w
 		bsr	MdMap_Move
 		neg.l	(RAM_HorScroll).w
-
-; 		move.w	(RAM_MapX),d0
-; 		move.w	(RAM_MapY),d1
-; 		lea	(RAM_BgBufferM),a0
-; 		move.w	d0,md_bg_x(a0)
-; 		move.w	d1,md_bg_y(a0)
-; 		lea	(RAM_BgBuffer),a0
-; 		asr.w	#1,d0
-; 		asr.w	#1,d1
-; 		move.w	d0,md_bg_x(a0)
-; 		move.w	d1,md_bg_y(a0)
-; 		move.w	d0,(RAM_HorScroll).w
-; 		move.w	d1,(RAM_VerScroll).w
-; 		adda	#sizeof_mdbg,a0
-; 		asr.w	#1,d0
-; 		asr.w	#1,d1
-; 		move.w	d0,md_bg_x(a0)
-; 		move.w	d1,md_bg_y(a0)
-; 		move.w	d0,(RAM_HorScroll+2).w
-; 		move.w	d1,(RAM_VerScroll+2).w
-; 		neg.l	(RAM_HorScroll).w
 		rts
 
 ; ====================================================================
@@ -276,275 +265,6 @@ MD_2DMODE:
 ; Subroutines
 ; ------------------------------------------------------
 
-; Emilie_MkSprite:
-; 		lea	(RAM_Sprites),a6
-; 		move.l	(RAM_EmiPosY),d0
-; 		move.l	(RAM_EmiPosX),d1
-; 		swap	d0
-; 		swap	d1
-; 		add.w	#$80+32,d0
-; 		add.w	#$80+32,d1
-; 		move.w	(RAM_EmiAnim),d2
-; 		lsr.w	#3,d2
-; 		and.w	#%11,d2
-; 		move.w	(RAM_EmiFrame),d3
-; 		add.w	d3,d2
-; 		add.w	d2,d2
-; 		lea	Map_Nicole(pc),a0
-; 		move.w	(a0,d2.w),d2
-; 		adda	d2,a0
-; 		move.b	(a0)+,d4
-; 		and.w	#$FF,d4
-; 		sub.w	#1,d4
-; 		move.w	#$0001,d5
-; 		move.w	#emily_VRAM,d6
-; .nxt_pz:
-; 		move.b	(a0)+,d3
-; 		ext.w	d3
-; 		add.w	d0,d3
-; 		move.w	d3,(a6)+
-;
-; 		move.b	(a0)+,d3
-; 		lsl.w	#8,d3
-; 		add.w	d5,d3
-; 		move.w	d3,(a6)+
-;
-; 		move.b	(a0)+,d3
-; 		lsl.w	#8,d3
-; 		move.b	(a0)+,d2
-; 		and.w	#$FF,d2
-; 		add.w	d3,d2
-; 		add.w	d6,d2
-; 		move.w	d2,(a6)+
-;
-; 		move.b	(a0)+,d3
-; 		ext.w	d3
-; 		add.w	d1,d3
-; 		move.w	d3,(a6)+
-; 		add.w	#1,d5
-; 		dbf	d4,.nxt_pz
-; 		clr.l	(a6)+
-; 		clr.l	(a6)+
-;
-; 	; DPLC
-; 		move.w	(RAM_EmiAnim),d2
-; 		lsr.w	#3,d2
-; 		and.w	#%11,d2
-; 		move.w	(RAM_EmiFrame),d3
-; 		add.w	d3,d2
-; 		add.w	d2,d2
-; 		lea	Dplc_Nicole(pc),a0
-; 		move.w	(a0,d2.w),d2
-; 		adda	d2,a0
-; 		move.w	(a0)+,d4
-; 		and.w	#$FF,d4
-; 		sub.w	#1,d4
-; 		move.w	#emily_VRAM,d5
-;
-;
-; 	; d0 - graphics
-; 	; d5 - VRAM OUTPUT
-; 		lsl.w	#5,d5
-; 		moveq	#0,d1
-; .nxt_dpz:
-; 		move.l	#ART_EMI,d0
-; 		move.w	(a0)+,d1
-; 		move.w	d1,d2
-; 		and.w	#$7FF,d1
-; 		lsl.w	#5,d1
-; 		add.l	d1,d0
-; 		move.w	d5,d1
-; 		lsr.w	#7,d2
-; 		add.w	#$20,d2
-; 		move.w	d2,d3
-; 		bsr	Video_DmaMkEntry
-; 		add.w	d3,d5
-; 		dbf	d4,.nxt_dpz
-; .no_upd:
-; 		rts
-
-; ====================================================================
-; ------------------------------------------------------
-; Subroutines
-; ------------------------------------------------------
-
-SuperSpr_Init:
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.l	#SuperSpr_Test,d0
-		move.l	d0,d1
-		or.l	#TH,d1
-		move.l	d1,marsspr_data(a0)
-		move.w	#512,marsspr_dwidth(a0)
-		move.w	#(320/2)-(64/2),marsspr_x(a0)
-		move.w	#(224/2)-(72/2),marsspr_y(a0)
-		move.b	#64,marsspr_xs(a0)
-		move.b	#72,marsspr_ys(a0)
-		move.w	#$80,marsspr_indx(a0)
-		move.b	#0,marsspr_xfrm(a0)
-		move.b	#0,marsspr_yfrm(a0)
-
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$60,marsspr_x(a0)
-; 		move.w	#$50,marsspr_y(a0)
-; 		move.b	#32,marsspr_xs(a0)
-; 		move.b	#48,marsspr_ys(a0)
-; 		move.w	#$80,marsspr_indx(a0)
-
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$10,marsspr_x(a0)
-; 		move.w	#$10,marsspr_y(a0)
-; 		move.b	#32,marsspr_xs(a0)
-; 		move.b	#48,marsspr_ys(a0)
-; 		move.w	#$80,marsspr_indx(a0)
-; 		move.b	#1,marsspr_yfrm(a0)
-
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; ; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$110,marsspr_x(a0)
-; 		move.w	#$80,marsspr_y(a0)
-; 		move.b	#32,marsspr_xs(a0)
-; 		move.b	#48,marsspr_ys(a0)
-; 		move.w	#$80,marsspr_indx(a0)
-; 		move.b	#3,marsspr_yfrm(a0)
-
-; 		move.l	#SuperSpr_Test,d0
-; 		move.l	d0,d1
-; ; 		or.l	#TH,d1
-; 		adda	#sizeof_marsspr,a0
-; 		move.l	d1,marsspr_data(a0)
-; 		move.w	#64,marsspr_dwidth(a0)
-; 		move.w	#$30,marsspr_x(a0)
-; 		move.w	#$70,marsspr_y(a0)
-; 		move.b	#32,marsspr_xs(a0)
-; 		move.b	#48,marsspr_ys(a0)
-; 		move.w	#$80,marsspr_indx(a0)
-; 		move.b	#2,marsspr_yfrm(a0)
-
-		adda	#sizeof_marsspr,a0
-		move.l	#0,marsspr_data(a0)
-
-SuperSpr_Main:
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-
-; 		sub.w	#1,(RAM_EmiTimer).w
-; 		bpl.s	.wspr
-; 		move.w	#6,(RAM_EmiTimer).w
-; 		move.b	marsspr_xfrm(a0),d0
-; 		add.w	#1,d0
-; 		and.w	#%111,d0
-; 		move.b	d0,marsspr_xfrm(a0)
-; 		adda	#sizeof_marsspr,a0
-; 		move.b	marsspr_yfrm(a0),d0
-; 		add.w	#1,d0
-; 		and.w	#%11,d0
-; 		move.b	d0,marsspr_yfrm(a0)
-; .wspr:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyX,d7
-		beq	.not_hold3
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		add.w	#1,marsspr_flags(a0)
-		and.w	#%11,marsspr_flags(a0)
-.not_hold3:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyZ,d7
-		beq	.not_hold4
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		add.b	#1,marsspr_xfrm(a0)
-		and.b	#%111,marsspr_xfrm(a0)
-.not_hold4:
-		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyY,d7
-		beq	.not_hold5
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		add.b	#1,marsspr_yfrm(a0)
-		and.b	#%111,marsspr_yfrm(a0)
-.not_hold5:
-
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyB,d7
-		beq	.not_hold2
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-		move.w	marsspr_x(a0),d0
-		move.w	marsspr_y(a0),d1
-		moveq	#TEST_MAINSPD,d2
-		moveq	#TEST_MAINSPD,d3
-		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyRight,d7
-		beq.s	.nor_s
-		add.w	d2,d0
-.nor_s:
-		btst	#bitJoyLeft,d7
-		beq.s	.nol_s
-		sub.w	d2,d0
-.nol_s:
-		btst	#bitJoyDown,d7
-		beq.s	.nod_s
-		add.w	d3,d1
-.nod_s:
-		btst	#bitJoyUp,d7
-		beq.s	.nou_s
-		sub.w	d3,d1
-.nou_s:
-		move.w	d0,marsspr_x(a0)
-		move.w	d1,marsspr_y(a0)
-
-; 		add.w	#$80,d0
-; 		add.w	#$80,d1
-; 		lea	(RAM_Sprites),a0
-; 		move.w	d1,(a0)+
-; 		move.w	#$0F00,(a0)+
-; 		move.w	#$2000|$50,(a0)+
-; 		move.w	d0,(a0)+
-
-.not_hold2:
-
-; 		move.w	(Controller_1+on_hold),d7
-; 		btst	#bitJoyA,d7
-; 		beq.s	.not_hold
-; 		lea	(RAM_MdDreq+Dreq_SuperSpr),a0
-; 		move.w	marsspr_xs(a0),d0
-; 		move.w	marsspr_ys(a0),d1
-; 		moveq	#TEST_MAINSPD,d2
-; 		moveq	#TEST_MAINSPD,d3
-; 		move.w	(Controller_1+on_hold),d7
-; 		btst	#bitJoyRight,d7
-; 		beq.s	.nor_s2
-; 		add.w	d2,d0
-; .nor_s2:
-; 		btst	#bitJoyLeft,d7
-; 		beq.s	.nol_s2
-; 		sub.w	d2,d0
-; .nol_s2:
-; 		btst	#bitJoyDown,d7
-; 		beq.s	.nod_s2
-; 		add.w	d3,d1
-; .nod_s2:
-; 		btst	#bitJoyUp,d7
-; 		beq.s	.nou_s2
-; 		sub.w	d3,d1
-; .nou_s2:
-; 		move.w	d0,marsspr_xs(a0)
-; 		move.w	d1,marsspr_ys(a0)
-.not_hold:
-
-		add.w	#1,(RAM_EmiFrame).w
-		rts
-
 ; ====================================================================
 ; ------------------------------------------------------
 ; Pick map
@@ -555,7 +275,7 @@ Level_PickMap:
 		move.l	#MapBlk_M|TH,a1
 		move.l	#MapFg_M|TH,a2
 		move.l	#0,a3
-		move.l	#0,a4
+		move.l	#MapCol_M,a4
 		moveq	#-1,d0
 		moveq	#0,d1
 		moveq	#0,d2
@@ -583,12 +303,30 @@ Level_PickMap:
 
 		rts
 
-; 		lea	(RAM_MdDreq+Dreq_ScrnBuff),a0
-; 		move.l	#TESTMARS_BG,scrlbg_Data(a0)
-; 		move.l	#512,scrlbg_W(a0)
-; 		move.l	#256,scrlbg_H(a0)
-; 		move.l	#$00000000,scrlbg_X(a0)
-; 		move.l	#$00000000,scrlbg_Y(a0)
+Map_Camera:
+		lea	(RAM_Objects),a6
+		lea	(RAM_BgBufferM),a5
+		moveq	#0,d3
+		move.w	md_bg_wf(a5),d2
+		move.w	#320/2,d1
+		move.w	obj_x(a6),d0
+		sub.w	d1,d0
+		bmi.s	.low_x
+		move.w	d0,d3
+.low_x:
+		move.w	d3,md_bg_x(a5)
+
+		moveq	#0,d3
+		move.w	md_bg_hf(a5),d2
+		move.w	#224/2,d1
+		move.w	obj_y(a6),d0
+		sub.w	d1,d0
+		bmi.s	.low_y
+		move.w	d0,d3
+.low_y:
+		move.w	d3,md_bg_y(a5)
+
+		rts
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -598,6 +336,305 @@ Level_PickMap:
 ; ------------------------------------------------------
 ; HBlank
 ; ------------------------------------------------------
+
+; ====================================================================
+; ------------------------------------------------------
+; Objects
+; ------------------------------------------------------
+
+; ====================================================================
+; -----------------------------------------
+; Object
+;
+; Player
+; -----------------------------------------
+
+; -----------------------------------------
+; RAM
+; -----------------------------------------
+
+; 		reserve obj_ram
+; plyr_ctrlwho	rs.l 1
+; 		endres
+
+; -----------------------------------------
+; Code
+; -----------------------------------------
+
+ObjMd_Player:
+		moveq	#0,d0
+		move.b	obj_index(a6),d0
+		add.w	d0,d0
+		move.w	.list(pc,d0.w),d1
+		jsr	.list(pc,d1.w)
+
+; 		move.l	#ani_plyr,d1
+; 		bsr	Object_Animate
+
+		bra	Object_Display
+
+; -----------------------------------------
+; Objects
+; -----------------------------------------
+
+.list:
+		dc.w .init-.list
+		dc.w .main-.list
+; ---------------------------------
+.mars_spr:
+		dc.l SuperSpr_Test|TH	; Spritesheet location
+		dc.w 512		; Spritesheet WIDTH
+		dc.w $80		; Palette index
+		dc.b 64,72		; Frame width and height
+
+; ---------------------------------
+; INIT
+; ---------------------------------
+
+.init:
+		move.l	#.mars_spr,obj_map(a6)
+		lea	(RAM_BgBufferM),a5
+		add.b	#1,obj_index(a6)
+		move.l	#$05040404,obj_size(a6)	; UDLR
+		clr.w	d0
+		clr.w	d1
+
+; ---------------------------------
+; MAIN
+; ---------------------------------
+
+.main:
+		lea	(RAM_BgBufferM),a5
+		lea	(Controller_1),a4
+
+; ----------------------
+		move.w	on_hold(a4),d0
+		move.w	obj_x_spd(a6),d1
+		move.w	#1,d2
+		move.w	#$30,d3
+		tst.w	d1
+		bmi.s	.leftx
+		sub.w	d3,d1
+		bpl.s	.keepx
+.stopx:
+		clr.w	d1
+		clr.w	d2
+		bra.s	.keepx
+.leftx:
+		add.w	d3,d1
+		bpl.s	.stopx
+.keepx:
+
+; ----------------------
+; Move Left/Right
+; ----------------------
+
+		btst	#bitobj_air,obj_status(a6)
+		bne.s	.dontduck
+		btst	#bitJoyDown,d0
+		beq.s	.dontduck
+		move.w	#2,d2
+		bra.s	.contlr
+.dontduck:
+		btst	#bitJoyRight,d0
+		beq.s	.nrm
+		bclr	#bitobj_flipH,obj_status(a6)
+		move.w	#$160,d1
+		move.w	#1,d2
+.nrm
+		btst	#bitJoyLeft,d0
+		beq.s	.contlr
+		bset	#bitobj_flipH,obj_status(a6)
+		move.w	#-$160,d1
+		move.w	#1,d2
+.contlr:
+		move.w	d1,obj_x_spd(a6)
+
+; ----------------------
+; JUMP
+; ----------------------
+
+		move.w	on_press(a4),d0
+		move.w	on_hold(a4),d3
+; 		btst	#bitobj_air,obj_status(a6)
+; 		bne.s	.nc
+		btst	#bitJoyC,d0
+		beq.s	.nc
+		bset	#bitobj_air,obj_status(a6)
+		move.w	#-$3B0,obj_y_spd(a6)
+		move.w	obj_x_spd(a6),d3
+		asr.w	#2,d3
+		tst.w	d3
+		bpl.s	.swpx
+		neg.w	d3
+.swpx:
+		sub.w	d3,obj_y_spd(a6)
+		move.b	#3,obj_anim_id(a6)
+.nc
+
+; ----------------------
+; Set Animation
+; ----------------------
+
+		btst	#bitobj_air,obj_status(a6)
+		bne.s	.noovr
+		move.b	d2,obj_anim_id(a6)
+		bra.s	.contanim
+.noovr:
+		move.b	#3,d2
+		tst.w	obj_y_spd(a6)
+		bmi.s	.jumpup
+		move.w	#6,d2
+.jumpup:
+
+; 		move.b	obj_anim_id(a6),d2
+		move.w	on_hold(a4),d3
+		btst	#bitJoyDown,d3
+		beq.s	.goinup
+		clr.w	obj_anim_pos(a6)
+		move.w	#5,d2
+		bra.s	.goindwn
+.goinup:
+		tst.w	obj_y_spd(a6)
+		bpl.s	.goindwn
+		btst	#bitJoyUp,d3
+		beq.s	.goindwn
+		move.w	#4,d2
+.goindwn:
+		move.b	d2,obj_anim_id(a6)
+
+.contanim:
+
+; ----------------------
+; Result
+; ----------------------
+
+	; X Physics
+		moveq	#0,d4
+		move.w	obj_x_spd(a6),d3
+		move.w	d3,d4
+		ext.l	d4
+		asl.l	#8,d4
+		add.l	d4,obj_x(a6)
+; 		bsr	object_LayCol_LR
+		beq.s	.touchx
+		clr.w	d3
+.touchx:
+		move.w	d3,obj_x_spd(a6)
+
+	; Y Fall
+		moveq	#0,d4
+		move.w	obj_y_spd(a6),d3
+		move.w	d3,d4
+		ext.l	d4
+		asl.l	#8,d4
+		add.l	d4,obj_y(a6)
+
+		bsr	object_ColM_Floor
+		beq.s	.falling
+		bra	object_FloorRead
+.falling:
+		move.w	obj_y_spd(a6),d3
+		add.w	#$40,d3		; Fall speed
+		cmp.w	#$800,d3
+		blt.s	.touchy
+		move.w	#$800,d3
+		bra.s	.touchy
+.ceily:
+		move.w	#$100,d3
+.touchy:
+		move.w	d3,obj_y_spd(a6)
+		rts
+
+; -----------------------------------------
+; DEBUG CONTROL
+; -----------------------------------------
+
+.tempctrl:
+		lea	(RAM_BgBufferM),a5
+		move.w	(Controller_1+on_press).l,d1
+		btst	#bitJoyZ,d1
+		beq.s	.nrz
+		bchg	#bitobj_flipH,obj_status(a6)
+.nrz
+		btst	#bitJoyY,d1
+		beq.s	.nly
+		bchg	#bitobj_flipV,obj_status(a6)
+.nly
+
+		move.b	(Controller_1+on_hold).l,d1
+		btst	#bitJoyUp,d1
+		beq.s	.nu
+		sub.w	#1,obj_y(a6)
+; 		bsr	object_laycol_ud
+.nu
+		move.b	(Controller_1+on_hold).l,d1
+		btst	#bitJoyDown,d1
+		beq.s	.nd
+		add.w	#1,obj_y(a6)
+; 		bsr	object_laycol_ud
+.nd
+
+		btst	#bitJoyRight,d1
+		beq.s	.nr
+		add.w	#1,obj_x(a6)
+		bclr	#bitobj_flipH,obj_status(a6)
+; 		bsr	object_laycol_lr
+.nr
+		btst	#bitJoyLeft,d1
+		beq.s	.nl
+		sub.w	#1,obj_x(a6)
+		bset	#bitobj_flipH,obj_status(a6)
+; 		bsr	object_laycol_lr
+.nl
+		rts
+
+; ---------------------------------------
+
+ani_plyr:	dc.w .idle-ani_plyr	; $00
+		dc.w .walk-ani_plyr
+		dc.w .duck-ani_plyr
+		dc.w .jump-ani_plyr
+		dc.w .upstb-ani_plyr	; $04
+		dc.w .dwnstb-ani_plyr
+		dc.w .fall-ani_plyr
+		dc.w .fall-ani_plyr
+
+.idle:		dc.b 7
+		dc.b 0
+
+		dc.b -1
+		align 2
+
+.walk:		dc.b 4
+		dc.b 1,2,3
+		dc.b -1
+		align 2
+
+.duck:		dc.b 4
+		dc.b 6
+		dc.b -1
+		align 2
+
+.jump:		dc.b 16
+		dc.b 11
+		dc.b -1
+		align 2
+
+.upstb:		dc.b 4
+		dc.b 8
+		dc.b -1
+		align 2
+.dwnstb:
+		dc.b 4
+		dc.b 9
+		dc.b -1
+		align 2
+.fall:
+		dc.b 4
+		dc.b 1
+		dc.b -1
+		align 2
 
 ; ====================================================================
 ; ------------------------------------------------------

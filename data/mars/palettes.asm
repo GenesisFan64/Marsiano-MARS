@@ -12,7 +12,7 @@ PalMars_MarsCity:
 		binclude "data/maps/3D/mcity/mtrl/marscity_pal.bin"
 		align 2
 
-MapPal_M:	binclude "data/maps/2D/level0/pal_m.bin"
+MapPal_M:	binclude "data/maps/2D/level0/m_pal.bin"
 		align 2
 TestSupSpr_Pal:
 		binclude "data/sprites/mars/nicole/sprites_pal.bin"

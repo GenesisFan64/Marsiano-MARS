@@ -25,7 +25,7 @@
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
-		move.w	#1,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
+		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
 		jmp	(Md_ReadModes).l
 
 ; ====================================================================

@@ -27,9 +27,9 @@
 ; --------------------------------------------------------
 
 		align 4
-MapBlk_M:	binclude "data/maps/2D/level0/art_m.bin"
+MapBlk_M:	binclude "data/maps/2D/level0/m_art.bin"
 		align 4
-MapFg_M:	binclude "data/maps/2D/level0/fg_main.bin"
+MapFg_M:	binclude "data/maps/2D/level0/m_fg.bin"
 		align 4
 
 ; --------------------------------------------------------
