@@ -77,20 +77,15 @@ MD_2DMODE:
 		move.w	#0,(RAM_MapY).l
 
 		bsr	MdMap_Init
-		bsr	.update_pos
+		bsr	Map_Camera
 		bsr	Level_PickMap
 		bsr	MdMap_DrawAll
 
-	; Object
+	; Objects
 		lea	(RAM_Objects),a6
 		move.l	#ObjMd_Player,obj_code(a6)
 		bsr	Objects_Run
-
-; 		lea	(RAM_Sprites),a0
-; 		move.w	#$80+$30,(a0)+
-; 		move.w	#$0F00,(a0)+
-; 		move.w	#$2000|$50,(a0)+
-; 		move.w	#$80+$50,(a0)+
+		bsr	Objects_Show
 
 	; Set Fade-in settings
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -120,20 +115,21 @@ MD_2DMODE:
 		moveq	#2,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
 
+
 ; ====================================================================
 ; ------------------------------------------------------
 ; Loop
 ; ------------------------------------------------------
 
 .loop:
-		bsr	Objects_Run
-		bsr	Map_Camera
+		bsr	Objects_Show
 		bsr	MdMap_Update
-
 .ploop:		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.ploop
 
+		bsr	Objects_Run
+		bsr	Map_Camera
 
 ; 		lea	str_Stats3(pc),a0
 ; 		move.l	#locate(0,0,10),d0
@@ -204,33 +200,12 @@ MD_2DMODE:
 ; 		sub.l	d0,(RAM_MapX).w
 ; .noz_l:
 
-; 		bsr.s	.update_pos
+
 ; .not_hold3:
 		move.w	(Controller_1+on_press),d7
 		btst	#bitJoyStart,d7
 		beq	.loop
 		move.w	#2,(RAM_Glbl_Scrn).w
-		rts
-
-
-.update_pos:
-		moveq	#-1,d0
-		move.w	(RAM_MapX),d1
-		move.w	(RAM_MapY),d2
-		bsr	MdMap_Move
-		moveq	#0,d0
-		asr.w	#1,d1
-		asr.w	#1,d2
-		move.w	d1,(RAM_HorScroll).w
-		move.w	d2,(RAM_VerScroll).w
-		bsr	MdMap_Move
-		moveq	#1,d0
-		asr.w	#1,d1
-		asr.w	#1,d2
-		move.w	d1,(RAM_HorScroll+2).w
-		move.w	d2,(RAM_VerScroll+2).w
-		bsr	MdMap_Move
-		neg.l	(RAM_HorScroll).w
 		rts
 
 ; ====================================================================
@@ -306,26 +281,44 @@ Level_PickMap:
 Map_Camera:
 		lea	(RAM_Objects),a6
 		lea	(RAM_BgBufferM),a5
+
 		moveq	#0,d3
 		move.w	md_bg_wf(a5),d2
 		move.w	#320/2,d1
 		move.w	obj_x(a6),d0
 		sub.w	d1,d0
-		bmi.s	.low_x
+		bmi.s	.no_x
 		move.w	d0,d3
-.low_x:
-		move.w	d3,md_bg_x(a5)
+.no_x:
+		move.w	d3,(RAM_MapX).w
 
 		moveq	#0,d3
 		move.w	md_bg_hf(a5),d2
 		move.w	#224/2,d1
 		move.w	obj_y(a6),d0
 		sub.w	d1,d0
-		bmi.s	.low_y
+		bmi.s	.no_y
 		move.w	d0,d3
-.low_y:
-		move.w	d3,md_bg_y(a5)
+.no_y:
+		move.w	d3,(RAM_MapY).w
 
+		moveq	#-1,d0
+		move.w	(RAM_MapX),d1
+		move.w	(RAM_MapY),d2
+		bsr	MdMap_Move
+		moveq	#0,d0
+		asr.w	#1,d1
+		asr.w	#1,d2
+		move.w	d1,(RAM_HorScroll).w
+		move.w	d2,(RAM_VerScroll).w
+		bsr	MdMap_Move
+		moveq	#1,d0
+		asr.w	#1,d1
+		asr.w	#1,d2
+		move.w	d1,(RAM_HorScroll+2).w
+		move.w	d2,(RAM_VerScroll+2).w
+		bsr	MdMap_Move
+		neg.l	(RAM_HorScroll).w
 		rts
 
 ; ====================================================================
@@ -371,6 +364,31 @@ ObjMd_Player:
 ; 		move.l	#ani_plyr,d1
 ; 		bsr	Object_Animate
 
+; 		lea	(RAM_BgBufferM),a1
+; 		lea	(RAM_Sprites),a0
+; 		move.w	obj_x(a6),d6
+; 		move.w	obj_y(a6),d5
+; 		sub.w	md_bg_x(a1),d6
+; 		sub.w	md_bg_y(a1),d5
+; 		move.l	obj_size(a6),d4		; d4 - UDLR sizes
+; 		move.w	d4,d3			; Grab LR
+; 		lsr.w	#8,d3
+; 		lsl.b	#3,d3
+; 		and.w	#$FF,d3
+; 		sub.w	d3,d6			; Subtract X
+; 		swap	d4
+; 		move.w	d4,d3			; Grab UD
+; 		lsr.w	#8,d3
+; 		lsl.b	#3,d3
+; 		and.w	#$FF,d3
+; 		sub.w	d3,d5			; Subtract Y
+; 		add.w	#$80,d6
+; 		add.w	#$80,d5
+; 		move.w	d5,(a0)+
+; 		move.w	#$0F00,(a0)+
+; 		move.w	#$2000|$50,(a0)+
+; 		move.w	d6,(a0)+
+
 		bra	Object_Display
 
 ; -----------------------------------------
@@ -386,18 +404,16 @@ ObjMd_Player:
 		dc.w 512		; Spritesheet WIDTH
 		dc.w $80		; Palette index
 		dc.b 64,72		; Frame width and height
+		align 2
 
 ; ---------------------------------
 ; INIT
 ; ---------------------------------
 
 .init:
-		move.l	#.mars_spr,obj_map(a6)
-		lea	(RAM_BgBufferM),a5
-		add.b	#1,obj_index(a6)
 		move.l	#$05040404,obj_size(a6)	; UDLR
-		clr.w	d0
-		clr.w	d1
+		move.l	#.mars_spr,obj_map(a6)
+		move.b	#1,obj_index(a6)
 
 ; ---------------------------------
 ; MAIN
@@ -439,13 +455,13 @@ ObjMd_Player:
 		btst	#bitJoyRight,d0
 		beq.s	.nrm
 		bclr	#bitobj_flipH,obj_status(a6)
-		move.w	#$160,d1
+		move.w	#$200,d1
 		move.w	#1,d2
 .nrm
 		btst	#bitJoyLeft,d0
 		beq.s	.contlr
 		bset	#bitobj_flipH,obj_status(a6)
-		move.w	#-$160,d1
+		move.w	#-$200,d1
 		move.w	#1,d2
 .contlr:
 		move.w	d1,obj_x_spd(a6)
@@ -461,7 +477,7 @@ ObjMd_Player:
 		btst	#bitJoyC,d0
 		beq.s	.nc
 		bset	#bitobj_air,obj_status(a6)
-		move.w	#-$3B0,obj_y_spd(a6)
+		move.w	#-$500,obj_y_spd(a6)
 		move.w	obj_x_spd(a6),d3
 		asr.w	#2,d3
 		tst.w	d3
@@ -535,7 +551,7 @@ ObjMd_Player:
 		bra	object_FloorRead
 .falling:
 		move.w	obj_y_spd(a6),d3
-		add.w	#$40,d3		; Fall speed
+		add.w	#$60,d3		; Fall speed
 		cmp.w	#$800,d3
 		blt.s	.touchy
 		move.w	#$800,d3

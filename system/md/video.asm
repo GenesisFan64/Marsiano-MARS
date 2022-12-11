@@ -1320,6 +1320,7 @@ Video_Mars_GfxMode:
 		and.w	#%00000111,d7			; Current limit: 8 Master modes
 		or.w	#$C0,d7
 		move.b	d7,(sysmars_reg+comm12+1).l
+		bsr	System_MarsUpdate
 .wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for Slave
 		and.w	#%00001111,d7
 		bne.s	.wait_slv
@@ -2411,19 +2412,24 @@ MdMap_DrawScrl:
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Init
+; Init objects
 ; --------------------------------------------------------
 
 Objects_Init:
-		lea	(RAM_Objects),a4
-		move.w	#(sizeof_mdobj*MAX_MDOBJ)-1,d4
+		lea	(RAM_Objects),a6
+		move.w	#(sizeof_mdobj*MAX_MDOBJ)-1,d7
 .clr:
-		clr.b	(a4)+
-		dbf	d4,.clr
+		clr.b	(a6)+
+		dbf	d7,.clr
+		lea	(RAM_ObjDispList),a6
+		move.w	#MAX_MDOBJ-1,d7
+.clr_d:
+		clr.l	(a6)+
+		dbf	d7,.clr_d
 		rts
 
 ; --------------------------------------------------------
-; Run
+; Process objects
 ; --------------------------------------------------------
 
 Objects_Run:
@@ -2440,12 +2446,20 @@ Objects_Run:
 .no_code:
 		adda	#sizeof_mdobj,a6
 		dbf	d7,.next_one
+		rts
 
-	; Build SUPER Sprites
+; --------------------------------------------------------
+; Draw ALL Objects from display list
+;
+; Call this BEFORE VBlank.
+; --------------------------------------------------------
+
+; *** Only SUPER Sprites for now ***
+
+Objects_Show:
 		lea	(RAM_ObjDispList),a6
 		lea	(RAM_MdDreq+Dreq_SuperSpr),a5
 		lea	(RAM_BgBufferM),a4
-; 		lea	(RAM_BgBufferM),a4
 		move.w	#MAX_MDOBJ-1,d7
 .next:
 		move.l	(a6),d0
@@ -2462,8 +2476,6 @@ Objects_Run:
 		move.w	d0,marsspr_xfrm(a5)	; Y|X
 		move.w	obj_x(a2),d6
 		move.w	obj_y(a2),d5
-		sub.w	md_bg_x(a4),d6
-		sub.w	md_bg_y(a4),d5
 		move.l	obj_size(a2),d4		; d4 - UDLR sizes
 		move.w	d4,d3			; Grab LR
 		lsr.w	#8,d3
@@ -2476,15 +2488,14 @@ Objects_Run:
 		lsl.b	#3,d3
 		and.w	#$FF,d3
 		sub.w	d3,d5			; Subtract Y
+		sub.w	md_bg_x(a4),d6
+		sub.w	md_bg_y(a4),d5
 		move.w	d6,marsspr_x(a5)
 		move.w	d5,marsspr_y(a5)
-
 		clr.l	(a6)			; Clear request
 		adda	#4,a6			; Next slot
 		adda	#sizeof_marsspr,a5	; Next SuperSprite
 		dbf	d7,.next
-
-
 .finish:
 		rts
 
@@ -2497,8 +2508,7 @@ Objects_Run:
 ;
 ; Makes current object visible to the screen.
 ;
-; Write a list pointer to obj_map(a6) with these
-; settings:
+; Mappings format for obj_map(a6):
 ;
 ; .list:
 ; 	dc.l SH2_ADDR|TH ; Spritesheet location, TH opt.
@@ -2607,33 +2617,52 @@ Object_Animate:
 
 object_ColM_Floor:
 		lea	(RAM_BgBufferM),a5
-		move.l	md_bg_col(a5),d0
-		beq.s	.blank
-		move.l	d0,a4
+		move.l	md_bg_col(a5),a4
+		moveq	#0,d0
+		moveq	#0,d1
 		move.w	obj_x(a6),d1
 		move.w	obj_y(a6),d0
 		move.l	obj_size(a6),d2
-
 		swap	d2		; Add Y
 		lsl.b	#3,d2
 		and.w	#$FF,d2
-		add.w	d2,d0
-
+		add.	d2,d0
 		move.w	md_bg_w(a5),d2
-		asr.w	#4,d0		; /16
-		asr.w	#4,d1
+		lsr.w	#4,d0		; /16
+		lsr.w	#4,d1
 		mulu.w	d2,d0
 		add.l	d1,d0
 		add.l	d0,a4
-		move.b	(a4),d0
-		beq.s	.blank
-		rts
-.blank:
 		moveq	#0,d0
+		move.b	(a4),d0
+; 		beq.s	.blank
 		rts
 
 ; If != 0
 object_FloorRead:
+		and.w	#$FF,d0
+		lsl.w	#4,d0
+		move.w	obj_x(a6),d1	; Grab CENTER X
+		and.w	#$0F,d1		; limit to 16
+		lea	slope_data_16(pc),a0
+		adda	d0,a0
+		move.b	(a0,d1.w),d0
+		and.w	#$F,d0
 		and.w	#-$10,obj_y(a6)
-		move.w	d3,obj_y_spd(a6)
+		add.w	d0,obj_y(a6)
+		lsl.w	#4,d0
+		move.w	d0,obj_y_spd(a6)
 		rts
+
+; Slope data 16x16
+slope_data_16:
+		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+		dc.b 15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+		dc.b  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15
+		dc.b 15,15,14,14,13,13,12,12,11,11,10,10, 9, 9, 8, 8
+		dc.b  7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0
+		dc.b  0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7
+		dc.b  8, 8, 9, 9,10,10,11,11,12,12,13,13,14,14,15,15
+		align 2

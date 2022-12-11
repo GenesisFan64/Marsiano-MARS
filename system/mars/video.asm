@@ -12,7 +12,7 @@
 
 ; SDRAM
 MAX_SCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
-MAX_SSPRSPD	equ 8		; Supersprite box increment: Size+this (maximum Super Sprite speed)
+MAX_SSPRSPD	equ 12		; Supersprite box increment: Size+this (maximum Super Sprite speed)
 MAX_FACES	equ 980		; MAX polygon faces for 3D models
 MAX_SVDP_PZ	equ 980+96	; MAX polygon pieces to draw
 MAX_ZDIST	equ -$1900	; Maximum 3D field distance (-Z)
