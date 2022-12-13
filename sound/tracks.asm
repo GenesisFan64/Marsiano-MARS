@@ -162,7 +162,7 @@ GemaTrk_xtrim:
 .ins:
 	gInsFm 0,FmIns_Bass_calm
 	gInsFm 0,FmIns_ClosedHat
-	gInsPsg 0,$00,$00,$00,$02,$04
+	gInsPsg 0,$00,$20,$00,$04,$04
 	gInsFm3 0,FmIns3_OpenHat
 	gInsDac 0,DacIns_wegot_kick,%10
 

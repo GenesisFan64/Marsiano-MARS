@@ -1653,13 +1653,13 @@ mstr_gfx2_loop:
 		jsr	@r0					; using OLD values
 		nop
 
-		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Draw L/R here, Slave does U/D
-		mov	#RAM_Mars_ScrlBuff,r13
-		bsr	MarsVideo_Bg_DrawScrl
-		nop
-; 		mov	#_sysreg+comm14+1,r1			; Start Slave task $01
-; 		mov	#1,r0
-; 		mov.b	r0,@r1
+; 		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Draw L/R here, Slave does U/D
+; 		mov	#RAM_Mars_ScrlBuff,r13
+; 		bsr	MarsVideo_Bg_DrawScrl
+; 		nop
+		mov	#_sysreg+comm14+1,r1			; Start Slave task $01
+		mov	#1,r0
+		mov.b	r0,@r1
 
 	; Now the SuperSprites:
 		mov	#RAM_Mars_ScrlBuff,r14			; Make new SuperSprite settings

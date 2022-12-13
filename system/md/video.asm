@@ -117,11 +117,10 @@ obj_subid	ds.b 1		; Object SubID
 obj_status	ds.b 1		; Object status
 obj_spwnid	ds.b 1		; Object respawn index (this - 1)
 obj_col		ds.b 1		; Object collision
-obj_null	ds.b 1		; ALIGN
-obj_ram		ds.b $3C	; Object RAM
+obj_ram		ds.b $40	; Object RAM
 sizeof_mdobj	ds.l 0
 		finish
-; 		message "\{sizeof_obj}"
+; 		message "\{sizeof_mdobj}"
 
 ; --------------------------------
 ; obj_status
@@ -150,8 +149,8 @@ at_r		equ	0
 
 			struct RAM_MdVideo
 RAM_Objects		ds.b MAX_MDOBJ*sizeof_mdobj
-RAM_ObjDispList		ds.l MAX_MDOBJ+1	; Objects that want
 RAM_BgBuffer		ds.b sizeof_mdbg*4	; Map backgrounds, back to front.
+RAM_ObjDispList		ds.l MAX_MDOBJ		; Objects that want to display
 RAM_FrameCount		ds.l 1			; Frames counter
 RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
 RAM_VerScroll		ds.l 320/16		; DMA Vertical scroll data
@@ -2442,13 +2441,12 @@ Objects_Run:
 		lea	(RAM_Objects),a6
 		move.w	#MAX_MDOBJ-1,d7
 .next_one:
-		move.l	obj_code(a6),d4
+		move.l	obj_code(a6),d6
 		beq.s	.no_code	; Free slot
-		bmi.s	.no_code	; Inactive object
-		movea.l	d4,a5
-		movem.l	d7,-(sp)
+		move.l	d7,-(sp)
+		move.l	d6,a5
 		jsr	(a5)
-		movem.l	(sp)+,d7
+		move.l	(sp)+,d7
 .no_code:
 		adda	#sizeof_mdobj,a6
 		dbf	d7,.next_one
@@ -2533,7 +2531,7 @@ Objects_Show:
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; Object_Display
+; object_Display
 ;
 ; Makes current object visible to the screen.
 ;
@@ -2546,7 +2544,7 @@ Objects_Show:
 ; 	dc.w $80	 ; Palette index
 ; --------------------------------------------------------
 
-Object_Display:
+object_Display:
 		lea	(RAM_ObjDispList),a0
 		move.w	#MAX_MDOBJ-1,d1
 .srch:

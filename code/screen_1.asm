@@ -44,7 +44,6 @@ MD_2DMODE:
 		bsr	Mode_Init
 		bsr	Video_PrintInit
 		bsr	Objects_Init
-; 		bsr	SuperSpr_Init
 
 	; MAP TESTING
 		move.l	#Art_level0,d0			; Genesis VDP graphics
@@ -108,7 +107,6 @@ MD_2DMODE:
 
 		moveq	#2,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
-
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -354,36 +352,9 @@ ObjMd_Player:
 		add.w	d0,d0
 		move.w	.list(pc,d0.w),d1
 		jsr	.list(pc,d1.w)
-
 		lea	ani_plyr(pc),a0
 		bsr	object_Animate
-
-; 		lea	(RAM_BgBufferM),a1
-; 		lea	(RAM_Sprites),a0
-; 		move.w	obj_x(a6),d6
-; 		move.w	obj_y(a6),d5
-; 		sub.w	md_bg_x(a1),d6
-; 		sub.w	md_bg_y(a1),d5
-; 		move.l	obj_size(a6),d4		; d4 - UDLR sizes
-; 		move.w	d4,d3			; Grab LR
-; 		lsr.w	#8,d3
-; 		lsl.b	#3,d3
-; 		and.w	#$FF,d3
-; 		sub.w	d3,d6			; Subtract X
-; 		swap	d4
-; 		move.w	d4,d3			; Grab UD
-; 		lsr.w	#8,d3
-; 		lsl.b	#3,d3
-; 		and.w	#$FF,d3
-; 		sub.w	d3,d5			; Subtract Y
-; 		add.w	#$80,d6
-; 		add.w	#$80,d5
-; 		move.w	d5,(a0)+
-; 		move.w	#$0F00,(a0)+
-; 		move.w	#$2000|$50,(a0)+
-; 		move.w	d6,(a0)+
-
-		bra	Object_Display
+		bra	object_Display
 
 ; -----------------------------------------
 ; Objects
