@@ -132,7 +132,7 @@ System_WaitFrame:
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
 ; 		jsr	(Video_DmaBlast).l
-		bsr	MdMap_DrawScrl
+		bsr	MdMap_DrawScrlMd
 		add.l	#1,(RAM_Framecount).l
 		rts
 

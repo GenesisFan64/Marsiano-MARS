@@ -149,136 +149,31 @@ GemaTrkData_MOVEME:
 	gInsNull
 	gInsNull
 
-; GemaTrkData_Nadie_MARS:
-; 	dc.l .pat
-; 	dc.l .blk
-; 	dc.l .ins
-; .blk:
-; 	binclude "sound/tracks/nadie_blk.bin"
-; 	align 2
-; .pat:
-; 	binclude "sound/tracks/nadie_patt.bin"
-; 	align 2
-; .ins:
-; 	gInsPwm 0,SmpIns_Nadie,%10
-; 	gInsFm -36,FmIns_Piano_Aqua
-; 	gInsFm -12,FmIns_HBeat_tom
-; 	gInsPwm -12,SmpIns_PKick,%00
-; 	gInsPsg 0,$50,$70,$00,$06,$08
+GemaTrk_xtrim:
+	dc.l .pat
+	dc.l .blk
+	dc.l .ins
+.blk:
+	binclude "sound/tracks/xtrim_blk.bin"
+	align 2
+.pat:
+	binclude "sound/tracks/xtrim_patt.bin"
+	align 2
+.ins:
+	gInsFm 0,FmIns_Bass_calm
+	gInsFm 0,FmIns_ClosedHat
+	gInsPsg 0,$00,$00,$00,$02,$04
+	gInsFm3 0,FmIns3_OpenHat
+	gInsDac 0,DacIns_wegot_kick,%10
+
+; 	gInsFm -24,FmIns_Bass_groove_2
+; 	gInsFm -36,FmIns_Ding_Baseball
 ; 	gInsFm 0,FmIns_Trumpet_1
-; 	gInsPwm 0,SmpIns_Piano,%00
-; 	gInsPwm -12,SmpIns_PTom,%00
-; 	gInsNull
-;
-; GemaTrkData_BeMine:
-; 	dc.l GemaPat_BeMine
-; 	dc.l GemaBlk_BeMine
-; 	dc.l GemaIns_BeMine
-; GemaBlk_BeMine:
-; 	binclude "sound/tracks/bemine_blk.bin"
-; GemaPat_BeMine:
-; 	binclude "sound/tracks/bemine_patt.bin"
-; GemaIns_BeMine:
-; 	gInsPwm -17,SmpIns_Bell_Ice,0
-; 	gInsPwm -17,SmpIns_Brass1_Hi,%01
-; 	gInsPwm -17,SmpIns_Brass1_Low,%01
-; 	gInsFm  -24,FmIns_Bass_groove
-; 	gInsFm3   0,FmIns3_OpenHat
-; 	gInsPwm -17,SmpIns_Snare_jam,0
-; 	gInsPwm -17,SmpIns_Kick_jam,0
-; 	gInsPwm -17,SmpIns_SnrTom_1,0
-; 	gInsPwm -17,SmpIns_Forest_1,0
-; 	gInsFm -36,FmIns_Ambient_dark
-; 	gInsPsg +12,$00,$00,$00,$08,$04
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-;
-; GemaTrkData_Nadie_MD:
-; 	dc.l .patt
-; 	dc.l .blk
-; 	dc.l .inst
-; .blk:
-; 	binclude "sound/tracks/nadie_md_blk.bin"
-; 	align 2
-; .patt:
-; 	binclude "sound/tracks/nadie_md_patt.bin"
-; 	align 2
-; .inst:
-; 	gInsDac 0,DacIns_Nadie,0
-; 	gInsFm -36,FmIns_Piano_Aqua
-; 	gInsFm -12,FmIns_HBeat_tom
-; 	gInsFm -37,FmIns_DrumKick_gem
-; 	gInsPsg 0,$50,$70,$00,$06,$08
-; 	gInsFm 0,FmIns_Trumpet_1
-; 	gInsNull
+; ; 	gInsFm 0,FmIns_Bass_1
 ; 	gInsFm3 0,FmIns3_ClosedHat
 ; 	gInsFm3 0,FmIns3_OpenHat
-;
-; GemaTrkData_WeGot:
-; 	dc.l GemaPat_WeGot
-; 	dc.l GemaBlk_WeGot
-; 	dc.l GemaIns_WeGot
-; GemaBlk_WeGot:
-; 	binclude "sound/tracks/wegot_blk.bin"
-; 	align 2
-; GemaPat_WeGot:
-; 	binclude "sound/tracks/wegot_patt.bin"
-; 	align 2
-; GemaIns_WeGot:
-; 	gInsFm 0,FmIns_PSynth_plus
-; 	gInsFm 0,FmIns_Bass_groove_2
-; 	gInsDac -36,DacIns_wegot_kick,0
-; 	gInsFm 0,FmIns_Bass_club
-; 	gInsFm3 0,FmIns3_OpenHat
-; 	gInsPsg 0,$20,$40,$10,$01,$04
-; 	gInsDac -36,DacIns_wegot_crash,0
-; 	gInsPsgN 0,$00,$00,$00,$00,$10,%100
-; 	gInsNull
-; 	gInsNull
-;
-; GemaTrkData_Mecano:
-; 	dc.l GemaPat_Mecano
-; 	dc.l GemaBlk_Mecano
-; 	dc.l GemaIns_Mecano
-; GemaBlk_Mecano:
-; 	binclude "sound/tracks/mecano_blk.bin"
-; 	align 2
-; GemaPat_Mecano:
-; 	binclude "sound/tracks/mecano_patt.bin"
-; 	align 2
-; GemaIns_Mecano:
-; 	gInsNull
-; 	gInsPsgN 0,$00,$00,$00,$00,$0C,%100
-; 	gInsFm 0,FmIns_PianoM1
-; 	gInsFm -12,FmIns_Trumpet_carnival
-; 	gInsFm 0,FmIns_Bass_italo
-; 	gInsDac 0,DacIns_wegot_kick,0
-; 	gInsPsgN 0,$00,$00,$00,$00,$08,%110
-; 	gInsDac -12,DacIns_snare_lobo,0
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsFm 0,FmIns_Bass_2
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
-; 	gInsNull
+
+
 
 ; GemaTrkData_Test3:
 ; 	dc.l GemaPat_Test3

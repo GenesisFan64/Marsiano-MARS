@@ -18,426 +18,12 @@ CACHE_MSTR_SCRL:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-
-; 		mov	#(Cach_WdgBuffWr+$20)-4,r1
-; 		mov	@r1,r0				; Check U/D first
-; 		tst	r0,r0
-; 		bf	.g_draw_ud
-; 		mov	#$20,r0				; <-- next timer
-; 		sub	r0,r1
-; 		mov	@r1,r0				; Check R/L
-; 		tst	r0,r0
-; 		bf	.g_draw_lr
-; .finish:
-; 		mov	#0,r0
-; 		mov.w	r0,@(marsGbl_WdgMode,gbr)
-; 		mov	#$FFFFFE80,r1			; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
-; 		rts
-; 		nop
-; 		align 4
-; .g_draw_ud:
-; 		bra	wdgbg_draw_ud
-; 		nop
-; .g_draw_lr:
-; 		bra	wdgbg_draw_lr
-; 		nop
-;
-; 		align 4
-; .tag_FRT:	dc.l _FRT
-
-; ; ----------------------------------------
-; ; Block refill
-; ; ----------------------------------------
-;
-; .draw_refill:
-; 		dt	r0
-; 		mov	r0,@r1
-; 		mov	#Cach_WdBackup_S,r0
-; 		mov	r2,@-r0
-; 		mov	r3,@-r0
-; 		mov	r4,@-r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		mov	r11,@-r0
-; 		mov	r12,@-r0
-; 		mov	r13,@-r0
-; 		mov	r14,@-r0
-; 		sts	macl,@-r0
-;
-; 		mov	#Cach_BlkRefill+4,r0
-; 		mov	@r0+,r12
-; 		mov	@r0+,r11
-; 		mov	@r0+,r10
-; 		mov	@r0+,r9
-; 		mov	@r0+,r8
-; 		mov	@r0+,r7
-; 		mov	@r0+,r6
-; 		mov	@r0+,r5
-; 		mov	@r0+,r13
-;
-; 		mov.w	@r12,r0
-; 		tst	r0,r0
-; 		bf	.get_in
-; 		mov	#Cach_BlkRefill,r1
-; 		xor	r0,r0
-; 		mov	r0,@r1
-; 		bra	.get_out
-; 		nop
-; .get_in:
-; 		extu.w	r0,r0
-; 		mov	r0,r1
-; 		mov	r0,r2
-; 		shlr8	r2
-; 		mov	#$7F,r0
-; 		and	r0,r2
-; 		mov	#$FF,r0
-; 		and	r0,r1
-;
-; 		xor	r0,r0
-; 		mov	r0,@r12
-; 		add	#4,r12
-; 		mov	#Cach_BlkRefill+4,r0
-; 		mov	r12,@r0
-;
-; 	;  r13 - _framebuffer area
-; 	;  r12 - Refill buffer
-; 	;  r11 - Scroll current top-left
-; 	;  r10 - FULL Scroll area size
-; 	;   r9 - Scroll Width
-; 	;   r8 - Block graphics
-; 	;   r7 - Layout data
-; 	;   r6 - Layout width
-; 	;   r5 - Block size
-;
-; 		mulu	r6,r2
-; 		sts	macl,r0
-; 		add	r1,r0
-; 		add	r0,r7
-; 		mov.b	@r7,r0
-; 		extu.b	r0,r0
-; 		mov	#16*16,r12
-; 		mulu	r12,r0
-; 		sts	macl,r0
-; 		add	r0,r8
-;
-; 		mulu	r5,r1
-; 		sts	macl,r1
-; 		mulu	r5,r2
-; 		sts	macl,r2
-; 		mulu	r9,r2
-; 		sts	macl,r12
-; 		add	r1,r12
-; 		add	r11,r12
-; 		mov	#320,r6
-; 		mov	r5,r3
-; .y_lne:
-; 		cmp/ge	r10,r12
-; 		bf	.ln_ret
-; 		sub	r10,r12
-; .ln_ret:
-; 		mov	r12,r11
-; 		mov	r5,r4
-; 		shlr2	r4
-; .x_lne:
-; 		mov	@r8+,r0
-; ; 		or	r7,r0
-; ; 		mov	#-1,r0
-; 		mov	r13,r7
-; 		add	r11,r7
-; 		mov	r0,@r7
-; 		cmp/ge	r6,r11
-; 		bt	.x_ex
-; 		mov	r13,r7
-; 		add	r11,r7
-; 		add	r10,r7
-; 		mov	r0,@r7
-; .x_ex:
-; 		dt	r4
-; 		bf/s	.x_lne
-; 		add	#4,r11
-; 		dt	r3
-; 		bf/s	.y_lne
-; 		add	r9,r12
-;
-;
-; .get_out:
-; 		mov	#Cach_WdBackup_L,r0
-; 		lds	@r0+,macl
-; 		mov	@r0+,r14
-; 		mov	@r0+,r13
-; 		mov	@r0+,r12
-; 		mov	@r0+,r11
-; 		mov	@r0+,r10
-; 		mov	@r0+,r9
-; 		mov	@r0+,r8
-; 		mov	@r0+,r7
-; 		mov	@r0+,r6
-; 		mov	@r0+,r5
-; 		mov	@r0+,r4
-; 		mov	@r0+,r3
-; 		mov	@r0+,r2
-; 		bra	wdgbg_nextwd
-; 		nop
-; 		align 4
-; 		ltorg
-
-; ; ----------------------------------------
-; ; Draw timer L/R
-; ; ----------------------------------------
-;
-; wdgbg_draw_lr:
-; 		dt	r0
-; 		mov	r0,@r1
-; 		mov	#Cach_WdBackup_S,r0
-; 		mov	r2,@-r0
-; 		mov	r3,@-r0
-; 		mov	r4,@-r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		mov	r11,@-r0
-; 		mov	r12,@-r0
-; 		mov	r13,@-r0
-; 		mov	r14,@-r0
-; 		sts	macl,@-r0
-;
-; ; $00 - Layout data (read)
-; ; $04 - FB pos (read)
-; ; $08 - Layout width (next block)
-; ; $0C - FB width (next line)
-; ; $10 - FB FULL size
-; ; $14 - FB base
-; ; $18 - Block data
-; ; $1C - Block counter
-;
-; 		mov	#Cach_WdgBuffRd,r14
-; 		mov	@($14,r14),r13		; r13 - FB base
-; 		mov	@($10,r14),r12		; r12 - FB full size
-; 		mov	@($0C,r14),r11		; r11 - FB width
-; 		mov	@($04,r14),r10		; r10 - FB x/y pos
-; 		mov	@($18,r14),r9		; r9 - Block data
-; 		mov	@($08,r14),r7		; r7 - Layout increment
-; 		mov	@r14,r8			; r8 - Layout data
-; 		mov.b	@r8,r0
-; 		add	r7,r8
-; 		mov	r8,@r14
-; 		mov	#320,r8
-; 		extu.b	r0,r0
-; 		mov	#16*16,r1		; <-- Manual block size
-; 		mulu	r0,r1
-; 		sts	macl,r0
-; 		add	r0,r9
-; 		mov	#16,r7			; <-- Manual block size
-; 		mov	#_framebuffer,r1
-; 		mov	#RAM_Mars_ScrlData,r2
-; .y_loop:
-; 		cmp/ge	r12,r10
-; 		bf	.lne_sz
-; 		sub	r12,r10
-; .lne_sz:
-; 		mov	r10,r5
-; 		mov	#16,r6			; <-- Manual block size
-; 		shlr2	r6
-; .x_loop:
-; 		mov	@r9+,r0
-;
-; 		mov	r2,r4
-; 		add	r5,r4
-; 		mov	r13,r3
-; 		add	r1,r3
-; 		add	r5,r3
-;
-; 		mov	r0,@r3
-; 		mov	r0,@r4
-; 		cmp/ge	r8,r5
-; 		bt	.ex_line
-; 		add	r12,r3
-; 		add	r12,r4
-; 		mov	r0,@r3
-; 		mov	r0,@r4
-; .ex_line:
-; 		dt	r6
-; 		bf/s	.x_loop
-; 		add	#4,r5
-; 		dt	r7
-; 		bf/s	.y_loop
-; 		add	r11,r10
-;
-;
-; 		mov	r10,@($04,r14)	; Save FB pos
-;
-; 		mov	#Cach_WdBackup_L,r0
-; 		lds	@r0+,macl
-; 		mov	@r0+,r14
-; 		mov	@r0+,r13
-; 		mov	@r0+,r12
-; 		mov	@r0+,r11
-; 		mov	@r0+,r10
-; 		mov	@r0+,r9
-; 		mov	@r0+,r8
-; 		mov	@r0+,r7
-; 		mov	@r0+,r6
-; 		mov	@r0+,r5
-; 		mov	@r0+,r4
-; 		mov	@r0+,r3
-; 		mov	@r0+,r2
-; 		bra	wdgbg_nextwd
-; 		nop
-
-; ; ----------------------------------------
-; ; Draw timer U/D
-; ; ----------------------------------------
-;
-; wdgbg_draw_ud:
-; 		dt	r0
-; 		mov	r0,@r1
-; 		mov	#Cach_WdBackup_S,r0
-; 		mov	r2,@-r0
-; 		mov	r3,@-r0
-; 		mov	r4,@-r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		mov	r11,@-r0
-; 		mov	r12,@-r0
-; 		mov	r13,@-r0
-; 		mov	r14,@-r0
-; 		sts	macl,@-r0
-;
-; ; $00 - Layout data (read)
-; ; $04 - FB pos (read)
-; ; $08 - Layout width (next block)
-; ; $0C - FB width (next line)
-; ; $10 - FB FULL size
-; ; $14 - FB base
-; ; $18 - Block data
-; ; $1C - Block counter
-;
-; 		mov	#Cach_WdgBuffRd_UD,r14
-; 		mov	@($14,r14),r13		; r13 - FB base
-; 		mov	@($10,r14),r12		; r12 - FB full size
-; 		mov	@($0C,r14),r11		; r11 - FB width
-; 		mov	@($04,r14),r10		; r10 - FB x/y pos
-; 		mov	@($18,r14),r9		; r9 - Block data
-; 		mov	#1,r7			; r7 - Layout increment
-; 		mov	@r14,r8			; r8 - Layout data
-; 		mov.b	@r8,r0
-; 		add	r7,r8
-; 		mov	r8,@r14
-; 		mov	#320,r8
-; 		extu.b	r0,r0
-; 		mov	#16*16,r1		; <-- Manual block size
-; 		mulu	r0,r1
-; 		sts	macl,r0
-; 		add	r0,r9
-; 		mov	#16,r7			; <-- Manual block size
-; 		lds	r10,macl
-; 		mov	#_framebuffer,r1
-; 		mov	#RAM_Mars_ScrlData,r2
-; .y_loopud:
-; 		cmp/ge	r12,r10
-; 		bf	.lne_szud
-; 		sub	r12,r10
-; .lne_szud:
-; 		mov	r10,r5
-; 		mov	#16,r6			; <-- Manual block size
-; 		shlr2	r6
-; .x_loopud:
-; 		mov	@r9+,r0
-;
-; 		mov	r2,r3
-; 		add	r5,r3
-; 		mov	r13,r4
-; 		add	r1,r4
-; 		add	r5,r4
-;
-; 		mov	r0,@r3
-; 		mov	r0,@r4
-; 		cmp/ge	r8,r5
-; 		bt	.exy_lineud
-; 		add	r12,r4
-; 		add	r12,r3
-; 		mov	r0,@r3
-; 		mov	r0,@r4
-; .exy_lineud:
-; 		dt	r6
-; 		bf/s	.x_loopud
-; 		add	#4,r5
-; 		dt	r7
-; 		bf/s	.y_loopud
-; 		add	r11,r10
-; 		sts	macl,r10
-;
-;
-; 		mov	#16,r0
-; 		add	r0,r10
-; 		mov	r10,@($04,r14)	; Save FB pos
-;
-; 		mov	#Cach_WdBackup_L,r0
-; 		lds	@r0+,macl
-; 		mov	@r0+,r14
-; 		mov	@r0+,r13
-; 		mov	@r0+,r12
-; 		mov	@r0+,r11
-; 		mov	@r0+,r10
-; 		mov	@r0+,r9
-; 		mov	@r0+,r8
-; 		mov	@r0+,r7
-; 		mov	@r0+,r6
-; 		mov	@r0+,r5
-; 		mov	@r0+,r4
-; 		mov	@r0+,r3
-; 		mov	@r0+,r2
-
-; ----------------------------------------
-
-; wdgbg_nextwd:
-; 		mov	#$FFFFFE80,r1
-; 		mov.w   #$A518,r0		; OFF
-; 		mov.w   r0,@r1
-; 		or      #$20,r0			; ON
-; 		mov.w   r0,@r1
-; 		mov.w   #$5A20,r0		; Timer for the next WD
-; 		mov.w   r0,@r1
-; 		rts
-; 		nop
-; 		align 4
-
-; 		ltorg
-
-; 	; NEXT ENTER
-; 		mov.l   #$FFFFFE80,r1
-; 		mov.w   #$A518,r0		; OFF
-; 		mov.w   r0,@r1
-; 		or      #$20,r0			; ON
-; 		mov.w   r0,@r1
-; 		mov.w   #$5A20,r0		; Timer for the next WD
-; 		mov.w   r0,@r1
-; 		rts
-; 		nop
-; 		align 4
-; .finish_now:
-; 		mov	#1,r0
-; 		mov.w	r0,@(marsGbl_WdgStatus,gbr)
-; 		mov	#$FFFFFE80,r1		; Stop watchdog
-; 		mov.w   #$A518,r0
-; 		mov.w   r0,@r1
+		mov	#$FFFFFE80,r1	; Stop watchdog
+		mov.w   #$A518,r0
+		mov.w   r0,@r1
 		rts
 		nop
 		align 4
-		ltorg
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -714,7 +300,7 @@ MarsVideo_NxtSuprSpr:
 		mov	r0,r8
 .yb_e:
 		mov	#320,r0
-		cmp/ge	r0,r7
+		cmp/gt	r0,r7
 		bf	.xb_e
 		mov	r0,r7
 .xb_e:
@@ -755,6 +341,7 @@ MarsVideo_NxtSuprSpr:
 		tst	#%01,r0		; X flip?
 		bt	.flp_h
 		add	r3,r13		; move beam
+		dt	r13
 		mov	#-1,r4		; decrement line
 .flp_h:
 		cmp/pz	r6
@@ -862,13 +449,13 @@ MarsVideo_NxtSuprSpr:
 
 
 ; --------------------------------------------------------
-; MarsVideo_DrawBgSSpr
+; MarsVideo_RefillBgSpr
 ;
 ; Call this BEFORE updating Sprite info
 ; --------------------------------------------------------
 
 		align 4
-MarsVideo_DrawBgSSpr:
+MarsVideo_RefillBgSpr:
 		mov	#Cach_SprBoxList,r14
 
 		mov	#Cach_Intrl_Size,r12
@@ -943,7 +530,7 @@ MarsVideo_DrawBgSSpr:
 		mov	r4,r2
 		add	r5,r2
 .x_lp:
-		cmp/gt	r12,r2
+		cmp/ge	r12,r2
 		bf	.x_keep
 		sub	r12,r2
 .x_keep:

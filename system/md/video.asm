@@ -108,13 +108,13 @@ obj_y		ds.l 1		; Object Y Position
 obj_map		ds.l 1		; Object image settings
 obj_x_spd	ds.w 1		; Object X Speed
 obj_y_spd	ds.w 1		; Object Y Speed
-obj_anim_pos	ds.w 1		; Object animation increment (obj_anim + obj_anim_pos)
+obj_anim_indx	ds.w 1		; Object animation increment (obj_anim + obj_anim_indx)
 obj_anim_id	ds.w 1		; Object animation to read (current|saved)
+obj_frame	ds.w 1		; Object display frame (MD: $FFFF, MARS: $YY,$XX)
 obj_anim_spd	ds.b 1		; Object animation delay
 obj_index	ds.b 1		; Object code index
 obj_subid	ds.b 1		; Object SubID
 obj_status	ds.b 1		; Object status
-obj_frame	ds.b 1		; Object display frame
 obj_spwnid	ds.b 1		; Object respawn index (this - 1)
 obj_col		ds.b 1		; Object collision
 obj_null	ds.b 1		; ALIGN
@@ -2092,19 +2092,25 @@ MdMap_DrawAll:
 ; 		rts
 
 ; --------------------------------------------------------
-; MdMap_DrawScrl
+; MdMap_DrawScrlMd
 ;
-; Draw off-screen changes
+; Draws map off-screen changes, only on Genesis-side.
+;
 ; CALL THIS ON VBLANK ONLY, MUST BE QUICK.
 ; --------------------------------------------------------
 
-MdMap_DrawScrl:
-; 		lea	(RAM_BgBufferM),a6	; <-- SH2 updates bits now.
-; 		bsr	.this_bg
+MdMap_DrawScrlMd:
 		lea	(RAM_BgBuffer),a6
 		lea	(vdp_data),a5
 		bsr.s	.this_bg
 		adda	#sizeof_mdbg,a6
+		bsr.s	.this_bg
+		lea	(RAM_BgBufferM),a6	; Clear bits here for
+		move.b	md_bg_flags(a6),d7	; the 32X map
+		and.w	#%11110000,d7
+		move.b	d7,md_bg_flags(a6)
+		rts
+
 .this_bg:
 		move.b	md_bg_flags(a6),d7
 		btst	#bitBgOn,d7
@@ -2464,34 +2470,57 @@ Objects_Show:
 .next:
 		move.l	(a6),d0
 		beq.s	.finish
-		move.l	d0,a2
-		move.l	obj_map(a2),a0		; Read mapping
+		move.l	d0,a3
+		move.l	obj_map(a3),a0		; Read mapping
 		move.l	(a0)+,marsspr_data(a5)
 		move.w	(a0)+,marsspr_dwidth(a5)
 		move.w	(a0)+,marsspr_indx(a5)
-		move.b	(a0)+,marsspr_xs(a5)
-		move.b	(a0)+,marsspr_ys(a5)
-		move.w	obj_frame(a2),d0	; Read frame
-		ror.w	#8,d0			; Rotate X/Y
-		move.w	d0,marsspr_xfrm(a5)	; Y|X
-		move.w	obj_x(a2),d6
-		move.w	obj_y(a2),d5
-		move.l	obj_size(a2),d4		; d4 - UDLR sizes
-		move.w	d4,d3			; Grab LR
-		lsr.w	#8,d3
-		lsl.b	#3,d3
+		move.b	(a0)+,d4
+		move.b	(a0)+,d3
+		move.b	d4,marsspr_xs(a5)
+		move.b	d3,marsspr_ys(a5)
+		move.w	obj_frame(a3),d0	; Read frame
+		move.b	d0,marsspr_xfrm(a5)
+		ror.w	#8,d0
+		move.b	d0,marsspr_yfrm(a5)
+		move.w	obj_x(a3),d6
+		move.w	obj_y(a3),d5
+		and.w	#$FF,d4
 		and.w	#$FF,d3
-		sub.w	d3,d6			; Subtract X
-		swap	d4
-		move.w	d4,d3			; Grab UD
-		lsr.w	#8,d3
-		lsl.b	#3,d3
-		and.w	#$FF,d3
-		sub.w	d3,d5			; Subtract Y
+		lsr.w	#1,d4
+		lsr.w	#1,d3
+; 		divu.w	#2,d4			; **
+		sub.w	d4,d6
+; 		divu.w	#2,d3			; **
+		sub.w	d3,d5
+
+; 		move.l	obj_size(a3),d4		; d4 - UDLR sizes
+
+; 		move.w	d4,d3			; Grab LR
+; 		lsr.w	#5,d3
+; 		and.w	#%11111000,d3
+; 		sub.w	d3,d6			; Subtract X
+; 		swap	d4
+; 		move.w	d4,d3			; Grab UD
+; 		lsr.w	#8,d3
+; 		lsl.b	#3,d3
+; 		and.w	#$FF,d3
+; 		sub.w	d3,d5			; Subtract Y
 		sub.w	md_bg_x(a4),d6
 		sub.w	md_bg_y(a4),d5
 		move.w	d6,marsspr_x(a5)
 		move.w	d5,marsspr_y(a5)
+		moveq	#0,d6
+		btst	#bitobj_flipH,obj_status(a3)
+		beq.s	.flip_h
+		bset	#0,d6
+.flip_h:
+		btst	#bitobj_flipV,obj_status(a3)
+		beq.s	.flip_v
+		bset	#1,d6
+.flip_v:
+		move.w	d6,marsspr_flags(a5)
+
 		clr.l	(a6)			; Clear request
 		adda	#4,a6			; Next slot
 		adda	#sizeof_marsspr,a5	; Next SuperSprite
@@ -2534,7 +2563,7 @@ Object_Display:
 ; Animates the sprite
 ;
 ; Input
-; d1 | LONG - Animation data
+; a0 | LONG - Animation data
 ;
 ; Output
 ; d0 | WORD - Frame
@@ -2544,115 +2573,214 @@ Object_Display:
 ; --------------------------------------------------------
 
 ; NOTE: to restart an animation
-; clear obj_anim_pos(a6) manually
+; clear obj_anim_indx(a6) manually
 
 Object_Animate:
- 		tst.l	d1
-  		beq.s	.return
+;  		tst.l	d1
+;   		beq.s	.return
  		moveq	#0,d2
  		move.b	obj_anim_id+1(a6),d2
  		cmp.b	obj_anim_id(a6),d2
  		beq.s	.sameThing
  		move.b	obj_anim_id(a6),obj_anim_id+1(a6)
- 		clr.w	obj_anim_pos(a6)
+ 		clr.w	obj_anim_indx(a6)
  		clr.b	obj_anim_spd(a6)
 .sameThing:
  		move.b	obj_anim_id(a6),d2
  		cmp.b	#-1,d2
  		beq.s	.return
- 		lsl.w	#1,d2
-; 	if MCD
-; 		or.l	#$200000,d1
-; 	else
-; 		btst	#bitMars,(RAM_SysFlags).l
-; 		beq.s	.nobanking
-; 		or.l	#$900000,d1
-; .nobanking:
-; 	endif
-		movea.l	d1,a0
- 		adda	(a0,d2.w),a0
+ 		add.w	d2,d2
+ 		move.w	(a0,d2.w),d2
+ 		lea	(a0,d2.w),a0
 
- 		move.b	(a0)+,d2
- 		cmp.b	#-1,d2
+ 		move.w	(a0)+,d2
+ 		cmp.w	#-1,d2
  		beq.s	.keepspd
  		sub.b	#1,obj_anim_spd(a6)
  		bpl.s	.return
 		move.b	d2,obj_anim_spd(a6)
 .keepspd:
  		moveq	#0,d1
- 		move.w	obj_anim_pos(a6),d2
- 		move.b	(a0),d1
+ 		move.w	obj_anim_indx(a6),d2
+ 		add.w	d2,d2
+ 		move.w	(a0),d1
  		adda	d2,a0
-
- 		and.l	#$FFFF0000,d0
- 		move.b	(a0),d0
- 		cmp.b	#-1,d0
- 		beq.s	.noAnim
- 		cmp.b	#-2,d0
+ 		move.w	(a0),d0
+ 		cmp.w	#-1,d0
+ 		beq.s	.noAnim		; loop
+ 		cmp.w	#-2,d0
+ 		beq.s	.lastFrame	; finish
+ 		cmp.w	#-3,d0
  		beq.s	.goToFrame
- 		cmp.b	#-3,d0
- 		beq.s	.lastFrame
 
- 		move.b	d0,obj_frame(a6)
- 		add.w	#1,obj_anim_pos(a6)
+ 		move.w	d0,obj_frame(a6)
+ 		add.w	#1,obj_anim_indx(a6)
 .return:
  		rts
 
 .noAnim:
- 		move.w	#1,obj_anim_pos(a6)
+ 		move.w	#1,obj_anim_indx(a6)
  		move.w	d1,d0
- 		move.b	d0,obj_frame(a6)
+ 		move.w	d0,obj_frame(a6)
 		rts
 .lastFrame:
  		clr.b	obj_anim_spd(a6)
 		rts
 .goToFrame:
-		clr.w	obj_anim_pos(a6)
-		move.b	1(a0),obj_anim_pos+1(a6)
+		clr.w	obj_anim_indx(a6)
+		move.w	2(a0),obj_anim_indx(a6)
 		rts
 
 ; --------------------------------------------------------
-; Floor collision
+; object_Speed
+;
+; Moves the object using speed settings
+;
+; Input:
+; a6 - Object
+;
+; Uses:
+; d7
 ; --------------------------------------------------------
+
+object_Speed:
+		moveq	#0,d7
+		move.w	obj_x_spd(a6),d7
+		ext.l	d7
+		asl.l	#8,d7
+		add.l	d7,obj_x(a6)
+		moveq	#0,d7
+		move.w	obj_y_spd(a6),d7
+		ext.l	d7
+		asl.l	#8,d7
+		add.l	d7,obj_y(a6)
+		rts
+
+; --------------------------------------------------------
+; object_ColM_Floor
+;
+; Check object collision on map's floor
+;
+; Input:
+; a6 - Object to check
+;
+; Returns:
+; beq  - No collision
+; bne  - Found collision
+; d4.b - Collision block number
+; d5.w - Y Adjustment (-minus)
+;
+; Uses:
+; d4-d7,a4-a5
+; --------------------------------------------------------
+
+; 32X MAP SIDE
 
 object_ColM_Floor:
 		lea	(RAM_BgBufferM),a5
+		moveq	#0,d4
+		moveq	#0,d5
+; 		tst.w	obj_y_spd(a6)
+; 		bmi.s	.valid
 		move.l	md_bg_col(a5),a4
-		moveq	#0,d0
-		moveq	#0,d1
-		move.w	obj_x(a6),d1
-		move.w	obj_y(a6),d0
-		move.l	obj_size(a6),d2
-		swap	d2		; Add Y
-		lsl.b	#3,d2
-		and.w	#$FF,d2
-		add.	d2,d0
-		move.w	md_bg_w(a5),d2
-		lsr.w	#4,d0		; /16
-		lsr.w	#4,d1
-		mulu.w	d2,d0
-		add.l	d1,d0
-		add.l	d0,a4
-		moveq	#0,d0
-		move.b	(a4),d0
-; 		beq.s	.blank
+		move.w	md_bg_wf(a5),d6
+		sub.w	#1,d6
+		move.w	obj_x(a6),d5
+		bpl.s	.v_x
+		clr.w	d5
+.v_x:
+		cmp.w	d6,d5
+		blt.s	.v_xr
+		move.w	d6,d5
+.v_xr:
+		move.w	md_bg_hf(a5),d6
+		sub.w	#1,d6
+		move.w	obj_y(a6),d4
+		bpl.s	.v_y
+		clr.w	d4
+.v_y:
+		cmp.w	d6,d4
+		blt.s	.v_yd
+		move.w	d6,d4
+.v_yd:
+		move.l	obj_size(a6),d6
+		swap	d6		; Add Y
+		and.w	#$FF,d6
+		move.w	d6,d7
+		lsl.w	#3,d7
+		add.w	d7,d4
+		asr.w	#4,d4		; /16
+		asr.w	#4,d5
+		moveq	#0,d7
+		move.w	md_bg_w(a5),d7
+		mulu.w	d7,d4
+		add.l	d5,d4
+		add.l	d4,a4
+		moveq	#0,d5
+		move.b	(a4),d4
+		sub.l	d7,a4
+		sub.w	#1,d6
+		bmi.s	.valid
+.next:
+		swap	d6
+		move.b	(a4),d6
+		beq.s	.blnk
+		move.b	d6,d4
+		sub.w	#$10,d5
+.blnk:
+		sub.l	d7,a4
+		swap	d6
+		dbf	d6,.next
+.valid:
+		and.w	#$FF,d4		; Filter ID
 		rts
 
-; If != 0
-object_FloorRead:
-		and.w	#$FF,d0
-		lsl.w	#4,d0
-		move.w	obj_x(a6),d1	; Grab CENTER X
-		and.w	#$0F,d1		; limit to 16
+; ----------------------------------------
+; object_SetColFloor
+;
+; Snaps the object to the map's floor.
+;
+; Call object_ColM_Floor first
+;
+; Input:
+; d4.b - Collision block
+; d5.w - Y decrement
+; ----------------------------------------
+
+object_SetColFloor:
+		and.w	#$FF,d4
+		beq.s	.no_col
+		lsl.w	#4,d4
+		move.w	obj_x(a6),d7	; Grab CENTER X
+		and.w	#$0F,d7		; limit to 16
 		lea	slope_data_16(pc),a0
-		adda	d0,a0
-		move.b	(a0,d1.w),d0
-		and.w	#$F,d0
-		and.w	#-$10,obj_y(a6)
-		add.w	d0,obj_y(a6)
-		lsl.w	#4,d0
-		move.w	d0,obj_y_spd(a6)
+		adda	d4,a0
+		move.b	(a0,d7.w),d4
+		and.w	#$0F,d4
+		move.w	obj_y(a6),d7
+		move.w	d7,d6
+		and.w	#-$10,d7
+		add.w	d5,d7
+		tst.b	d4
+		beq.s	.zero
+		add.w	d4,d7
+	; d6 - curr
+	; d7 - new
+		cmp.w	d7,d6
+		blt.s	.no_col
+		move.w	obj_x_spd(a6),d6
+		bne.s	.zero
+; 		bpl.s	.x_pl
+; 		neg.w	d6
+; .x_pl:
+		move.w	#$600,d6 ;TEMPORAL
+		move.w	d6,obj_y_spd(a6)
+.zero:
+		move.w	d7,obj_y(a6)
+.no_col:
 		rts
+
+; ----------------------------------------
 
 ; Slope data 16x16
 slope_data_16:

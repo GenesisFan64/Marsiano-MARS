@@ -28,13 +28,8 @@ TEST_MAINSPD	equ $04
 ; ------------------------------------------------------
 
 		struct RAM_ModeBuff
-RAM_MapX	ds.l 1
-RAM_MapY	ds.l 1
-RAM_ThisSpeed	ds.l 1
-; RAM_EmiFrame	ds.w 1
-; RAM_EmiAnim	ds.w 1
-; RAM_EmiTimer	ds.w 1
-RAM_KeepSong	ds.w 1
+RAM_MapX	ds.w 1
+RAM_MapY	ds.w 1
 		finish
 
 ; ====================================================================
@@ -72,7 +67,7 @@ MD_2DMODE:
 		bsr	Video_FadePal_Mars
 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
 		and.w	#$7FFF,(RAM_MdMarsPalFd).w
-		move.l	#$10000,(RAM_ThisSpeed).l
+; 		move.l	#$10000,(RAM_ThisSpeed).l
 		move.w	#0,(RAM_MapX).l
 		move.w	#0,(RAM_MapY).l
 
@@ -102,14 +97,13 @@ MD_2DMODE:
 
 		moveq	#0,d0
 		bsr	Sound_TrkStop
-		move.w	#200+32,d1
+		move.w	#200+96,d1
 		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_MOVEME),a0
-; 		lea	(GemaTrkData_Nadie_MD),a0
+		lea	(GemaTrk_xtrim),a0
 		moveq	#0,d0
-		moveq	#7,d1
+		moveq	#4,d1
 		moveq	#0,d2
-		moveq	#0,d3
+		moveq	#%0000,d3
 		bsr	Sound_TrkPlay
 
 		moveq	#2,d0			; and set this psd-graphics mode
@@ -287,9 +281,9 @@ Map_Camera:
 		move.w	#320/2,d1
 		move.w	obj_x(a6),d0
 		sub.w	d1,d0
-		bmi.s	.no_x
+; 		bmi.s	.no_x
 		move.w	d0,d3
-.no_x:
+; .no_x:
 		move.w	d3,(RAM_MapX).w
 
 		moveq	#0,d3
@@ -297,9 +291,9 @@ Map_Camera:
 		move.w	#224/2,d1
 		move.w	obj_y(a6),d0
 		sub.w	d1,d0
-		bmi.s	.no_y
+; 		bmi.s	.no_y
 		move.w	d0,d3
-.no_y:
+; .no_y:
 		move.w	d3,(RAM_MapY).w
 
 		moveq	#-1,d0
@@ -361,8 +355,8 @@ ObjMd_Player:
 		move.w	.list(pc,d0.w),d1
 		jsr	.list(pc,d1.w)
 
-; 		move.l	#ani_plyr,d1
-; 		bsr	Object_Animate
+		lea	ani_plyr(pc),a0
+		bsr	object_Animate
 
 ; 		lea	(RAM_BgBufferM),a1
 ; 		lea	(RAM_Sprites),a0
@@ -401,9 +395,9 @@ ObjMd_Player:
 ; ---------------------------------
 .mars_spr:
 		dc.l SuperSpr_Test|TH	; Spritesheet location
-		dc.w 512		; Spritesheet WIDTH
+		dc.w 64*12		; Spritesheet WIDTH
 		dc.w $80		; Palette index
-		dc.b 64,72		; Frame width and height
+		dc.b 64,64		; Frame width and height
 		align 2
 
 ; ---------------------------------
@@ -411,9 +405,11 @@ ObjMd_Player:
 ; ---------------------------------
 
 .init:
-		move.l	#$05040404,obj_size(a6)	; UDLR
+		move.l	#$02020101,obj_size(a6)	; UDLR
 		move.l	#.mars_spr,obj_map(a6)
 		move.b	#1,obj_index(a6)
+		clr.b	obj_anim_indx(a6)
+		move.b	#0,obj_anim_id(a6)
 
 ; ---------------------------------
 ; MAIN
@@ -423,61 +419,41 @@ ObjMd_Player:
 		lea	(RAM_BgBufferM),a5
 		lea	(Controller_1),a4
 
-; ----------------------
-		move.w	on_hold(a4),d0
+	; ----------------------
+	; X speed decrement
+	; ----------------------
+
 		move.w	obj_x_spd(a6),d1
 		move.w	#1,d2
-		move.w	#$30,d3
+		move.w	#$40,d3
 		tst.w	d1
+		beq.s	.stopx
 		bmi.s	.leftx
 		sub.w	d3,d1
 		bpl.s	.keepx
 .stopx:
 		clr.w	d1
 		clr.w	d2
+		clr.b	obj_anim_id(a6)
 		bra.s	.keepx
 .leftx:
 		add.w	d3,d1
 		bpl.s	.stopx
 .keepx:
 
-; ----------------------
-; Move Left/Right
-; ----------------------
+	; ----------------------
+	; User input
+	; ----------------------
 
+		lea	(Controller_1),a4
 		btst	#bitobj_air,obj_status(a6)
-		bne.s	.dontduck
-		btst	#bitJoyDown,d0
-		beq.s	.dontduck
-		move.w	#2,d2
-		bra.s	.contlr
-.dontduck:
-		btst	#bitJoyRight,d0
-		beq.s	.nrm
-		bclr	#bitobj_flipH,obj_status(a6)
-		move.w	#$200,d1
-		move.w	#1,d2
-.nrm
-		btst	#bitJoyLeft,d0
-		beq.s	.contlr
-		bset	#bitobj_flipH,obj_status(a6)
-		move.w	#-$200,d1
-		move.w	#1,d2
-.contlr:
-		move.w	d1,obj_x_spd(a6)
-
-; ----------------------
-; JUMP
-; ----------------------
-
+		bne.s	.nc
 		move.w	on_press(a4),d0
 		move.w	on_hold(a4),d3
-; 		btst	#bitobj_air,obj_status(a6)
-; 		bne.s	.nc
 		btst	#bitJoyC,d0
 		beq.s	.nc
 		bset	#bitobj_air,obj_status(a6)
-		move.w	#-$500,obj_y_spd(a6)
+		move.w	#-$600,obj_y_spd(a6)
 		move.w	obj_x_spd(a6),d3
 		asr.w	#2,d3
 		tst.w	d3
@@ -485,70 +461,53 @@ ObjMd_Player:
 		neg.w	d3
 .swpx:
 		sub.w	d3,obj_y_spd(a6)
-		move.b	#3,obj_anim_id(a6)
-.nc
-
-; ----------------------
-; Set Animation
-; ----------------------
-
+; 		move.w	#3,d2
+.nc:
+		move.w	on_hold(a4),d0
 		btst	#bitobj_air,obj_status(a6)
-		bne.s	.noovr
+		bne.s	.dontduck
+		btst	#bitJoyDown,d0
+		beq.s	.dontduck
+		move.w	#2,d2
+		bra.s	.contlr
+.dontduck:
+
+	; Right/Left
+		btst	#bitJoyRight,d0
+		beq.s	.nrm
+		bclr	#bitobj_flipH,obj_status(a6)
+		move.w	#$800,d1
+		move.w	#1,d2
+.nrm
+		btst	#bitJoyLeft,d0
+		beq.s	.contlr
+		bset	#bitobj_flipH,obj_status(a6)
+		move.w	#-$800,d1
+		move.w	#1,d2
+.contlr:
+		move.w	d1,obj_x_spd(a6)
+		btst	#bitobj_air,obj_status(a6)
+		beq.s	.nc2
+		move.w	#3,d2
+.nc2:
 		move.b	d2,obj_anim_id(a6)
-		bra.s	.contanim
-.noovr:
-		move.b	#3,d2
-		tst.w	obj_y_spd(a6)
-		bmi.s	.jumpup
-		move.w	#6,d2
-.jumpup:
 
-; 		move.b	obj_anim_id(a6),d2
-		move.w	on_hold(a4),d3
-		btst	#bitJoyDown,d3
-		beq.s	.goinup
-		clr.w	obj_anim_pos(a6)
-		move.w	#5,d2
-		bra.s	.goindwn
-.goinup:
-		tst.w	obj_y_spd(a6)
-		bpl.s	.goindwn
-		btst	#bitJoyUp,d3
-		beq.s	.goindwn
-		move.w	#4,d2
-.goindwn:
-		move.b	d2,obj_anim_id(a6)
-
-.contanim:
-
-; ----------------------
-; Result
-; ----------------------
-
-	; X Physics
-		moveq	#0,d4
-		move.w	obj_x_spd(a6),d3
-		move.w	d3,d4
-		ext.l	d4
-		asl.l	#8,d4
-		add.l	d4,obj_x(a6)
+	; ----------------------
+	; Left/Right movement
+		bsr	object_Speed		; Move X/Y
 ; 		bsr	object_LayCol_LR
-		beq.s	.touchx
-		clr.w	d3
-.touchx:
-		move.w	d3,obj_x_spd(a6)
+; 		beq.s	.touchx
+; 		clr.w	d3
+; .touchx:
+; 		move.w	d3,obj_x_spd(a6)
 
-	; Y Fall
-		moveq	#0,d4
-		move.w	obj_y_spd(a6),d3
-		move.w	d3,d4
-		ext.l	d4
-		asl.l	#8,d4
-		add.l	d4,obj_y(a6)
-
+	; ----------------------
+	; Falling
 		bsr	object_ColM_Floor
 		beq.s	.falling
-		bra	object_FloorRead
+		bclr	#bitobj_air,obj_status(a6)
+		bsr	object_SetColFloor
+		bra.s	.cont_fall
 .falling:
 		move.w	obj_y_spd(a6),d3
 		add.w	#$60,d3		; Fall speed
@@ -556,54 +515,54 @@ ObjMd_Player:
 		blt.s	.touchy
 		move.w	#$800,d3
 		bra.s	.touchy
-.ceily:
 		move.w	#$100,d3
 .touchy:
 		move.w	d3,obj_y_spd(a6)
+.cont_fall:
 		rts
 
-; -----------------------------------------
-; DEBUG CONTROL
-; -----------------------------------------
-
-.tempctrl:
-		lea	(RAM_BgBufferM),a5
-		move.w	(Controller_1+on_press).l,d1
-		btst	#bitJoyZ,d1
-		beq.s	.nrz
-		bchg	#bitobj_flipH,obj_status(a6)
-.nrz
-		btst	#bitJoyY,d1
-		beq.s	.nly
-		bchg	#bitobj_flipV,obj_status(a6)
-.nly
-
-		move.b	(Controller_1+on_hold).l,d1
-		btst	#bitJoyUp,d1
-		beq.s	.nu
-		sub.w	#1,obj_y(a6)
-; 		bsr	object_laycol_ud
-.nu
-		move.b	(Controller_1+on_hold).l,d1
-		btst	#bitJoyDown,d1
-		beq.s	.nd
-		add.w	#1,obj_y(a6)
-; 		bsr	object_laycol_ud
-.nd
-
-		btst	#bitJoyRight,d1
-		beq.s	.nr
-		add.w	#1,obj_x(a6)
-		bclr	#bitobj_flipH,obj_status(a6)
-; 		bsr	object_laycol_lr
-.nr
-		btst	#bitJoyLeft,d1
-		beq.s	.nl
-		sub.w	#1,obj_x(a6)
-		bset	#bitobj_flipH,obj_status(a6)
-; 		bsr	object_laycol_lr
-.nl
-		rts
+; ; -----------------------------------------
+; ; DEBUG CONTROL
+; ; -----------------------------------------
+;
+; .tempctrl:
+; 		lea	(RAM_BgBufferM),a5
+; 		move.w	(Controller_1+on_press).l,d1
+; 		btst	#bitJoyZ,d1
+; 		beq.s	.nrz
+; 		bchg	#bitobj_flipH,obj_status(a6)
+; .nrz
+; 		btst	#bitJoyY,d1
+; 		beq.s	.nly
+; 		bchg	#bitobj_flipV,obj_status(a6)
+; .nly
+;
+; 		move.b	(Controller_1+on_hold).l,d1
+; 		btst	#bitJoyUp,d1
+; 		beq.s	.nu
+; 		sub.w	#1,obj_y(a6)
+; ; 		bsr	object_laycol_ud
+; .nu
+; 		move.b	(Controller_1+on_hold).l,d1
+; 		btst	#bitJoyDown,d1
+; 		beq.s	.nd
+; 		add.w	#1,obj_y(a6)
+; ; 		bsr	object_laycol_ud
+; .nd
+;
+; 		btst	#bitJoyRight,d1
+; 		beq.s	.nr
+; 		add.w	#1,obj_x(a6)
+; 		bclr	#bitobj_flipH,obj_status(a6)
+; ; 		bsr	object_laycol_lr
+; .nr
+; 		btst	#bitJoyLeft,d1
+; 		beq.s	.nl
+; 		sub.w	#1,obj_x(a6)
+; 		bset	#bitobj_flipH,obj_status(a6)
+; ; 		bsr	object_laycol_lr
+; .nl
+; 		rts
 
 ; ---------------------------------------
 
@@ -611,46 +570,47 @@ ani_plyr:	dc.w .idle-ani_plyr	; $00
 		dc.w .walk-ani_plyr
 		dc.w .duck-ani_plyr
 		dc.w .jump-ani_plyr
-		dc.w .upstb-ani_plyr	; $04
-		dc.w .dwnstb-ani_plyr
-		dc.w .fall-ani_plyr
-		dc.w .fall-ani_plyr
+; 		dc.w .upstb-ani_plyr	; $04
+; 		dc.w .dwnstb-ani_plyr
+; 		dc.w .fall-ani_plyr
+; 		dc.w .fall-ani_plyr
 
-.idle:		dc.b 7
-		dc.b 0
-
-		dc.b -1
-		align 2
-
-.walk:		dc.b 4
-		dc.b 1,2,3
-		dc.b -1
+.idle:		dc.w 8
+		dc.w $0001,$0002
+		dc.w -1
 		align 2
 
-.duck:		dc.b 4
-		dc.b 6
-		dc.b -1
+.walk:		dc.w 3
+		dc.w $0100,$0100,$0103,$0104
+		dc.w $0105,$0106,$0107,$0108
+		dc.w $0109
+		dc.w -1
 		align 2
 
-.jump:		dc.b 16
-		dc.b 11
-		dc.b -1
+.duck:		dc.w 1
+		dc.w $0003,$0004
+		dc.w -2
 		align 2
 
-.upstb:		dc.b 4
-		dc.b 8
-		dc.b -1
+.jump:		dc.w 3
+		dc.w $0006,$0007,$0008,$0009
+		dc.w -3,2
 		align 2
-.dwnstb:
-		dc.b 4
-		dc.b 9
-		dc.b -1
-		align 2
-.fall:
-		dc.b 4
-		dc.b 1
-		dc.b -1
-		align 2
+;
+; .upstb:		dc.w 4
+; 		dc.w 8
+; 		dc.w -1
+; 		align 2
+; .dwnstb:
+; 		dc.w 4
+; 		dc.w 9
+; 		dc.w -1
+; 		align 2
+; .fall:
+; 		dc.w 4
+; 		dc.w 1
+; 		dc.w -1
+; 		align 2
 
 ; ====================================================================
 ; ------------------------------------------------------

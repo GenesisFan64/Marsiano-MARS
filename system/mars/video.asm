@@ -636,244 +636,89 @@ MarsVideo_Bg_DrawReq:
 
 	; X timers
 		mov	#2,r7
+		xor	r6,r6
 		mov	#Cach_DrawTimers,r8
-		mov	r8,r5
-		mov	@(scrl_blksize,r13),r6
-		mov	r6,r4
-		dt	r4
-		neg	r6,r6
-		mov	@(scrl_xset,r13),r3
-		add	r1,r3
-		mov	r3,r0
-		and	r6,r0
-		tst	r0,r0
+		mov.b	@(md_bg_flags,r14),r0
+		extu.b	r0,r0
+		and	#%1111,r0
+		tst	#%0001,r0		; bitDrwR
+		bf	.x_r
+		tst	#%0010,r0		; bitDrwL
 		bt	.x_k
-		cmp/pz	r1
-		bt	.x_r
-		add	#4,r5
+		mov	r6,@r8
+		mov	r7,@(4,r8)
+		bra	.x_k
+		nop
 .x_r:
-		mov	r7,@r5
-		and	r4,r3
+		mov	r7,@r8
+		mov	r6,@(4,r8)
 .x_k:
-		mov	r3,@(scrl_xset,r13)
-	; Y timers
 		add	#8,r8
-		mov	r8,r5
-		mov	@(scrl_yset,r13),r3
-		add	r2,r3
-		mov	r3,r0
-		and	r6,r0
-		tst	r0,r0
-		bt	.y_k
-		cmp/pz	r2
-		bt	.y_r
-		add	#4,r5
-.y_r:
-		mov	r7,@r5
-		and	r4,r3
-.y_k:
-		mov	r3,@(scrl_yset,r13)
 
+	; Y timers
+		tst	#%0100,r0		; bitDrwD
+		bf	.y_r
+		tst	#%1000,r0		; bitDrwU
+		bt	.y_k
+		mov	r6,@r8
+		mov	r7,@(4,r8)
+		bra	.y_k
+		nop
+.y_r:
+		mov	r7,@r8
+		mov	r6,@(4,r8)
+.y_k:
 		rts
 		nop
 		align 4
 
-
-; 		mov	#Cach_DrawTimers,r2
-; 		mov.b	@(md_bg_flags,r14),r0
-; 		extu.b	r0,r0
-; ; 		and	#$FF,r0
-; 		mov	r2,r1			; Set NEW screen timers ($02)
-; 		mov	#2,r3
-; 		tst	#%00000001,r0		; bitDrwR
-; 		bt	.no_r
-; 		mov	r3,@r1
-; .no_r:
-; 		add	#4,r1
-; 		tst	#%00000010,r0		; bitDrwL
-; 		bt	.no_l
-; 		mov	r3,@r1
-; .no_l:
-; 		add	#4,r1
-; 		tst	#%00000100,r0		; bitDrwD
-; 		bt	.no_d
-; 		mov	r3,@r1
-; .no_d:
-; 		add	#4,r1
-; 		tst	#%00001000,r0		; bitDrwU
-; 		bt	.no_upd
-; 		mov	r3,@r1
-; .no_upd:
-; 		nop
-
-	; mach - Watchdog settings
-	;  r14 - Background buffer
-	;  r13 - Scroll area buffer
-	;  r12 - Layout data
-	;  r11 - Framebuffer X/Y pos
-	;  r10 - Layout width
-	;   r9 - Scroll width (next line)
-	;   r8 - Scroll FULL size (w*h)
-	;   r7 - Framebuffer BASE
-	;   r6 - Block data
-	;   r5 - Block timer
-	;   r4 - X or Y increment
-	;   r3 - Layout increment
-	;   r2 - Screen timers RLDU
-
-; 		mov	@(md_bg_low,r14),r12
-; 		mov	#Cach_WdgBuffWr,r3
-; 		mov	@(scrl_fbpos,r13),r11
-; 		mov	#-16,r1				; <-- (-)manual block size
-; 		mov.w	@(md_bg_w,r14),r0
-; 		extu.w	r0,r10
-; 		mov	@(scrl_intrl_w,r13),r9
-; 		mov	#((224+16)/16),r5		; Timer for L/R
-; 		mov	@(scrl_intrl_size,r13),r8
-; 		mov	@(md_bg_blk,r14),r6
-; 		and	r1,r11
-; 		mov	@(scrl_fbpos_y,r13),r0
-; 		and	r1,r0
-; 		mov	@(scrl_fbdata,r13),r7
-; 		mulu	r0,r9
-; 		sts	macl,r0
-; 		add	r0,r11
-; 		lds	r3,mach
+; 	; ---------------------------------------
+; 	; Set block update timers
+; 	; ---------------------------------------
 ;
-; 	; L/R columns
-; 		mov	r12,r13				; <-- copy layout
-; 		mov.w	@(md_bg_yinc_u,r14),r0		; Move top Y
-; 		exts.w	r0,r0
-; 		mov	#16,r1				; <-- manual block size
-; 		muls	r1,r0
-; 		sts	macl,r0
-; 		shlr8	r0
-; 		exts.w	r0,r0
-; 		muls	r10,r0
-; 		sts	macl,r0
-; 		add	r0,r12
-; 		mov.w	@(md_bg_xinc_r,r14),r0
-; 		mov	#320,r4				; r4 - X increment
-; 		bsr	.x_draw
-; 		exts.w	r0,r3
-; 		mov.w	@(md_bg_xinc_l,r14),r0
-; 		exts.w	r0,r3
-; 		mov	#0,r4
-; 		bsr	.x_draw
-; 		add	#4,r2
-;
-; 	; U/D rows
-; 		mov	#((320+16)/16),r5		; Timer for U/D
-; 		mov	r13,r12
-; 		add	#4,r2				; Now check D/U timers
-; 		sts	mach,r0
-; 		add	#$20,r0
-; 		lds	r0,mach
-; 		mov.w	@(md_bg_xinc_l,r14),r0		; Move left
-; 		exts.w	r0,r0
-; 		mov	#16,r1				; <-- manual block size
-; 		muls	r1,r0
-; 		sts	macl,r0
-; 		shlr8	r0
-; 		exts.w	r0,r0
-; 		add	r0,r12
-; 		mov.w	@(md_bg_yinc_d,r14),r0
-; 		mov	#224,r4
-; 		bsr	.y_draw
-; 		exts.w	r0,r3
-; 		mov.w	@(md_bg_yinc_u,r14),r0
-; 		extu.w	r0,r3
-; 		mov	#0,r4
-; 		bsr	.y_draw
-; 		add	#4,r2
-;
-; 		lds	@r15+,pr
-; 		rts
-; 		nop
-; 		align 4
-
-; ----------------------------------------
-
-; ; r3 - layout X increment
-; ; r4 - framebuffer X increment
-; ; mach - Cach_WdgBuffWr
-;
-; .x_draw:
-; 		mov	@r2,r0
+; 	; X timers
+; 		mov	#2,r7
+; 		mov	#Cach_DrawTimers,r8
+; 		mov	r8,r5
+; 		mov	@(scrl_blksize,r13),r6
+; 		mov	r6,r4
+; 		dt	r4
+; 		neg	r6,r6
+; 		mov	@(scrl_xset,r13),r3
+; 		add	r1,r3
+; 		mov	r3,r0
+; 		and	r6,r0
 ; 		tst	r0,r0
-; 		bt	.no_timer
-; 		dt	r0
-; 		mov	r0,@r2
+; 		bt	.x_k
+; 		cmp/pz	r1
+; 		bt	.x_r
+; 		add	#4,r5
+; .x_r:
+; 		mov	r7,@r5
+; 		and	r4,r3
+; .x_k:
+; 		mov	r3,@(scrl_xset,r13)
 ;
-; 		mov	#16,r1		; <-- manual block size
-; 		muls	r1,r3		; r3 - layout increment
-; 		sts	macl,r3
-; 		shlr8	r3
-; 		mov	r11,r1
-; 		add	r4,r1
-; 		cmp/ge	r8,r1
-; 		bf	.sz_safe
-; 		sub	r8,r1
-; .sz_safe:
-; 		sts	mach,r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		mov	 r1,@-r0	; <-- copy of r11
-; 		mov	r12,r1		; <-- layout + X pos
-; 		add	 r3,r1
-; 		mov	 r1,@-r0
-; .no_timer:
-; 		rts
-; 		nop
-; 		align 4
-;
-; ; ----------------------------------------
-;
-; ; r3 - layout Y increment
-; ; r4 - framebuffer Y increment
-; ; mach - Cach_WdgBuffWr_UD
-;
-; .y_draw:
-; 		mov	@r2,r0
+; 	; Y timers
+; 		add	#8,r8
+; 		mov	@(scrl_yset,r13),r3
+; 		add	r2,r3
+; 		mov	r3,r0
+; 		and	r6,r0
 ; 		tst	r0,r0
-; 		bt	.no_timer
-; 		dt	r0
-; 		mov	r0,@r2
+; 		bt	.y_k
+; 		cmp/pz	r2
+; 		bt	.y_r
+; 		add	#4,r8
+; .y_r:
+; 		mov	r7,@r8
+; 		and	r4,r3
+; .y_k:
+; 		mov	r3,@(scrl_yset,r13)
 ;
-; 		mov	#16,r1		; <-- manual block size
-; 		muls	r1,r3		; r3 - layout increment
-; 		sts	macl,r3
-; 		shlr8	r3
-; 		mulu	r10,r3
-; 		sts	macl,r3
-;
-; 		mov	r11,r1
-; 		mulu	r9,r4
-; 		sts	macl,r0
-; 		add	r0,r1
-; 		cmp/ge	r8,r1
-; 		bf	.sz_safey
-; 		sub	r8,r1
-; .sz_safey:
-; 		sts	mach,r0
-; 		mov	r5,@-r0
-; 		mov	r6,@-r0
-; 		mov	r7,@-r0
-; 		mov	r8,@-r0
-; 		mov	r9,@-r0
-; 		mov	r10,@-r0
-; 		mov	 r1,@-r0	; <-- copy of r11
-; 		mov	r12,r1		; <-- layout + Y pos
-; 		add	 r3,r1
-; 		mov	 r1,@-r0
 ; 		rts
 ; 		nop
 ; 		align 4
-; 		ltorg
 
 ; --------------------------------------------------------
 ; MarsVideo_DmaDraw
@@ -1098,16 +943,19 @@ MarsVideo_Bg_DrawScrl:
 		exts.w	r0,r2
 		mov	#0,r1
 .go_du:
+		mov	#CS3|$40,r3
+		mov	r2,@r3
+
 		mulu	r1,r11
 		sts	macl,r0
 		mov	r10,r6
 		add	r0,r6
 ; 		mov	#-$10,r0
-; 		and	r0,r6			; r6 - curr out pos
+; 		and	r0,r6				; r6 - curr out pos
 		mov	r8,@-r15
 		mov.w	@(md_bg_xinc_l,r14),r0		; r7 - Layout increment
 		exts.w	r0,r1
-		mov	#16,r3		; <-- MANUAL BLOCK SIZE
+		mov	#16,r3				; <-- MANUAL BLOCK SIZE
 		mulu	r3,r1
 		sts	macl,r0
 		shlr8	r0

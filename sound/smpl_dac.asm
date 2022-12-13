@@ -11,10 +11,10 @@ gSmpHead macro len,loop
 	endm
 
 	align $8000
-; DacIns_wegot_kick:
-; 	gSmpHead .end-.start,0
-; .start:	binclude "sound/instr/smpl/wegot_kick.wav",$2C
-; .end:
+DacIns_wegot_kick:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/Kick_pun.wav",$2C
+.end:
 ; DacIns_snare_lobo:
 ; 	gSmpHead .end-.start,0
 ; .start:	binclude "sound/instr/smpl/snare_lobo.wav",$2C

@@ -1649,13 +1649,17 @@ mstr_gfx2_loop:
 		nop
 		bsr	MarsVideo_Bg_DrawReq
 		nop
- 		mov	#MarsVideo_DrawBgSSpr,r0		; Refill BG sections overwritten by sprites
+ 		mov	#MarsVideo_RefillBgSpr,r0		; Refill BG sections overwritten by sprites
 		jsr	@r0					; using OLD values
 		nop
-		mov	#_sysreg+comm14+1,r1			; Start Slave task $01
-		mov	#1,r0
-		mov.b	r0,@r1
-	; ** Slave is active **
+
+		mov	#RAM_Mars_DreqRead+Dreq_BgExBuff,r14	; Draw L/R here, Slave does U/D
+		mov	#RAM_Mars_ScrlBuff,r13
+		bsr	MarsVideo_Bg_DrawScrl
+		nop
+; 		mov	#_sysreg+comm14+1,r1			; Start Slave task $01
+; 		mov	#1,r0
+; 		mov.b	r0,@r1
 
 	; Now the SuperSprites:
 		mov	#RAM_Mars_ScrlBuff,r14			; Make new SuperSprite settings
@@ -1702,6 +1706,7 @@ mstr_gfx2_loop:
 		mov.b	@(framectl,r1),r0		; REQUEST Framebuffer swap
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)
+
 		bra	mstr_ready
 		nop
 		align 4
@@ -2181,16 +2186,16 @@ sizeof_marsram		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF			; Single buffer for all screen modes
+RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF		; Single buffer for all screen modes
 sizeof_marsvid		ds.l 0
 			finish
 
 ; --------------------------------------------------------
 ; per-screen RAM
 			struct RAM_Mars_ScrnBuff
-Cach_DrawTimers		ds.l 4		; Screen draw-request timers, write $02 to these
-RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2			; Scrolling buffers
-RAM_Mars_ScrlData	ds.b ((320+16)*(224+16))+320
+Cach_DrawTimers		ds.l 4				; Screen draw-request timers, write $02 to these
+RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2		; Scrolling buffers
+RAM_Mars_ScrlData	ds.b ((320+16)*(224+16))+320	; Entire pixeldata for one scroll: (w*h)+320
 end_scrn02		ds.l 0
 			finish
 			struct RAM_Mars_ScrnBuff
