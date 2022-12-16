@@ -12,7 +12,7 @@
 
 ; SDRAM
 MAX_SCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
-MAX_SSPRSPD	equ 12		; Supersprite box increment: Size+this (maximum Super Sprite speed)
+MAX_SSPRSPD	equ 8		; Supersprite box increment: Size+this (maximum Super Sprite speed)
 MAX_FACES	equ 980		; MAX polygon faces for 3D models
 MAX_SVDP_PZ	equ 980+96	; MAX polygon pieces to draw
 MAX_ZDIST	equ -$1900	; Maximum 3D field distance (-Z)
@@ -630,95 +630,95 @@ MarsVideo_Bg_UpdPos:
 MarsVideo_Bg_DrawReq:
 ; 		sts	pr,@-r15
 
-	; ---------------------------------------
-	; Set block update timers
-	; ---------------------------------------
-
-	; X timers
-		mov	#2,r7
-		xor	r6,r6
-		mov	#Cach_DrawTimers,r8
-		mov.b	@(md_bg_flags,r14),r0
-		extu.b	r0,r0
-		and	#%1111,r0
-		tst	#%0001,r0		; bitDrwR
-		bf	.x_r
-		tst	#%0010,r0		; bitDrwL
-		bt	.x_k
-		mov	r6,@r8
-		mov	r7,@(4,r8)
-		bra	.x_k
-		nop
-.x_r:
-		mov	r7,@r8
-		mov	r6,@(4,r8)
-.x_k:
-		add	#8,r8
-
-	; Y timers
-		tst	#%0100,r0		; bitDrwD
-		bf	.y_r
-		tst	#%1000,r0		; bitDrwU
-		bt	.y_k
-		mov	r6,@r8
-		mov	r7,@(4,r8)
-		bra	.y_k
-		nop
-.y_r:
-		mov	r7,@r8
-		mov	r6,@(4,r8)
-.y_k:
-		rts
-		nop
-		align 4
-
 ; 	; ---------------------------------------
 ; 	; Set block update timers
 ; 	; ---------------------------------------
 ;
 ; 	; X timers
 ; 		mov	#2,r7
+; 		xor	r6,r6
 ; 		mov	#Cach_DrawTimers,r8
-; 		mov	r8,r5
-; 		mov	@(scrl_blksize,r13),r6
-; 		mov	r6,r4
-; 		dt	r4
-; 		neg	r6,r6
-; 		mov	@(scrl_xset,r13),r3
-; 		add	r1,r3
-; 		mov	r3,r0
-; 		and	r6,r0
-; 		tst	r0,r0
+; 		mov.b	@(md_bg_flags,r14),r0
+; 		extu.b	r0,r0
+; 		and	#%1111,r0
+; 		tst	#%0001,r0		; bitDrwR
+; 		bf	.x_r
+; 		tst	#%0010,r0		; bitDrwL
 ; 		bt	.x_k
-; 		cmp/pz	r1
-; 		bt	.x_r
-; 		add	#4,r5
+; 		mov	r6,@r8
+; 		mov	r7,@(4,r8)
+; 		bra	.x_k
+; 		nop
 ; .x_r:
-; 		mov	r7,@r5
-; 		and	r4,r3
+; 		mov	r7,@r8
+; 		mov	r6,@(4,r8)
 ; .x_k:
-; 		mov	r3,@(scrl_xset,r13)
+; 		add	#8,r8
 ;
 ; 	; Y timers
-; 		add	#8,r8
-; 		mov	@(scrl_yset,r13),r3
-; 		add	r2,r3
-; 		mov	r3,r0
-; 		and	r6,r0
-; 		tst	r0,r0
+; 		tst	#%0100,r0		; bitDrwD
+; 		bf	.y_r
+; 		tst	#%1000,r0		; bitDrwU
 ; 		bt	.y_k
-; 		cmp/pz	r2
-; 		bt	.y_r
-; 		add	#4,r8
+; 		mov	r6,@r8
+; 		mov	r7,@(4,r8)
+; 		bra	.y_k
+; 		nop
 ; .y_r:
 ; 		mov	r7,@r8
-; 		and	r4,r3
+; 		mov	r6,@(4,r8)
 ; .y_k:
-; 		mov	r3,@(scrl_yset,r13)
-;
 ; 		rts
 ; 		nop
 ; 		align 4
+
+; 	; ---------------------------------------
+; 	; Set block update timers
+; 	; ---------------------------------------
+;
+	; X timers
+		mov	#2,r7
+		mov	#Cach_DrawTimers,r8
+		mov	r8,r5
+		mov	@(scrl_blksize,r13),r6
+		mov	r6,r4
+		dt	r4
+		neg	r6,r6
+		mov	@(scrl_xset,r13),r3
+		add	r1,r3
+		mov	r3,r0
+		and	r6,r0
+		tst	r0,r0
+		bt	.x_k
+		cmp/pz	r1
+		bt	.x_r
+		add	#4,r5
+.x_r:
+		mov	r7,@r5
+		and	r4,r3
+.x_k:
+		mov	r3,@(scrl_xset,r13)
+
+	; Y timers
+		add	#8,r8
+		mov	@(scrl_yset,r13),r3
+		add	r2,r3
+		mov	r3,r0
+		and	r6,r0
+		tst	r0,r0
+		bt	.y_k
+		cmp/pz	r2
+		bt	.y_r
+		add	#4,r8
+.y_r:
+		mov	r7,@r8
+		and	r4,r3
+.y_k:
+		mov	r3,@(scrl_yset,r13)
+
+		rts
+		nop
+		align 4
 
 ; --------------------------------------------------------
 ; MarsVideo_DmaDraw

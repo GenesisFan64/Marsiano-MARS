@@ -96,13 +96,13 @@ MD_2DMODE:
 
 		moveq	#0,d0
 		bsr	Sound_TrkStop
-		move.w	#200+96,d1
+		move.w	#200,d1
 		bsr	Sound_GlbBeats
 		lea	(GemaTrk_xtrim),a0
 		moveq	#0,d0
-		moveq	#4,d1
+		moveq	#3,d1
 		moveq	#0,d2
-		moveq	#%0000,d3
+		moveq	#%0001,d3
 		bsr	Sound_TrkPlay
 
 		moveq	#2,d0			; and set this psd-graphics mode
@@ -417,13 +417,13 @@ ObjMd_Player:
 	; ----------------------
 
 		lea	(Controller_1),a4
-		btst	#bitobj_air,obj_status(a6)
-		bne.s	.nc
+; 		btst	#bitobj_air,obj_status(a6)
+; 		bne.s	.nc
 		move.w	on_press(a4),d0
 		move.w	on_hold(a4),d3
 		btst	#bitJoyC,d0
 		beq.s	.nc
-		bset	#bitobj_air,obj_status(a6)
+; 		bset	#bitobj_air,obj_status(a6)
 		move.w	#-$600,obj_y_spd(a6)
 		move.w	obj_x_spd(a6),d3
 		asr.w	#2,d3
@@ -432,7 +432,7 @@ ObjMd_Player:
 		neg.w	d3
 .swpx:
 		sub.w	d3,obj_y_spd(a6)
-; 		move.w	#3,d2
+
 .nc:
 		move.w	on_hold(a4),d0
 		btst	#bitobj_air,obj_status(a6)
@@ -462,34 +462,31 @@ ObjMd_Player:
 		move.w	#3,d2
 .nc2:
 		move.b	d2,obj_anim_id(a6)
+		bsr	object_Speed
 
 	; ----------------------
-	; Left/Right movement
-		bsr	object_Speed		; Move X/Y
-; 		bsr	object_LayCol_LR
-; 		beq.s	.touchx
-; 		clr.w	d3
-; .touchx:
-; 		move.w	d3,obj_x_spd(a6)
+	; Wall collision
 
 	; ----------------------
-	; Falling
+	; Falling and
+	; floor collision
+
 		bsr	object_ColM_Floor
 		beq.s	.falling
-		bclr	#bitobj_air,obj_status(a6)
 		bsr	object_SetColFloor
 		bra.s	.cont_fall
 .falling:
 		move.w	obj_y_spd(a6),d3
+		bset	#bitobj_air,obj_status(a6)
 		add.w	#$60,d3		; Fall speed
 		cmp.w	#$800,d3
 		blt.s	.touchy
 		move.w	#$800,d3
-		bra.s	.touchy
-		move.w	#$100,d3
+; 		bra.s	.touchy
 .touchy:
 		move.w	d3,obj_y_spd(a6)
 .cont_fall:
+; 		bsr	object_UpdY
 		rts
 
 ; ; -----------------------------------------

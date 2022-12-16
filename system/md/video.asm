@@ -2103,12 +2103,8 @@ MdMap_DrawScrlMd:
 		lea	(vdp_data),a5
 		bsr.s	.this_bg
 		adda	#sizeof_mdbg,a6
-		bsr.s	.this_bg
-		lea	(RAM_BgBufferM),a6	; Clear bits here for
-		move.b	md_bg_flags(a6),d7	; the 32X map
-		and.w	#%11110000,d7
-		move.b	d7,md_bg_flags(a6)
-		rts
+	; SH2-side handles the
+	; RAM_BgBufferM's drawing
 
 .this_bg:
 		move.b	md_bg_flags(a6),d7
@@ -2641,12 +2637,16 @@ Object_Animate:
 ; d7
 ; --------------------------------------------------------
 
-object_Speed:
+object_UpdX:
 		moveq	#0,d7
 		move.w	obj_x_spd(a6),d7
 		ext.l	d7
 		asl.l	#8,d7
 		add.l	d7,obj_x(a6)
+		rts
+object_Speed:
+		bsr.s	object_UpdX
+object_UpdY:
 		moveq	#0,d7
 		move.w	obj_y_spd(a6),d7
 		ext.l	d7
@@ -2657,7 +2657,7 @@ object_Speed:
 ; --------------------------------------------------------
 ; object_ColM_Floor
 ;
-; Check object collision on map's floor
+; Check object collision on 32X map's floor
 ;
 ; Input:
 ; a6 - Object to check
@@ -2666,7 +2666,7 @@ object_Speed:
 ; beq  - No collision
 ; bne  - Found collision
 ; d4.b - Collision block number
-; d5.w - Y Adjustment (-minus)
+; d5.w - Y-pos center snap
 ;
 ; Uses:
 ; d4-d7,a4-a5
@@ -2676,59 +2676,61 @@ object_Speed:
 
 object_ColM_Floor:
 		lea	(RAM_BgBufferM),a5
+		moveq	#0,d5
 		moveq	#0,d4
-		moveq	#0,d5
-; 		tst.w	obj_y_spd(a6)
-; 		bmi.s	.valid
 		move.l	md_bg_col(a5),a4
-		move.w	md_bg_wf(a5),d6
-		sub.w	#1,d6
-		move.w	obj_x(a6),d5
+		move.w	md_bg_wf(a5),d7
+		sub.w	#1,d7
+		move.w	obj_x(a6),d4
 		bpl.s	.v_x
-		clr.w	d5
-.v_x:
-		cmp.w	d6,d5
-		blt.s	.v_xr
-		move.w	d6,d5
-.v_xr:
-		move.w	md_bg_hf(a5),d6
-		sub.w	#1,d6
-		move.w	obj_y(a6),d4
-		bpl.s	.v_y
 		clr.w	d4
+.v_x:
+		cmp.w	d7,d4
+		blt.s	.v_xr
+		move.w	d7,d4
+.v_xr:
+		move.w	md_bg_hf(a5),d7
+		sub.w	#1,d7
+		move.w	obj_y(a6),d5
+		bpl.s	.v_y
+		clr.w	d5
 .v_y:
-		cmp.w	d6,d4
+		cmp.w	d7,d5
 		blt.s	.v_yd
-		move.w	d6,d4
+		move.w	d7,d5
 .v_yd:
-		move.l	obj_size(a6),d6
-		swap	d6		; Add Y
-		and.w	#$FF,d6
-		move.w	d6,d7
-		lsl.w	#3,d7
-		add.w	d7,d4
-		asr.w	#4,d4		; /16
-		asr.w	#4,d5
-		moveq	#0,d7
-		move.w	md_bg_w(a5),d7
-		mulu.w	d7,d4
-		add.l	d5,d4
-		add.l	d4,a4
-		moveq	#0,d5
+		move.l	obj_size(a6),d7
+		swap	d7		; Add Y
+		and.w	#$FF,d7
+		move.w	d7,d6
+		lsl.w	#3,d6
+		add.w	d6,d5
+
+	; 16x16 only
+		lsr.w	#1,d7
+		asr.w	#4,d4
+		add.l	d4,a4		; Add X
+		move.l	d5,d4
+		asr.w	#4,d4
+		moveq	#0,d6
+		move.w	md_bg_w(a5),d6
+		mulu.w	d6,d4
+		add.l	d4,a4		; Add Y
+		and.w	#-$10,d5	; Filter target Y
 		move.b	(a4),d4
-		sub.l	d7,a4
-		sub.w	#1,d6
+		sub.l	d6,a4
+		sub.w	#1,d7
 		bmi.s	.valid
 .next:
-		swap	d6
-		move.b	(a4),d6
+		swap	d7
+		move.b	(a4),d7
 		beq.s	.blnk
-		move.b	d6,d4
+		move.b	d7,d4
 		sub.w	#$10,d5
 .blnk:
-		sub.l	d7,a4
-		swap	d6
-		dbf	d6,.next
+		sub.l	d6,a4
+		swap	d7
+		dbf	d7,.next
 .valid:
 		and.w	#$FF,d4		; Filter ID
 		rts
@@ -2742,39 +2744,40 @@ object_ColM_Floor:
 ;
 ; Input:
 ; d4.b - Collision block
-; d5.w - Y decrement
+; d5.w - Y-pos center snap
 ; ----------------------------------------
 
 object_SetColFloor:
 		and.w	#$FF,d4
 		beq.s	.no_col
 		lsl.w	#4,d4
-		move.w	obj_x(a6),d7	; Grab CENTER X
-		and.w	#$0F,d7		; limit to 16
+		move.w	obj_x(a6),d7		; Grab CENTER X
+		and.w	#$0F,d7			; limit to 16
 		lea	slope_data_16(pc),a0
 		adda	d4,a0
 		move.b	(a0,d7.w),d4
 		and.w	#$0F,d4
+
+		moveq	#0,d6
 		move.w	obj_y(a6),d7
-		move.w	d7,d6
-		and.w	#-$10,d7
-		add.w	d5,d7
-		tst.b	d4
-		beq.s	.zero
-		add.w	d4,d7
-	; d6 - curr
-	; d7 - new
-		cmp.w	d7,d6
+		move.l	obj_size(a6),d6
+		swap	d6
+		and.w	#$FF,d6
+		lsl.w	#3,d6
+		sub.w	d6,d5
+		add.w	d4,d5	; target slope
+		cmp.w	d5,d7
 		blt.s	.no_col
-		move.w	obj_x_spd(a6),d6
-		bne.s	.zero
-; 		bpl.s	.x_pl
-; 		neg.w	d6
-; .x_pl:
-		move.w	#$600,d6 ;TEMPORAL
+		move.w	#$800,d6
 		move.w	d6,obj_y_spd(a6)
-.zero:
-		move.w	d7,obj_y(a6)
+; .set_me:
+; 		move.w	obj_x_spd(a6),d6
+; 		bpl.s	.x_spd
+; 		neg.w	d6
+; .x_spd:
+
+		bclr	#bitobj_air,obj_status(a6)
+		move.w	d5,obj_y(a6)
 .no_col:
 		rts
 
