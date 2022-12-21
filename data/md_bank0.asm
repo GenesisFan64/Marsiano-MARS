@@ -9,7 +9,7 @@
 ; Maximum size: $0FFFFF bytes per bank
 ; ----------------------------------------------------------------
 
-		include "data/mars/palettes.asm"	; All 32X palettes will be here.
+		include "data/m_palettes.asm"	; All 32X palettes will be here.
 
 		align 2
 Pal_level0:	binclude "data/maps/2D/level0/pal.bin"

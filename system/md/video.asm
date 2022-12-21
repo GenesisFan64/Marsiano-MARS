@@ -2706,29 +2706,33 @@ object_ColM_Floor:
 		lsl.w	#3,d6
 		add.w	d6,d5
 
+	; d5 - Ypos + size
+	; d6 - Xpos
+	; d7 - Dsize/2
+
 	; 16x16 only
-		lsr.w	#1,d7
-		asr.w	#4,d4
+		lsr.w	#1,d7		; Dsize/2
+		asr.w	#4,d4		; X >> 16
 		add.l	d4,a4		; Add X
-		move.l	d5,d4
-		asr.w	#4,d4
+		move.l	d5,d4		; Copy d5 to d4
+		asr.w	#4,d4		; Y >> 16
 		moveq	#0,d6
-		move.w	md_bg_w(a5),d6
-		mulu.w	d6,d4
+		move.w	md_bg_w(a5),d6	; d6: map width
+		mulu.w	d6,d4		; (Y>>16)*(mwidth)
 		add.l	d4,a4		; Add Y
-		and.w	#-$10,d5	; Filter target Y
-		move.b	(a4),d4
+		and.w	#-$10,d5	; Filter Y Snap
+		move.b	(a4),d4		; d4: Start ID
 		sub.l	d6,a4
-		sub.w	#1,d7
+		sub.w	#1,d7		; Dsize - 1
 		bmi.s	.valid
 .next:
 		swap	d7
-		move.b	(a4),d7
+		move.b	(a4),d7		; New ID != 0?
 		beq.s	.blnk
-		move.b	d7,d4
-		sub.w	#$10,d5
+		move.b	d7,d4		; Set new ID
+		sub.w	#$10,d5		; Decrement Y Snap
 .blnk:
-		sub.l	d6,a4
+		sub.l	d6,a4		; Decrement width
 		swap	d7
 		dbf	d7,.next
 .valid:
@@ -2767,7 +2771,7 @@ object_SetColFloor:
 		sub.w	d6,d5
 		add.w	d4,d5	; target slope
 		cmp.w	d5,d7
-		blt.s	.no_col
+		ble.s	.no_col
 		move.w	#$800,d6
 		move.w	d6,obj_y_spd(a6)
 ; .set_me:

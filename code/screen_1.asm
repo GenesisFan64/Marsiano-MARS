@@ -417,8 +417,8 @@ ObjMd_Player:
 	; ----------------------
 
 		lea	(Controller_1),a4
-; 		btst	#bitobj_air,obj_status(a6)
-; 		bne.s	.nc
+		btst	#bitobj_air,obj_status(a6)
+		bne.s	.nc
 		move.w	on_press(a4),d0
 		move.w	on_hold(a4),d3
 		btst	#bitJoyC,d0

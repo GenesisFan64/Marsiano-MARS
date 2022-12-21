@@ -1699,10 +1699,10 @@ mstr_gfx2_loop:
 		tst	r0,r0
 		bf	.wait_slv
 		mov	#_vdpreg,r1
-.waitv:
-		mov.b	@(vdpsts,r1),r0			; If we got late to VBlank wait until
-		tst	#VBLK,r0			; DISPLAY is active again.
-		bf	.waitv
+; .waitv:
+; 		mov.b	@(vdpsts,r1),r0			; If we got late to VBlank wait until
+; 		tst	#VBLK,r0			; DISPLAY is active again.
+; 		bf	.waitv
 		mov.b	@(framectl,r1),r0		; REQUEST Framebuffer swap
 		xor	#1,r0
 		mov.b	r0,@(framectl,r1)

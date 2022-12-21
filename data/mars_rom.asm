@@ -36,7 +36,7 @@ MapFg_M:	binclude "data/maps/2D/level0/m_fg.bin"
 ; Graphics
 ; --------------------------------------------------------
 
-		include "data/mars/graphics.asm"
+		include "data/m_graphics.asm"
 
 ; --------------------------------------------------------
 ; Models

@@ -40,12 +40,14 @@ SCALE_SIZE	  = 0x80#0x100
 img_width         = 1			# failsafe.
 img_height        = 1
 
+
 # reserved names for textures
 TAG_NOMATERIAL	  = "MARSNULL"		# random color mode
 TAG_MARSCOLOR	  = "MARSINDX"		# set index color (0-255) ex. for color 10: MARSINDX_10
 #TAG_MARSINDX_LIST = "MARSLIST"          # set index color in the material (for animated stuff)
 TAG_TEXTUR        = "Textr_"		# tag for texture data in assembly
 TAG_OBJECTSDIR    = "import"		# folder name that stores your objs (and material)
+MODEL_FOLDER      = "data/mars/objects/mdl/"
 
 # ======================================================================
 # -------------------------------------------------
@@ -534,10 +536,10 @@ if a != 0:
 out_head.write("MarsObj_"+object_name+":\n")
 out_head.write("\t\tdc.w "+str(used_triangles+used_quads)+","+str(num_vert)+"\n") # numof_faces, numof_vertices
 out_head.write("\t\tdc.l TH|.vert,TH|.face,TH|.vrtx,TH|.mtrl\n")
-out_head.write('.vert:\t\tbinclude "data/mars/objects/mdl/'+object_name+'/vert.bin"\n')
-out_head.write('.face:\t\tbinclude "data/mars/objects/mdl/'+object_name+'/face.bin"\n')
-out_head.write('.vrtx:\t\tbinclude "data/mars/objects/mdl/'+object_name+'/vrtx.bin"\n')
-out_head.write('.mtrl:\t\tinclude "data/mars/objects/mdl/'+object_name+'/mtrl.asm"\n')
+out_head.write('.vert:\t\tbinclude "'+MODEL_FOLDER+object_name+'/vert.bin"\n')
+out_head.write('.face:\t\tbinclude "'+MODEL_FOLDER+object_name+'/face.bin"\n')
+out_head.write('.vrtx:\t\tbinclude "'+MODEL_FOLDER+object_name+'/vrtx.bin"\n')
+out_head.write('.mtrl:\t\tinclude "'+MODEL_FOLDER+object_name+'/mtrl.asm"\n')
 out_head.write("\t\talign 4")
 print("Vert:",num_vert,"Face:",used_triangles+used_quads)
 print("Poly:",used_triangles,"Quad:",used_quads)

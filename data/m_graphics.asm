@@ -12,10 +12,6 @@
 Textr_marscity:
 		binclude "data/maps/3D/mcity/mtrl/marscity_art.bin"
 		align 4
-Textr_pecsi:
-		binclude "data/mars/objects/mtrl/pecsi_art.bin"
-		align 4
-
 SuperSpr_Test:
 		binclude "data/sprites/mars/nicole/sprites_art.bin"
 		align 4
