@@ -443,6 +443,9 @@ MdlMap_Build:
 		move.l	(a1,d0.w),mdl_data(a4)
 		move.w	d1,mdl_x_pos(a4)
 		move.w	d2,mdl_z_pos(a4)
+		clr.w	mdl_x_rot(a4)
+		clr.w	mdl_y_rot(a4)
+		clr.w	mdl_z_rot(a4)
 		adda	#sizeof_mdlobj,a4
 		rts
 
@@ -614,9 +617,3 @@ MarsMap_00:
 		align 2
 
 ; ====================================================================
-
-.here:
-	if MOMPASS=6
-		message "THIS RAM-CODE ends at: \{.here}"
-	endif
-		dephase

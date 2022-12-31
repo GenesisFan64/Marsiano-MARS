@@ -45,7 +45,7 @@ Md_ReadModes:
 		and.w	#%0111,d0		; <-- current limit
 		lsl.w	#2,d0
 		move.l	.pick_boot(pc,d0.w),d0
-		jsr	(System_JumpRamCode).l
+		jsr	(System_GrabRamCode).l
 		bra.s	Md_ReadModes
 .pick_boot:
 		dc.l RamCode_Scrn1
@@ -71,11 +71,29 @@ Md_TopCode_e:
 ; --------------------------------------------------------
 
 RamCode_Scrn1:
+		phase RAMCODE_USER
 		include "code/screen_1.asm"
+.here:
+	if MOMPASS=6
+		message "THIS RAM-CODE ends at: \{.here}"
+	endif
+		dephase
 RamCode_Scrn2:
+		phase RAMCODE_USER
 		include "code/screen_2.asm"
+.here:
+	if MOMPASS=6
+		message "THIS RAM-CODE ends at: \{.here}"
+	endif
+		dephase
 RamCode_Debug:
+		phase RAMCODE_USER
 		include "code/debug.asm"
+.here:
+	if MOMPASS=6
+		message "THIS RAM-CODE ends at: \{.here}"
+	endif
+		dephase
 
 ; ====================================================================
 ; --------------------------------------------------------

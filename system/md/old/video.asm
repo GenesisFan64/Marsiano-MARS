@@ -284,7 +284,6 @@ Video_ClearScreen:
 		lsl.w	#8,d1
 		lsl.w	#2,d1
 		bsr	Video_Fill
-	; RAM...
 		lea	(RAM_HorScroll),a0
 		move.w	#240-1,d7
 		moveq	#0,d0
@@ -312,14 +311,12 @@ Video_ClearScreen:
 		move.l	d0,(a0)+
 		move.l	d0,(a1)+
 		dbf	d7,.pnext
-
-		lea	(RAM_MdDreq+Dreq_Palette),a0
-		lea	(RAM_MdMarsPalFd),a1
+	; Only the 256-color's fade...
+		lea	(RAM_MdMarsPalFd),a0
 		move.w	#(256/2)-1,d7
 		moveq	#0,d0
 .pmnext:
 		move.l	d0,(a0)+
-		move.l	d0,(a1)+
 		dbf	d7,.pmnext
 		rts
 

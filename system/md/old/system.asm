@@ -88,10 +88,10 @@ System_Init:
 ; --------------------------------------------------------
 
 System_WaitFrame:
-; 		lea	(vdp_ctrl),a6
-; .wait_lag:	move.w	(a6),d4
-; 		btst	#bitVBlk,d4
-; 		bne.s	.wait_lag
+		lea	(vdp_ctrl),a6
+.wait_lag:	move.w	(a6),d4
+		btst	#bitVBlk,d4
+		bne.s	.wait_lag
 ; 		bsr	Video_Mars_WaitFrame
 		bsr	System_MarsUpdate
 		lea	(vdp_ctrl),a6
@@ -168,7 +168,7 @@ System_MarsUpdate:
 		jmp	(System_RomSendDreq).l	; <-- external jump
 
 ; --------------------------------------------------------
-; System_GrabRamCode
+; System_JumpRamCode
 ;
 ; Send new code to the USER side of RAM and
 ; jump into it.
@@ -178,7 +178,7 @@ System_MarsUpdate:
 ;      in the 880000/900000 areas
 ; --------------------------------------------------------
 
-System_GrabRamCode:
+System_JumpRamCode:
 		or.l	#$880000,d0
 		move.l	d0,a0
 		lea	(RAMCODE_USER),a1

@@ -197,7 +197,7 @@ dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
 
 ; --------------------------------------------------------
 ; 02Eh
-marsEnbl	db 0		; flag to use PWM communication
+marsBlock	db 0		; flag to temporally disable PWM communication
 marsUpd		db 0		; flag to request a PWM transfer
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 palMode		db 0		; PAL speed flag (TODO)
@@ -1005,9 +1005,6 @@ track_out:
 ; --------------------------------------------------------
 
 mars_scomm:
-		ld	a,(marsEnbl)	; Enable MARS requests?
-		or	a
-		jr	z,.blocked
 		ld	hl,6000h	; Point BANK closely
 		rst	8		; to the 32X area ($A10000)
 		ld	(hl),0
@@ -1023,6 +1020,9 @@ mars_scomm:
 		ld	(hl),1
 		ld	iy,8000h|5100h	; iy - mars sysreg (now $A15100)
 		ld	ix,pwmcom
+		ld	a,(marsBlock)	; block MARS requests?
+		or	a
+		jr	nz,.blocked
 		ld	a,(marsUpd)	; update?
 		or	a
 		ret	z

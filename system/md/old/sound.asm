@@ -41,9 +41,6 @@ Sound_Init:
 .copy:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copy
-	if MARS=1
-		move.b	#1,(z80_cpu+marsEnbl).l		; $2E=marsEnbl
-	endif
 		move.w	#0,(z80_reset).l		; Reset cancel
 		nop
 		nop
