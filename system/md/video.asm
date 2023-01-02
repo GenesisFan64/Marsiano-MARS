@@ -106,6 +106,7 @@ obj_size	ds.l 1		; Object size (see below)
 obj_x		ds.l 1		; Object X Position
 obj_y		ds.l 1		; Object Y Position
 obj_map		ds.l 1		; Object image settings
+obj_vram	ds.w 1		; Object VRAM position (MD-side only)
 obj_x_spd	ds.w 1		; Object X Speed
 obj_y_spd	ds.w 1		; Object Y Speed
 obj_anim_indx	ds.w 1		; Object animation increment (obj_anim + obj_anim_indx)
@@ -114,24 +115,27 @@ obj_frame	ds.w 1		; Object display frame (MD: $FFFF, MARS: $YY,$XX)
 obj_anim_spd	ds.b 1		; Object animation delay
 obj_index	ds.b 1		; Object code index
 obj_subid	ds.b 1		; Object SubID
-obj_status	ds.b 1		; Object status
+obj_set		ds.b 1		; Object settings
+obj_status	ds.b 1		; Object custom status
 obj_spwnid	ds.b 1		; Object respawn index (this - 1)
-obj_col		ds.b 1		; Object collision
 obj_ram		ds.b $40	; Object RAM
 sizeof_mdobj	ds.l 0
 		finish
 ; 		message "\{sizeof_mdobj}"
 
 ; --------------------------------
-; obj_status
+; obj_settings
 ; --------------------------------
 
-bitobj_flipH	equ	0	; set to flip Sprite Horizontally
+bitobj_Mars	equ	7	; This object is for 32X side.
 bitobj_flipV	equ	1	; set to flip Sprite Vertically
-bitobj_air	equ	2	; set if floating/jumping
+bitobj_flipH	equ	0	; set to flip Sprite Horizontally
 
-; bitobj_touch	equ	6	; set to get touched by objects
-bitobj_stay	equ	7	; set to stay on-screen
+; --------------------------------
+; obj_set
+; --------------------------------
+
+bitobj_air	equ	0	; set if floating/jumping
 
 ; --------------------------------
 ; obj_size
@@ -180,7 +184,7 @@ sizeof_mdvid		ds.l 0
 ; Init Genesis video
 ; --------------------------------------------------------
 
-Video_Init:		
+Video_Init:
 		lea	(RAM_MdVideo),a6	; Clear RAM
 		moveq	#0,d6
 		move.w	#(sizeof_mdvid-RAM_MdVideo)-1,d7
@@ -385,63 +389,63 @@ Video_LoadMap:
 		dbf	d5,.yloop
 		rts
 
-; ; --------------------------------------------------------
-; ; Video_LoadMap_Vert
-; ;
-; ; Load map data, Vertical order
-; ;
-; ; a0 - Map data
-; ; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
-; ; d1 | LONG - Width|Height (cells),  mapsize(x,y)
-; ; d2 | WORD - VRAM
+; --------------------------------------------------------
+; Video_LoadMap_Vert
 ;
-; ; Breaks:
-; ; a4-a5,d4-d7
-; ; --------------------------------------------------------
+; Load map data, Vertical order
 ;
-; Video_LoadMap_Vert:
-; 		lea	(vdp_data),a4
-; 		bsr	vid_PickLayer
-; 		move.l	d1,d5		; Start here
-; 		swap	d5
-; .xloop:
-; 		swap	d5
-; 		move.l	d4,-(sp)
-; 		move.w	d1,d7
-; 		btst	#2,(RAM_VdpRegs+$C).l
-; 		beq.s	.yloop
-; 		lsr.w	#1,d7
-; .yloop:
-; 		move.l	d4,4(a4)
-; 		move.w	(a0),d5
-; 		cmp.w	#-1,d5
-; 		bne.s	.nonull
-; 		move.w	#varNullVram,d5
-; 		bra.s	.cont
-; .nonull:
-; 		add.w	d2,d5
-; .cont:
-; 		swap	d7
-; 		adda	#2,a0
-; 		btst	#2,(RAM_VdpRegs+$C).l
-; 		beq.s	.nodble
-; 		adda	#2,a0
-; 		move.w	d5,d7
-; 		lsr.w	#1,d7
-; 		and.w	#$7FF,d7
-; 		and.w	#$F800,d5
-; 		or.w	d7,d5
-; .nodble:
-; 		swap	d7
-; 		move.w	d5,(a4)
-; 		add.l	d6,d4
-; 		dbf	d7,.yloop
-; .outdbl:
-; 		move.l	(sp)+,d4
-; 		add.l	#$20000,d4
-; 		swap	d5
-; 		dbf	d5,.xloop
-; 		rts
+; a0 - Map data
+; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
+; d1 | LONG - Width|Height (cells),  mapsize(x,y)
+; d2 | WORD - VRAM
+
+; Breaks:
+; a4-a5,d4-d7
+; --------------------------------------------------------
+
+Video_LoadMap_Vert:
+		lea	(vdp_data),a4
+		bsr	vid_PickLayer
+		move.l	d1,d5		; Start here
+		swap	d5
+.xloop:
+		swap	d5
+		move.l	d4,-(sp)
+		move.w	d1,d7
+		btst	#2,(RAM_VdpRegs+$C).l
+		beq.s	.yloop
+		lsr.w	#1,d7
+.yloop:
+		move.l	d4,4(a4)
+		move.w	(a0),d5
+		cmp.w	#-1,d5
+		bne.s	.nonull
+		move.w	#varNullVram,d5
+		bra.s	.cont
+.nonull:
+		add.w	d2,d5
+.cont:
+		swap	d7
+		adda	#2,a0
+		btst	#2,(RAM_VdpRegs+$C).l
+		beq.s	.nodble
+		adda	#2,a0
+		move.w	d5,d7
+		lsr.w	#1,d7
+		and.w	#$7FF,d7
+		and.w	#$F800,d5
+		or.w	d7,d5
+.nodble:
+		swap	d7
+		move.w	d5,(a4)
+		add.l	d6,d4
+		dbf	d7,.yloop
+.outdbl:
+		move.l	(sp)+,d4
+		add.l	#$20000,d4
+		swap	d5
+		dbf	d5,.xloop
+		rts
 
 ; ; --------------------------------------------------------
 ; ; Video_AutoMap_Vert
@@ -794,12 +798,12 @@ Video_RunFade:
 
 ; --------------------------------------------------------
 ; Video_LoadPal
-; 
+;
 ; Input:
 ; a0 - Palette data
 ; d0 - Start position
 ; d1 - Number of colors
-; 
+;
 ; Breaks:
 ; d5-d7,a6
 ; --------------------------------------------------------
@@ -1232,11 +1236,15 @@ Video_LoadArt:
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
 		jsr	System_Dma_Enter
+	if MARS
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
+	endif
  		move.w	d5,-(sp)
 		move.w	d6,(a4)				; d6 - First word
 		move.w	(sp)+,(a4)			; *** Second write, 68k freezes until DMA ends
+	if MARS
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
+	endif
 		move.w	#$8100,d6			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d6
 		move.w	d6,(a4)
@@ -1278,7 +1286,9 @@ Video_DmaBlast:
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a4)
 		jsr	System_Dma_Enter		; Request Z80 stop and SH2 backup
+	if MARS
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
+	endif
 .next:		tst.w	(RAM_VdpDmaIndx).w
 		beq.s	.end
 		move.l	(a3),(a4)			; Size
@@ -1296,7 +1306,9 @@ Video_DmaBlast:
 		sub.w	#7*2,(RAM_VdpDmaIndx).w
 		bra.s	.next
 .end:
+	if MARS
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
+	endif
 		jsr	System_Dma_Exit			; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
@@ -1318,6 +1330,7 @@ Video_DmaBlast:
 ; --------------------------------------------------------
 
 Video_Mars_GfxMode:
+	if MARS
 		move.w	d0,d7
 		and.w	#%00000111,d7			; Current limit: 8 Master modes
 		or.w	#$C0,d7
@@ -1329,6 +1342,7 @@ Video_Mars_GfxMode:
 .wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master
 		and.w	#%11000000,d7
 		bne.s	.wait
+	endif
 		rts
 
 ; --------------------------------------------------------
@@ -1336,6 +1350,7 @@ Video_Mars_GfxMode:
 ; --------------------------------------------------------
 
 Video_Mars_WaitFrame:
+	if MARS
 		bset	#5,(sysmars_reg+comm12+1).l	; Set R bit
 .wait:
 ; 		move.w	(vdp_ctrl),d7
@@ -1345,6 +1360,7 @@ Video_Mars_WaitFrame:
 		btst	#5,d7
 		bne.s	.wait
 .late:
+	endif
 		rts
 
 ; --------------------------------------------------------
@@ -2457,72 +2473,111 @@ Objects_Run:
 ; Call this BEFORE VBlank.
 ; --------------------------------------------------------
 
-; *** Only SUPER Sprites for now ***
-
 Objects_Show:
 		lea	(RAM_ObjDispList),a6
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a5
-		lea	(RAM_BgBufferM),a4
+		lea	(RAM_Sprites),a5		; a5 - Genesis sprites
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a4	; a4 - 32X SUPER Sprites
+		moveq	#1,d6				; d6 - MD Link
 		move.w	#MAX_MDOBJ-1,d7
 .next:
 		move.l	(a6),d0
-		beq.s	.finish
+		beq	.finish
+; 		bra *
 		move.l	d0,a3
 		move.l	obj_map(a3),a0		; Read mapping
-		move.l	(a0)+,marsspr_data(a5)
-		move.w	(a0)+,marsspr_dwidth(a5)
-		move.w	(a0)+,marsspr_indx(a5)
-		move.b	(a0)+,d4
+		btst	#bitobj_Mars,obj_set(a3)
+		bne.s	.mars_mode
+
+		move.w	obj_frame(a3),d0
+		add.w	d0,d0
+		move.w	(a0,d0.w),d0
+		adda	d0,a0
+		move.w	(a0)+,d5
+		beq	.mk_spr
+		sub.w	#1,d5
+.mk_pz:
+		move.b	(a0)+,d0
+		ext.w	d0
+		add.w	obj_y(a3),d0
+		add.w	#$80,d0
+		move.b	(a0)+,d1
+		lsl.w	#8,d1
+		or.w	d6,d1
+
+		move.w	(a0)+,d2
+		add.w	obj_vram(a3),d2
+		adda	#2,a0
+
+		move.w	(a0)+,d3
+		add.w	obj_x(a3),d3
+		add.w	#$80,d3
+
+		move.w	d0,(a5)+
+		move.w	d1,(a5)+
+		move.w	d2,(a5)+
+		move.w	d3,(a5)+
+		add.w	#1,d6
+		dbf	d5,.mk_pz
+
+		bra.s	.mk_spr
+
+.mars_mode:
+
+		move.l	(a0)+,marsspr_data(a4)
+		move.w	(a0)+,marsspr_dwidth(a4)
+		move.w	(a0)+,marsspr_indx(a4)
+		move.b	(a0)+,d2
 		move.b	(a0)+,d3
-		move.b	d4,marsspr_xs(a5)
-		move.b	d3,marsspr_ys(a5)
+		move.b	d2,marsspr_xs(a4)
+		move.b	d3,marsspr_ys(a4)
 		move.w	obj_frame(a3),d0	; Read frame
-		move.b	d0,marsspr_xfrm(a5)
+		move.b	d0,marsspr_xfrm(a4)
 		ror.w	#8,d0
-		move.b	d0,marsspr_yfrm(a5)
-		move.w	obj_x(a3),d6
+		move.b	d0,marsspr_yfrm(a4)
+		move.w	obj_x(a3),d4
 		move.w	obj_y(a3),d5
-		and.w	#$FF,d4
+		and.w	#$FF,d2
 		and.w	#$FF,d3
-		lsr.w	#1,d4
+		lsr.w	#1,d2
 		lsr.w	#1,d3
-; 		divu.w	#2,d4			; **
-		sub.w	d4,d6
+; 		divu.w	#2,d2			; **
+		sub.w	d2,d4
 ; 		divu.w	#2,d3			; **
 		sub.w	d3,d5
-
-; 		move.l	obj_size(a3),d4		; d4 - UDLR sizes
-
-; 		move.w	d4,d3			; Grab LR
+; 		move.l	obj_size(a3),d2		; d2 - UDLR sizes
+; 		move.w	d2,d3			; Grab LR
 ; 		lsr.w	#5,d3
 ; 		and.w	#%11111000,d3
-; 		sub.w	d3,d6			; Subtract X
-; 		swap	d4
-; 		move.w	d4,d3			; Grab UD
+; 		sub.w	d3,d4			; Subtract X
+; 		swap	d2
+; 		move.w	d2,d3			; Grab UD
 ; 		lsr.w	#8,d3
 ; 		lsl.b	#3,d3
 ; 		and.w	#$FF,d3
 ; 		sub.w	d3,d5			; Subtract Y
-		sub.w	md_bg_x(a4),d6
-		sub.w	md_bg_y(a4),d5
-		move.w	d6,marsspr_x(a5)
-		move.w	d5,marsspr_y(a5)
-		moveq	#0,d6
-		btst	#bitobj_flipH,obj_status(a3)
+		lea	(RAM_BgBufferM),a2
+		sub.w	md_bg_x(a2),d4
+		sub.w	md_bg_y(a2),d5
+		move.w	d4,marsspr_x(a4)
+		move.w	d5,marsspr_y(a4)
+		moveq	#0,d4
+		btst	#bitobj_flipH,obj_set(a3)
 		beq.s	.flip_h
-		bset	#0,d6
+		bset	#0,d4
 .flip_h:
-		btst	#bitobj_flipV,obj_status(a3)
+		btst	#bitobj_flipV,obj_set(a3)
 		beq.s	.flip_v
-		bset	#1,d6
+		bset	#1,d4
 .flip_v:
-		move.w	d6,marsspr_flags(a5)
+		move.w	d4,marsspr_flags(a4)
+		adda	#sizeof_marsspr,a4	; Next SuperSprite
 
+.mk_spr:
 		clr.l	(a6)			; Clear request
 		adda	#4,a6			; Next slot
-		adda	#sizeof_marsspr,a5	; Next SuperSprite
 		dbf	d7,.next
 .finish:
+		clr.l	(a5)		; TODO: endoflist check
 		rts
 
 ; ----------------------------------------------------------------
@@ -2549,6 +2604,7 @@ object_Display:
 .srch:
 		move.l	(a0),d0
 		beq.s	.this_one
+		adda	#4,a0
 		dbf	d1,.srch
 .this_one:
 		move.l	a6,(a0)

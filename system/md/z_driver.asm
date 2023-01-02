@@ -30,7 +30,7 @@ Z80_TOP:
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-ZSET_WTUNE	equ -25		; Manual frequency adjustment for DAC WAVE playback
+ZSET_WTUNE	equ -26		; Manual frequency adjustment for DAC WAVE playback
 ZSET_TESTME	equ 0		; Set to 1 to "hear"-test the DAC playback
 MAX_INS		equ 16		; Max usable instruments for EACH track slot
 
@@ -197,7 +197,7 @@ dac_fill:	push	af		; <-- this changes between PUSH AF(playing) and RET(stopped)
 
 ; --------------------------------------------------------
 ; 02Eh
-marsEnbl	db 0		; flag to use PWM communication
+marsBlock	db 0		; flag to use PWM communication
 marsUpd		db 0		; flag to request a PWM transfer
 currTickBits	db 0		; Current Tick/Tempo bitflags (000000BTb B-beat, T-tick)
 palMode		db 0		; PAL speed flag (TODO)
@@ -261,7 +261,7 @@ drv_loop:
 		call	get_tick
 		rst	8
 .neither:
-		call	mars_scomm		; 32X communication for PWM playback
+		call	ex_comm		; 32X communication for PWM playback
 		call	get_tick
 		rst	8
 .next_cmd:
@@ -999,15 +999,18 @@ track_out:
 		ret
 
 ; --------------------------------------------------------
-; ** 32X ***
+; ** SPECIAL ***
+;
+; 32X:
 ; Communicate with the Slave CPU to send the table
 ; of PWM's to play.
 ; --------------------------------------------------------
 
-mars_scomm:
-		ld	a,(marsEnbl)	; Enable MARS requests?
+ex_comm:
+	if MARS
+		ld	a,(marsBlock)	; Enable MARS requests?
 		or	a
-		jr	z,.blocked
+		jr	nz,.blocked
 		ld	hl,6000h	; Point BANK closely
 		rst	8		; to the 32X area ($A10000)
 		ld	(hl),0
@@ -1076,8 +1079,9 @@ mars_scomm:
 		jr	nz,.next_pass
 		res	7,(iy+comm14)	; Break transfer loop
 		res	6,(iy+comm14)	; Clear CLK
-		rst	8
 .blocked:
+	endif
+		rst	8
 		ld	hl,pwmcom
 		ld	b,7		; MAX PWM channels
 		xor	a
@@ -1085,6 +1089,11 @@ mars_scomm:
 		ld	(hl),a		; Reset our COM bytes
 		inc	hl
 		djnz	.clrcom
+		rst	8
+		nop
+		nop
+		nop
+		rst	8
 		ret
 
 ; --------------------------------------------------------
@@ -3438,7 +3447,7 @@ chip_env:
 .fm_insupd:
 		push	bc
 		call	.fm_keyoff		; restart chip channel
-		rst	20h			; <--- TODO: si se pone lento, quitarlo
+; 		rst	20h			; <--- TODO: si se pone lento, quitarlo
 		push	ix			; copy ix to hl
 		pop	hl
 		ld	a,c

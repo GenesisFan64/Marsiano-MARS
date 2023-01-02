@@ -379,6 +379,7 @@ ObjMd_Player:
 		move.b	#1,obj_index(a6)
 		clr.b	obj_anim_indx(a6)
 		move.b	#0,obj_anim_id(a6)
+		bset	#bitobj_Mars,obj_set(a6)
 
 ; ---------------------------------
 ; MAIN
@@ -444,13 +445,13 @@ ObjMd_Player:
 	; Right/Left
 		btst	#bitJoyRight,d0
 		beq.s	.nrm
-		bclr	#bitobj_flipH,obj_status(a6)
+		bclr	#bitobj_flipH,obj_set(a6)
 		move.w	#$800,d1
 		move.w	#1,d2
 .nrm
 		btst	#bitJoyLeft,d0
 		beq.s	.contlr
-		bset	#bitobj_flipH,obj_status(a6)
+		bset	#bitobj_flipH,obj_set(a6)
 		move.w	#-$800,d1
 		move.w	#1,d2
 .contlr:
