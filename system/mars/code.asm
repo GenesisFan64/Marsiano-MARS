@@ -1509,42 +1509,61 @@ mstr_gfx1_init_1:
 		bra	mstr_gfx1_cont
 		nop
 mstr_gfx1_init_2:
+; 		mov	#1,r0
+; 		mov.w	r0,@(marsGbl_WaveEnable,gbr)	; *** TEMPORAL
+; 		mov	#16,r0
+; 		mov.w	r0,@(marsGbl_WaveSpd,gbr)	; ***
+; 		mov	#8,r0
+; 		mov.w	r0,@(marsGbl_WaveMax,gbr)	; ***
+; 		mov	#16,r0
+; 		mov.w	r0,@(marsGbl_WaveDeform,gbr)	; ***
+
 		mov 	#_vdpreg,r1
 		mov	#1,r0
 		mov.b	r0,@(bitmapmd,r1)
 mstr_gfx1_cont:
-		mov	#$200,r1
-		mov	#512,r2
-		mov	#240,r3
-		mov	#MarsVideo_MakeNametbl,r0
-		jsr	@r0
-		mov	#0,r4
+; 		mov	#MarsGfx_TEMP,r1
+; 		mov	#_framebuffer+$200,r2
+; 		mov	#(320*224)/4,r3
+; .copyme:
+; 		mov	@r1+,r0
+; 		mov	r0,@r2
+; 		dt	r3
+; 		bf/s	.copyme
+; 		add	#4,r2
 
 ; -------------------------------
 ; Loop
 ; -------------------------------
 
 mstr_gfx1_loop:
-		mov	#$200,r1			; Clear framebuffer
-		mov	#(320+16)/2,r2
-		mov	#240,r3
-		mov	#MarsVideo_ClearScreen,r0
+		mov	#$200,r1
+		mov	#320,r2
+		mov	#224,r3
+		mov	#MarsVideo_MakeNametbl,r0
 		jsr	@r0
 		mov	#0,r4
 
-		mov	#$200,r1
-		mov	#0,r2
-		mov	#0,r3
-		mov	#512,r4
-		mov	#240,r5
-		mov	#512*240,r6
-		mov	#Cach_Intrl_Size,r7
-		mov	#MarsVideo_MkSprCoords,r0	; Screen settings for SuperSpr boxes
-		jsr	@r0
-		nop
-		mov	#MarsVideo_DrawSuperSpr_M,r0
-		jsr	@r0
-		nop
+; 		mov	#$200,r1			; Clear framebuffer
+; 		mov	#(320+16)/2,r2
+; 		mov	#240,r3
+; 		mov	#MarsVideo_ClearScreen,r0
+; 		jsr	@r0
+; 		mov	#0,r4
+;
+; 		mov	#$200,r1
+; 		mov	#0,r2
+; 		mov	#0,r3
+; 		mov	#512,r4
+; 		mov	#240,r5
+; 		mov	#512*240,r6
+; 		mov	#Cach_Intrl_Size,r7
+; 		mov	#MarsVideo_MkSprCoords,r0	; Screen settings for SuperSpr boxes
+; 		jsr	@r0
+; 		nop
+; 		mov	#MarsVideo_DrawSuperSpr_M,r0
+; 		jsr	@r0
+; 		nop
 
 		mov	#_vdpreg,r1			; Framebuffer swap REQUEST
 		mov.b	@(framectl,r1),r0

@@ -144,6 +144,7 @@ sndReq_sbyte:
 ; ------------------------------------------------
 
 sndReqCmd:
+	if MARS
 .wait_in:	move.b	(sysmars_reg+comm14),d7
 		and.w	#%11110000,d7
 		bne.s	.wait_in
@@ -161,6 +162,7 @@ sndReqCmd:
 .wait_out:	move.b	(sysmars_reg+comm14),d7
 		and.w	#%11110000,d7
 		bne.s	.wait_out
+	endif
 		rts
 
 ; --------------------------------------------------------
@@ -213,7 +215,7 @@ Sound_DMA_Resume:
 		rts
 
 ; --------------------------------------------------------
-; SoundReq_SetTrack
+; Sound_TrkPlay
 ;
 ; a0 | Pointer to Pattern, Blocks and Instruments list
 ;      in this order:
@@ -334,7 +336,7 @@ Sound_TrkTicks:
 
 Sound_GlbBeats:
 		bsr	sndReq_Enter
-		move.w	#$10,d7		; Command $10
+		move.w	#$09,d7		; Command $09
 		bsr	sndReq_scmd
 		move.b	d0,d7		; d0 - Slot
 		bsr	sndReq_sbyte
@@ -343,6 +345,4 @@ Sound_GlbBeats:
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------
-
-; Z80 code is located on the $880000 area
 

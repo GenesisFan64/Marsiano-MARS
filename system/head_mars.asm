@@ -68,9 +68,9 @@
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
 		dc.b "SEGA 32X        "
-		dc.b "(C)GF64 2023.FEB"
-		dc.b "Un demo chafa para el 32X llamado MARSIANO con S"
-		dc.b "Project Marsiano                                "
+		dc.b "(C)GF64 2023.???"
+		dc.b "Marsiano MARS                                   "
+		dc.b "Marsiano MARS                                   "
 		dc.b "GM TECHDEMO-01"
 		dc.w 0
 		dc.b "J6              "

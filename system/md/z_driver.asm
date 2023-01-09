@@ -1,5 +1,5 @@
 ; --------------------------------------------------------
-; GEMA sound driver
+; GEMA sound driver 2022/2023
 ;
 ; Reads custom miniature versions of Impulsetracker
 ; files, has automatic detection of soundchips for each
@@ -8,18 +8,15 @@
 ; Features:
 ; - Support for 32X but needs specific sound driver code
 ; on the SH2 side, and requires the CMD interrupt.
-; - All 10 FM+PSG channels can be used, 7 PWMs
+; - All 10 FM+PSG channels can be used including extra
+; sound channels depending of the add-on
 ; - Two playable track slots: BGM(0) and SFX(1)
-;   Slot 1 can either overwrite chip channels or
-;   if possible grab unused slots
 ; - Supports FM/PSG effects
-;
-; ...TODO...
 ; --------------------------------------------------------
 
 ; NOTE: DAC sample playback has to be sync'd manually
 ; on every code change.
-; Sample rate is at the 18000hz+ range
+; Sample rate is at the 18000hz-close range
 
 Z80_TOP:
 		cpu Z80			; Enter Z80
@@ -30,8 +27,8 @@ Z80_TOP:
 ; --------------------------------------------------------
 
 MAX_TRKCHN	equ 17		; Max internal tracker channels (4PSG + 6FM + 7PWM)
-ZSET_WTUNE	equ -26		; Manual frequency adjustment for DAC WAVE playback
-ZSET_TESTME	equ 0		; Set to 1 to "hear"-test the DAC playback
+ZSET_WTUNE	equ -27		; Manual frequency adjustment for DAC WAVE playback
+ZSET_TESTME	equ 0		; Set to 1 to "hear"test the DAC playback
 MAX_INS		equ 16		; Max usable instruments for EACH track slot
 
 ; --------------------------------------------------------
@@ -60,7 +57,7 @@ trk_CachNotes	equ 18h	; Pointer to track storage (100h bytes long and aligned)
 trk_CmdReq	equ 1Ah	; Track command requests
 
 ; Tracker channel data, 8 bytes each.
-chnl_Chip	equ 0		; *** MUST BE AT 0 ***
+chnl_Chip	equ 0		; *** MUST BE AT INDEX 0 ***
 chnl_Flags	equ 1		; playback requests and other specific bits
 chnl_Note	equ 2
 chnl_Ins	equ 3
@@ -292,35 +289,19 @@ drv_loop:
 		dw .cmnd_trkplay		; $00 - Play
 		dw .cmnd_trkstop		; $01 - Stop/Pause
 		dw .cmnd_trkresume		; $02 - Resume
-		dw .cmnd_0			; $03 -
+		dw .cmnd_0			; $03 - Check busy
 		dw .cmnd_0			; $04 -
 		dw .cmnd_0			; $05 -
 		dw .cmnd_0			; $06 -
 		dw .cmnd_0			; $07 -
 		dw .cmnd_trkticks		; $08 - Set ticks
-		dw .cmnd_0			; $09 -
+		dw .cmnd_trktempo		; $09 - Set global subbeats
 		dw .cmnd_0			; $0A -
 		dw .cmnd_0			; $0B -
 		dw .cmnd_0			; $0C -
 		dw .cmnd_0			; $0D -
 		dw .cmnd_0			; $0E -
 		dw .cmnd_0			; $0F -
-		dw .cmnd_trktempo		; $10 - Set global subbeats
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0			; $14
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0			; $18
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0			; $1C
-		dw .cmnd_0
-		dw .cmnd_0
-		dw .cmnd_0
 
 ; --------------------------------------------------------
 ; Command list
@@ -668,8 +649,8 @@ updtrack:
 		rst	8
 		pop	bc		; Restore rowcount
 
-	; Check for effects that change things
-	; to internal playback (jump, tempo, etc.)
+	; Check for effects
+	; Jump, Tempo, etc.
 		and	1000b		; Only check for the EFFECT bit
 		or	a
 		jp	z,.next_note
@@ -681,11 +662,8 @@ updtrack:
 		cp	2		; Effect B: Position Jump
 		call	z,.eff_B
 		cp	3		; Effect C: Pattern break
-		call	z,.eff_C
+		jp	z,.eff_C	; <-- JP
 		jp	.next_note
-; .rnout_chnls:
-; 		pop	bc
-; 		jp	.next_note
 
 ; ----------------------------------------
 ; Call this to increment the
@@ -777,10 +755,11 @@ updtrack:
 ; ----------------------------------------
 
 .eff_C:
-		ld	bc,0			; clear rowcount
-		ld	a,(ix+chnl_EffArg)
-		cp	-1			; EffArg == -1?
-		jp	z,.trkend_effC		; Use it as track-end (for SFX)
+		jp	.trkend_effC
+; 		ld	a,(ix+chnl_EffArg)
+; 		cp	-1			; EffArg == -1?
+; 		jp	z,.trkend_effC		; Use it as track-end (for SFX)
+; 		ld	bc,0			; clear rowcount
 
 ; ----------------------------------------
 ; If pattern finished, load the next one
@@ -805,14 +784,14 @@ updtrack:
 		ld	l,0			; quick reset trk_read
 		ld	(iy+trk_Read),l
 		ld	(iy+((trk_Read+1))),h
-
+		rst	8
 		push	hl			; Save hl
 		ld	de,0
 		ld	e,a
-		rst	8
 		ld	l,(iy+trk_romBlk)	; Get block position
 		ld	h,(iy+(trk_romBlk+1))	; directly from ROM
 		ld	a,(iy+(trk_romBlk+2))
+		rst	8
 		add	hl,de
 		adc	a,0
 		ld	b,a
@@ -837,6 +816,7 @@ updtrack:
 		push	de
 		ld	bc,6			; thispoint, rowcount, nextpoint
 		call	transferRom
+		rst	8
 		pop	hl
 		ld	e,(hl)			; de - pointer increment
 		inc	hl
@@ -961,8 +941,9 @@ updtrack:
 .track_end:
 		pop	hl			; Get hl back
 .trkend_effC:
+; 		res	7,(iy+trk_status)
 		call	track_out
-; 		ld	(iy+trk_CmdReq),-1
+		ld	(iy+trk_CmdReq),-1
 		rst	8
 		ld	(iy+trk_rowPause),0
 		ld	(iy+trk_tickTmr),0
@@ -983,19 +964,15 @@ track_out:
 		ld	de,8
 		ld	b,MAX_TRKCHN
 .clrfe:
-		ld	a,(ix+chnl_Chip)
-		or	a
-		jr	z,.nochip
+; 		ld	a,(ix+chnl_Chip)
+; 		or	a
+; 		jr	z,.nochip
 		ld	(ix+chnl_Note),-2
 		ld	(ix+chnl_Vol),64
-		ld	a,(ix+chnl_Flags)
-		ld	a,1
-		ld	(ix+chnl_Flags),a
+		ld	(ix+chnl_Flags),1
 .nochip:
 		add	ix,de
 		djnz	.clrfe
-; 		ld	a,1
-; 		ld	(marsUpd),a
 		ret
 
 ; --------------------------------------------------------
@@ -1080,19 +1057,17 @@ ex_comm:
 		res	7,(iy+comm14)	; Break transfer loop
 		res	6,(iy+comm14)	; Clear CLK
 .blocked:
+
 	endif
 		rst	8
 		ld	hl,pwmcom
 		ld	b,7		; MAX PWM channels
+		rst	8
 		xor	a
 .clrcom:
 		ld	(hl),a		; Reset our COM bytes
 		inc	hl
 		djnz	.clrcom
-		rst	8
-		nop
-		nop
-		nop
 		rst	8
 		ret
 
@@ -1101,9 +1076,13 @@ ex_comm:
 ; --------------------------------------------------------
 
 setupchip:
+		ld	a,1
+		ld	(currPrio),a
 		ld	hl,insDataC_0
 		ld	iy,trkBuff_0		; iy - Tracker channels
 		call	.mk_chip
+		ld	a,0
+		ld	(currPrio),a
 		ld	hl,insDataC_1
 		ld	iy,trkBuff_1
 .mk_chip:
@@ -1146,11 +1125,11 @@ setupchip:
 		call	.check_ins
 		cp	-1			; NULL instrument?
 		jr	z,.no_chnl
+		ld	(currInsPos),hl
 		call	.chip_swap		; check if this channel switched chip
 		call	.check_chnl		; a - chip requested
 		cp	-1
 		jr	z,.ran_out
-		ld	(currInsPos),hl
 		ld	(currTblPos),ix
 		rst	20h
 		bit	1,(iy+chnl_Flags)
@@ -1162,11 +1141,6 @@ setupchip:
 		call	nz,.req_eff
 		bit	0,(iy+chnl_Flags)
 		call	nz,.req_note
-; 		ld	a,(iy+chnl_Flags)
-; 		and	1010b
-; 		or	a
-; 		call	nz,.req_note
-
 .ran_out:
 		ld	a,(iy+chnl_Flags)	; Clear status bits
 		and	11110000b
@@ -1174,9 +1148,7 @@ setupchip:
 		pop	bc
 		ret
 .no_chnl:
-; 		call	.chip_swap
 		ld	(iy+chnl_Chip),0
-; 		ld	(ix+chnl_Flags),0
 		pop	bc
 		ret
 
@@ -1415,8 +1387,8 @@ setupchip:
 		pop	hl
 		ret
 
-; manual location for each instr cache
-; 28h bytes each
+; Manual location for each patch cache
+; each pointer is 28h bytes long.
 .fmpickins:
 		dw fmins_com
 		dw fmins_com2
@@ -1879,32 +1851,8 @@ setupchip:
 ; Effect X: Panning
 ; --------------------------------
 
-; PWM points here too.
 .effPwm_X:
-		ld	a,e
-		rlca
-		rlca
-		and	00000011b
-		ld	hl,.fmpan_list
-		ld	de,0
-		ld	e,a
-		rst	8
-		add	hl,de
-		ld	e,(hl)
-		ld	a,(iy+chnl_Flags)
-		and	11001111b
-		or	e
-		ld	(iy+chnl_Flags),a
-		ret
-
-; PWM points here too.
 .effFm_X:
-		ld	a,(ix+2)
-		and	111b
-		ld	b,0
-		ld	c,a
-		ld	ix,fmcom
-		add	ix,bc
 		ld	a,e
 		rlca
 		rlca
@@ -1915,30 +1863,10 @@ setupchip:
 		rst	8
 		add	hl,de
 		ld	e,(hl)
-		ld	a,(iy+chnl_Flags)
+		ld	a,(iy+chnl_Flags)	; ** set PANNING bits %xxLRxxxx
 		and	11001111b
 		or	e
 		ld	(iy+chnl_Flags),a
-		ld	a,(iy+chnl_Flags)
-		add	a,a		; move LR bits
-		add	a,a
-		cpl
-		and	11000000b	; Set Panning ENABLE bits
-		ld	(ix+FMPAN),a
-
-; 		ld	a,(iy+chnl_Flags)
-; 		add	a,a		; move LR bits
-; 		add	a,a
-; 		cpl
-; 		and	11000000b	; Set Panning ENABLE bits
-; 		ld	(ix+FMPAN),a
-; 		ld	e,11110000b	; ALLOWED keys (TEMPORAL)
-; 		rst	8
-; 		ld	(ix+FMKEYS),e
-		ld	a,(ix)		; key on
-		or	01000000b
-		ld	(ix),a
-
 		ret
 .fmpan_list:
 		db 00010000b	; 000h
@@ -2026,7 +1954,6 @@ setupchip:
 		or	c
 		ld	(ix+PWOUTF),a
 		ret
-
 ; PSG Keyoff
 .pwm_keyoff:
 		ld	c,010b
@@ -2035,14 +1962,6 @@ setupchip:
 .pwm_keycut:
 		ld	c,100b
 		jr	.chnl_unlink
-
-; 		ld	a,100b			; Request DAC stop
-; 		ld	(daccom),a
-; .doff:
-; 		ld	hl,0
-; 		ld	(tblFM6),hl
-; 		ld	(iy+chnl_Chip),0
-; 		ret
 
 ; --------------------------------
 ; Note: PSG1-3,PSGN
@@ -2056,21 +1975,17 @@ setupchip:
 ; PSG Keycut
 .pcut:
 		ld	c,100b
+
+; --------------------------------
+;  c - cmd bits
+; ix - current table
+;
 .chnl_unlink:
-		rst	8
-		push	iy
-		pop	de
-		ld	a,(ix)
-		cp	e
-		ret	nz
-		ld	a,(ix+1)
-		cp	d
-		ret	nz
 		rst	8
 		ld	(hl),c
 		ld	(ix),0
 		ld	(ix+1),0
-		ld	(ix+3),0	; pitch zero
+		ld	(ix+3),0		; pitch zero
 		ld	(iy+chnl_Chip),0
 		ret
 
@@ -2169,9 +2084,9 @@ setupchip:
 		ld	hl,daccom
 		ld	a,(iy+chnl_Note)
 		cp	-1
-		jp	z,.fm_keyoff
+		jp	z,.dac_keyoff
 		cp	-2
-		jp	z,.fm_keycut
+		jp	z,.dac_keycut
 		ld	(iy+chnl_Chip),0C0h	; Set as DAC
 		ld	de,0
 		ld	e,(ix+3)		; Get pitch
@@ -2207,15 +2122,16 @@ setupchip:
 		ld	hl,fmcom+2		; Channel 3 fmcom
 		ld	a,(iy+chnl_Note)
 		cp	-1
-		jp	z,.fm_keyoff
+		jp	z,.fm3_keyoff
 		cp	-2
-		jp	z,.fm_keycut
+		jp	z,.fm3_keycut
 		ld	(iy+chnl_Chip),0B0h	; Set as FM3 special
-		ld	d,27h
+; 		ld	d,27h
 		ld	a,01000000b
 		ld	(fmSpcMode),a
-		ld	e,a
-		call	fm_send_1
+		rst	8
+; 		ld	e,a
+; 		call	fm_send_1
 		push	hl
 		pop	ix
 		jr	.fm_chnlkon
@@ -2246,12 +2162,12 @@ setupchip:
 		cp	2			; Check if we got into channel 3
 		jr	nz,.rd_nt3
 		ld	b,a
-		ld	d,27h			; Disable CH3 special mode
-		ld	a,00000000b
+; 		ld	d,27h			; Disable CH3 special mode
+		xor	a
 		ld	(fmSpcMode),a
 		rst	8
-		ld	e,a
-		call	fm_send_1
+; 		ld	e,a
+; 		call	fm_send_1
 		ld	a,b
 .rd_nt3:
 		or	0A0h
@@ -2315,11 +2231,19 @@ setupchip:
 		ld	(ix+FMVOL),0
 .fm_kpv:
 		ret
-
+.dac_keyoff:
+.dac_keycut:
+		call	dac_off
 ; keyoff/cut
+.fm3_keycut:
+		xor	a
+		ld	(fmSpcMode),a
 .fm_keycut:
 		ld	c,100b
 		jp	.chnl_unlink
+.fm3_keyoff:
+		xor	a
+		ld	(fmSpcMode),a
 .fm_keyoff:
 		ld	c,010b
 		ld	(hl),c
@@ -2339,6 +2263,7 @@ setupchip:
 		and	11110000b
 		cp	b
 		jr	z,.chip_out
+		rst	8
 		ld	d,a		; d - reuse last ID
 		ld	a,c		; New chip-ins is null?
 		cp	-1
@@ -2461,7 +2386,6 @@ setupchip:
 		add	hl,de
 		ld	(hl),100b
 		jr	.p_out
-
 .chp_unlk:
 		push	iy
 		pop	de
@@ -2471,6 +2395,7 @@ setupchip:
 		ret	nz
 		inc	hl
 		ld	a,(hl)
+; 		and	00111111b	; TODO
 		cp	d
 		ret	nz
 		dec	hl
@@ -2526,7 +2451,8 @@ setupchip:
 ; Checks which channel type is using
 ; auto-set channel
 ;
-; a - sound chip
+; a - Sound chip
+; b - Flags: %Oxxxxxxx
 ; ----------------------------------------
 
 .check_chnl:
@@ -2580,17 +2506,15 @@ setupchip:
 .chk_tbln:
 		push	iy
 		pop	de		; de - Copy of curr track-channel
-
-	; **** MSB priority overwrite
 		rst	8
-		ld	a,(ix+1)	; MSB | LSB
-		or	(ix)		; Check if blank
-		jr	z,.new
-		ld	a,(ix+1)
-		cp	d
-		jr	c,.busy_s
-.new:
-		rst	8
+; 		ld	a,(ix)
+; 		ld	c,(ix+1)
+; 		or	c
+; 		jr	z,.free
+; 		ld	a,(currPrio)
+; 		or	a
+; 		jr	nz,.busy_s
+; .free:
 		ld	(ix),e		; NEW slot
 		ld	(ix+1),d
 		xor	a		; Found free slot, pick it.
@@ -2603,81 +2527,126 @@ setupchip:
 ; Check available channel slot from list
 ; --------------------------------------------
 
+; ix - table
+
 .chk_tbl:
-		ld	bc,0		; bc - Free slot point
-.next:
+		push	iy
+		push	ix
+		pop	bc
+		pop	hl
+		ld	de,8		; Next channel table
+
+; Check same link
+.next_l:
 		ld	a,(ix+1)	; Check MSB first
 		cp	-1		; End of list? (as WORD: 0FFxxh)
-		jr	z,.chkfree
-		push	iy
-		pop	de		; de - Copy of curr track-channel
+		jr	z,.chk_z
+		cp	h
+		jr	nz,.n_m
 		rst	8
-		cp	d		; check if link matches
-		jr	nz,.diffr
 		ld	a,(ix)
-		cp	e
-		jr	nz,.diffr
-		xor	a		; return 0
-		ret
-.diffr:
-		ld	a,c		; bc link already set?
-		or	b
-		jr	nz,.alrdfnd
+		cp	l
+		jr	nz,.n_m
 		rst	8
-		ld	e,(ix+1)	; Check if this link == 0
-		ld	a,(ix)
-		or	e
-		jr	z,.fndlink
-
-	; priority
-
-		jr	.alrdfnd
-
-; 		push	de		; Check if this link is
-; 		ld	d,(ix+1)	; floating.
-; 		ld	e,(ix)
-; 		inc	de
-; 		rst	8
-; 		ld	a,(de)
-; 		pop	de
-; 		cp	-2
-; 		jr	z,.fndlink
-; 		cp	-1
-; 		jr	z,.fndlink
-
-; 		jr	.alrdfnd
-	; **** MSB priority overwrite
-; 		ld	a,e
-; 		cp	d
-; 		jr	nc,.alrdfnd
-	; ****
-
-.fndlink:
-		push	ix		; bc - got new link
-		pop	bc
-		rst	8
-.alrdfnd:
-		ld	de,8		; Next channel table
-		add	ix,de
-		jr	.next
-
-; free link slot
-.chkfree:
-		ld	a,c		; found free link?
-		or	b
-		jr	z,.fndslot
-		push	bc
-		pop	ix		; tell ix is the new slot
-		push	iy
-		pop	de		; and mark it on buffer
-		rst	8
-		ld	(ix),e
-		ld	(ix+1),d
 		xor	a
 		ret
-.fndslot:
-		ld	a,-1		; linksteal check goes here
+.n_m:
+		rst	8
+		add	ix,de
+		jr	.next_l
+
+; Check free
+.chk_z:
+		push	bc
+		pop	ix
+.next_z:
+		ld	a,(ix+1)	; Check MSB first
+		cp	-1		; End of list? (as WORD: 0FFxxh)
+		jr	z,.ran_o
+		ld	e,(ix)
+		rst	8
+		or	e
+		jr	nz,.n_z
+		jr	.overw
+.n_z:
+		rst	8
+		ld	de,8
+		add	ix,de
+		jr	.next_z
+.ran_o:
+		push	bc
+		pop	ix
+		ld	a,(currPrio)
+		or	a
+		jr	nz,.overw
+		ld	a,-1
 		ret
+.overw:
+		ld	(ix),l
+		ld	(ix+1),h
+		rst	8
+		xor	a
+		ret
+
+; 		ld	a,-1
+; 		ret
+; .new_l:
+; 		rst	8
+; 		ld	(ix),l
+; 		ld	(ix+1),h
+; 		xor	a
+; 		ret
+
+
+; 		ld	bc,0		; bc - Free slot point
+; .next:
+; 		ld	a,(ix+1)	; Check MSB first
+; 		cp	-1		; End of list? (as WORD: 0FFxxh)
+; 		jr	z,.chk_free
+; 		push	iy
+; 		pop	de		; de - Copy of curr track-channel
+; 		rst	8
+; 		cp	d		; check if link matches
+; 		jr	nz,.diffr
+; 		ld	a,(ix)
+; 		cp	e
+; 		jr	nz,.diffr
+; 		xor	a		; return 0
+; 		ret
+; .diffr:
+; 		ld	a,c		; bc link already set?
+; 		or	b
+; 		jr	nz,.alrdfnd
+; 		rst	8
+; 		ld	e,(ix+1)	; Check if this link == 0
+; 		ld	a,(ix)
+; 		or	e
+; 		jr	z,.fndlink
+; 		jr	.alrdfnd
+; .fndlink:
+; 		push	ix		; bc - got new link
+; 		pop	bc
+; 		rst	8
+; .alrdfnd:
+; 		ld	de,8		; Next channel table
+; 		add	ix,de
+; 		jr	.next
+; .chk_free:
+; 		ld	a,c		; found free link?
+; 		or	b
+; 		jr	z,.r_out
+; 		push	bc
+; 		pop	ix		; tell ix is the new slot
+; 		push	iy
+; 		pop	de		; and mark it on buffer
+; 		rst	8
+; 		ld	(ix),e
+; 		ld	(ix+1),d
+; 		xor	a
+; 		ret
+; .r_out:
+; 		ld	a,-1
+; 		ret
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2745,7 +2714,6 @@ gema_init:
 .set_it:
 		ld	(iy+trk_CachNotes),l
 		ld	(iy+(trk_CachNotes+1)),h
-; 		ld	(iy+trk_numChnls),e
 		ld	(iy+trk_sizeIns),d
 		ret
 
@@ -2987,8 +2955,8 @@ transferRom:
 		res	0,(ix+1)	; Tell 68k we are out, waiting.
 .x68kpwtlp:
 		rst	8
-		nop
-		rst	8
+; 		nop
+; 		rst	8
 		bit	0,(ix)		; 68k finished?
 		jr	nz,.x68kpwtlp
 		set	0,(ix+1)	; Set Z80 read flag again, and return
@@ -2999,8 +2967,8 @@ transferRom:
 		res	0,(ix+1)	; Tell 68k we are out, waiting.
 .x68klstwtlp:
 		rst	8
-		nop
-		rst	8
+; 		nop
+; 		rst	8
 		bit	0,(ix)		; 68k finished?
 		jr	nz,.x68klstwtlp
 		set	0,(ix+1)	; Set Z80 read flag again, and return
@@ -3273,13 +3241,13 @@ chip_env:
 		rst	8
 		ld	a,(ix)
 		inc	iy
-		inc	c
+; 		inc	c
 		jr	.fm_chnl			; Channel 6 (normal)
 .req_dac:
-		ld	d,0B6h			; Panning for DAC
-		ld	a,((fmcom+5)+FMPAN)	; Reuse FM6's panning
-		ld	e,11000000b
-		call	fm_send_2
+; 		ld	d,0B6h			; Panning for DAC
+; 		ld	a,((fmcom+5)+FMPAN)	; Reuse FM6's panning
+; 		ld	e,11000000b
+; 		call	fm_send_2
 		jp	dac_play		; Set playback
 .req_pitch:
 		exx
@@ -3332,7 +3300,7 @@ chip_env:
 		call	nz,.fm_insupd
 		bit	5,b		; Volume-update bit? (%0010xxxx)
 		call	nz,.fm_volupd	;
-		bit	6,b		; Panning update bit? (%0100xxxx)
+		bit	6,b		; ** Panning update bit? (%0100xxxx)
 		call	nz,.fm_panupd
 		bit	0,b		; Key-on (001b) bit?
 		ret	z
@@ -3373,8 +3341,13 @@ chip_env:
 		inc	d
 ; 		call	.fm_panset
 
-	; For Special FM3 mode it just copy-pastes regs
+	; For Special FM3 mode it copy-pastes regs
 	; from a separate list
+		ld	a,(fmSpcMode)
+		ld	d,27h
+		ld	e,a
+		call	fm_send_1
+
 		ld	a,c		; FM3 special check
 		cp	2
 		jr	nz,.notfm3
@@ -3431,7 +3404,7 @@ chip_env:
 		and	11b
 		or	0B4h
 		ld	d,a
-.fm_panset:
+; .fm_panset:
 		ld	e,(ix+1Dh)
 		ld	a,(iy+FMPAN)
 		and	11000000b
@@ -3442,8 +3415,8 @@ chip_env:
 		call	z,fm_send_1
 		ret
 
-; CPU-intense
-; only call this if needed
+; *** CPU-intense
+; only call this if needed ***
 .fm_insupd:
 		push	bc
 		call	.fm_keyoff		; restart chip channel
@@ -4033,7 +4006,7 @@ wavFreq_List:	dw 100h		; C-0
 ; Z80 RAM
 ; ----------------------------------------------------------------
 
-		align 10h
+; 		align 10h
 pwmcom:		db 00h,00h,00h,00h,00h,00h,00h,00h	; 0 - Playback bits: KeyOn/KeyOff/KeyCut/other update bits
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; 8 - Volume | Pitch MSB
 		db 00h,00h,00h,00h,00h,00h,00h,00h	; 16 - Pitch LSB
@@ -4060,7 +4033,7 @@ psgalv		db 00h,00h,00h,00h		; 36 attack level attenuation
 whdflg		db 00h,00h,00h,00h		; 40 flags to indicate hardware should be updated
 psgtim		db 00h,00h,00h,00h		; 44 timer for sustain
 psgvol		db 00h,00h,00h,00h
-fmins_com:	ds 028h				; Current instrument data for each FM
+fmins_com:	ds 028h				; Intrument patch data for each FM
 fmins_com2:	ds 028h
 fmins_com3:	ds 028h
 fmins_com4:	ds 028h
@@ -4083,7 +4056,7 @@ tblPSG:		db 00h,00h,00h,00h,00h,00h,00h,00h	; Channel 1
 		db 00h,00h,01h,00h,00h,00h,00h,00h	; Channel 2
 		db 00h,00h,02h,00h,00h,00h,00h,00h	; Channel 3
 		dw -1	; end-of-list
-tblPSGN:	db 00h,00h,03h,00h,00h,00h,00h,00h	; Noise (DIRECT CHECK only)
+tblPSGN:	db 00h,00h,03h,00h,00h,00h,00h,00h	; Noise (DIRECT READ only)
 
 	; FM: 90h+ FM3: 0A0h DAC: 0B0h
 	;  4 - Special mode (FM3: Special, FM6: DAC)
@@ -4124,6 +4097,7 @@ currInsData	dw 0
 currTblPos	dw 0
 currInsPos	dw 0
 currTrkCtrl	dw 0
+currPrio	dw 0
 tickFlag	dw 0		; Tick flag from VBlank, Read as (tickFlag+1) for reading/reseting
 tickCnt		db 0		; Tick counter (PUT THIS TAG AFTER tickFlag)
 wave_Start	dw 0		; START: 68k 24-bit pointer

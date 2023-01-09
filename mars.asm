@@ -9,7 +9,7 @@
 		include	"system/md/const.asm"		; Genesis variables
 		include	"system/mars/map.asm"		; 32X hardware map
 		include "code/global.asm"		; Global user variables on the Genesis
-		include	"system/head.asm"		; 32X header
+		include	"system/head_mars.asm"		; 32X header
 
 ; ====================================================================
 ; ----------------------------------------------------------------

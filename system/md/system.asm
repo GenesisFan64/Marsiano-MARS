@@ -45,10 +45,10 @@ System_Init:
 		move.w	#$4EF9,d0		; Set JMP opcode for the Hblank/VBlank jumps
  		move.w	d0,(RAM_MdMarsVInt).l
 		move.w	d0,(RAM_MdMarsHInt).l
-		move.l	#$56255769,d0		; Set these random values
-		move.l	#$95116102,d1
-		move.l	d0,(RAM_SysRandVal).l
-		move.l	d1,(RAM_SysRandSeed).l
+; 		move.l	#$56255769,d0		; Set these random values
+; 		move.l	#$95116102,d1
+; 		move.l	d0,(RAM_SysRandVal).l
+; 		move.l	d1,(RAM_SysRandSeed).l
 		move.l	#VInt_Default,d0	; Set default ints
 		move.l	#Hint_Default,d1
 		bsr	System_SetInts
@@ -88,10 +88,10 @@ System_Init:
 ; --------------------------------------------------------
 
 System_WaitFrame:
-; 		lea	(vdp_ctrl),a6
-; .wait_lag:	move.w	(a6),d4
-; 		btst	#bitVBlk,d4
-; 		bne.s	.wait_lag
+		lea	(vdp_ctrl),a6		; <-- VSync IN
+.wait_lag:	move.w	(a6),d4
+		btst	#bitVBlk,d4
+		bne.s	.wait_lag
 ; 		bsr	Video_Mars_WaitFrame
 		bsr	System_MarsUpdate
 		lea	(vdp_ctrl),a6
@@ -131,8 +131,6 @@ System_WaitFrame:
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
-; 		jsr	(Video_DmaBlast).l
-		bsr	MdMap_DrawScrlMd
 		add.l	#1,(RAM_Framecount).l
 		rts
 
@@ -163,9 +161,13 @@ System_Dma_Exit:
 ; --------------------------------------------------------
 
 System_MarsUpdate:
+	if MARS=1
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
 		jmp	(System_RomSendDreq).l	; <-- external jump
+	else
+		rts
+	endif
 
 ; --------------------------------------------------------
 ; System_GrabRamCode
@@ -179,6 +181,7 @@ System_MarsUpdate:
 ; --------------------------------------------------------
 
 System_GrabRamCode:
+	if MARS
 		or.l	#$880000,d0
 		move.l	d0,a0
 		lea	(RAMCODE_USER),a1
@@ -187,6 +190,9 @@ System_GrabRamCode:
 		move.b	(a0)+,(a1)+
 		dbf	d7,.copyme2
 		jmp	(RAMCODE_USER).l
+	else
+		rts
+	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -416,22 +422,36 @@ System_Input:
 ; --------------------------------------------------------
 ; System_Random
 ; 
-; Picks a random value
+; Makes a random number.
 ; 
+; Input:
+; d0 | Seed
+;
 ; Output:
 ; d0 | LONG
+;
+; Uses:
+; d4-d5
 ; --------------------------------------------------------
 
-; TODO: rewrite this
 System_Random:
-		move.l	(RAM_SysRandSeed),d5
-		move.l	(RAM_SysRandVal),d4
-		rol.l	#1,d5
-		asr.l	d5,d4
-		add.l	d5,d4
-		move.l	d5,(RAM_SysRandSeed).l
-		move.l	d4,(RAM_SysRandVal).l
+		move.l	d4,-(sp)
+		move.l	(RAM_SysRandSeed).l,d4
+		bne.s	.good_s
+		move.l	#$B51A7823,d4
+.good_s:
 		move.l	d4,d0
+		rol.l	#5,d4
+		add.l	d0,d4
+		asr.w	#3,d4
+		add.l	d0,d4
+		move.w	d4,d0
+		swap	d4
+		add.w	d4,d0
+		move.w	d0,d4
+		swap	d4
+		move.l	d4,(RAM_SysRandSeed).l
+		move.l	(sp)+,d4
 		rts
 
 ; --------------------------------------------------------

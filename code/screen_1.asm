@@ -117,7 +117,7 @@ MD_2DMODE:
 .ploop:		bsr	System_WaitFrame
 		bsr	Video_RunFade
 		bne.s	.ploop
-
+		bsr	MdMap_DrawScrlMd
 		bsr	Objects_Run
 		bsr	Map_Camera
 

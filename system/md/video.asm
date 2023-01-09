@@ -154,16 +154,19 @@ at_r		equ	0
 			struct RAM_MdVideo
 RAM_Objects		ds.b MAX_MDOBJ*sizeof_mdobj
 RAM_BgBuffer		ds.b sizeof_mdbg*4	; Map backgrounds, back to front.
-RAM_ObjDispList		ds.l MAX_MDOBJ		; Objects that want to display
 RAM_FrameCount		ds.l 1			; Frames counter
 RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
 RAM_VerScroll		ds.l 320/16		; DMA Vertical scroll data
+RAM_ObjDispList		ds.w MAX_MDOBJ		; Objects half-RAM pointers for display (Obj|Extra)
+RAM_SprDrwPz		ds.w 8*70		; External sprite pieces
 RAM_Sprites		ds.w 8*70		; DMA Sprites
 RAM_Palette		ds.w 64			; DMA palette
 RAM_PaletteFd		ds.w 64			; Target MD palette for FadeIn/Out
 RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out (NOTE: it's slow)
 RAM_VdpDmaList		ds.w 7*MAX_MDDMATSK	; DMA BLAST list for VBlank
 RAM_VidPrntList		ds.w 3*64		; Video_Print list: Address, Type
+RAM_SprDrwCntr		ds.w 1
+RAM_SprShowIndx		ds.w 1
 RAM_VdpDmaIndx		ds.w 1			; Current index in DMA BLAST list
 RAM_VdpDmaMod		ds.w 1			; Mid-write flag (just to be safe)
 RAM_VidPrntVram		ds.w 1			; Default VRAM location for ASCII text used by Video_Print
@@ -1065,9 +1068,9 @@ Video_DmaMkEntry:
 ;
 ; Fill data to VRAM
 ;
-; d0 | WORD - Bytes to fill
+; d0 | WORD - WORD to fill
 ; d1 | WORD - VRAM position
-; d2 | WORD - Size (WORDS)
+; d2 | WORD - Size
 ;
 ; Breaks:
 ; d6-d7,a6
@@ -1084,6 +1087,7 @@ Video_Fill:
 		bne.s	.dmaw
 		move.w	#$8F01,(a6)	; Increment $01
 		move.w	d2,d7		; d2 - Size
+		sub.w	#1,d7
 		move.l	#$94009300,d6
 		move.b	d7,d6
 		swap	d6
@@ -2444,8 +2448,9 @@ Objects_Init:
 		lea	(RAM_ObjDispList),a6
 		move.w	#MAX_MDOBJ-1,d7
 .clr_d:
-		clr.l	(a6)+
+		clr.w	(a6)+
 		dbf	d7,.clr_d
+		clr.w	(RAM_SprDrwCntr).w
 		rts
 
 ; --------------------------------------------------------
@@ -2474,21 +2479,48 @@ Objects_Run:
 ; --------------------------------------------------------
 
 Objects_Show:
-		lea	(RAM_ObjDispList),a6
-		lea	(RAM_Sprites),a5		; a5 - Genesis sprites
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a4	; a4 - 32X SUPER Sprites
-		moveq	#1,d6				; d6 - MD Link
-		move.w	#MAX_MDOBJ-1,d7
-.next:
-		move.l	(a6),d0
-		beq	.finish
-; 		bra *
-		move.l	d0,a3
-		move.l	obj_map(a3),a0		; Read mapping
-		btst	#bitobj_Mars,obj_set(a3)
-		bne.s	.mars_mode
+		moveq	#1,d7				; d7 - MD Link
+		lea	(RAM_Sprites),a6		; a6 - Genesis sprites
 
-		move.w	obj_frame(a3),d0
+		move.w	(RAM_SprDrwCntr),d6
+		beq.s	.no_sprdrw
+		clr.w	(RAM_SprDrwCntr).w
+		lea	(RAM_SprDrwPz),a5
+		sub.w	#1,d6
+.nexts:
+		cmp.w	#70,d7
+		bge.s	.no_sprdrw
+		move.w	(a5)+,d0
+		move.w	(a5)+,d1	; custom
+		and.w	#$FF,d1
+		lsl.w	#8,d1
+		or.w	d7,d1
+		move.w	(a5)+,d2
+		move.w	(a5)+,d3
+		move.w	d0,(a6)+
+		move.w	d1,(a6)+
+		move.w	d2,(a6)+
+		move.w	d3,(a6)+
+		add.w	#1,d7
+		dbf	d6,.nexts
+.no_sprdrw:
+
+	; Draw mappings from sprites
+		lea	(RAM_ObjDispList),a5
+		lea	(RAM_MdDreq+Dreq_SuperSpr),a4	; a4 - 32X SUPER Sprites
+		move.w	#MAX_MDOBJ-1,d6
+.next:
+		move.w	(a5),d0
+		beq	.finish
+		moveq	#-1,d1
+		move.w	d0,d1
+		move.l	d1,a2
+		move.l	obj_map(a2),a0		; Read mapping
+		btst	#bitobj_Mars,obj_set(a2)
+		bne.s	.mars_mode
+		cmp.w	#70,d7
+		bge	.mk_spr
+		move.w	obj_frame(a2),d0
 		add.w	d0,d0
 		move.w	(a0,d0.w),d0
 		adda	d0,a0
@@ -2496,33 +2528,29 @@ Objects_Show:
 		beq	.mk_spr
 		sub.w	#1,d5
 .mk_pz:
+	; TODO: H/V flip
 		move.b	(a0)+,d0
 		ext.w	d0
-		add.w	obj_y(a3),d0
+		add.w	obj_y(a2),d0
 		add.w	#$80,d0
 		move.b	(a0)+,d1
 		lsl.w	#8,d1
-		or.w	d6,d1
-
+		or.w	d7,d1
 		move.w	(a0)+,d2
-		add.w	obj_vram(a3),d2
+		add.w	obj_vram(a2),d2
 		adda	#2,a0
-
 		move.w	(a0)+,d3
-		add.w	obj_x(a3),d3
+		add.w	obj_x(a2),d3
 		add.w	#$80,d3
-
-		move.w	d0,(a5)+
-		move.w	d1,(a5)+
-		move.w	d2,(a5)+
-		move.w	d3,(a5)+
-		add.w	#1,d6
+		move.w	d0,(a6)+
+		move.w	d1,(a6)+
+		move.w	d2,(a6)+
+		move.w	d3,(a6)+
+		add.w	#1,d7
 		dbf	d5,.mk_pz
-
 		bra.s	.mk_spr
 
 .mars_mode:
-
 		move.l	(a0)+,marsspr_data(a4)
 		move.w	(a0)+,marsspr_dwidth(a4)
 		move.w	(a0)+,marsspr_indx(a4)
@@ -2530,12 +2558,12 @@ Objects_Show:
 		move.b	(a0)+,d3
 		move.b	d2,marsspr_xs(a4)
 		move.b	d3,marsspr_ys(a4)
-		move.w	obj_frame(a3),d0	; Read frame
+		move.w	obj_frame(a2),d0	; Read frame
 		move.b	d0,marsspr_xfrm(a4)
 		ror.w	#8,d0
 		move.b	d0,marsspr_yfrm(a4)
-		move.w	obj_x(a3),d4
-		move.w	obj_y(a3),d5
+		move.w	obj_x(a2),d4
+		move.w	obj_y(a2),d5
 		and.w	#$FF,d2
 		and.w	#$FF,d3
 		lsr.w	#1,d2
@@ -2544,7 +2572,7 @@ Objects_Show:
 		sub.w	d2,d4
 ; 		divu.w	#2,d3			; **
 		sub.w	d3,d5
-; 		move.l	obj_size(a3),d2		; d2 - UDLR sizes
+; 		move.l	obj_size(a2),d2		; d2 - UDLR sizes
 ; 		move.w	d2,d3			; Grab LR
 ; 		lsr.w	#5,d3
 ; 		and.w	#%11111000,d3
@@ -2555,29 +2583,35 @@ Objects_Show:
 ; 		lsl.b	#3,d3
 ; 		and.w	#$FF,d3
 ; 		sub.w	d3,d5			; Subtract Y
-		lea	(RAM_BgBufferM),a2
-		sub.w	md_bg_x(a2),d4
-		sub.w	md_bg_y(a2),d5
+		lea	(RAM_BgBufferM),a1
+		sub.w	md_bg_x(a1),d4
+		sub.w	md_bg_y(a1),d5
 		move.w	d4,marsspr_x(a4)
 		move.w	d5,marsspr_y(a4)
 		moveq	#0,d4
-		btst	#bitobj_flipH,obj_set(a3)
+		btst	#bitobj_flipH,obj_set(a2)
 		beq.s	.flip_h
 		bset	#0,d4
 .flip_h:
-		btst	#bitobj_flipV,obj_set(a3)
+		btst	#bitobj_flipV,obj_set(a2)
 		beq.s	.flip_v
 		bset	#1,d4
 .flip_v:
 		move.w	d4,marsspr_flags(a4)
 		adda	#sizeof_marsspr,a4	; Next SuperSprite
-
 .mk_spr:
-		clr.l	(a6)			; Clear request
-		adda	#4,a6			; Next slot
-		dbf	d7,.next
+		clr.w	(a5)+			; Clear request
+		dbf	d6,.next
 .finish:
-		clr.l	(a5)		; TODO: endoflist check
+		lea	(RAM_Sprites),a6	; a6 - Genesis sprites
+		move.w	d7,d6
+		cmp.w	#70,d7
+		bge.s	.ran_out
+		sub.w	#1,d6
+		lsl.w	#3,d6
+		adda	d6,a6
+		clr.l	(a6)			; TODO: endoflist check
+.ran_out:
 		rts
 
 ; ----------------------------------------------------------------
@@ -2587,27 +2621,82 @@ Objects_Show:
 ; --------------------------------------------------------
 ; object_Display
 ;
-; Makes current object visible to the screen.
+; Builds a sprite using map data specified in
+; obj_map(a6)
 ;
-; Mappings format for obj_map(a6):
+; *** GENESIS map ***
+; mapdata:
+;       dc.w .frame0-mapdata
+;       dc.w .frame1-mapdata
+;       ...
+; .frame0:
+;       dc.w numofpz
+;       dc.b YY,SS
+;       dc.w vram_normal
+;       dc.w vram_half
+;       dc.w XXXX
+;       align 2
 ;
-; .list:
-; 	dc.l SH2_ADDR|TH ; Spritesheet location, TH opt.
+; *** 32X map ***
+; mapdata:
+; 	dc.l SH2_ADDR|TH ; Spritesheet location (TH opt.)
 ; 	dc.w 512	 ; Spritesheet WIDTH
 ; 	dc.b 64,72	 ; Frame width and height
 ; 	dc.w $80	 ; Palette index
+;
+; obj_frame(a6) is in YYXX direction
+;
+; Input:
+; a6 - Object
+;
+; Uses:
+; a5,d7
 ; --------------------------------------------------------
 
 object_Display:
-		lea	(RAM_ObjDispList),a0
-		move.w	#MAX_MDOBJ-1,d1
+		lea	(RAM_ObjDispList),a5
+		move.w	#MAX_MDOBJ-1,d7
 .srch:
-		move.l	(a0),d0
+		tst.w	(a5)
 		beq.s	.this_one
-		adda	#4,a0
-		dbf	d1,.srch
+		adda	#2,a5
+		dbf	d7,.srch
 .this_one:
-		move.l	a6,(a0)
+		move.w	a6,(a5)
+		rts
+
+; --------------------------------------------------------
+; object_MkSprPz
+;
+; Makes separate sprite pieces using
+;
+; Input:
+; d0 - X pos
+; d1 - Y pos
+; d2 - VRAM
+; d3 - Size
+:
+; Uses:
+; a5,d7
+; --------------------------------------------------------
+
+object_MkSprPz:
+		move.w	(RAM_SprDrwCntr).w,d7
+		cmp.w	#70,d7
+		bge.s	.nope
+		lsl.w	#3,d7
+		lea	(RAM_SprDrwPz),a5
+		adda	d7,a5
+		add.w	#$80,d0
+		add.w	#$80,d1
+		and.w	#$FF,d3
+; 		lsl.w	#8,d3
+		move.w	d1,(a5)+
+		move.w	d3,(a5)+
+		move.w	d2,(a5)+
+		move.w	d0,(a5)+
+		add.w	#1,(RAM_SprDrwCntr).w
+.nope:
 		rts
 
 ; --------------------------------------------------------

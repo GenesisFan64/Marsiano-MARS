@@ -42,7 +42,7 @@ vertex_list   = list()
 # -------------------------------------------------
 
 got_frames=0
-scale=0x10000
+scale=0x100
 reading=True
 out_anim.write(bytes(4))		# first 4 bytes reserved
 while reading:
@@ -53,12 +53,12 @@ while reading:
     break
 
   point = text.split("\t")
-  x_pos = int(float(point[1])*(scale*8))
-  y_pos = int(float(point[2])*(scale*8))*-1
-  z_pos = int(float(point[3])*(scale*8))*-1
-  y_rot = int(float(point[4])*(scale/5.624995))*-1
-  x_rot = int(float(point[5])*(scale/5.624995))*-1
-  z_rot = int(float(point[6])*(scale/5.624995))*-1
+  x_pos = int(float(point[1])*(scale))
+  y_pos = int(float(point[2])*(scale))*-1 # <-- meh
+  z_pos = int(float(point[3])*(scale))*-1
+  y_rot = int(float(point[4])*(scale/11.3777777778))*-1  #11.248
+  x_rot = int(float(point[5])*(scale/11.3777777778))*-1
+  z_rot = int(float(point[6])*(scale/11.3777777778))*-1
   
   out_anim.write( bytes([x_pos>>24&0xFF,x_pos>>16&0xFF,x_pos>>8&0xFF,x_pos&0xFF,
 			 y_pos>>24&0xFF,y_pos>>16&0xFF,y_pos>>8&0xFF,y_pos&0xFF,

@@ -57,6 +57,18 @@ finish		macro				; Then finish the custom struct.
 		endm
 
 ; -------------------------------------
+; Report RAM usage
+; -------------------------------------
+
+report		macro from,dis
+	if from == 0
+		if MOMPASS=6
+			message "THIS SCREEN RAM uses: \{(dis-RAM_ModeBuff)&$FFFFFF} of \{MAX_MDERAM}"
+		endif
+	endif
+		endm
+
+; -------------------------------------
 ; Color debug
 ; -------------------------------------
 
@@ -89,3 +101,4 @@ paddingSoFar	set paddingSoFar + address - *
 		endif
 	endif
     endm
+

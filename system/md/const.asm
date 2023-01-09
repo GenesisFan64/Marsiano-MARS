@@ -11,7 +11,7 @@ MAX_MDDMATSK	equ 16			; MAX DMA BLAST entries
 ; --------------------------------------------------------
 
 MDRAM_START	equ $FFFF9000		; Start of Genesis working RAM
-MAX_MDERAM	equ $C00		; Maximum RAM for current Screen mode
+MAX_MDERAM	equ $1000		; Maximum RAM for current Screen mode
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -74,7 +74,7 @@ bitJoyX		equ 10
 bitJoyMode	equ 11
 
 ; Mega Mouse
-; Read WORD in +on_hold or +on_press
+; Read WORD as +on_hold or +on_press
 ClickR		equ $0001
 ClickL		equ $0002
 ClickM		equ $0004	; US MOUSE ONLY
@@ -93,21 +93,23 @@ bitClickS	equ 3
 ; ----------------------------------------------------------------
 
 		struct MDRAM_START
-	if MOMPASS=1				; First pass: empty sizes
-RAM_ModeBuff	ds.l 0
+	; First pass: empty sizes
+	if MOMPASS=1
 RAM_MdSound	ds.l 0
 RAM_MdVideo	ds.l 0
 RAM_MdSystem	ds.l 0
-RAM_MdGlobal	ds.l 0
 RAM_MdDreq	ds.l 0
+RAM_ModeBuff	ds.l 0
+RAM_MdGlobal	ds.l 0
 sizeof_mdram	ds.l 0
 	else
-RAM_ModeBuff	ds.b MAX_MDERAM			; Second pass: sizes are set
+	; Second pass: sizes are set
 RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
 RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
 RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
-RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal
 RAM_MdDreq	ds.b sizeof_dreq
+RAM_ModeBuff	ds.b MAX_MDERAM
+RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal	; code/global.asm
 sizeof_mdram	ds.l 0
 	endif
 
