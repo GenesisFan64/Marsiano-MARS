@@ -95,7 +95,7 @@ bitClickS	equ 3
 		struct MDRAM_START
 	; First pass: empty sizes
 	if MOMPASS=1
-RAM_MdSound	ds.l 0
+; RAM_MdSound	ds.l 0
 RAM_MdVideo	ds.l 0
 RAM_MdSystem	ds.l 0
 RAM_MdDreq	ds.l 0
@@ -104,7 +104,7 @@ RAM_MdGlobal	ds.l 0
 sizeof_mdram	ds.l 0
 	else
 	; Second pass: sizes are set
-RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
+; RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
 RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
 RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
 RAM_MdDreq	ds.b sizeof_dreq

@@ -9,9 +9,12 @@ LIST OF UNEMULATED SEGA 32X HARDWARE FEATURES/BUGS/ERRORS, the ones marked with 
 - Fusion 3.64: VDPFILL might randomly get stuck waiting for the framebuffer-busy bit.
 
 -- 68000 --
-- Writing to the DREQ's FIFO register only works properly on the $880000/$900000 areas, doing the writes in the RAM area ($FF0000) will cause to miss some WORD writes during transfer, Writing RAM values to the DREQ is not affected.
-- RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers. (from $88xxxx/$9xxxxx to $0xxxxx) If you do any Genesis DMA-transfer without setting this bit it will read trash data. (Except RAM, like the common Palette/Scroll/Sprite transfers.) Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the last VDP write on the RAM area. For the SH2 side: If RV is set, any read from the ROM area will return trash data.
+- Writing to the DREQ's FIFO register only works properly on the $880000/$900000 areas, doing the writes in the RAM area ($FF0000) will cause to miss some WORD writes during transfer (Writing RAM values to the DREQ is not affected)
+- RV bit: This bit sets the ROM map temporally to it's original location on the Genesis side as a workaround for the DMA's ROM-to-VDP transfers: from $88xxxx/$9xxxxx to $0xxxxx) If you do any Genesis DMA-transfer without setting this bit it will read trash data. (Except RAM, like the common Palette/Scroll/Sprite transfers.) Your Genesis DMA-to-VDP transfer routines MUST be located on RAM (recommended method) OR if you need to use the ROM area: just put the RV writes (on and off) AND the last VDP write on the RAM area. For the SH2 side: If RV is set, any read from the ROM area will return trash data.
 - If 68S is set to 0 in the middle of the SH2's DMA transfer of DREQ, it MIGHT crash the ENTIRE 32X add-on. **
+
+-- Z80 --
+- If the Z80 tries to read from 8000h-0FFFFh while the RV bit is active, crashes all.
 
 -- SH2---
 - The SDRAM, Framebuffer, ROM area and Cache run at different speeds for reading/writing and depending where the Program Counter (PC) is currently located. CACHE being the fastest BUT with the lowest space to store code or data.
@@ -31,7 +34,7 @@ LIST OF UNEMULATED SEGA 32X HARDWARE FEATURES/BUGS/ERRORS, the ones marked with 
 
 -- PWM --
 - It's 3-word FIFO isn't emulated properly, on emulators it behaves like a normal write-register. (I imagine...)
-- Normally the output limit for both LEFT and RIGHT channels is 4095 ($0FFF) but depending of the speed of the PWM interrupt this value decreases, for example if the PWM interrupt is at 22050hz the limit now is 1023 ($03FF)
+- Normally the output limit for both LEFT and RIGHT channels is 4095 ($0FFF) but depending of the speed of the PWM interrupt this value decreases: For example if the PWM interrupt is at 22050hz the limit now is 1023 ($03FF)
 
 --- Both sides ---
 - FM bit: This bit tells which system side (Genesis or 32X) can read/write to the SuperVDP (The Framebuffer and 256-color palette, EXCEPT the registers), If a CPU with NO permission touches the SuperVDP it will freeze the entire system (either Genesis 68K or 32X SH2).

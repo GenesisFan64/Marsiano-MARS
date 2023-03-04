@@ -1,5 +1,5 @@
 #======================================================================
-# Convert Impulse tracker module to GEMA
+# Convert Impulse tracker module to GEMA/Nicona
 #======================================================================
 
 import sys
@@ -10,7 +10,6 @@ import os.path
 # Settings
 # -------------------------------------------------
 
-MAX_PATTSIZE	= 0x200
 MAX_TIME	= 0x7F
 MAX_CHAN	= 18
 
@@ -85,7 +84,6 @@ for b in range(0,OrdNum):
 curr_PattInc = 0				# OUT header counter
 numof_Patt   = PatNum
 out_patterns.write(bytes(numof_Patt*4))		# make room for pointers
-out_patterns.write(bytes([0x00,0x00]))		# one more for size detection
 
 while numof_Patt:
 	input_file.seek(addr_PattList)
@@ -181,10 +179,10 @@ while numof_Patt:
 
 
 # last size...
-b = out_patterns.tell()
-out_patterns.seek(curr_PattInc)
-a = b
-out_patterns.write(bytes([a&0xFF,(a>>8)&0xFF]))
+# b = out_patterns.tell()
+# out_patterns.seek(curr_PattInc)
+# a = b
+# out_patterns.write(bytes([a&0xFF,(a>>8)&0xFF]))
 
 # ----------------------------
 # End

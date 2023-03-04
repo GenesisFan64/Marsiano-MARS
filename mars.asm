@@ -36,7 +36,7 @@
 Md_TopCode:
 		phase $FF0000
 minfo_ram_s:
-		include	"system/md/sound.asm"
+		include	"sound/gema.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
 Md_ReadModes:
@@ -102,9 +102,9 @@ RamCode_Debug:
 
 		align 4
 		phase $880000+*
-Z80_CODE:	include "system/md/z_driver.asm"	; Called once
-Z80_CODE_END:
 		include "system/md/sub_dreq.asm"	; DREQ transfer only works on 880000
+Z80_CODE:	include "sound/gema_zdrv.asm"		; Called once
+Z80_CODE_END:
 		include "sound/tracks.asm"		; GEMA: Track data
 		include "sound/instr.asm"		; GEMA: FM instruments
 		include "sound/smpl_dac.asm"		; GEMA: DAC samples

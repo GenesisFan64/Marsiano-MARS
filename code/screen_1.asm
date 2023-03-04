@@ -92,16 +92,20 @@ MD_2DMODE:
 		bsr	Video_Update
 		bsr 	System_WaitFrame	; Send first DREQ
 
-		moveq	#0,d0
-		bsr	Sound_TrkStop
-		move.w	#200,d1
-		bsr	Sound_GlbBeats
-		lea	(GemaTrk_xtrim),a0
-		moveq	#0,d0
-		moveq	#3,d1
-		moveq	#0,d2
-		moveq	#%0001,d3
-		bsr	Sound_TrkPlay
+; 		moveq	#0,d0
+; 		bsr	Sound_TrkStop
+; 		move.w	#200,d1
+; 		bsr	Sound_GlbBeats
+; 		lea	(GemaTrk_xtrim),a0
+; 		moveq	#0,d0
+; 		moveq	#3,d1
+; 		moveq	#0,d2
+; 		moveq	#%0001,d3
+; 		bsr	Sound_TrkPlay
+
+		bsr	gemaStopAll
+		moveq	#3,d0
+		bsr	gemaPlayTrack
 
 		moveq	#2,d0			; and set this psd-graphics mode
 		bsr	Video_Mars_GfxMode
@@ -126,7 +130,7 @@ MD_2DMODE:
 ; 		bsr	Video_Print
 
 		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyMode,d7
+		btst	#bitJoyStart,d7
 		beq.s	.not_mode
 		bsr	.fade_out
 		move.w	#1,(RAM_Glbl_Scrn).w
@@ -193,7 +197,7 @@ MD_2DMODE:
 
 ; .not_hold3:
 		move.w	(Controller_1+on_press),d7
-		btst	#bitJoyStart,d7
+		btst	#bitJoyA,d7
 		beq	.loop
 		move.w	#2,(RAM_Glbl_Scrn).w
 		rts
@@ -446,13 +450,13 @@ ObjMd_Player:
 		btst	#bitJoyRight,d0
 		beq.s	.nrm
 		bclr	#bitobj_flipH,obj_set(a6)
-		move.w	#$800,d1
+		move.w	#$600,d1
 		move.w	#1,d2
 .nrm
 		btst	#bitJoyLeft,d0
 		beq.s	.contlr
 		bset	#bitobj_flipH,obj_set(a6)
-		move.w	#-$800,d1
+		move.w	#-$600,d1
 		move.w	#1,d2
 .contlr:
 		move.w	d1,obj_x_spd(a6)

@@ -1239,21 +1239,15 @@ Video_LoadArt:
 		lsr.w	#8,d7
 		cmp.b	#$FF,d7
 		beq.s	.from_ram
-		jsr	System_Dma_Enter
-	if MARS
-		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
-	endif
+		bsr	System_DmaEnter_ROM
  		move.w	d5,-(sp)
 		move.w	d6,(a4)				; d6 - First word
 		move.w	(sp)+,(a4)			; *** Second write, 68k freezes until DMA ends
-	if MARS
-		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
-	endif
 		move.w	#$8100,d6			; DMA OFF
 		move.b	(RAM_VdpRegs+1),d6
 		move.w	d6,(a4)
 		move.w	(sp)+,sr
-		jmp	System_Dma_Exit
+		bra	System_DmaExit_ROM
 .from_ram:
 		move.w	d7,(a4)
  		move.w	d5,-(sp)
@@ -1289,7 +1283,7 @@ Video_DmaBlast:
 		move.b	(RAM_VdpRegs+1),d7
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a4)
-		jsr	System_Dma_Enter		; Request Z80 stop and SH2 backup
+		bsr	System_DmaEnter_ROM		; Request Z80 stop and SH2 backup
 	if MARS
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
 	endif
@@ -1313,7 +1307,7 @@ Video_DmaBlast:
 	if MARS
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
 	endif
-		jsr	System_Dma_Exit			; Resume Z80 and SH2 direct
+		bsr	System_DmaExit_ROM		; Resume Z80 and SH2 direct
 		move.w	#$8100,d7			; DMA OFF
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a4)

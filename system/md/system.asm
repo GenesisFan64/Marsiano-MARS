@@ -104,6 +104,7 @@ System_WaitFrame:
 		move.b	(RAM_VdpRegs+1),d7
 		bset	#bitDmaEnbl,d7
 		move.w	d7,(a6)
+		bsr	System_DmaEnter_RAM
 		move.l	#$94009328,(a6)
 		move.l	#$96009500|(RAM_VerScroll<<7&$FF0000)|(RAM_VerScroll>>1&$FF),(a6)
 		move.w	#$9700|(RAM_VerScroll>>17&$7F),(a6)
@@ -128,6 +129,7 @@ System_WaitFrame:
 		move.w	#$C000,(a6)
 		move.w	#$0000|$80,-(sp)
 		move.w	(sp)+,(a6)
+		bsr	System_DmaExit_RAM
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
@@ -135,21 +137,59 @@ System_WaitFrame:
 		rts
 
 ; --------------------------------------------------------
-; System_Dma_Enter, System_Dma_Exit
+; System_DmaEnter_(from) and System_DmaEnter_(from)
+; (from): ROM or RAM
 ;
-; Call these before entering or exiting any
-; DMA ROM-to-VDP transfer
+; Call to these labels BEFORE and AFTER doing
+; DMA-to-VDP transers.
+; These calls are not needed for FILL or COPY.
 ;
-; Your Sound driver's Z80 pause calls go here
+; ** For stock Genesis:
+;  | The Z80 cannot read from ROM while the
+;  | DMA ROM-to-VDP transfer is active.
+;  | THIS INCLUDES RAM TRANSFERS
+;  | ** Solution:
+;  | STOP the Z80 entirely OR
+;  | First stop, set a flag and turn ON the
+;  | Z80 again, If the Z80 reads the flags it
+;  | should be stuck on a loop until you clear
+;  | the flag from here after finishing your
+;  | DMA transfer(s)
+;
+; ** For the 32X:
+;  | SAME rule for the Genesis, but this time the
+;  | ROM-to-VDP transfer requires the RV bit to be set.
+;  | (RAM transfers doesn't require this bit at all.)
+;  | Setting the RV bit blocks the SH2 from accessing
+;  | the ROM area, THIS ALSO affects the Z80.
+;  | ** Solution:
+;  | First, make sure the SH2 isn't reading from ROM
+;  | while the bit is active, or it will read garbage
+;  | data.
+;  | In the case where you need to read from ROM
+;  | a lot (Playing PWM's for example):
+;  | First request an CMD interrupt and tell the
+;  | SH2 to backup a small amount of sample data
+;  | and temporally relocate the read point to the
+;  | backup until you make another
+;  | interrupt telling that you finished here and set
+;  | RV back to 0.
+;
+; This is where you put your Sound driver's Z80 stop
+; or pause calls go here
 ; --------------------------------------------------------
 
-System_Dma_Enter:
-		jsr	(Sound_DMA_Pause).l
-		rts
+System_DmaEnter_RAM:
+		bra	gemaDmaPause
+System_DmaExit_RAM:
+		bra	gemaDmaResume
 
-System_Dma_Exit:
-		jsr	(Sound_DMA_Resume).l
-		rts
+; --------------------------------------------------------
+
+System_DmaEnter_ROM:
+		bra	gemaDmaPauseRom
+System_DmaExit_ROM:
+		bra	gemaDmaResumeRom
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -438,7 +478,7 @@ System_Random:
 		move.l	d4,-(sp)
 		move.l	(RAM_SysRandSeed).l,d4
 		bne.s	.good_s
-		move.l	#$B51A7823,d4
+		move.l	#$23B51947,d4
 .good_s:
 		move.l	d4,d0
 		rol.l	#5,d4
@@ -590,8 +630,7 @@ Mode_Init:
 		dbf	d5,.clr_mdls
 
 		move.w	#0,d0
-		bsr	Video_Mars_GfxMode
-		rts
+		bra	Video_Mars_GfxMode
 
 ; --------------------------------------------------------
 
@@ -635,5 +674,3 @@ HInt_Default:
 ; ----------------------------------------------------------------
 ; System data
 ; ----------------------------------------------------------------
-
-

@@ -91,16 +91,19 @@ MD_3DMODE:
 ; 		moveq	#0,d2
 ; 		move.w	#%0001,d3		;
 ; 		bsr	Sound_TrkPlay
-		moveq	#0,d0	; OLD
-		bsr	Sound_TrkStop
-		move.w	#200+32,d1
-		bsr	Sound_GlbBeats
-		lea	(GemaTrkData_MOVEME),a0
-		moveq	#0,d0
-		moveq	#7,d1
-		moveq	#0,d2
-		moveq	#0,d3
-		bsr	Sound_TrkPlay
+; 		moveq	#0,d0	; OLD
+; 		bsr	Sound_TrkStop
+; 		move.w	#200+32,d1
+; 		bsr	Sound_GlbBeats
+; 		lea	(GemaTrkData_MOVEME),a0
+; 		moveq	#0,d0
+; 		moveq	#7,d1
+; 		moveq	#0,d2
+; 		moveq	#0,d3
+; 		bsr	Sound_TrkPlay
+		bsr	gemaStopAll
+		moveq	#2,d0
+		bsr	gemaPlayTrack
 
 	; Set Fade-in settings
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -137,7 +140,7 @@ MD_3DMODE:
 		bne.s	.loop
 
 		move.w	(Controller_1+on_hold),d7
-		btst	#bitJoyMode,d7
+		btst	#bitJoyStart,d7
 		beq.s	.not_mode
 		bsr	.fade_out
 		move.w	#0,(RAM_Glbl_Scrn).w
