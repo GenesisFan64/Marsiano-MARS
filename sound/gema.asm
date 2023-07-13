@@ -314,6 +314,27 @@ gemaPlayTrack:
 		bsr	sndReq_scmd
 		move.b	d0,d7
 		bsr	sndReq_sbyte
+		moveq	#0,d7
+		bsr	sndReq_sbyte
+		bra 	sndReq_Exit
+
+; --------------------------------------------------------
+; gemaPlayFromBlk
+;
+; Play a track by number
+;
+; d0.b - Track number
+; d1.b - Block number
+; --------------------------------------------------------
+
+gemaPlayFromBlk:
+		bsr	sndReq_Enter
+		move.w	#$01,d7		; Command $04
+		bsr	sndReq_scmd
+		move.b	d0,d7
+		bsr	sndReq_sbyte
+		move.b	d1,d7
+		bsr	sndReq_sbyte
 		bra 	sndReq_Exit
 
 ; --------------------------------------------------------

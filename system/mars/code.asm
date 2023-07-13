@@ -763,19 +763,20 @@ s_irq_cmd:
 		mov	r0,r7
 		and	#%111,r0
 		cmp/eq	#%001,r0
-		bt	.no_keyoff
+		bt	.pwm_keyon
 		cmp/eq	#%010,r0
 		bt	.pwm_keyoff
 		cmp/eq	#%100,r0
 		bt	.pwm_keycut
+.no_req2:
 		bra	.no_req
 		nop
+; KEY OFF...
 .pwm_keyoff:
 		mov	#$40,r2
 		mov	#MarsSound_SetVolume,r0
 		jsr	@r0
 		nop
-.no_req2:
 		bra	.no_req
 		nop
 .pwm_keycut:
@@ -786,10 +787,11 @@ s_irq_cmd:
 		bra	.no_req
 		nop
 		align 4
+
 	; Normal playback
-.no_keyoff:
-		mov	r7,r0
-		tst	#$10,r0
+.pwm_keyon:
+		mov	r7,r0		; <-- check COM bits again
+		tst	#$10,r0		; %xxx?xxxx
 		bt	.no_pitchbnd
 		mov	r14,r13
 		add	#8,r13		; skip COM
@@ -806,11 +808,6 @@ s_irq_cmd:
 		mov	#MarsSound_SetPwmPitch,r0
 		jsr	@r0
 		nop
-.no_pitchbnd:
-		mov	r7,r0
-		tst	#$20,r0
-		bt	.no_volumebnd
-		mov	r0,r7
 		mov	r14,r13
 		add	#8,r13		; point to volume values
 		mov.b	@r13,r0
@@ -819,7 +816,9 @@ s_irq_cmd:
 		mov	#MarsSound_SetVolume,r0
 		jsr	@r0
 		nop
-.no_volumebnd:
+		bra	.no_req
+		nop
+.no_pitchbnd:
 		mov	r7,r0
 		tst	#$01,r0		; key-on?
 		bt	.no_req

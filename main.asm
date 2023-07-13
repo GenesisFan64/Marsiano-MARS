@@ -3,7 +3,20 @@
 ; PROJECT MARSIANO
 ; +-----------------------------------------------------------------+
 
-		include	"system/macros.asm"		; Assembler macros
+		!org 0				; Start at 0
+		cpu 		68000		; Current CPU is 68k, gets changed later.
+		padding		off		; Dont pad dc.b
+		listing 	purecode	; Want listing file, but only the final code in expanded macros
+		supmode 	on 		; Supervisor mode 68k
+		dottedstructs	off		; If needed
+		page 		0
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Includes
+; ----------------------------------------------------------------
+
+		include	"macros.asm"			; Assembler macros
 		include	"system/shared.asm"		; Shared Genesis/32X variables
 		include	"system/md/map.asm"		; Genesis hardware map
 		include	"system/md/const.asm"		; Genesis variables

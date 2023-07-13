@@ -345,9 +345,15 @@ GemaTrk_TEST_0:
 ; Max. 16 instruments
 ; Starting from 1.
 .ins:
-	gInsPsg 0,$20,$20,$10,$00,$04,0
-	gInsPsgN +12,$20,$20,$10,$00,$04,0,%011
-	gInsFm -12,FmIns_Bass_calm
+; 	gInsDac 0,DacIns_TESTINS,0
+
+; 	gInsPwm -17,SmpIns_VctrBrass,%001
+; 	gInsPwm -17,SmpIns_VctrBrass,%001
+
+	gInsPsg 0,$00,$00,$00,$00,$00,0
+	gInsFm -12,FmIns_Trumpet_2
+; 	gInsPsgN +12,$20,$20,$10,$00,$04,0,%011
+
 	gInsFm3 0,FmIns_Sp_OpenHat
 	gInsDac -12,DacIns_Snare_1,0
 	gInsPwm -17,SmpIns_VctrBrass,%001

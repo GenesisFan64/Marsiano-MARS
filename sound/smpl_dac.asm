@@ -28,6 +28,11 @@ DacIns_Snare_1:
 .start:	binclude "sound/instr/smpl/snare_1.wav",$2C
 .end:
 
+DacIns_TESTINS:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/test.wav",$2C
+.end:
+
 ; TEST SAMPLE
 TEST_WAVE:
 	binclude "sound/instr/smpl/test.wav",$2C

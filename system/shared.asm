@@ -74,11 +74,11 @@ sizeof_marsspr	ds.l 0
 ; On the 32X Side:
 ; 	mov	#RAM_Mars_DreqRead+DREQ_LABEL,r1
 ;
-; Call System_MarsUpdate DURING display to transfer your
+; Call System_MarsUpdate DURING DISPLAY to transfer your
 ; changes.
 ; ----------------------------------------------------------------
 
-; *** List MUST be aligned in 8bytes (end with 0 or 8) ***
+; *** List MUST be aligned in 8bytes, end with 0 or 8 ***
 
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
@@ -89,6 +89,6 @@ Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0
 		finish
 
-	if MOMPASS=7
+	if MOMPASS=5
 		message "DREQ RAM uses: \{sizeof_dreq}"
 	endif

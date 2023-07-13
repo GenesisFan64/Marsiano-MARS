@@ -5,18 +5,6 @@
 ; Include this file FIRST
 ; ----------------------------------------------------------------
 
-; --------------------------------------------------------
-; AS Main settings
-; --------------------------------------------------------
-
-		!org 0				; Start at 0
-		cpu 		68000		; Current CPU is 68k, gets changed later.
-		padding		off		; Dont pad dc.b
-		listing 	purecode	; Want listing file, but only the final code in expanded macros
-		supmode 	on 		; Supervisor mode 68k
-		dottedstructs	off		; If needed
-		page 		0
-
 ; ====================================================================
 ; ---------------------------------------------
 ; Functions

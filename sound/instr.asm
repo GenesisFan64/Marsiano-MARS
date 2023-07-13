@@ -118,4 +118,3 @@ FmIns_Trombone_gem:
 		binclude "sound/instr/fm/OLD/trombone_gem.gsx",$2478,$20
 FmIns_HBeat_tom:
 		binclude "sound/instr/fm/OLD/nadia_tom.gsx",$2478,$20
-

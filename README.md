@@ -1,7 +1,7 @@
 # Marsiano-MARS
 An starting point for making Sega 32X homebrew software, was going to be used for a tech demo to show it's capabilities but ran out of time...
 
-- 68k is being used for the main logic
+- 68000 is being used for the main logic
 
 - Z80 does the sound, including PWM (with the help of Slave SH2)
 

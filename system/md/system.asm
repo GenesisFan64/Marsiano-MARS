@@ -244,9 +244,9 @@ System_GrabRamCode:
 ;
 ; Reads data from the Controller ports
 ; *** CALL THIS ON VBLANK ONLY ***
-; 
+;
 ; Uses:
-; d4-d6,a4-a6
+; d5-d7,a5-a6
 ; --------------------------------------------------------
 
 System_Input:
@@ -263,22 +263,22 @@ System_Input:
 ; ; 		move.w	#0,(z80_bus).l
 ; 		rts
 
-; --------------------------------------------------------	
+; --------------------------------------------------------
 ; Read port
-; 
+;
 ; a5 - Current port
 ; a6 - Output data
 ; --------------------------------------------------------
 
 .this_one:
 		bsr	.pick_id
-		move.b	d4,pad_id(a6)
-		cmp.w	#$F,d4
+		move.b	d7,pad_id(a6)
+		cmp.w	#$F,d7
 		beq.s	.exit
-		and.w	#$F,d4
-		add.w	d4,d4
-		move.w	.list(pc,d4.w),d5
-		jmp	.list(pc,d5.w)
+		and.w	#$F,d7
+		add.w	d7,d7
+		move.w	.list(pc,d7.w),d6
+		jmp	.list(pc,d6.w)
 .exit:
 		clr.b	pad_ver(a6)
 		rts
@@ -379,7 +379,7 @@ System_Input:
 
 ; --------------------------------------------------------
 ; ID $0D
-; 
+;
 ; Normal controller: 3 button or 6 button.
 ; --------------------------------------------------------
 
@@ -392,22 +392,22 @@ System_Input:
 		move.b	#$00,(a5)	; Show SA|RLDU
 		nop
 		nop
-		move.b	(a5),d4		; The following flips are for
-		lsl.w	#2,d4		; the 6pad's internal counter:
-		and.w	#%11000000,d4
-		or.w	d5,d4
+		move.b	(a5),d7		; The following flips are for
+		lsl.w	#2,d7		; the 6pad's internal counter:
+		and.w	#%11000000,d7
+		or.w	d5,d7
 		move.b	#$40,(a5)	; Show CB|RLDU (2)
-		not.w	d4
+		not.w	d7
 		move.b	on_hold+1(a6),d5
-		eor.b	d4,d5
+		eor.b	d7,d5
 		move.b	#$00,(a5)	; Show SA|RLDU (3)
-		move.b	d4,on_hold+1(a6)
-		and.b	d4,d5
+		move.b	d7,on_hold+1(a6)
+		and.b	d7,d5
 		move.b	d5,on_press+1(a6)
 		move.b	#$40,(a5)	; 6 button responds (4)
 		nop
 		nop
-		move.b	(a5),d4		; Grab ??|MXYZ
+		move.b	(a5),d7		; Grab ??|MXYZ
  		move.b	#$00,(a5)	; (5)
   		nop
   		nop
@@ -419,23 +419,23 @@ System_Input:
 		lsr.w	#2,d6
 		and.w	#1,d6
 		beq.s	.oldpad
-		not.b	d4
- 		and.w	#%1111,d4
+		not.b	d7
+ 		and.w	#%1111,d7
 		move.b	on_hold(a6),d5
-		eor.b	d4,d5
-		move.b	d4,on_hold(a6)
-		and.b	d4,d5
+		eor.b	d7,d5
+		move.b	d7,on_hold(a6)
+		and.b	d7,d5
 		move.b	d5,on_press(a6)
 .oldpad:
 		move.b	d6,pad_ver(a6)
 		rts
-		
+
 ; --------------------------------------------------------
 ; Grab ID
 ; --------------------------------------------------------
 
 .pick_id:
-		moveq	#0,d4
+		moveq	#0,d7
 		move.b	#%01110000,(a5)		; TH=1,TR=1,TL=1
 		nop
 		nop
@@ -443,19 +443,19 @@ System_Input:
 		move.b	#%00110000,(a5)		; TH=0,TR=1,TL=1
 		nop
 		nop
-		add.w	d4,d4
+		add.w	d7,d7
 .read:
 		move.b	(a5),d5
 		move.b	d5,d6
 		and.b	#$C,d6
 		beq.s	.step_1
-		addq.w	#1,d4
+		addq.w	#1,d7
 .step_1:
-		add.w	d4,d4
+		add.w	d7,d7
 		move.b	d5,d6
 		and.w	#3,d6
 		beq.s	.step_2
-		addq.w	#1,d4
+		addq.w	#1,d7
 .step_2:
 		rts
 

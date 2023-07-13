@@ -16,7 +16,7 @@ clear
 
 # MD/MARS
 echo "** MARS **"
-tools/AS/linux/asl mars.asm -q -xx -c -A -olist out/rom_mars.lst -A -L -D MCD=0,MARS=1,MARSCD=0
-python tools/p2bin.py mars.p out/rom_mars.bin
-rm mars.p
-rm mars.h
+tools/AS/linux/asl main.asm -q -xx -c -A -olist out/rom_mars.lst -A -L -D MCD=0,MARS=1,MARSCD=0
+python tools/p2bin.py main.p out/rom_mars.bin
+rm main.p
+rm main.h
