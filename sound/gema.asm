@@ -61,7 +61,7 @@ zDrvMarsBlk	equ marsBlock		; Disable PWM flag
 ; a0-a1,d0-d1
 ; --------------------------------------------------------
 
-		align $80
+; 		align $80
 Sound_Init:
 		move.w	#$2700,sr
 		move.w	#$0100,(z80_bus).l		; Get Z80 bus

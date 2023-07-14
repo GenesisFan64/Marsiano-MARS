@@ -3,7 +3,7 @@
 ; OLD Header for Genesis to boot
 ; ----------------------------------------------------------------
 
-		dc.l 0			; Stack point
+		dc.l RAM_Stack		; Stack point
 		dc.l $3F0		; Entry point MUST point to $3F0
 		dc.l MD_ErrBus		; Bus error
 		dc.l MD_ErrAddr		; Address error
@@ -273,10 +273,3 @@ MD_Init:
 		move.l	#$80048104,(a6)		; Default top VDP regs
 		moveq	#0,d0			; Clear both Master and Slave comm's
 		move.l	d0,comm12(a5)
-		move.l	#$FF,d1			; Small delay...
-.wait_1:
-		move.l	#$FF,d0
-.wait_2:
-		nop
-		dbf	d0,.wait_2
-		dbf	d1,.wait_1

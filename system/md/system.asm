@@ -18,9 +18,14 @@ RAM_initflug	ds.l 1				; "INIT" flag
 RAM_MdMarsVInt	ds.w 3				; VBlank jump (JMP xxxx xxxx)
 RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
 RAM_MdVBlkWait	ds.w 1
-RAM_SysFlags	ds.w 1				; Game engine flags (note: it's a byte)
 sizeof_mdsys	ds.l 0
-		finish
+		endstruct
+
+		if (sizeof_mdsys-RAM_MdSystem) > MAX_MdSystem
+			error "RAN OUT OF GENESIS SYS-SUBS"
+		else
+			report "GENESIS SYS-SUBS",sizeof_mdsys-RAM_MdSystem
+		endif
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -31,8 +36,8 @@ sizeof_mdsys	ds.l 0
 ; --------------------------------------------------------
 
 System_Init:
-		move.w	#$2700,sr		; Disable interrupts
 		move.w	sr,-(sp)
+		move.w	#$2700,sr		; Disable interrupts
 		move.w	#$0100,(z80_bus).l	; Stop Z80
 .wait:
 		btst	#0,(z80_bus).l		; Wait for it
@@ -45,61 +50,53 @@ System_Init:
 		move.w	#$4EF9,d0		; Set JMP opcode for the Hblank/VBlank jumps
  		move.w	d0,(RAM_MdMarsVInt).l
 		move.w	d0,(RAM_MdMarsHInt).l
-; 		move.l	#$56255769,d0		; Set these random values
-; 		move.l	#$95116102,d1
-; 		move.l	d0,(RAM_SysRandVal).l
-; 		move.l	d1,(RAM_SysRandSeed).l
 		move.l	#VInt_Default,d0	; Set default ints
 		move.l	#Hint_Default,d1
 		bsr	System_SetInts
 		lea	(RAM_InputData),a0	; Clear input data buffer
-		move.w	#sizeof_input-1/2,d1
+		move.w	#(sizeof_input/2)-1,d1
 		moveq	#0,d0
 .clrinput:
-		move.w	#0,(a0)+
+		move.w	d0,(a0)+
 		dbf	d1,.clrinput
+; 		move.l	#$56255769,d0		; Set these random values
+; 		move.l	#$95116102,d1
+; 		move.l	d0,(RAM_SysRandVal).l
+; 		move.l	d1,(RAM_SysRandSeed).l
 		move.w	(sp)+,sr
 		rts
-
-; 		lea	(vdp_ctrl),a6
-; .wait_in:	move.w	(a6),d4
-; 		btst	#bitVBlk,d4
-; 		beq.s	.wait_in
-; .wait_out:	move.w	(a6),d4
-; 		btst	#bitVBlk,d4
-; 		bne.s	.wait_out
-; 		bra	System_MarsUpdate
 
 ; --------------------------------------------------------
 ; System_WaitFrame
 ;
-; Call this to wait until the next frame.
+; Call this on the loop your current screen.
 ;
-; Before entering VBlank:
-; - The DREQ section from here will be transfered
-; to the 32X side then processed on the next
-; frame.
-;
-; Inside VBlank this will:
-; - Update the controller inputs
+; Calling this it will:
+; - Update the controller data
 ; - Transfer the Genesis palette, sprites and scroll
-;   data from from RAM to VDP
-;   (Doesn't require the RV bit)
+;   data from from RAM to VDP, RV bit is not required.
+;
+; But before entering VBlank:
+; - The DREQ data stored here will be transfered
+; to the 32X side
 ; --------------------------------------------------------
 
 System_WaitFrame:
-		lea	(vdp_ctrl),a6		; <-- VSync IN
-.wait_lag:	move.w	(a6),d4
+		lea	(vdp_ctrl),a6		; Inside VBlank?
+.wait_lag:	move.w	(a6),d4			; then it's a lag frame.
 		btst	#bitVBlk,d4
 		bne.s	.wait_lag
-; 		bsr	Video_Mars_WaitFrame
-		bsr	System_MarsUpdate
-		lea	(vdp_ctrl),a6
-.wait_in:	move.w	(a6),d4			; We are on DISPLAY, wait for VBlank
+		bsr	System_MarsUpdate	; Update 32X stuff
+		lea	(vdp_ctrl),a6		; Check if we are on DISPLAY
+.wait_in:	move.w	(a6),d4
 		btst	#bitVBlk,d4
 		beq.s	.wait_in
 		bsr	System_Input		; Read inputs FIRST
-		lea	(vdp_ctrl),a6		; *** DMA'd Scroll and Palette
+	; *** DMA'd Scroll and Palette
+	;
+	; The palette is transferred at the end so
+	; it doesn't show the dots on screen. (hopefully)
+		lea	(vdp_ctrl),a6
 		move.w	#$8100,d7		; DMA ON
 		move.b	(RAM_VdpRegs+1),d7
 		bset	#bitDmaEnbl,d7
@@ -147,13 +144,13 @@ System_WaitFrame:
 ; ** For stock Genesis:
 ;  | The Z80 cannot read from ROM while the
 ;  | DMA ROM-to-VDP transfer is active.
-;  | THIS INCLUDES RAM TRANSFERS
+;  | THIS INCLUDES RAM TRANSFERS.
 ;  | ** Solution:
-;  | STOP the Z80 entirely OR
+;  | STOP the Z80 entirely OR:
 ;  | First stop, set a flag and turn ON the
-;  | Z80 again, If the Z80 reads the flags it
+;  | Z80 again, if the Z80 reads the flag it
 ;  | should be stuck on a loop until you clear
-;  | the flag from here after finishing your
+;  | that flag from here after finishing your
 ;  | DMA transfer(s)
 ;
 ; ** For the 32X:
@@ -204,7 +201,7 @@ System_MarsUpdate:
 	if MARS=1
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
-		jmp	(System_RomSendDreq).l	; <-- external jump
+		jmp	(System_RomSendDreq).l	; <-- EXTERNAL JUMP to $880000 area
 	else
 		rts
 	endif
@@ -224,12 +221,12 @@ System_GrabRamCode:
 	if MARS
 		or.l	#$880000,d0
 		move.l	d0,a0
-		lea	(RAMCODE_USER),a1
-		move.w	#$5000-1,d7	; TODO: make custom sizes.
+		lea	(RAM_UserCode),a1
+		move.w	#(MAX_UserCode+MAX_UserData)-1,d7	; TODO: TEMPORAL SIZE
 .copyme2:
 		move.b	(a0)+,(a1)+
 		dbf	d7,.copyme2
-		jmp	(RAMCODE_USER).l
+		jmp	(RAM_UserCode).l
 	else
 		rts
 	endif
@@ -273,9 +270,9 @@ System_Input:
 .this_one:
 		bsr	.pick_id
 		move.b	d7,pad_id(a6)
-		cmp.w	#$F,d7
+		cmp.w	#$0F,d7
 		beq.s	.exit
-		and.w	#$F,d7
+		andi.w	#$0F,d7
 		add.w	d7,d7
 		move.w	.list(pc,d7.w),d6
 		jmp	.list(pc,d6.w)
@@ -331,7 +328,7 @@ System_Input:
 		nop
 		nop
 		move.b	(a5),d7
- 		and.w	#%1111,d7
+ 		andi.w	#%1111,d7
 		move.w	on_hold(a6),d6
 		eor.w	d7,d6
 		move.w	d7,on_hold(a6)
@@ -342,11 +339,11 @@ System_Input:
 		nop
 		move.b	(a5),d7
 		move.b	#$20,(a5)	; X3 | X2 | X1 | X0
-		and.w	#%1111,d7
+		andi.w	#%1111,d7
 		lsl.w	#4,d7
 		nop
 		move.b	(a5),d6
-		and.w	#%1111,d6
+		andi.w	#%1111,d6
 		or.w	d6,d7
 		btst    #0,d5
 		beq.s	.x_neg
@@ -359,11 +356,11 @@ System_Input:
 		nop
 		move.b	(a5),d7
 		move.b	#$20,(a5)	; Y3 | Y2 | Y1 | Y0
-		and.w	#%1111,d7
+		andi.w	#%1111,d7
 		lsl.w	#4,d7
 		nop
 		move.b	(a5),d6
-		and.w	#%1111,d6
+		andi.w	#%1111,d6
 		or.w	d6,d7
 		btst    #1,d5
 		beq.s	.y_neg
@@ -388,13 +385,13 @@ System_Input:
 		nop
 		nop
 		move.b	(a5),d5
-		and.w	#%00111111,d5
+		andi.w	#%00111111,d5
 		move.b	#$00,(a5)	; Show SA|RLDU
 		nop
 		nop
 		move.b	(a5),d7		; The following flips are for
 		lsl.w	#2,d7		; the 6pad's internal counter:
-		and.w	#%11000000,d7
+		andi.w	#%11000000,d7
 		or.w	d5,d7
 		move.b	#$40,(a5)	; Show CB|RLDU (2)
 		not.w	d7
@@ -415,12 +412,12 @@ System_Input:
  		move.b	#$40,(a5)	; (6)
  		nop
  		nop
-		and.w	#$F,d6
+		andi.w	#$F,d6
 		lsr.w	#2,d6
-		and.w	#1,d6
+		andi.w	#1,d6
 		beq.s	.oldpad
 		not.b	d7
- 		and.w	#%1111,d7
+ 		andi.w	#%1111,d7
 		move.b	on_hold(a6),d5
 		eor.b	d7,d5
 		move.b	d7,on_hold(a6)
@@ -447,13 +444,13 @@ System_Input:
 .read:
 		move.b	(a5),d5
 		move.b	d5,d6
-		and.b	#$C,d6
+		andi.b	#$C,d6
 		beq.s	.step_1
 		addq.w	#1,d7
 .step_1:
 		add.w	d7,d7
 		move.b	d5,d6
-		and.w	#3,d6
+		andi.w	#3,d6
 		beq.s	.step_2
 		addq.w	#1,d7
 .step_2:
@@ -511,7 +508,7 @@ System_Random:
 System_SineWave_Cos:
 		movem.w	d0,-(sp)
 		moveq	#0,d2
-		add.b	#$40,d0
+		addi.b	#$40,d0
 		move.b	d0,d2
 		asl.b	#1,d2
 		move.w	MdSys_SineData(pc,d2.w),d2
@@ -525,7 +522,7 @@ System_SineWave_Cos:
 
 System_SineWave:
 		movem.w	d0,-(sp)
-		and.w	#$7F,d0
+		andi.w	#$7F,d0
 		asl.w	#1,d0
 		move.w	MdSys_SineData(pc,d0.w),d2
 		mulu.w	d1,d2
@@ -615,8 +612,8 @@ System_SramInit:
 
 Mode_Init:
 		jsr	(Video_Clear).l
-		lea	(RAM_ModeBuff),a4
-		move.w	#(MAX_MDERAM/2)-1,d5
+		lea	(RAM_ScreenBuff),a4
+		move.w	#(MAX_ScrnBuff/2)-1,d5
 		moveq	#0,d4
 .clr:
 		move.w	d4,(a4)+
@@ -659,7 +656,7 @@ Mode_FadeOut:
 VInt_Default:
 		movem.l	d0-a6,-(sp)
 		bsr	System_Input
-		add.l	#1,(RAM_FrameCount).l
+		addi.l	#1,(RAM_FrameCount).l
 		movem.l	(sp)+,d0-a6		
 		rte
 

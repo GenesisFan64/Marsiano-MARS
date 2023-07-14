@@ -29,7 +29,7 @@ mdl_z_rot	ds.w 1		; Z rotation $08.00
 mdl_frame	ds.w 1
 mdl_flags	ds.w 1
 sizeof_mdlobj	ds.l 0
-		finish
+		endstruct
 
 ; 3D Camera
 ; RAM_MdDreq+Dreq_ObjCam
@@ -41,7 +41,7 @@ cam_x_rot	ds.l 1		; X rotation $000000.00
 cam_y_rot	ds.l 1		; Y rotation $000000.00
 cam_z_rot	ds.l 1		; Z rotation $000000.00
 sizeof_camera	ds.l 0
-		finish
+		endstruct
 
 ; "Super" sprites:
 ; RAM_MdDreq+Dreq_SuperSpr
@@ -61,7 +61,7 @@ marsspr_fill	ds.w 1		; <-- 2 FILLER bytes: free to use
 marsspr_data	ds.l 1		; Spritesheet address in SH2 area (0 == end-of-supersprites)
 ; marsspr_map	ds.l 1		; MAP data
 sizeof_marsspr	ds.l 0
-		finish
+		endstruct
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -87,7 +87,7 @@ Dreq_ObjCam	ds.b sizeof_camera
 Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
 Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
 sizeof_dreq	ds.l 0
-		finish
+		endstruct
 
 	if MOMPASS=5
 		message "DREQ RAM uses: \{sizeof_dreq}"

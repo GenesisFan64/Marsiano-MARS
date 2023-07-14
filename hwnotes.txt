@@ -19,11 +19,11 @@ LIST OF UNEMULATED SEGA 32X HARDWARE FEATURES/BUGS/ERRORS, the ones marked with 
 -- SH2---
 - The SDRAM, Framebuffer, ROM area and Cache run at different speeds for reading/writing and depending where the Program Counter (PC) is currently located. CACHE being the fastest BUT with the lowest space to store code or data.
 - BUS fighting: If any of the SH2 CPUs READ/WRITE the same location at the same time it will crash the add-on. Only tested on the SDRAM area but I believe the video and audio registers are affected too. only the comm's are safe for both sides (and Genesis too.) **
-- After writing _DMAOPERATION to 1 (Starting the DMA), it takes a few instructions to start: add 2 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0/_DMACHANNEL1)
+- After writing the DMA enable bit it takes a few instructions to start: add 2 nops in case you need to wait for the transfer to finish (reading bit 1 of _DMACHANNEL0/_DMACHANNEL1) **
 - When DMA is active: If the DESTINATION section gets read or rewritten during the transfer it will end early or get cancelled.
 - If DREQLEN gets modified during the DREQ transfer it will corrupt the output and probably freeze the entire 32X **
-- When writing to the $A5xx part to $FFFFFE80 (WATCHDOG Control): If you don't include the required %00011000($18) bits the CPU crashes.
-- If you use the DMA interrupt for transfering DREQ data: check for the DMA finish bit (bit 1 of _DMACHANNEL0/_DMACHANNEL1), if don't the next DREQ writes will be off-timed.
+- When writing to the $A5xx part to $FFFFFE80 (WATCHDOG Control): If you don't include the required %00011000($18) bits the current CPU crashes.
+- If you use the DMA interrupt for transfering DREQ data: check for the DMA finish bit (bit 1 of _DMACHANNEL0/_DMACHANNEL1), If don't the next DREQ writes will be off-timed.
 - 16-byte DMA transfers doesn't work properly if SOURCE(?) and DESTINATION aren't aligned by 0x10(16)'s.
 
 -- SuperVDP --

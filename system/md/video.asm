@@ -12,7 +12,7 @@ RAM_BgBufferM	equ	RAM_MdDreq+Dreq_BgExBuff	; Relocate MARS layer control
 
 MAX_MDOBJ	equ 16		; Max objects for Genesis
 varNullVram	equ $7FF	; Default Blank cell for some video routines
-varPrintVram	equ $580	; Location of the PRINT text graphics
+varPrintVram	equ $580	; Default location of the PRINT text graphics
 varPrintPal	equ 3		; Palette to use for the printable text
 
 ; --------------------------------------------------------
@@ -51,8 +51,8 @@ bitDrwR		equ 0
 bitDrwL		equ 1
 bitDrwD		equ 2
 bitDrwU		equ 3
-bitBgOn		equ 7
 bitMarsBg	equ 6
+bitBgOn		equ 7
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -94,7 +94,7 @@ md_bg_col	ds.l 1		; Collision data (if needed)
 md_bg_x		ds.l 1		; X pos 0000.0000
 md_bg_y		ds.l 1		; Y pos 0000.0000
 sizeof_mdbg	ds.l 0
-		finish
+		endstruct
 
 ; --------------------------------
 ; object struct
@@ -120,8 +120,7 @@ obj_status	ds.b 1		; Object custom status
 obj_spwnid	ds.b 1		; Object respawn index (this - 1)
 obj_ram		ds.b $40	; Object RAM
 sizeof_mdobj	ds.l 0
-		finish
-; 		message "\{sizeof_mdobj}"
+		endstruct
 
 ; --------------------------------
 ; obj_settings
@@ -180,7 +179,13 @@ RAM_FadeMarsDelay	ds.w 1
 RAM_FadeMarsTmr		ds.w 1
 RAM_VdpRegs		ds.b 24			; VDP Register cache
 sizeof_mdvid		ds.l 0
-			finish
+			endstruct
+
+		if (sizeof_mdvid-RAM_MdVideo) > MAX_MdVideo
+			error "RAN OUT OF GENESIS VIDEO"
+		else
+			report "GENESIS VIDEO",sizeof_mdvid-RAM_MdVideo
+		endif
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -188,13 +193,13 @@ sizeof_mdvid		ds.l 0
 ; --------------------------------------------------------
 
 Video_Init:
-		lea	(RAM_MdVideo),a6	; Clear RAM
+		lea	(RAM_MdVideo),a6	; Clear our RAM section
 		moveq	#0,d6
 		move.w	#(sizeof_mdvid-RAM_MdVideo)-1,d7
 .clrram:
 		move.b	d6,(a6)+
 		dbf	d7,.clrram
-		lea	list_vdpregs(pc),a6
+		lea	list_vdpregs(pc),a6	; Write "cache'd" VDP registers
 		lea	(RAM_VdpRegs).w,a5
 		lea	(vdp_ctrl),a4
 		move.w	#$8000,d6
@@ -211,8 +216,10 @@ Video_Init:
 ; Video_Update
 ;
 ; Writes register data stored in RAM to VDP
-; from Registers $80 to $90, WINDOW registers
-; $91 and $92 can be written manually.
+; from Registers $80 to $90
+;
+; WINDOW registers $91 and $92 are written
+; manually.
 ;
 ; Breaks:
 ; d6-d7,a5-a6
@@ -226,7 +233,7 @@ Video_Update:
 .loop:
 		move.b	(a6)+,d6
 		move.w	d6,(a5)
-		add.w	#$100,d6
+		addi.w	#$100,d6
 		dbf	d7,.loop
 .exit:
 		rts
@@ -255,6 +262,7 @@ list_vdpregs:
 		dc.b $00
 		align 2
 
+; Default PRINT palette
 ASCII_PAL:	dc.w $0000,$0EEE,$0CCC,$0AAA,$0888,$0444,$000E,$0008
 		dc.w $00EE,$0088,$00E0,$0080,$0E00,$0800,$0000,$0000
 ASCII_PAL_e:
@@ -291,7 +299,8 @@ Video_ClearScreen:
 		lsl.w	#8,d1
 		lsl.w	#2,d1
 		bsr	Video_Fill
-	; RAM...
+
+	; RAM cleanup
 		lea	(RAM_HorScroll),a0
 		move.w	#240-1,d7
 		moveq	#0,d0
@@ -310,7 +319,6 @@ Video_ClearScreen:
 .snext:
 		move.l	d0,(a0)+
 		dbf	d7,.snext
-
 		lea	(RAM_Palette),a0
 		lea	(RAM_PaletteFd),a1
 		move.w	#(64/2)-1,d7
@@ -319,7 +327,7 @@ Video_ClearScreen:
 		move.l	d0,(a0)+
 		move.l	d0,(a1)+
 		dbf	d7,.pnext
-
+	if MARS
 		lea	(RAM_MdDreq+Dreq_Palette),a0
 		lea	(RAM_MdMarsPalFd),a1
 		move.w	#(256/2)-1,d7
@@ -328,6 +336,7 @@ Video_ClearScreen:
 		move.l	d0,(a0)+
 		move.l	d0,(a1)+
 		dbf	d7,.pmnext
+	endif
 		rts
 
 ; ====================================================================
@@ -449,49 +458,6 @@ Video_LoadMap_Vert:
 		swap	d5
 		dbf	d5,.xloop
 		rts
-
-; ; --------------------------------------------------------
-; ; Video_AutoMap_Vert
-; ;
-; ; Make automatic map, Vertical order
-; ;
-; ; MCD: Use this to make a virtual screen
-; ; for Stamps
-; ;
-; ; d0 | LONG - 00|Lyr|X|Y,  locate(lyr,x,y)
-; ; d1 | LONG - Width|Height (cells),  mapsize(x,y)
-; ; d2 | WORD - VRAM
-;
-; ; Breaks:
-; ; a4-a5,d4-d7
-; ; --------------------------------------------------------
-;
-; ; TODO: double interlace
-; Video_AutoMap_Vert:
-; 		lea	(vdp_data),a4
-; 		bsr	vid_PickLayer
-; 		move.w	d2,d7		; Start here
-; 		move.l	d1,d5
-; 		swap	d5
-; .xloop:
-; 		swap	d5
-; 		move.l	d4,-(sp)
-; 		move.w	d1,d5
-; 		btst	#2,(RAM_VdpRegs+$C).l
-; 		beq.s	.yloop
-; 		lsr.w	#1,d5
-; .yloop:
-; 		move.l	d4,4(a4)
-; 		move.w	d7,(a4)
-; 		add.w	#1,d7
-; 		add.l	d6,d4
-; 		dbf	d5,.yloop
-;
-; 		move.l	(sp)+,d4
-; 		add.l	#$20000,d4
-; 		swap	d5
-; 		dbf	d5,.xloop
-; 		rts
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1008,7 +974,7 @@ Video_DoPalFade:
 ; --------------------------------------------------------
 ; Video_DmaMkEntry
 ;
-; Sets a new DMA transfer task to the Blast list
+; Sets a new DMA transfer task to the BLAST list
 ;
 ; *** ONLY CALL THIS OUTSIDE OF VBLANK ***
 ;
@@ -1316,266 +1282,9 @@ Video_DmaBlast:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Video routines for 32X
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; Video_Mars_GfxMode
-; Sets graphics mode on the 32X side
-;
-; Input:
-; d0 - Graphics mode
-; --------------------------------------------------------
-
-Video_Mars_GfxMode:
-	if MARS
-		move.w	d0,d7
-		and.w	#%00000111,d7			; Current limit: 8 Master modes
-		or.w	#$C0,d7
-		move.b	d7,(sysmars_reg+comm12+1).l
-		bsr	System_MarsUpdate
-.wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for Slave
-		and.w	#%00001111,d7
-		bne.s	.wait_slv
-.wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master
-		and.w	#%11000000,d7
-		bne.s	.wait
-	endif
-		rts
-
-; --------------------------------------------------------
-; Video_Mars_WaitFrame
-; --------------------------------------------------------
-
-Video_Mars_WaitFrame:
-	if MARS
-		bset	#5,(sysmars_reg+comm12+1).l	; Set R bit
-.wait:
-; 		move.w	(vdp_ctrl),d7
-; 		btst	#bitVBlk,d7
-; 		bne.s	.late
-		move.w	(sysmars_reg+comm12).l,d7
-		btst	#5,d7
-		bne.s	.wait
-.late:
-	endif
-		rts
-
-; --------------------------------------------------------
-; Video_LoadPal_Mars
-;
-; Load Indexed palette directly to Buffer
-;
-; d0 - Start at
-; d1 - Number of colors
-; d2 - Priority bit OFF/ON
-; --------------------------------------------------------
-
-Video_FadePal_Mars:
-		lea	(RAM_MdMarsPalFd),a6
-		clr.w	(RAM_FadeMarsTmr).w
-		bra.s	vidMars_Pal
-Video_LoadPal_Mars:
-		lea	(RAM_MdDreq+Dreq_Palette).w,a6
-vidMars_Pal:
-		move.l	a0,a5
-		moveq	#0,d7
-		move.w	d0,d7
-		add.w	d7,d7
-		adda	d7,a6
-		move.w	d1,d7
-		sub.w	#1,d7
-		move.w	d2,d6
-		and.w	#1,d6
-		ror.w	#1,d6
-.loop:
-		move.w	(a5)+,d5
-		or.w	d6,d5
-		move.w	d5,(a6)+
-		dbf	d7,.loop
-		rts
-
-; --------------------------------------------------------
-; Video_MarsPalFade
-;
-; a0 - Palette data
-; d0 - Number of colors
-; d1 - Speed
-;
-; RAM_ReqFadeMars: (WORD)
-; $00 - No task (or finished)
-; $01 - Fade in
-; $02 - Fade out to black
-;
-; CALL THIS OUTSIDE OF VBLANK
-; --------------------------------------------------------
-
-; TODO: luego ver que hago con el priority bit
-
-Video_MarsPalFade:
-		sub.w	#1,(RAM_FadeMarsTmr).w
-		bpl.s	.active
-		move.w	(RAM_FadeMarsDelay).w,(RAM_FadeMarsTmr).w
-		move.w	(RAM_FadeMarsReq).w,d7
-		add.w	d7,d7
-		move.w	.fade_list(pc,d7.w),d7
-		jmp	.fade_list(pc,d7.w)
-.active:
-		rts
-
-; --------------------------------------------
-
-.fade_list:
-		dc.w .fade_done-.fade_list
-		dc.w .fade_in-.fade_list
-		dc.w .fade_out-.fade_list
-
-; --------------------------------------------
-; No fade or finished.
-; --------------------------------------------
-
-.fade_done:
-		rts
-
-; --------------------------------------------
-; Fade in
-; --------------------------------------------
-
-.fade_in:
-		lea	(RAM_MdMarsPalFd),a6
-		lea	(RAM_MdDreq+Dreq_Palette).w,a5
-		move.w	#256,d0				; Num of colors
-		move.w	(RAM_FadeMarsIncr).w,d1		; Speed
-		move.w	d0,d6
-		swap	d6
-		sub.w	#1,d0
-.nxt_pal:
-		clr.w	d2		; Reset finished colorbits
-		move.w	(a6),d7		; d7 - Input
-		move.w	(a5),d6		; d6 - Output
-		move.w	d7,d3		; RED
-		move.w	d6,d4
-		and.w	#%1111111111100000,d6
-		and.w	#%0000000000011111,d4
-		and.w	#%0000000000011111,d3
-		add.w	d1,d4
-		cmp.w	d3,d4
-		bcs.s	.no_red
-		move.w	d3,d4
-		or.w	#%001,d2	; RED is ready
-.no_red:
-		or.w	d4,d6
-		lsl.w	#5,d1
-		move.w	d7,d3		; GREEN
-		move.w	d6,d4
-		and.w	#%1111110000011111,d6
-		and.w	#%0000001111100000,d4
-		and.w	#%0000001111100000,d3
-		add.w	d1,d4
-		cmp.w	d3,d4
-		bcs.s	.no_grn
-		move.w	d3,d4
-		or.w	#%010,d2	; GREEN is ready
-.no_grn:
-		or.w	d4,d6
-		lsl.w	#5,d1
-		move.w	d7,d3		; BLUE
-		move.w	d6,d4
-		and.w	#%1000001111111111,d6
-		and.w	#%0111110000000000,d4
-		and.w	#%0111110000000000,d3
-		add.w	d1,d4
-		cmp.w	d3,d4
-		bcs.s	.no_blu
-		move.w	d3,d4
-		or.w	#%100,d2	; BLUE is ready
-.no_blu:
-		or.w	d4,d6
-		lsr.w	#8,d1
-		lsr.w	#2,d1
-		and.w	#$8000,d7	; Keep priority bit
-		or.w	d7,d6
-		move.w	d6,(a5)+
-		adda	#2,a6
-		cmp.w	#%111,d2
-		bne.s	.no_fnsh
-		swap	d6
-		sub.w	#1,d6
-		swap	d6
-.no_fnsh:
-		dbf	d0,.nxt_pal
-		swap	d6
-		tst.w	d6
-		bne.s	.no_move
-		clr.w	(RAM_FadeMarsReq).w
-.no_move:
-		rts
-
-; --------------------------------------------
-; Fade out
-; --------------------------------------------
-
-.fade_out:
-		lea	(RAM_MdDreq+Dreq_Palette).w,a6
-		move.w	#256,d0				; Num of colors
-		move.w	(RAM_FadeMarsIncr).w,d1		; Speed
-		move.w	d0,d6
-		swap	d6
-		sub.w	#1,d0
-.nxt_pal_o:
-		clr.w	d2		; Reset finished colorbits
-		move.w	(a6),d7		; d7 - Input
-		move.w	d7,d6
-		and.w	#%1111111111100000,d7
-		and.w	#%0000000000011111,d6
-		sub.w	d1,d6
-		bpl.s	.no_red_o
-		clr.w	d6
-		or.w	#%001,d2	; RED is ready
-.no_red_o:
-		or.w	d6,d7
-		lsl.w	#5,d1
-		move.w	d7,d6
-		and.w	#%1111110000011111,d7
-		and.w	#%0000001111100000,d6
-		sub.w	d1,d6
-		bpl.s	.no_grn_o
-		clr.w	d6
-		or.w	#%010,d2	; GREEN is ready
-.no_grn_o:
-		or.w	d6,d7
-		lsl.w	#5,d1
-		move.w	d7,d6
-		and.w	#%1000001111111111,d7
-		and.w	#%0111110000000000,d6
-		sub.w	d1,d6
-		bpl.s	.no_blu_o
-		clr.w	d6
-		or.w	#%100,d2	; BLUE is ready
-.no_blu_o:
-		or.w	d6,d7
-		lsr.w	#8,d1
-		lsr.w	#2,d1
-		move.w	d7,(a6)+
-		cmp.w	#%111,d2
-		bne.s	.no_fnsh_o
-		swap	d6
-		sub.w	#1,d6
-		swap	d6
-.no_fnsh_o:
-		dbf	d0,.nxt_pal_o
-		swap	d6
-		tst.w	d6
-		bne.s	.no_move_o
-		clr.w	(RAM_FadeMarsReq).w
-.no_move_o:
-		rts
-
-; ====================================================================
-; ----------------------------------------------------------------
 ; MAP layout system
 ;
-; Note: uses some RAM'd video registeds.
+; Note: uses some RAM'd video registers.
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
@@ -2941,3 +2650,260 @@ slope_data_16:
 		dc.b  0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7
 		dc.b  8, 8, 9, 9,10,10,11,11,12,12,13,13,14,14,15,15
 		align 2
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Video routines for 32X
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; Video_Mars_GfxMode
+; Sets graphics mode on the 32X side
+;
+; Input:
+; d0 - Graphics mode
+; --------------------------------------------------------
+
+Video_Mars_GfxMode:
+	if MARS
+		move.w	d0,d7
+		and.w	#%00000111,d7			; Current limit: 8 Master modes
+		or.w	#$C0,d7
+		move.b	d7,(sysmars_reg+comm12+1).l
+		bsr	System_MarsUpdate
+.wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for Slave
+		and.w	#%00001111,d7
+		bne.s	.wait_slv
+.wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master
+		and.w	#%11000000,d7
+		bne.s	.wait
+	endif
+		rts
+
+; --------------------------------------------------------
+; Video_Mars_WaitFrame
+; --------------------------------------------------------
+
+Video_Mars_WaitFrame:
+	if MARS
+		bset	#5,(sysmars_reg+comm12+1).l	; Set R bit
+.wait:
+; 		move.w	(vdp_ctrl),d7
+; 		btst	#bitVBlk,d7
+; 		bne.s	.late
+		move.w	(sysmars_reg+comm12).l,d7
+		btst	#5,d7
+		bne.s	.wait
+.late:
+	endif
+		rts
+
+; --------------------------------------------------------
+; Video_LoadPal_Mars
+;
+; Load Indexed palette directly to Buffer
+;
+; d0 - Start at
+; d1 - Number of colors
+; d2 - Priority bit OFF/ON
+; --------------------------------------------------------
+
+Video_FadePal_Mars:
+		lea	(RAM_MdMarsPalFd),a6
+		clr.w	(RAM_FadeMarsTmr).w
+		bra.s	vidMars_Pal
+Video_LoadPal_Mars:
+		lea	(RAM_MdDreq+Dreq_Palette),a6
+vidMars_Pal:
+		move.l	a0,a5
+		moveq	#0,d7
+		move.w	d0,d7
+		add.w	d7,d7
+		adda	d7,a6
+		move.w	d1,d7
+		sub.w	#1,d7
+		move.w	d2,d6
+		and.w	#1,d6
+		ror.w	#1,d6
+.loop:
+		move.w	(a5)+,d5
+		or.w	d6,d5
+		move.w	d5,(a6)+
+		dbf	d7,.loop
+		rts
+
+; --------------------------------------------------------
+; Video_MarsPalFade
+;
+; a0 - Palette data
+; d0 - Number of colors
+; d1 - Speed
+;
+; RAM_ReqFadeMars: (WORD)
+; $00 - No task (or finished)
+; $01 - Fade in
+; $02 - Fade out to black
+;
+; CALL THIS OUTSIDE OF VBLANK
+; --------------------------------------------------------
+
+; TODO: luego ver que hago con el priority bit
+
+Video_MarsPalFade:
+		sub.w	#1,(RAM_FadeMarsTmr).w
+		bpl.s	.active
+		move.w	(RAM_FadeMarsDelay).w,(RAM_FadeMarsTmr).w
+		move.w	(RAM_FadeMarsReq).w,d7
+		add.w	d7,d7
+		move.w	.fade_list(pc,d7.w),d7
+		jmp	.fade_list(pc,d7.w)
+.active:
+		rts
+
+; --------------------------------------------
+
+.fade_list:
+		dc.w .fade_done-.fade_list
+		dc.w .fade_in-.fade_list
+		dc.w .fade_out-.fade_list
+
+; --------------------------------------------
+; No fade or finished.
+; --------------------------------------------
+
+.fade_done:
+		rts
+
+; --------------------------------------------
+; Fade in
+; --------------------------------------------
+
+.fade_in:
+		lea	(RAM_MdMarsPalFd),a6
+		lea	(RAM_MdDreq+Dreq_Palette),a5
+		move.w	#256,d0				; Num of colors
+		move.w	(RAM_FadeMarsIncr).w,d1		; Speed
+		move.w	d0,d6
+		swap	d6
+		sub.w	#1,d0
+.nxt_pal:
+		clr.w	d2		; Reset finished colorbits
+		move.w	(a6),d7		; d7 - Input
+		move.w	(a5),d6		; d6 - Output
+		move.w	d7,d3		; RED
+		move.w	d6,d4
+		and.w	#%1111111111100000,d6
+		and.w	#%0000000000011111,d4
+		and.w	#%0000000000011111,d3
+		add.w	d1,d4
+		cmp.w	d3,d4
+		bcs.s	.no_red
+		move.w	d3,d4
+		or.w	#%001,d2	; RED is ready
+.no_red:
+		or.w	d4,d6
+		lsl.w	#5,d1
+		move.w	d7,d3		; GREEN
+		move.w	d6,d4
+		and.w	#%1111110000011111,d6
+		and.w	#%0000001111100000,d4
+		and.w	#%0000001111100000,d3
+		add.w	d1,d4
+		cmp.w	d3,d4
+		bcs.s	.no_grn
+		move.w	d3,d4
+		or.w	#%010,d2	; GREEN is ready
+.no_grn:
+		or.w	d4,d6
+		lsl.w	#5,d1
+		move.w	d7,d3		; BLUE
+		move.w	d6,d4
+		and.w	#%1000001111111111,d6
+		and.w	#%0111110000000000,d4
+		and.w	#%0111110000000000,d3
+		add.w	d1,d4
+		cmp.w	d3,d4
+		bcs.s	.no_blu
+		move.w	d3,d4
+		or.w	#%100,d2	; BLUE is ready
+.no_blu:
+		or.w	d4,d6
+		lsr.w	#8,d1
+		lsr.w	#2,d1
+		and.w	#$8000,d7	; Keep priority bit
+		or.w	d7,d6
+		move.w	d6,(a5)+
+		adda	#2,a6
+		cmp.w	#%111,d2
+		bne.s	.no_fnsh
+		swap	d6
+		sub.w	#1,d6
+		swap	d6
+.no_fnsh:
+		dbf	d0,.nxt_pal
+		swap	d6
+		tst.w	d6
+		bne.s	.no_move
+		clr.w	(RAM_FadeMarsReq).w
+.no_move:
+		rts
+
+; --------------------------------------------
+; Fade out
+; --------------------------------------------
+
+.fade_out:
+		lea	(RAM_MdDreq+Dreq_Palette),a6
+		move.w	#256,d0				; Num of colors
+		move.w	(RAM_FadeMarsIncr).w,d1		; Speed
+		move.w	d0,d6
+		swap	d6
+		sub.w	#1,d0
+.nxt_pal_o:
+		clr.w	d2		; Reset finished colorbits
+		move.w	(a6),d7		; d7 - Input
+		move.w	d7,d6
+		and.w	#%1111111111100000,d7
+		and.w	#%0000000000011111,d6
+		sub.w	d1,d6
+		bpl.s	.no_red_o
+		clr.w	d6
+		or.w	#%001,d2	; RED is ready
+.no_red_o:
+		or.w	d6,d7
+		lsl.w	#5,d1
+		move.w	d7,d6
+		and.w	#%1111110000011111,d7
+		and.w	#%0000001111100000,d6
+		sub.w	d1,d6
+		bpl.s	.no_grn_o
+		clr.w	d6
+		or.w	#%010,d2	; GREEN is ready
+.no_grn_o:
+		or.w	d6,d7
+		lsl.w	#5,d1
+		move.w	d7,d6
+		and.w	#%1000001111111111,d7
+		and.w	#%0111110000000000,d6
+		sub.w	d1,d6
+		bpl.s	.no_blu_o
+		clr.w	d6
+		or.w	#%100,d2	; BLUE is ready
+.no_blu_o:
+		or.w	d6,d7
+		lsr.w	#8,d1
+		lsr.w	#2,d1
+		move.w	d7,(a6)+
+		cmp.w	#%111,d2
+		bne.s	.no_fnsh_o
+		swap	d6
+		sub.w	#1,d6
+		swap	d6
+.no_fnsh_o:
+		dbf	d0,.nxt_pal_o
+		swap	d6
+		tst.w	d6
+		bne.s	.no_move_o
+		clr.w	(RAM_FadeMarsReq).w
+.no_move_o:
+		rts

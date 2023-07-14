@@ -1,8 +1,6 @@
 ; ===========================================================================
 ; ----------------------------------------------------------------
 ; MACROS
-;
-; Include this file FIRST
 ; ----------------------------------------------------------------
 
 ; ====================================================================
@@ -39,7 +37,7 @@ GLBL_LASTORG	set *
 ; Finish struct
 ; -------------------------------------
 
-finish		macro				; Then finish the custom struct.
+endstruct	macro				; Then finish the custom struct.
 		!org GLBL_LASTORG
 		phase GLBL_LASTPC
 		endm
@@ -48,12 +46,12 @@ finish		macro				; Then finish the custom struct.
 ; Report RAM usage
 ; -------------------------------------
 
-report		macro from,dis
-	if from == 0
-		if MOMPASS=6
-			message "THIS SCREEN RAM uses: \{(dis-RAM_ModeBuff)&$FFFFFF} of \{MAX_MDERAM}"
+report		macro text,dis
+; 	if from == 0
+		if MOMPASS == 2
+			message text+" uses: \{(dis)&$FFFFFF}"
 		endif
-	endif
+; 	endif
 		endm
 
 ; -------------------------------------

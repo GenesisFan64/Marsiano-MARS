@@ -30,7 +30,7 @@ mchnsnd_pitch	ds.l 1
 mchnsnd_flags	ds.l 1		; %SLR S-wave format mono/stereo | LR-wave output bits
 mchnsnd_vol	ds.l 1
 sizeof_sndchn	ds.l 0
-		finish
+		endstruct
 
 ; ====================================================================
 ; --------------------------------------------------------

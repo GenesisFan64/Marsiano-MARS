@@ -59,7 +59,7 @@ marsGbl_WaveMax		ds.w 1	; Maximum wave
 marsGbl_WaveDeform	ds.w 1	; Wave increment value
 marsGbl_WaveTan		ds.w 1	; Linetable wave tan
 sizeof_MarsGbl		ds.l 0
-			finish
+			endstruct
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -423,11 +423,11 @@ m_irq_pwm:
 
 	; *** HARDWARE NOTE ***
 	; DMA takes a little to start properly:
-	; after writing _DMAOPERATION = 1 put
-	; 2 instructions (or 2 nops) if you want
-	; to manually check if the DMA it's active.
+	; after writing DMA enable bit wait
+	; 2 instructions or more to let it
+	; initailize. (TODO)
 	;
-	; On Emulators it just starts right away
+	; On Emulators it just starts right away.
 m_irq_cmd:
 		mov	#_FRT,r1
 		mov.b	@(7,r1),r0
@@ -444,8 +444,6 @@ m_irq_cmd:
 		mov	#_DMASOURCE0,r3		; r3 - DMA base register
 		mov	#_sysreg+comm12,r2	; r2 - comm to write the signal
 		mov	#_sysreg+dreqfifo,r1	; r1 - Source point: DREQ FIFO
-		mov	#0,r0			; _DMAOPERATION = 0
-		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable bit OFF
 		mov	r0,@($C,r3)
 		mov	#RAM_Mars_DreqDma,r0
@@ -454,10 +452,8 @@ m_irq_cmd:
 		extu.w	r0,r0
 		mov	r0,@(8,r3)		; Length (set by 68k)
 		mov	r1,@r3			; Source
-		mov	#%0100010011100101,r0	; Transfer mode + DMA enable + Enable DMA interrupt
+		mov	#%0100010011100101,r0	; Transfer mode + Enable DMA interrupt + DMA enable
 		mov	r0,@($C,r3)		; Dest:Incr(01) Src:Keep(00) Size:Word(01)
-		mov	#1,r0			; _DMAOPERATION = 1
-		mov	r0,@($30,r3)
 		mov.b	@r2,r0			; Tell Genesis we can recieve DREQ data
 		or	#%01000000,r0
 		mov.b	r0,@r2
@@ -473,15 +469,12 @@ m_irq_cmd:
 		nop
 		align 4
 
+; =================================================================
 ; ------------------------------------------------
 ; Master | DMA Exit
 ;
-; This will trigger when DMA is a FEW writes
-; away from finishing the transfer,
-; NOT exactly on finish.
-;
-; Check for the DMA-active bit BEFORE
-; writing _DMAOPERATION = 0
+; Read the TE bit then write that bit to
+; 0 to finish the transfer.
 ; ------------------------------------------------
 
 		align 4
@@ -494,8 +487,6 @@ m_irq_dma:
 .wait_dma:	mov	@($C,r1),r0
 		tst	#%10,r0			; DMA finished?
 		bt	.wait_dma
-		mov	#0,r0			; _DMAOPERATION = 0
-		mov	r0,@($30,r1)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable OFF
 		mov	r0,@($C,r1)
 		rts
@@ -559,11 +550,8 @@ m_irq_vres:
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
 		mov	#_DMASOURCE1,r1
-		mov	#0,r0
-		mov	r0,@($30,r1)
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
-
 		mov	#_sysreg,r1
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
@@ -993,11 +981,8 @@ s_irq_vres:
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
 		mov	#_DMASOURCE1,r1
-		mov	#0,r0
-		mov	r0,@($30,r1)
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
-
 		mov	#_sysreg,r1
 		mov.w	@(dreqctl,r1),r0
 		tst	#1,r0
@@ -1243,9 +1228,9 @@ SH2_M_HotStart:
 		mov	#_CCR,r1		; Reset CACHE
 		mov	#$10,r0
 		mov.b	r0,@r1
-		nop
-		nop
-		nop
+		mov	#_DMAOPERATION,r2	; Enable both DMA channels
+		mov	#1,r0
+		mov	r0,@r2
 		nop
 		nop
 		nop
@@ -2031,9 +2016,9 @@ SH2_S_HotStart:
 		mov	#_CCR,r1		; Reset CACHE
 		mov	#$10,r0
 		mov.b	r0,@r1
-		nop
-		nop
-		nop
+		mov	#_DMAOPERATION,r2	; Enable both DMA channels
+		mov	#1,r0
+		mov	r0,@r2
 		nop
 		nop
 		nop
@@ -2168,7 +2153,7 @@ slv_exit:
 sin_table	binclude "system/mars/data/sinedata.bin"
 ; m_ascii	binclude "system/mars/data/m_ascii.bin"
 		align 4
-		include "data/mars_sdram.asm"
+		include "game/data/mars_sdram.asm"
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2194,7 +2179,7 @@ sizeof_marsram		ds.l 0
 	if MOMPASS=6
 		message "SH2 MARS RAM: \{((SH2_RAM)&$FFFFFF)}-\{((.here)&$FFFFFF)}"
 	endif
-		finish
+		endstruct
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2204,9 +2189,9 @@ sizeof_marsram		ds.l 0
 ; ----------------------------------------------------------------
 
 			struct MarsRam_Video
-RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF		; Single buffer for all screen modes
+RAM_Mars_ScrnBuff	ds.b MAX_MSCRNBUFF		; Single buffer for all screen modes
 sizeof_marsvid		ds.l 0
-			finish
+			endstruct
 
 ; --------------------------------------------------------
 ; per-screen RAM
@@ -2215,7 +2200,7 @@ Cach_DrawTimers		ds.l 4				; Screen draw-request timers, write $02 to these
 RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2		; Scrolling buffers
 RAM_Mars_ScrlData	ds.b ((320+16)*(224+16))+320	; Entire pixeldata for one scroll: (w*h)+320
 end_scrn02		ds.l 0
-			finish
+			endstruct
 			struct RAM_Mars_ScrnBuff
 RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Sprites / Polygon pieces
 RAM_Mars_SVdpDrwList_e	ds.l 0				; (END point label)
@@ -2228,7 +2213,7 @@ RAM_Mars_PlgnNum_1	ds.l 1
 RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Slave's Objects
 RAM_Mars_ObjCamera	ds.b sizeof_camera		; Slave's Camera
 sizeof_scrn04		ds.l 0
-			finish
+			endstruct
 	if MOMPASS=6
 	if end_scrn02-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
 		error "RAN OUT OF RAM FOR 2D STUFF (\{(end_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
@@ -2245,7 +2230,7 @@ sizeof_scrn04		ds.l 0
 			struct MarsRam_Sound
 MarsSnd_PwmCache	ds.b $80*MAX_PWMCHNL
 sizeof_marssnd		ds.l 0
-			finish
+			endstruct
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2257,7 +2242,7 @@ RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM H
 RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy of DREQ for reading.
 RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here
 sizeof_marssys		ds.l 0
-			finish
+			endstruct
 
 ; ====================================================================
 

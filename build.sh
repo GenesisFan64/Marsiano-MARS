@@ -14,7 +14,14 @@ clear
 # rm mcd.p
 # rm mcd.h
 
-# MD/MARS
+# GENESIS
+echo "** GENESIS **"
+tools/AS/linux/asl main.asm -q -xx -c -A -olist out/rom_md.lst -A -L -D MCD=0,MARS=0,MARSCD=0
+python tools/p2bin.py main.p out/rom_md.bin
+rm main.p
+rm main.h
+
+# MARS
 echo "** MARS **"
 tools/AS/linux/asl main.asm -q -xx -c -A -olist out/rom_mars.lst -A -L -D MCD=0,MARS=1,MARSCD=0
 python tools/p2bin.py main.p out/rom_mars.bin

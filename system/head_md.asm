@@ -3,7 +3,7 @@
 ; Genesis header
 ; ----------------------------------------------------------------
 
-		dc.l 0			; Stack point
+		dc.l RAM_Stack		; Stack point
 		dc.l MD_Entry		; Entry point MUST point to $3F0
 		dc.l MD_ErrBus		; Bus error
 		dc.l MD_ErrAddr		; Address error
@@ -68,10 +68,10 @@
 		dc.l MD_ErrorTrap
 		dc.l MD_ErrorTrap
 		dc.b "SEGA GENESIS    "
-		dc.b "(C)GF64 2023.FEB"
-		dc.b "Bloque eswap                                    "
-		dc.b "SwapBlok                                        "
-		dc.b "GM PUZZLSWP-01"
+		dc.b "(C)GF64 2023.???"
+		dc.b "Marsiano GENESIS                                "
+		dc.b "Marsiano GENESIS                                "
+		dc.b "GM TECHDEMO-01"
 		dc.w 0
 		dc.b "J6              "
 		dc.l 0

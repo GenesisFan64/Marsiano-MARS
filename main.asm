@@ -13,6 +13,25 @@
 
 ; ====================================================================
 ; ----------------------------------------------------------------
+; USER SETTINGS
+; ----------------------------------------------------------------
+
+; RAM Sizes
+;
+; MAKE SURE IT DOESN'T REACH FC00 FOR CROSS-PORTING
+; TO SEGA-CD (And maybe SCD+32X)
+
+MAX_SysCode	equ $2000
+MAX_UserCode	equ $2000
+MAX_UserData	equ $4000
+MAX_MdVideo	equ $2000
+MAX_MdSystem	equ $0800
+MAX_MdOther	equ $2000	; 32X's DREQ data to send
+MAX_MdGlobal	equ $1000	; USER Global variables
+MAX_ScrnBuff	equ $2000	; RAM section for current screen ONLY
+
+; ====================================================================
+; ----------------------------------------------------------------
 ; Includes
 ; ----------------------------------------------------------------
 
@@ -20,38 +39,97 @@
 		include	"system/shared.asm"		; Shared Genesis/32X variables
 		include	"system/md/map.asm"		; Genesis hardware map
 		include	"system/md/const.asm"		; Genesis variables
+		include	"system/md/ram.asm"		; Genesis RAM sections
 		include	"system/mars/map.asm"		; 32X hardware map
-		include "code/global.asm"		; Global user variables on the Genesis
-		include	"system/head_mars.asm"		; 32X header
+		include "game/global.asm"		; Global user variables on the Genesis
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Main
 ; ----------------------------------------------------------------
 
-		lea	(Md_TopCode+$880000),a0			; Transfer common 68K code
-		lea	($FF0000),a1				; at the top of RAM
-		move.w	#((Md_TopCode_e-Md_TopCode))-1,d0
+; ---------------------------------------------
+; 32X MAIN
+; ---------------------------------------------
+
+	if MARS
+		include	"system/head_mars.asm"			; 32X header
+		lea	($880000+Md_SysCode),a0			; Transfer SYSTEM code
+		lea	(RAM_SystemCode),a1
+		move.w	#((Md_SysCode_e-Md_SysCode))-1,d0
 .copyme:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copyme
+		lea	($880000+Md_JumpCode),a0		; Transfer JUMP code
+		lea	(RAM_ScreenJump),a1
+		move.w	#((Md_JumpCode_e-Md_JumpCode))-1,d0
+.copyme_2:
+		move.b	(a0)+,(a1)+
+		dbf	d0,.copyme_2
+
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
 		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
 		jmp	(Md_ReadModes).l
 
+; ---------------------------------------------
+; MD MAIN
+; ---------------------------------------------
+	else
+		include	"system/head_md.asm"		; Genesis header
+		jsr	(Sound_init).l
+		jsr	(Video_init).l
+		jsr	(System_Init).l
+		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
+		bra.w	Md_ReadModes
+
+; ---------------------------------------------
+	endif
+
 ; ====================================================================
 ; --------------------------------------------------------
-; TOP 68K code
+; Code sections
 ; --------------------------------------------------------
 
-Md_TopCode:
-		phase $FF0000
-minfo_ram_s:
+		align $1000
+; ---------------------------------------------
+; TOP-RAM Genesis system routines
+; ---------------------------------------------
+
+	if MARS
+Md_SysCode:
+		phase RAM_SystemCode
+	endif
+; ---------------------------------------------
 		include	"sound/gema.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
+; ---------------------------------------------
+	if MARS
+.end:
+	if (.end-RAM_SystemCode) > MAX_SysCode
+		error "RAN OUT OF TOP-CODE"
+	else
+		report "RAM TOP-CODE SUBS",(.end-RAM_SystemCode)
+	endif
+		dephase
+Md_SysCode_e:
+		align 2
+	endif
+
+; ---------------------------------------------
+; JUMP code for switching screen modes
+;
+; $100 BYTES ONLY!
+; ---------------------------------------------
+
+	if MARS
+Md_JumpCode:
+		phase RAM_ScreenJump
+	endif
+; ---------------------------------------------
+
 Md_ReadModes:
 		moveq	#0,d0
 		move.w	(RAM_Glbl_Scrn).w,d0
@@ -70,13 +148,18 @@ Md_ReadModes:
 		dc.l RamCode_Debug
 		dc.l RamCode_Debug
 
-	if MOMPASS=6
-.here:		message "MD TOP RAM-CODE uses: \{.here-minfo_ram_s}"
+; ---------------------------------------------
+	if MARS
+.end:
+	if (.end-RAM_ScreenJump) > $100 ; $FFFF00-$FFFFFF
+		error "RAN OUT OF JUMP-CODE"
+	else
+		report "RAM JUMP-CODE SUBS",(.end-Md_ReadModes)
 	endif
-RAMCODE_USER:
 		dephase
-Md_TopCode_e:
+Md_JumpCode_e:
 		align 2
+	endif
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -84,29 +167,34 @@ Md_TopCode_e:
 ; --------------------------------------------------------
 
 RamCode_Scrn1:
-		phase RAMCODE_USER
-		include "code/screen_1.asm"
-.here:
-	if MOMPASS=6
-		message "THIS RAM-CODE ends at: \{.here}"
+	if MARS
+		phase RAM_UserCode
 	endif
+		include "game/screen_1.asm"
+.here:
+	if MARS
 		dephase
+	endif
+
 RamCode_Scrn2:
-		phase RAMCODE_USER
-		include "code/screen_2.asm"
-.here:
-	if MOMPASS=6
-		message "THIS RAM-CODE ends at: \{.here}"
+	if MARS
+		phase RAM_UserCode
 	endif
+		include "game/screen_2.asm"
+.here:
+	if MARS
 		dephase
+	endif
+
 RamCode_Debug:
-		phase RAMCODE_USER
-		include "code/debug.asm"
-.here:
-	if MOMPASS=6
-		message "THIS RAM-CODE ends at: \{.here}"
+	if MARS
+		phase RAM_UserCode
 	endif
+		include "game/debug.asm"
+.here:
+	if MARS
 		dephase
+	endif
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -135,7 +223,7 @@ Z80_CODE_END:
 
 		phase $900000+*			; ** Currently this one only.
 MDBNK0_START:
-		include "data/md_bank0.asm"	; <-- 68K ONLY bank data
+		include "game/data/md_bank0.asm"	; <-- 68K ONLY bank data
 MDBNK0_END:
 		dephase
 ; 		org $100000-4			; Fill this bank and
@@ -151,7 +239,7 @@ MDBNK0_END:
 ; ---------------------------------------------
 
 ; 		phase $900000
-; 		include "data/md_bank1.asm"
+; 		include "game/data/md_bank1.asm"
 ; 		dephase
 ; 		org $200000-4
 ; 		dc.b "BNK1"
@@ -161,7 +249,7 @@ MDBNK0_END:
 ; ---------------------------------------------
 
 ; 		phase $900000
-; 		include "data/md_bank2.asm"
+; 		include "game/data/md_bank2.asm"
 ; 		dephase
 ; 		org $300000-4
 ; 		dc.b "BNK2"
@@ -171,7 +259,7 @@ MDBNK0_END:
 ; ---------------------------------------------
 
 ; 		phase $900000
-; 		include "data/md_bank3.asm"
+; 		include "game/data/md_bank3.asm"
 ; 		dephase
 ; 		org $400000-4
 ; 		dc.b "BNK3"
@@ -182,13 +270,14 @@ MDBNK0_END:
 ; ----------------------------------------------------------------
 
 		align 4
-		include "data/md_dma.asm"
+		include "game/data/md_dma.asm"
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; SH2 SDRAM CODE
 ; ----------------------------------------------------------------
 
+	if MARS
 		align 4
 MARS_RAMDATA:
 		include "system/mars/code.asm"
@@ -207,8 +296,9 @@ MARS_RAMDATA_E:
 		phase CS1+*
 		align 4
 		include "sound/smpl_pwm.asm"		; GEMA: PWM samples
-		include "data/mars_rom.asm"
+		include "game/data/mars_rom.asm"
 		dephase
+	endif
 
 ; ====================================================================
 ; ---------------------------------------------

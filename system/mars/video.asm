@@ -11,7 +11,7 @@
 ; --------------------------------------------------------
 
 ; SDRAM
-MAX_SCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
+MAX_MSCRNBUFF	equ $2C000	; MAX SDRAM for each Screen mode
 MAX_SSPRSPD	equ 8		; Supersprite box increment: Size+this (maximum Super Sprite speed)
 MAX_FACES	equ 980		; MAX polygon faces for 3D models
 MAX_SVDP_PZ	equ 980+96	; MAX polygon pieces to draw
@@ -50,7 +50,7 @@ scrl_fbdata	ds.l 1		; Screen data location on framebuffer
 scrl_xpos	ds.l 1		; $0000.0000
 scrl_ypos	ds.l 1		; $0000.0000
 sizeof_mscrl	ds.l 0
-		finish
+		endstruct
 
 		struct 0
 plypz_type	ds.l 1		; Type + Material settings (width + index add)
@@ -66,7 +66,7 @@ plypz_src_xr_dx	ds.l 1
 plypz_src_yl_dx	ds.l 1
 plypz_src_yr_dx	ds.l 1
 sizeof_plypz	ds.l 0
-		finish
+		endstruct
 
 ; Polygon data
 ; Size: $38
@@ -76,7 +76,7 @@ polygn_mtrl	ds.l 1		; Material Type: Color (0-255) or Texture data address
 polygn_points	ds.l 4*2	; X/Y positions
 polygn_srcpnts	ds.w 4*2	; X/Y texture points 16-bit, Ignored on solid color.
 sizeof_polygn	ds.l 0
-		finish
+		endstruct
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -731,10 +731,7 @@ MarsVideo_Bg_DrawReq:
 
 		align 4
 MarsVideo_DmaDraw:
-		mov	#_DMAOPERATION,r5
 		mov	#_DMASOURCE1,r4
-		mov	#0,r0
-		mov	r0,@r5
 		mov	#%0101101011100000,r0
 		mov	r0,@($0C,r4)
 		mov	r1,r0
@@ -745,13 +742,9 @@ MarsVideo_DmaDraw:
 		mov	r0,@($08,r4)
 		mov	#%0101101011100001,r0
 		mov	r0,@($0C,r4)
-		mov	#1,r0
-		mov	r0,@r5
 .wait_dma:	mov	@($C,r4),r0		; Still on DMA?
 		tst	#%10,r0
 		bt	.wait_dma
-		mov	#0,r0
-		mov	r0,@r5
 		mov	#%0101101011100000,r0
 		mov	r0,@($C,r4)
 		rts

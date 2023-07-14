@@ -6,14 +6,6 @@
 MAX_MDDMATSK	equ 16			; MAX DMA BLAST entries
 
 ; ====================================================================
-; --------------------------------------------------------
-; Settings
-; --------------------------------------------------------
-
-MDRAM_START	equ $FFFF9000		; Start of Genesis working RAM
-MAX_MDERAM	equ $1000		; Maximum RAM for current Screen mode
-
-; ====================================================================
 ; ----------------------------------------------------------------
 ; Input
 ; ----------------------------------------------------------------
@@ -41,7 +33,7 @@ extr_3		ds.w 1
 extr_4		ds.w 1
 extr_5		ds.w 1
 sizeof_input	ds.l 0
-		finish
+		endstruct
 
 ; Read as (Controller_1) then add +on_hold or +on_press
 Controller_1	equ RAM_InputData
@@ -83,38 +75,3 @@ bitClickR	equ 0
 bitClickL	equ 1
 bitClickM	equ 2
 bitClickS	equ 3
-
-; ====================================================================
-; ----------------------------------------------------------------
-; MD RAM
-;
-; NOTE for porting this to Sega CD (or SegaCD+32X):
-; From $FFFD00 to $FFFDFF is reserved for the MAIN-CPU's vectors
-; ----------------------------------------------------------------
-
-		struct MDRAM_START
-	; First pass: empty sizes
-	if MOMPASS=1
-; RAM_MdSound	ds.l 0
-RAM_MdVideo	ds.l 0
-RAM_MdSystem	ds.l 0
-RAM_MdDreq	ds.l 0
-RAM_ModeBuff	ds.l 0
-RAM_MdGlobal	ds.l 0
-sizeof_mdram	ds.l 0
-	else
-	; Second pass: sizes are set
-; RAM_MdSound	ds.b sizeof_mdsnd-RAM_MdSound
-RAM_MdVideo	ds.b sizeof_mdvid-RAM_MdVideo
-RAM_MdSystem	ds.b sizeof_mdsys-RAM_MdSystem
-RAM_MdDreq	ds.b sizeof_dreq
-RAM_ModeBuff	ds.b MAX_MDERAM
-RAM_MdGlobal	ds.b sizeof_mdglbl-RAM_MdGlobal	; code/global.asm
-sizeof_mdram	ds.l 0
-	endif
-
-	if MOMPASS=7
-		message "MD RAM: \{(MDRAM_START)&$FFFFFF}-\{(sizeof_mdram)&$FFFFFF}"
-	endif
-		finish
-
