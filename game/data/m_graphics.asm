@@ -9,9 +9,6 @@
 ; ----------------------------------------------------------------
 
 		align 4
-Textr_marscity:
-		binclude "game/data/maps/3D/mcity/mtrl/marscity_art.bin"
-		align 4
-SuperSpr_Test:
-		binclude "game/data/sprites/mars/nicole/sprites_art.bin"
-		align 4
+; ArtMars_TEST:
+; 		binclude "game/data/TESTS/test_art.bin"
+; 		align 2

@@ -20,12 +20,7 @@ RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
 RAM_MdVBlkWait	ds.w 1
 sizeof_mdsys	ds.l 0
 		endstruct
-
-		if (sizeof_mdsys-RAM_MdSystem) > MAX_MdSystem
-			error "RAN OUT OF GENESIS SYS-SUBS"
-		else
-			report "GENESIS SYS-SUBS",sizeof_mdsys-RAM_MdSystem
-		endif
+		report "MD SYS-SUBS",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -190,6 +185,27 @@ System_DmaExit_ROM:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
+; SEGA CD / CD+32X ONLY
+;
+; a6 - Communication ports RW/RO
+; ----------------------------------------------------------------
+
+	if MCD|MARSCD
+System_McdSubTask:
+		lea	(sysmcd_reg+mcd_comm_m),a6
+.wait_sub_s:	move.b	1(a6),d7		; Wait if SUB is BUSY
+		bmi.s	.wait_sub_s
+		move.b	d0,(a6)			; Set this command
+.wait_sub_i:	move.b	1(a6),d7		; Wait until SUB gets busy
+		bpl.s	.wait_sub_i
+		move.b	#$00,(a6)		; Clear value, SUB already got the ID
+; .wait_sub_o:	move.b	1(a6),d7		; Wait until SUB finishes
+; 		bmi.s	.wait_sub_o
+		rts
+	endif
+
+; ====================================================================
+; ----------------------------------------------------------------
 ; 32X ONLY
 ; ----------------------------------------------------------------
 
@@ -198,7 +214,7 @@ System_DmaExit_ROM:
 ; --------------------------------------------------------
 
 System_MarsUpdate:
-	if MARS=1
+	if MARS|MARSCD
 		lea	(RAM_MdDreq),a0		; Send DREQ
 		move.w	#sizeof_dreq,d0
 		jmp	(System_RomSendDreq).l	; <-- EXTERNAL JUMP to $880000 area
@@ -209,20 +225,85 @@ System_MarsUpdate:
 ; --------------------------------------------------------
 ; System_GrabRamCode
 ;
+; MCD, 32X and CD32X only.
+;
 ; Send new code to the USER side of RAM and
 ; jump into it.
 ;
+; ** FOR SEGA CD/CD+32X
+; Input:
+; a0 -
+;
+; ** FOR SEGA 32X
+; a0 - Filename string 8-bytes
+;
 ; Input:
 ; d0 - Location of the RAM code to copy
-;      in the 880000/900000 areas
+;      in the $880000/$900000 areas
 ; --------------------------------------------------------
 
 System_GrabRamCode:
-	if MARS
+	if MCD|MARSCD
+		lea	(sysmcd_reg+mcd_dcomm_m),a1
+		move.w	(a0)+,(a1)+			; 0 copy filename
+		move.w	(a0)+,(a1)+			; 2
+		move.w	(a0)+,(a1)+			; 4
+		move.w	(a0)+,(a1)+			; 6
+		move.w	(a0)+,(a1)+			; 8
+		move.w	#0,(a1)+			; A <-- zero end
+		moveq	#$01,d0				; COMMAND: READ CD AND PASS DATA
+		bsr	System_McdSubTask
+
+		lea	(RAM_UserCode),a0
+		move.w	#(MAX_UserCode),d0
+
+	; a0 - Output location
+	; d0 - Number of $10-byte packets
+		lsr.w	#4,d0				; size >> 4
+		subq.w	#1,d0				; -1
+		lea	(sysmcd_reg+mcd_dcomm_s),a6
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
+		bset	#7,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+.copy_ram:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait if sub PASSed the packet
+		btst	#6,d7
+		beq.s	.copy_ram
+		move.l	a6,a5
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.w	(a5)+,(a0)+
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; Tell SUB we got the pack
+		bset	#6,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+.wait_sub:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait clear
+		btst	#6,d7
+		bne.s	.wait_sub
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; and clear our bit too.
+		bclr	#6,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+		dbf	d0,.copy_ram
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
+		bclr	#7,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+
+		jmp	(RAM_UserCode).l
+; 		move.l	#$C0000000,(vdp_ctrl).l
+; 		move.w	#$080,(vdp_data).l
+; 		bra.s	*
+
+	elseif MARS
 		or.l	#$880000,d0
 		move.l	d0,a0
 		lea	(RAM_UserCode),a1
-		move.w	#(MAX_UserCode+MAX_UserData)-1,d7	; TODO: TEMPORAL SIZE
+		move.w	(a0)+,d7
+		subq.w	#1,d7
+; 		bra *
+		move.w	#(MAX_UserCode)-1,d7	; TODO: TEMPORAL SIZE
 .copyme2:
 		move.b	(a0)+,(a1)+
 		dbf	d7,.copyme2
@@ -270,7 +351,7 @@ System_Input:
 .this_one:
 		bsr	.pick_id
 		move.b	d7,pad_id(a6)
-		cmp.w	#$0F,d7
+		cmpi.w	#$0F,d7
 		beq.s	.exit
 		andi.w	#$0F,d7
 		add.w	d7,d7

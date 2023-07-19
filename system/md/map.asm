@@ -25,6 +25,20 @@ vdp_ctrl	equ	$C00004		; video control port
 psg_ctrl	equ	$C00011		; PSG control
 
 ; ----------------------------------------------------------------
+; SEGA CD map
+; ----------------------------------------------------------------
+
+sysmcd_wram	equ	$200000
+sysmcd_reg	equ	$A12000
+
+; ----------------------------------------------------------------
+; 32X map
+; ----------------------------------------------------------------
+
+sysmars_id	equ	$A130EC		; 32X's ID: "MARS"
+sysmars_reg	equ	$A15100		; MARS 32X registers section, see system/mars/map.asm for variables
+
+; ----------------------------------------------------------------
 ; Genesis / Mega drive Z80 map
 ; ----------------------------------------------------------------
 
@@ -36,10 +50,3 @@ zbank		equ	$6000		; Z80 ROM BANK: %XXXXXXXX X0000000 00000000 (9-byte writes)
 ; zvdp_data	equ	$7F00		; video data port
 ; zvdp_ctrl	equ	$7F04		; video control port
 zpsg_ctrl	equ	$7F11		; PSG control
-
-; ----------------------------------------------------------------
-; 32X registers
-; ----------------------------------------------------------------
-
-sysmars_id	equ	$A130EC		; 32X's ID: "MARS"
-sysmars_reg	equ	$A15100		; MARS 32X registers section, see system/mars/map.asm for variables

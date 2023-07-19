@@ -26,11 +26,11 @@
 ; 32X MAP data: Block graphics and Layout
 ; --------------------------------------------------------
 
-		align 4
-MapBlk_M:	binclude "game/data/maps/2D/level0/m_art.bin"
-		align 4
-MapFg_M:	binclude "game/data/maps/2D/level0/m_fg.bin"
-		align 4
+; 		align 4
+; MapBlk_M:	binclude "game/data/maps/2D/level0/m_art.bin"
+; 		align 4
+; MapFg_M:	binclude "game/data/maps/2D/level0/m_fg.bin"
+; 		align 4
 
 ; --------------------------------------------------------
 ; Graphics
@@ -42,9 +42,9 @@ MapFg_M:	binclude "game/data/maps/2D/level0/m_fg.bin"
 ; Models
 ; --------------------------------------------------------
 
-		align 4
-		include "game/data/maps/3D/mcity/mars_data.asm"
-		align 4
+; 		align 4
+; 		include "game/data/maps/3D/mcity/mars_data.asm"
+; 		align 4
 
 ; MarsObj_test:
 ; 		include "game/data/mars/objects/mdl/test/head.asm"

@@ -46,12 +46,18 @@ endstruct	macro				; Then finish the custom struct.
 ; Report RAM usage
 ; -------------------------------------
 
-report		macro text,dis
-; 	if from == 0
-		if MOMPASS == 2
-			message text+" uses: \{(dis)&$FFFFFF}"
+report		macro text,dis,dat
+	if MOMPASS == 2
+		if dat == -1
+			message text+": \{(dis)&$FFFFFF}"
+		else
+			if dis > dat
+				error "RAN OUT OF "+text
+			else
+				message text+" uses \{(dis)&$FFFFFF} of \{(dat)&$FFFFFF}"
+			endif
 		endif
-; 	endif
+	endif
 		endm
 
 ; -------------------------------------
@@ -87,4 +93,52 @@ paddingSoFar	set paddingSoFar + address - *
 		endif
 	endif
     endm
+
+; ====================================================================
+; ---------------------------------------------
+; ISO filesystem macros
+; ---------------------------------------------
+
+; Set a ISO file
+; NOTE: a valid ISO head is required ($8000 to $B7FF)
+
+iso_setfs	macro type,start,end
+.fstrt:		dc.b .fend-.fstrt				; Block size
+		dc.b 0						; zero
+		dc.b (start>>11&$FF),(start>>19&$FF)		; Start sector, little
+		dc.b (start>>27&$FF),(start>>35&$FF)
+		dc.l start>>11					; Start sector, big
+		dc.b ((end-start)&$FF),((end-start)>>8&$FF)	; Filesize, little
+		dc.b ((end-start)>>16&$FF),((end-start)>>24&$FF)
+		dc.l end-start					; Filesize, big
+		dc.b (2018-1900)+1				; Year
+		dc.b 0,0,0,0,0,0				; TODO
+		dc.b 2						; File flags
+		dc.b 0,0
+		dc.b 1,0					; Volume sequence number, little
+		dc.b 0,1					; Volume sequence number, big
+		dc.b 1,type
+.fend:
+		endm
+
+iso_file	macro filename,start,end
+.fstrt:		dc.b .fend-.fstrt				; Block size
+		dc.b 0						; zero
+		dc.b (start>>11&$FF),(start>>19&$FF)		; Start sector, little
+		dc.b (start>>27&$FF),(start>>35&$FF)
+		dc.l start>>11					; Start sector, big
+		dc.b ((end-start)&$FF),((end-start)>>8&$FF)	; Filesize, little
+		dc.b ((end-start)>>16&$FF),((end-start)>>24&$FF)
+		dc.l end-start					; Filesize, big
+		dc.b (2023-1900)+1				; Year
+		dc.b 0,0,0,0,0,0				; TODO
+		dc.b 0						; File flags
+		dc.b 0,0
+		dc.b 1,0					; Volume sequence number, little
+		dc.b 0,1					; Volume sequence number, big
+		dc.b .flend-.flen
+.flen:		dc.b filename,";1"
+.flend:		dc.b 0
+.fend:
+		endm
 

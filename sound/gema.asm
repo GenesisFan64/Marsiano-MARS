@@ -266,25 +266,25 @@ gemaDmaResumeRom:
 ; ------------------------------------------------
 
 sndReqCmd:
-	if MARS
-.wait_in:	move.b	(sysmars_reg+comm14),d7
-		and.w	#%11110000,d7
-		bne.s	.wait_in
-		and.w	#%00001111,d6
-		or.b	d6,d7
-		move.b	d7,(sysmars_reg+comm14).l
-		move.b	(sysmars_reg+comm14).l,d7
-		and.w	#%00001111,d7
-		cmp.b	d6,d7
-		bne.s	.wait_in
-		bset	#7,(sysmars_reg+comm14).l
-		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
-; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
-; 		bne.s	.wait_cmd
-.wait_out:	move.b	(sysmars_reg+comm14),d7
-		and.w	#%11110000,d7
-		bne.s	.wait_out
-	endif
+; 	if MARS
+; .wait_in:	move.b	(sysmars_reg+comm14),d7
+; 		and.w	#%11110000,d7
+; 		bne.s	.wait_in
+; 		and.w	#%00001111,d6
+; 		or.b	d6,d7
+; 		move.b	d7,(sysmars_reg+comm14).l
+; 		move.b	(sysmars_reg+comm14).l,d7
+; 		and.w	#%00001111,d7
+; 		cmp.b	d6,d7
+; 		bne.s	.wait_in
+; 		bset	#7,(sysmars_reg+comm14).l
+; 		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
+; ; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; ; 		bne.s	.wait_cmd
+; .wait_out:	move.b	(sysmars_reg+comm14),d7
+; 		and.w	#%11110000,d7
+; 		bne.s	.wait_out
+; 	endif
 		rts
 
 ; ============================================================

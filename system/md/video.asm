@@ -181,11 +181,7 @@ RAM_VdpRegs		ds.b 24			; VDP Register cache
 sizeof_mdvid		ds.l 0
 			endstruct
 
-		if (sizeof_mdvid-RAM_MdVideo) > MAX_MdVideo
-			error "RAN OUT OF GENESIS VIDEO"
-		else
-			report "GENESIS VIDEO",sizeof_mdvid-RAM_MdVideo
-		endif
+			report "MD VIDEO",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -1164,6 +1160,17 @@ Video_Copy:
 ; --------------------------------------------------------
 
 Video_LoadArt:
+	if MCD|MARSCD
+		move.l	d0,d7
+		andi.l	#$FF0000,d7
+		cmp.l	#$FF0000,d7
+		beq.s	.ram_range
+		move.l	d0,a0
+		move.w	(a0)+,d7
+		move.w	d7,-(sp)
+		addi.l	#2,d0
+.ram_range:
+	endif
 		move.w	sr,-(sp)
 		or	#$700,sr
 		lea	(vdp_ctrl),a4
@@ -1213,6 +1220,11 @@ Video_LoadArt:
 		move.b	(RAM_VdpRegs+1),d6
 		move.w	d6,(a4)
 		move.w	(sp)+,sr
+	if MCD|MARSCD
+		bsr	System_DmaExit_ROM
+		move.w	(sp)+,d7
+		rts
+	endif
 		bra	System_DmaExit_ROM
 .from_ram:
 		move.w	d7,(a4)
@@ -2665,19 +2677,19 @@ slope_data_16:
 ; --------------------------------------------------------
 
 Video_Mars_GfxMode:
-	if MARS
-		move.w	d0,d7
-		and.w	#%00000111,d7			; Current limit: 8 Master modes
-		or.w	#$C0,d7
-		move.b	d7,(sysmars_reg+comm12+1).l
-		bsr	System_MarsUpdate
-.wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for Slave
-		and.w	#%00001111,d7
-		bne.s	.wait_slv
-.wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master
-		and.w	#%11000000,d7
-		bne.s	.wait
-	endif
+; 	if MARS
+; 		move.w	d0,d7
+; 		and.w	#%00000111,d7			; Current limit: 8 Master modes
+; 		or.w	#$C0,d7
+; 		move.b	d7,(sysmars_reg+comm12+1).l
+; 		bsr	System_MarsUpdate
+; .wait_slv:	move.w	(sysmars_reg+comm14).l,d7	; Wait for Slave
+; 		and.w	#%00001111,d7
+; 		bne.s	.wait_slv
+; .wait:		move.w	(sysmars_reg+comm12).l,d7	; Wait for Master
+; 		and.w	#%11000000,d7
+; 		bne.s	.wait
+; 	endif
 		rts
 
 ; --------------------------------------------------------
@@ -2685,17 +2697,17 @@ Video_Mars_GfxMode:
 ; --------------------------------------------------------
 
 Video_Mars_WaitFrame:
-	if MARS
-		bset	#5,(sysmars_reg+comm12+1).l	; Set R bit
-.wait:
-; 		move.w	(vdp_ctrl),d7
-; 		btst	#bitVBlk,d7
-; 		bne.s	.late
-		move.w	(sysmars_reg+comm12).l,d7
-		btst	#5,d7
-		bne.s	.wait
-.late:
-	endif
+; 	if MARS
+; 		bset	#5,(sysmars_reg+comm12+1).l	; Set R bit
+; .wait:
+; ; 		move.w	(vdp_ctrl),d7
+; ; 		btst	#bitVBlk,d7
+; ; 		bne.s	.late
+; 		move.w	(sysmars_reg+comm12).l,d7
+; 		btst	#5,d7
+; 		bne.s	.wait
+; .late:
+; 	endif
 		rts
 
 ; --------------------------------------------------------

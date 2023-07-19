@@ -10,3 +10,6 @@
 ; ----------------------------------------------------------------
 
 		align 4
+ArtMars_TEST:
+		binclude "game/data/TESTS/test_art.bin"
+		align 2

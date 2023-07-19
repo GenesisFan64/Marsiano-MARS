@@ -19,7 +19,9 @@ RAM_MdDreq		equ	RAM_MdOther
 			struct $FFFF0000
 RAM_SystemCode		ds.b MAX_SysCode	;
 RAM_UserCode		ds.b MAX_UserCode	;
-RAM_UserData		ds.b MAX_UserData	;
+; RAM_UserData		ds.b MAX_UserData	;
+			endstruct
+			struct $FFFF8000
 RAM_MdVideo		ds.b MAX_MdVideo	; $FF8000 DMA visuals
 RAM_MdSystem		ds.b MAX_MdSystem	;
 RAM_MdOther		ds.b MAX_MdOther	; 32X's DREQ goes here
@@ -27,8 +29,8 @@ RAM_MdGlobal		ds.b MAX_MdGlobal
 RAM_ScreenBuff		ds.b MAX_ScrnBuff
 sizeof_MdRam		ds.l 0
 			endstruct
-			report "GENESIS RAM",(sizeof_MdRam-$FFFF0000)
+			report "MD RAM",(sizeof_MdRam-$FFFF0000),$FC00
 
 RAM_Stack		equ RAM_MegaCd		; <-- goes backwards
 RAM_MegaCd		equ $FFFFFD00
-RAM_ScreenJump		equ $FFFFFE80		; Fileloading routines ** TODO: check if this loc is safe
+RAM_ScreenJump		equ $FFFFFE00;$FFFFFE80		; Screen change section

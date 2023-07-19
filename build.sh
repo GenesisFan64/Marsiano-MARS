@@ -21,9 +21,23 @@ python tools/p2bin.py main.p out/rom_md.bin
 rm main.p
 rm main.h
 
+# GENESIS
+echo "** SEGA CD **"
+tools/AS/linux/asl main.asm -q -xx -c -A -olist out/rom_mcd.lst -A -L -D MCD=1,MARS=0,MARSCD=0
+python tools/p2bin.py main.p out/rom_mcd.iso
+rm main.p
+rm main.h
+
 # MARS
-echo "** MARS **"
+echo "** SEGA 32X **"
 tools/AS/linux/asl main.asm -q -xx -c -A -olist out/rom_mars.lst -A -L -D MCD=0,MARS=1,MARSCD=0
 python tools/p2bin.py main.p out/rom_mars.bin
+rm main.p
+rm main.h
+
+# MARSCD
+echo "** SEGA CD32X **"
+tools/AS/linux/asl main.asm -q -xx -c -A -olist out/rom_marscd.lst -A -L -D MCD=0,MARS=0,MARSCD=1
+python tools/p2bin.py main.p out/rom_marscd.iso
 rm main.p
 rm main.h

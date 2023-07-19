@@ -25,7 +25,6 @@
 ; --------------------------------------------------------
 
 System_RomSendDreq:
-	if MARS
 		move.w	sr,d7
 		move.w	#$2700,sr
 		lea	(sysmars_reg).l,a5
@@ -53,9 +52,4 @@ System_RomSendDreq:
 		dbf	d5,.l0
 		move.w	#%000,dreqctl(a5)	; Clear 68S on exit
 		move.w	d7,sr
-		rts
-; .bad:
-; 		move.w	#%000,dreqctl(a5)
-; 		move.w	d7,sr
-	endif
 		rts

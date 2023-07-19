@@ -8,12 +8,16 @@
 ; ----------------------------------------------------------------
 
 		align 2
-PalMars_MarsCity:
-		binclude "game/data/maps/3D/mcity/mtrl/marscity_pal.bin"
+PalMars_TEST:
+		binclude "game/data/TESTS/test_pal.bin"
 		align 2
 
-MapPal_M:	binclude "game/data/maps/2D/level0/m_pal.bin"
-		align 2
-TestSupSpr_Pal:
-		binclude "game/data/sprites/mars/nicole/sprites_pal.bin"
-		align 2
+; PalMars_MarsCity:
+; 		binclude "game/data/maps/3D/mcity/mtrl/marscity_pal.bin"
+; 		align 2
+;
+; MapPal_M:	binclude "game/data/maps/2D/level0/m_pal.bin"
+; 		align 2
+; TestSupSpr_Pal:
+; 		binclude "game/data/sprites/mars/nicole/sprites_pal.bin"
+; 		align 2
