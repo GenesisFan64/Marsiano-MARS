@@ -52,7 +52,7 @@ report		macro text,dis,dat
 			message text+": \{(dis)&$FFFFFF}"
 		else
 			if dis > dat
-				error "RAN OUT OF "+text
+				error "RAN OUT OF:"+text
 			else
 				message text+" uses \{(dis)&$FFFFFF} of \{(dat)&$FFFFFF}"
 			endif
@@ -93,6 +93,26 @@ paddingSoFar	set paddingSoFar + address - *
 		endif
 	endif
     endm
+
+; -------------------------------------
+; ZERO Fill padding
+;
+; if AS align doesn't work
+; -------------------------------------
+
+rompad		macro address			; Zero fill
+diff := address - *
+		if diff < 0
+			error "too much stuff before org $\{address} ($\{(-diff)} bytes)"
+		else
+			while diff > 1024
+				; AS can only generate 1 kb of code on a single line
+				dc.b [1024]0
+diff := diff - 1024
+			endm
+			dc.b [diff]0
+		endif
+	endm
 
 ; ====================================================================
 ; ---------------------------------------------

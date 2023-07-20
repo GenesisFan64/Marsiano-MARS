@@ -9,7 +9,7 @@
 
 		align 2
 PalMars_TEST:
-		binclude "game/data/TESTS/test_pal.bin"
+		binclude "game/data/TESTS/mars_pal.bin"
 		align 2
 
 ; PalMars_MarsCity:

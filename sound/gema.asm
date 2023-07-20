@@ -64,6 +64,9 @@ zDrvMarsBlk	equ marsBlock		; Disable PWM flag
 ; 		align $80
 Sound_Init:
 		move.w	#$2700,sr
+	if PICO
+		; PICO driver init...
+	else
 		move.w	#$0100,(z80_bus).l		; Get Z80 bus
 		move.w	#$0100,(z80_reset).l		; Z80 reset
 .wait:
@@ -88,6 +91,7 @@ Sound_Init:
 		nop
 		move.w	#$100,(z80_reset).l
 		move.w	#0,(z80_bus).l			; Start Z80
+	endif
 		rts
 
 ; ====================================================================
@@ -186,6 +190,9 @@ sndReq_sbyte:
 ; --------------------------------------------------------
 
 gemaDmaPause:
+	if PICO
+		rts
+	else
 		swap	d7
 		swap	d6
 		bsr	sndLockZ80
@@ -197,6 +204,7 @@ gemaDmaPause:
 		swap	d6
 		swap	d7
 		rts
+	endif
 
 ; --------------------------------------------------------
 ; gemaDmaResume
@@ -205,6 +213,9 @@ gemaDmaPause:
 ; --------------------------------------------------------
 
 gemaDmaResume:
+	if PICO
+		rts
+	else
 		swap	d7
 		swap	d6
 		bsr	sndLockZ80
@@ -213,6 +224,7 @@ gemaDmaResume:
 		swap	d6
 		swap	d7
 		rts
+	endif
 
 ; --------------------------------------------------------
 ; gemaDmaPause
@@ -221,6 +233,9 @@ gemaDmaResume:
 ; --------------------------------------------------------
 
 gemaDmaPauseRom:
+	if PICO
+		rts
+	else
 		swap	d7
 		swap	d6
 		bsr	sndLockZ80
@@ -236,6 +251,7 @@ gemaDmaPauseRom:
 		swap	d6
 		swap	d7
 		rts
+	endif
 
 ; --------------------------------------------------------
 ; gemaDmaResume
@@ -244,6 +260,9 @@ gemaDmaPauseRom:
 ; --------------------------------------------------------
 
 gemaDmaResumeRom:
+	if PICO
+		rts
+	else
 		swap	d7
 		swap	d6
 		bsr	sndLockZ80
@@ -257,6 +276,7 @@ gemaDmaResumeRom:
 		swap	d6
 		swap	d7
 		rts
+	endif
 
 ; ------------------------------------------------
 ; 32X ONLY: Request CMD interrupt with
@@ -362,10 +382,14 @@ gemaStopTrack:
 ; --------------------------------------------------------
 
 gemaStopAll:
+	if PICO
+		rts
+	else
 		bsr	sndReq_Enter
 		move.w	#$08,d7		; Command $08
 		bsr	sndReq_scmd
 		bra 	sndReq_Exit
+	endif
 
 ; --------------------------------------------------------
 ; gemaSetBeats

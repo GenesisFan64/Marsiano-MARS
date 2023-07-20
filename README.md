@@ -1,15 +1,11 @@
 # Marsiano-MARS
-An starting point for making Sega 32X homebrew software, was going to be used for a tech demo to show it's capabilities but ran out of time...
+A multi SEGA-system game codebase for Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico.
 
-- 68000 is being used for the main logic
+WORK IN PROGRESS, IN THE MIDDLE OF CLEANUP.
 
-- Z80 does the sound, including PWM (with the help of Slave SH2)
+- Sega Genesis and Sega 32X roms are tested on real hardware.
+- Sega CD, Sega CD32X and Sega Pico are UNTESTED on hardware as I don't have a Sega CD or the Sega Pico (There's no flashcarts for Pico anyway)
 
-- MASTER SH2 controls the visuals (2D+3D), SLAVE SH2 does the PWM playback and sometimes it's used for dual-cpu tasks
+Prebuilt binaries are located in the /out folder for testing, ROMs are for NTSC systems, SCD roms are for the USA region.
 
-This code provides: Smooth 2D 256-color scrolling background with "Super" sprites, 3D objects system, sound driver with PWM support and DREQ for controlling everything on the 68000 side.
-
-This is also being used to research bugs and limitations of the real hardware that current emulators ignore... see hwnotes.txt for details.
-
-A prebuilt binary is located in the /out folder for testing, works on any Genesis/MD flashcart WITH the 32X inserted. ROM is for NTSC systems, can be played on PAL but with slowdown.
-If it doesn't boot or it freezes: I probably broke something without testing on HW
+If the Genesis and 32X versions doesn't boot or it freezes: I probably broke something without testing on HW, other versions I have no clue if those will work.

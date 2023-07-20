@@ -40,9 +40,7 @@ RAM_MapY	ds.w 1
 		bsr	Video_Update
 		bsr	Video_PrintInit
 		bsr	Mode_Init
-
 		bsr	gemaStopAll
-
 		lea	(RAM_PaletteFd+$60),a0
 		move.w	#0,(a0)+
 		move.w	#$EEE,(a0)+
@@ -52,32 +50,45 @@ RAM_MapY	ds.w 1
 		move.w	#$222,(a0)+
 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
 		clr.w	(RAM_MdMarsPalFd).w
+
+	; Test image
+	if MARS|MARSCD
 		lea	(PalMars_TEST),a0
 		moveq	#0,d0
 		move.w	#256,d1
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
+		; SH2 does the pixel data
+	else
+		move.l	#ArtMd_TEST,d0			; Genesis VDP graphics
+		move.w	#1*$20,d1
+		move.w	#ArtMd_TEST_e-ArtMd_TEST,d2
+		bsr	Video_LoadArt
+		lea	(MapMd_TEST),a0
+		move.l	#locate(1,0,0),d0
+		move.l	#mapsize(320,224),d1
+		move.w	#1,d2
+		bsr	Video_LoadMap
+		lea	(PalMd_TEST),a0			; 16-color palette
+		moveq	#0,d0
+		moveq	#16,d1
+		bsr	Video_FadePal
+	endif
 
+	; Shared:
 		lea	str_Stats(pc),a0
 		move.l	#locate(0,1,1),d0
 		bsr	Video_Print
-
-
 ; 	Set Fade-in settings
-
-
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		move.b	#%10000001,(RAM_VdpRegs+$C).w		; H40 + shadow mode
 		bsr	Video_Update
-; 		bsr	.fade_in
-
 		move.w	#1,(RAM_FadeMdIncr).w
 		move.w	#2,(RAM_FadeMarsIncr).w
 		move.w	#1,(RAM_FadeMdDelay).w
 		move.w	#0,(RAM_FadeMarsDelay).w
 		move.w	#1,(RAM_FadeMdReq).w
 		move.w	#1,(RAM_FadeMarsReq).w
-
 	if MCD|MARSCD
 		moveq	#$10,d0
 		bsr	System_McdSubTask
@@ -139,24 +150,21 @@ RAM_MapY	ds.w 1
 ; ------------------------------------------------------
 
 str_Stats:
-		dc.b "MARSIANO SCD32X! NO FEIK! AYY LMAO!",$A
-; 		dc.b $A
+		dc.b "MARSIANO!",$A
 		dc.b 0
 		align 2
 
 str_Stats2:
 ; 	if MARS
 		dc.b "\\l",$A,$A
-		dc.b "MCD COMM: \\b \\b RW/RD",$A,$A
-		dc.b "\\w \\w \\w \\w RW",$A
+		dc.b "\\b \\b CD RW/RD",$A,$A
+		dc.b "\\w \\w \\w \\w CD RW",$A
 		dc.b "\\w \\w \\w \\w",$A,$A
-		dc.b "\\w \\w \\w \\w RD",$A
+		dc.b "\\w \\w \\w \\w CD RD",$A
 		dc.b "\\w \\w \\w \\w",$A
 		dc.b $A
-		dc.b "MARS COMM",$A,$A
+		dc.b "\\w \\w \\w \\w MARS",$A
 		dc.b "\\w \\w \\w \\w",$A
-		dc.b "\\w \\w \\w \\w",$A,$A
-		dc.b "\\l",$A
 		dc.b 0
 ; ; 	else
 ; 		dc.b "\\l",0
@@ -191,9 +199,7 @@ str_Stats2:
 		dc.l sysmars_reg+comm10
 		dc.l sysmars_reg+comm12
 		dc.l sysmars_reg+comm14
-
-		dc.l $FFFFFFF0
-; 	endif
 		align 2
 
 ; ====================================================================
+

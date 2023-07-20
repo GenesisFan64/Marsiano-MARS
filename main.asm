@@ -1,6 +1,9 @@
 ; ===========================================================================
 ; +-----------------------------------------------------------------+
 ; PROJECT MARSIANO
+;
+; A game engine for
+; Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico
 ; +-----------------------------------------------------------------+
 
 		!org 0				; Start at 0
@@ -16,19 +19,19 @@
 ; USER SETTINGS
 ; ----------------------------------------------------------------
 
-; RAM Sizes
+; RAM Sizes for Sega CD and Sega 32X
 ;
 ; MAKE SURE IT DOESN'T REACH FC00 FOR CROSS-PORTING
 ; TO SEGA-CD (And maybe SCD+32X)
 
-MAX_SysCode	equ $2000
-MAX_UserCode	equ $2000
-; MAX_UserData	equ $4000
-MAX_MdVideo	equ $2000
-MAX_MdSystem	equ $0800
+MAX_SysCode	equ $1800	; ** CD/32X/CD32X
+MAX_UserCode	equ $3000	; ** CD/32X/CD32X
+
+MAX_MdVideo	equ $2000	;
+MAX_MdSystem	equ $0800	; Special.
 MAX_MdOther	equ $2000	; 32X's DREQ data to send
-MAX_MdGlobal	equ $1000	; USER Global variables
-MAX_ScrnBuff	equ $2000	; RAM section for current screen ONLY
+MAX_MdGlobal	equ $0800	; USER Global variables
+MAX_ScrnBuff	equ $2800	; RAM section for current screen ONLY
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -39,9 +42,8 @@ MAX_ScrnBuff	equ $2000	; RAM section for current screen ONLY
 		include	"system/shared.asm"		; Shared Genesis/32X variables
 		include	"system/md/map.asm"		; Genesis hardware map
 		include	"system/md/const.asm"		; Genesis variables
-; 		include	"system/mcd/const.asm"		; Sega CD variables
+		include	"system/mcd/const.asm"		; Sega CD variables
 		include	"system/md/ram.asm"		; Genesis RAM sections
-		include	"system/mcd/const.asm"		; Genesis variables
 		include	"system/mars/map.asm"		; 32X hardware map
 		include "game/global.asm"		; Global user variables on the Genesis
 
@@ -68,24 +70,22 @@ MAX_ScrnBuff	equ $2000	; RAM section for current screen ONLY
 .copyme_2:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copyme_2
-		jsr	(Sound_init).l
+		jsr	(Sound_init).l				; RAM jumps
 		jsr	(Video_init).l
 		jsr	(System_Init).l
 		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
 		jmp	(Md_ReadModes).l
 
 ; ---------------------------------------------
-; SEGA CD INIT
+; SEGA CD and CD32X INIT
 ; ---------------------------------------------
+
 	elseif MCD|MARSCD
 		include	"system/head_mcd.asm"			; Sega CD header
 mcdin_top:
-		move.b	(sysmcd_reg+mcd_memory+1).l,d0		; Set WORDRAM to SUB, DMNA=1
-		bset	#1,d0
-		move.b	d0,(sysmcd_reg+mcd_memory+1).l
-		if MARSCD
+	if MARSCD
 		include "system/mcd/marscd.asm"
-		endif
+	endif
 		lea	Md_SysCode(pc),a0			; Transfer SYSTEM code
 		lea	(RAM_SystemCode),a1
 		move.w	#((Md_SysCode_e-Md_SysCode))-1,d0
@@ -98,14 +98,13 @@ mcdin_top:
 .copyme_2:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copyme_2
-
-		lea	(sysmcd_reg+mcd_dcomm_m),a0
+		lea	(sysmcd_reg+mcd_dcomm_m),a0		; Load default assets
 		move.l	#"WORD",(a0)+
 		move.l	#"DATA",(a0)+
 		move.l	#".BIN",(a0)+
 		move.w	#0,(a0)+
 		moveq	#$02,d0
-		jsr	(System_McdSubTask).l
+		jsr	(System_McdSubTask).l			; WRAM load
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
@@ -117,6 +116,19 @@ Z80_CODE:	include "sound/gema_zdrv.asm"			; Called once
 Z80_CODE_END:
 Gema_MasterList:	; TEMPORAL
 		dephase
+
+; ---------------------------------------------
+; SEGA PICO INIT
+;
+; Recycle the MD's routines.
+; ---------------------------------------------
+	elseif PICO
+		include	"system/head_pico.asm"			; Pico header
+		jsr	(Sound_init).l
+		jsr	(Video_init).l
+		jsr	(System_Init).l
+		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
+		bra.w	Md_ReadModes
 
 ; ---------------------------------------------
 ; MD INIT
@@ -276,18 +288,20 @@ GFXDMA_WRAM_e:
 ; Screen modes
 ; --------------------------------------------------------
 
-; 	if MARS
 		align $800
 CD32_Start:
+	if MARSCD
 		include "system/mars/code.asm"
 		cpu 68000
 		padding off
 		dephase
+	endif
 		align $800
 CD32_End:
 		align 4
 
-	endif
+		rompad $100000
+	endif	; end SCD section
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -340,7 +354,9 @@ Z80_CODE_END:
 ; BANK 0
 ; ---------------------------------------------
 
+	if MARS
 		phase $900000+*				; ** Currently this one only.
+	endif
 MDBNK0_START:
 		include "game/data/md_bank0.asm"	; <-- 68K ONLY bank data
 MDBNK0_END:

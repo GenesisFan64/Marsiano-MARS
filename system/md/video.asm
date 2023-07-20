@@ -3,7 +3,7 @@
 ; Genesis Video
 ; ----------------------------------------------------------------
 
-RAM_BgBufferM	equ	RAM_MdDreq+Dreq_BgExBuff	; Relocate MARS layer control
+; RAM_BgBufferM	equ	RAM_MdDreq+Dreq_BgExBuff	; Relocate MARS layer control
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -1148,7 +1148,7 @@ Video_Copy:
 ; Load graphics using DMA, direct
 ;
 ; d0 | LONG - Art data
-; d1 | WORD - VRAM location
+; d1 | WORD - cell_vram(location)
 ; d2 | WORD - Size
 ;
 ; Breaks:
@@ -1159,6 +1159,9 @@ Video_Copy:
 ; ROM ***
 ; --------------------------------------------------------
 
+; TODO: MCD/MARSCD
+; Falta el word-patch
+
 Video_LoadArt:
 	if MCD|MARSCD
 		move.l	d0,d7
@@ -1166,9 +1169,10 @@ Video_LoadArt:
 		cmp.l	#$FF0000,d7
 		beq.s	.ram_range
 		move.l	d0,a0
-		move.w	(a0)+,d7
-		move.w	d7,-(sp)
+		move.w	(a0),d7
+		movem.w	d1/d7,-(sp)		; Save missing word
 		addi.l	#2,d0
+		subi.w	#1,d2
 .ram_range:
 	endif
 		move.w	sr,-(sp)
@@ -1222,7 +1226,8 @@ Video_LoadArt:
 		move.w	(sp)+,sr
 	if MCD|MARSCD
 		bsr	System_DmaExit_ROM
-		move.w	(sp)+,d7
+		movem.w	(sp)+,d1/d7
+		; TODO
 		rts
 	endif
 		bra	System_DmaExit_ROM
@@ -1292,1376 +1297,1380 @@ Video_DmaBlast:
 .exit:
 		rts
 
-; ====================================================================
-; ----------------------------------------------------------------
-; MAP layout system
+; ; ====================================================================
+; ; ----------------------------------------------------------------
+; ; MAP layout system
+; ;
+; ; Note: uses some RAM'd video registers.
+; ; ----------------------------------------------------------------
 ;
-; Note: uses some RAM'd video registers.
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; MdMap_Init
+; ; --------------------------------------------------------
+; ; MdMap_Init
+; ;
+; ; Initializes all BG buffers
+; ; --------------------------------------------------------
 ;
-; Initializes all BG buffers
-; --------------------------------------------------------
-
-MdMap_Init:
-		lea	(RAM_BgBuffer),a0
-		move.w	#((sizeof_mdbg*4)/4)-1,d1
-		moveq	#0,d0
-.clr:
-		move.l	d0,(a0)+
-		dbf	d1,.clr
-		rts
-
-; --------------------------------------------------------
-; MdMap_Set
+; MdMap_Init:
+; 		lea	(RAM_BgBuffer),a0
+; 		move.w	#((sizeof_mdbg*4)/4)-1,d1
+; 		moveq	#0,d0
+; .clr:
+; 		move.l	d0,(a0)+
+; 		dbf	d1,.clr
+; 		rts
 ;
-; Sets a new scrolling section to use.
+; ; --------------------------------------------------------
+; ; MdMap_Set
+; ;
+; ; Sets a new scrolling section to use.
+; ;
+; ; **SET YOUR X and Y COORDS EXTERNALLY
+; ; BEFORE GETTING HERE**
+; ;
+; ; Input:
+; ; ** Genesis side **
+; ; d0 | WORD - BG internal slot (-1: 32X only)
+; ; d1 | WORD - VRAM location for map data
+; ; d2 | WORD - VRAM add + palette
+; ; a0 - Level header data:
+; ; 	dc.w width,height
+; ; 	dc.b blkwidth,blkheight
+; ; a1 - Block data
+; ; a2 - LOW priority layout data
+; ; a3 - HIGH priority layout data
+; ; d4 - Collision data
+; ;
+; ; Then load the graphics externally at the same
+; ; VRAM location set in d2
+; ;
+; ; ** 32X side **
+; ; d0 | WORD - Write as -1
+; ; d1 | WORD - Scroll buffer to use on the 32X side (0 - default)
+; ; d2 | WORD - Index-palette increment
+; ; a0 - Level header data: (68K AREA)
+; ; 	dc.w width,height
+; ; 	dc.b blkwidth,blkheight
+; ; a1 - Graphics data stored as blocks (SH2 AREA)
+; ; a2 - MAIN layout (SH2 AREA)
+; ; a3 - *** UNUSED, set to 0
+; ; a4 - Collision data (68K AREA)
+; ;
+; ; Uses:
+; ; d0,d6-d7
+; ; --------------------------------------------------------
 ;
-; **SET YOUR X and Y COORDS EXTERNALLY
-; BEFORE GETTING HERE**
+; MdMap_Set:
+; 		tst.w	d0
+; 		bpl.s	.md_side
+; 		lea	(RAM_BgBufferM),a6
+; 		bset	#bitMarsBg,md_bg_flags(a6)
+; 		bra.s	.mars_side
+; .md_side:
+; 		lea	(RAM_BgBuffer),a6
+; 		mulu.w	#sizeof_mdbg,d0
+; 		adda	d0,a6
+; 		bclr	#bitMarsBg,md_bg_flags(a6)
+; .mars_side:
+; 		move.w	d1,md_bg_vpos(a6)
+; 		move.w	d2,md_bg_vram(a6)
 ;
-; Input:
-; ** Genesis side **
-; d0 | WORD - BG internal slot (-1: 32X only)
-; d1 | WORD - VRAM location for map data
-; d2 | WORD - VRAM add + palette
-; a0 - Level header data:
-; 	dc.w width,height
-; 	dc.b blkwidth,blkheight
-; a1 - Block data
-; a2 - LOW priority layout data
-; a3 - HIGH priority layout data
-; d4 - Collision data
+; 		moveq	#0,d7
+; 		move.w	md_bg_x(a6),d7
+; 		move.b	d7,md_bg_xset(a6)
+; 		move.w	d7,md_bg_x_old(a6)
+; 		swap	d7
+; 		move.l	d7,md_bg_x(a6)
+; 		moveq	#0,d7
+; 		move.w	md_bg_y(a6),d7
+; 		move.b	d7,md_bg_yset(a6)
+; 		move.w	d7,md_bg_y_old(a6)
+; 		swap	d7
+; 		move.l	d7,md_bg_y(a6)
+; 		and.w	#$F,d3
+; 		and.w	#$F,d4
 ;
-; Then load the graphics externally at the same
-; VRAM location set in d2
+; 		swap	d3
+; 		swap	d4
+; 		move.l	a1,md_bg_blk(a6)
+; 		move.l	a2,md_bg_low(a6)
+; 		move.l	a3,md_bg_hi(a6)
+; 		move.l	a4,md_bg_col(a6)
+; 		move.l	a0,a5
+; 		move.w	(a5)+,d7	; Layout Width (blocks)
+; 		move.w	(a5)+,d6	; Layout Height (blocks)
+; 		move.b	(a5)+,d4	; BLOCK width
+; 		move.b	(a5)+,d3	; BLOCK height
+; 		and.w	#$FF,d4
+; 		and.w	#$FF,d3
+; 		move.w	d7,md_bg_w(a6)
+; 		move.w	d6,md_bg_h(a6)
+; 		move.b	d4,md_bg_bw(a6)
+; 		move.b	d3,md_bg_bh(a6)
+; 		mulu.w	d4,d7
+; 		mulu.w	d3,d6
+; 		move.w	d7,md_bg_wf(a6)
+; 		move.w	d6,md_bg_hf(a6)
+; 		sub.w	#1,d4
+; 		sub.w	#1,d3
+; 		and.b	d4,md_bg_xset(a6)
+; 		and.b	d3,md_bg_yset(a6)
+; 		swap	d3
+; 		swap	d4
 ;
-; ** 32X side **
-; d0 | WORD - Write as -1
-; d1 | WORD - Scroll buffer to use on the 32X side (0 - default)
-; d2 | WORD - Index-palette increment
-; a0 - Level header data: (68K AREA)
-; 	dc.w width,height
-; 	dc.b blkwidth,blkheight
-; a1 - Graphics data stored as blocks (SH2 AREA)
-; a2 - MAIN layout (SH2 AREA)
-; a3 - *** UNUSED, set to 0
-; a4 - Collision data (68K AREA)
+; 	; TODO: improve this...
+; 		move.w	md_bg_x(a6),d3
+; 		move.w	md_bg_y(a6),d4
+; 	; X beams
+; .xl_l:		cmp.w	d7,d3
+; 		blt.s	.xl_g
+; 		sub.w	d7,d3
+; 		bra.s	.xl_l
+; .xl_g:
+; 		move.w	d3,md_bg_xinc_l(a6)
+; 		add.w	#320,d3				; <-- X resolution R
+; .xr_l:		cmp.w	d7,d3
+; 		blt.s	.xr_g
+; 		sub.w	d7,d3
+; 		bra.s	.xr_l
+; .xr_g:
+; 		move.w	d3,md_bg_xinc_r(a6)
 ;
-; Uses:
-; d0,d6-d7
-; --------------------------------------------------------
-
-MdMap_Set:
-		tst.w	d0
-		bpl.s	.md_side
-		lea	(RAM_BgBufferM),a6
-		bset	#bitMarsBg,md_bg_flags(a6)
-		bra.s	.mars_side
-.md_side:
-		lea	(RAM_BgBuffer),a6
-		mulu.w	#sizeof_mdbg,d0
-		adda	d0,a6
-		bclr	#bitMarsBg,md_bg_flags(a6)
-.mars_side:
-		move.w	d1,md_bg_vpos(a6)
-		move.w	d2,md_bg_vram(a6)
-
-		moveq	#0,d7
-		move.w	md_bg_x(a6),d7
-		move.b	d7,md_bg_xset(a6)
-		move.w	d7,md_bg_x_old(a6)
-		swap	d7
-		move.l	d7,md_bg_x(a6)
-		moveq	#0,d7
-		move.w	md_bg_y(a6),d7
-		move.b	d7,md_bg_yset(a6)
-		move.w	d7,md_bg_y_old(a6)
-		swap	d7
-		move.l	d7,md_bg_y(a6)
-		and.w	#$F,d3
-		and.w	#$F,d4
-
-		swap	d3
-		swap	d4
-		move.l	a1,md_bg_blk(a6)
-		move.l	a2,md_bg_low(a6)
-		move.l	a3,md_bg_hi(a6)
-		move.l	a4,md_bg_col(a6)
-		move.l	a0,a5
-		move.w	(a5)+,d7	; Layout Width (blocks)
-		move.w	(a5)+,d6	; Layout Height (blocks)
-		move.b	(a5)+,d4	; BLOCK width
-		move.b	(a5)+,d3	; BLOCK height
-		and.w	#$FF,d4
-		and.w	#$FF,d3
-		move.w	d7,md_bg_w(a6)
-		move.w	d6,md_bg_h(a6)
-		move.b	d4,md_bg_bw(a6)
-		move.b	d3,md_bg_bh(a6)
-		mulu.w	d4,d7
-		mulu.w	d3,d6
-		move.w	d7,md_bg_wf(a6)
-		move.w	d6,md_bg_hf(a6)
-		sub.w	#1,d4
-		sub.w	#1,d3
-		and.b	d4,md_bg_xset(a6)
-		and.b	d3,md_bg_yset(a6)
-		swap	d3
-		swap	d4
-
-	; TODO: improve this...
-		move.w	md_bg_x(a6),d3
-		move.w	md_bg_y(a6),d4
-	; X beams
-.xl_l:		cmp.w	d7,d3
-		blt.s	.xl_g
-		sub.w	d7,d3
-		bra.s	.xl_l
-.xl_g:
-		move.w	d3,md_bg_xinc_l(a6)
-		add.w	#320,d3				; <-- X resolution R
-.xr_l:		cmp.w	d7,d3
-		blt.s	.xr_g
-		sub.w	d7,d3
-		bra.s	.xr_l
-.xr_g:
-		move.w	d3,md_bg_xinc_r(a6)
-
-	; Y beams
-.yt_l:		cmp.w	d6,d4
-		blt.s	.yt_g
-		sub.w	d6,d4
-		bra.s	.yt_l
-.yt_g:
-		move.w	d4,md_bg_yinc_u(a6)
-		add.w	#224,d4				; <-- Y resolution B
-.yb_l:		cmp.w	d6,d4
-		blt.s	.yb_g
-		sub.w	d6,d4
-		bra.s	.yb_l
-.yb_g:
-		move.w	d4,md_bg_yinc_d(a6)
-
-		bset	#bitBgOn,md_bg_flags(a6)	; Enable this BG
-		rts
-
-; --------------------------------------------------------
-; MdMap_Move
+; 	; Y beams
+; .yt_l:		cmp.w	d6,d4
+; 		blt.s	.yt_g
+; 		sub.w	d6,d4
+; 		bra.s	.yt_l
+; .yt_g:
+; 		move.w	d4,md_bg_yinc_u(a6)
+; 		add.w	#224,d4				; <-- Y resolution B
+; .yb_l:		cmp.w	d6,d4
+; 		blt.s	.yb_g
+; 		sub.w	d6,d4
+; 		bra.s	.yb_l
+; .yb_g:
+; 		move.w	d4,md_bg_yinc_d(a6)
 ;
-; Moves the current background/foreground
-; and checks for overflow.
+; 		bset	#bitBgOn,md_bg_flags(a6)	; Enable this BG
+; 		rts
 ;
-; Input:
-; d0 | WORD - Background slot, if -1 32X's
-; d1 | WORD - Current X position
-; d2 | WORD - Current Y position
-; a0 - Background to move and check.
+; ; --------------------------------------------------------
+; ; MdMap_Move
+; ;
+; ; Moves the current background/foreground
+; ; and checks for overflow.
+; ;
+; ; Input:
+; ; d0 | WORD - Background slot, if -1 32X's
+; ; d1 | WORD - Current X position
+; ; d2 | WORD - Current Y position
+; ; a0 - Background to move and check.
+; ;
+; ; Uses:
+; ; d6-d7
+; ; --------------------------------------------------------
 ;
-; Uses:
-; d6-d7
-; --------------------------------------------------------
-
-MdMap_Move:
-		lea	(RAM_BgBufferM),a6
-		tst.w	d0
-		bmi.s	.mars_side
-		lea	(RAM_BgBuffer),a6
-		mulu.w	#sizeof_mdbg,d0
-		adda	d0,a6
-.mars_side:
+; MdMap_Move:
+; 		lea	(RAM_BgBufferM),a6
+; 		tst.w	d0
+; 		bmi.s	.mars_side
+; 		lea	(RAM_BgBuffer),a6
+; 		mulu.w	#sizeof_mdbg,d0
+; 		adda	d0,a6
+; .mars_side:
+; ; 		btst	#bitBgOn,md_bg_flags(a6)
+; ; 		beq	.not_enabld
+; 		move.w	md_bg_wf(a6),d0
+; 		tst.w	d1
+; 		bpl.s	.x_left
+; 		clr.w	d1
+; .x_left:
+; 		sub.w	#320,d0
+; 		cmp.w	d0,d1
+; 		bcs.s	.x_right
+; 		move.w	d0,d1
+; .x_right:
+; 		move.w	md_bg_hf(a6),d0
+; 		tst.w	d2
+; 		bpl.s	.y_left
+; 		clr.w	d2
+; .y_left:
+; 		sub.w	#224,d0
+; 		cmp.w	d0,d2
+; 		bcs.s	.y_right
+; 		move.w	d0,d2
+; .y_right:
+; 		move.w	d1,md_bg_x(a6)
+; 		move.w	d2,md_bg_y(a6)
+; .not_enabld:
+; 		rts
+;
+; ; --------------------------------------------------------
+; ; MdMap_Update
+; ;
+; ; Updates backgrounds internally, call this
+; ; BEFORE going into VBlank.
+; ;
+; ; Then later call MdMap_DrawScrl on VBlank,
+; ; this also applies for the 32X as this routine also
+; ; resets the drawing bits.
+; ;
+; ; For the 32X:
+; ; Call System_MarsUpdate AFTER this.
+; ; --------------------------------------------------------
+;
+; MdMap_Update:
+; 	if MARS|MARSCD
+; 		lea	(RAM_BgBufferM),a6
+; 		bsr.s	.this_bg
+; 		lea	(RAM_BgBuffer),a6
+; 		bsr.s	.this_bg
+; 		adda	#sizeof_mdbg,a6
+; .this_bg:
 ; 		btst	#bitBgOn,md_bg_flags(a6)
-; 		beq	.not_enabld
-		move.w	md_bg_wf(a6),d0
-		tst.w	d1
-		bpl.s	.x_left
-		clr.w	d1
-.x_left:
-		sub.w	#320,d0
-		cmp.w	d0,d1
-		bcs.s	.x_right
-		move.w	d0,d1
-.x_right:
-		move.w	md_bg_hf(a6),d0
-		tst.w	d2
-		bpl.s	.y_left
-		clr.w	d2
-.y_left:
-		sub.w	#224,d0
-		cmp.w	d0,d2
-		bcs.s	.y_right
-		move.w	d0,d2
-.y_right:
-		move.w	d1,md_bg_x(a6)
-		move.w	d2,md_bg_y(a6)
-.not_enabld:
-		rts
-
-; --------------------------------------------------------
-; MdMap_Update
+; 		beq	.no_bg
+; 		moveq	#0,d1
+; 		moveq	#0,d2
+; 		move.w	md_bg_x(a6),d3
+; 		move.w	md_bg_x_old(a6),d0
+; 		cmp.w	d0,d3
+; 		beq.s	.xequ
+; 		move.w	d3,d1
+; 		sub.w	d0,d1
+; 		move.w	d3,md_bg_x_old(a6)
+; .xequ:
+; 		move.w	md_bg_y(a6),d3
+; 		move.w	md_bg_y_old(a6),d0
+; 		cmp.w	d0,d3
+; 		beq.s	.yequ
+; 		move.w	d3,d2
+; 		sub.w	d0,d2
+; 		move.w	d3,md_bg_y_old(a6)
+; .yequ:
 ;
-; Updates backgrounds internally, call this
-; BEFORE going into VBlank.
-;
-; Then later call MdMap_DrawScrl on VBlank,
-; this also applies for the 32X as this routine also
-; resets the drawing bits.
-;
-; For the 32X:
-; Call System_MarsUpdate AFTER this.
-; --------------------------------------------------------
-
-MdMap_Update:
-		lea	(RAM_BgBufferM),a6
-		bsr.s	.this_bg
-		lea	(RAM_BgBuffer),a6
-		bsr.s	.this_bg
-		adda	#sizeof_mdbg,a6
-.this_bg:
-		btst	#bitBgOn,md_bg_flags(a6)
-		beq	.no_bg
-		moveq	#0,d1
-		moveq	#0,d2
-		move.w	md_bg_x(a6),d3
-		move.w	md_bg_x_old(a6),d0
-		cmp.w	d0,d3
-		beq.s	.xequ
-		move.w	d3,d1
-		sub.w	d0,d1
-		move.w	d3,md_bg_x_old(a6)
-.xequ:
-		move.w	md_bg_y(a6),d3
-		move.w	md_bg_y_old(a6),d0
-		cmp.w	d0,d3
-		beq.s	.yequ
-		move.w	d3,d2
-		sub.w	d0,d2
-		move.w	d3,md_bg_y_old(a6)
-.yequ:
-
-	; Increment drawing beams
-		move.w	d1,d0
-		move.w	md_bg_wf(a6),d5
-		move.w	md_bg_xinc_l(a6),d4
-		bsr.s	.beam_incr
-		move.w	d4,md_bg_xinc_l(a6)
-		move.w	md_bg_xinc_r(a6),d4
-		bsr.s	.beam_incr
-		move.w	d4,md_bg_xinc_r(a6)
-		move.w	d2,d0
-		move.w	md_bg_hf(a6),d5
-		move.w	md_bg_yinc_u(a6),d4
-		bsr.s	.beam_incr
-		move.w	d4,md_bg_yinc_u(a6)
-		move.w	md_bg_yinc_d(a6),d4
-		bsr.s	.beam_incr
-		move.w	d4,md_bg_yinc_d(a6)
-
-	; Update internal counters
-		moveq	#0,d3
-		move.b	md_bg_bw(a6),d3		; X set
-		move.b	md_bg_xset(a6),d0
-		add.b	d1,d0
-		move.b	d0,d4
-		and.w	d3,d4
-		beq.s	.x_k
-		moveq	#bitDrwR,d4
-		tst.w	d1
-		bpl.s	.x_r
-		moveq	#bitDrwL,d4
-.x_r:
-		bset	d4,md_bg_flags(a6)
-.x_k:
-		sub.w	#1,d3
-		and.b	d3,d0
-		move.b	d0,md_bg_xset(a6)
-		move.b	md_bg_bh(a6),d3		; Y set
-		move.b	md_bg_yset(a6),d0
-		add.b	d2,d0
-		move.b	d0,d4
-		and.w	d3,d4
-		beq.s	.y_k
-		moveq	#bitDrwD,d4
-		tst.w	d2
-		bpl.s	.y_d
-		moveq	#bitDrwU,d4
-.y_d:
-		bset	d4,md_bg_flags(a6)
-.y_k:
-		sub.w	#1,d3
-		and.b	d3,d0
-		move.b	d0,md_bg_yset(a6)
-.no_bg:
-		rts
-
-; d0 - Increment by
-; d4 - X/Y beam
-; d5 - Max Width/Height
-.beam_incr:
-		add.w	d0,d4
-.xd_l:		tst.w	d4
-		bpl.s	.xd_g
-		add.w	d5,d4
-		bra.s	.xd_l
-.xd_g:		cmp.w	d5,d4
-		blt.s	.val_h
-		sub.w	d5,d4
-		bra.s	.xd_g
-.val_h:
-		rts
-
-; --------------------------------------------------------
-; MdMap_DrawAll
-;
-; Call this only if DISPLAY is OFF or in VBlank
-;
-; Notes:
-; - Does NOT check for off-bounds blocks
-; - Blocks with ID $00 are skipped.
-; --------------------------------------------------------
-
-MdMap_DrawAll:
-		lea	(RAM_BgBuffer),a6
-		bsr	.this_bg
-		adda	#sizeof_mdbg,a6
-.this_bg:
-		btst	#bitBgOn,md_bg_flags(a6)
-		beq	.no_bg
-		move.l	md_bg_blk(a6),a5
-		move.l	md_bg_low(a6),a4
-		move.l	md_bg_hi(a6),a3
-		move.w	md_bg_x(a6),d0		; X start
-		move.w	md_bg_y(a6),d1		; Y start
-		move.b	md_bg_bw(a6),d2
-		move.b	md_bg_bh(a6),d3
-		move.w	md_bg_w(a6),d4
+; 	; Increment drawing beams
+; 		move.w	d1,d0
 ; 		move.w	md_bg_wf(a6),d5
-; 		move.w	md_bg_hf(a6),d6
-
-		moveq	#0,d6
-		move.w	d0,d6
-		and.w	#-$10,d6
-		lsr.w	#2,d6
-		and.w	#$7F,d6
-
-		moveq	#0,d5
-		move.w	d1,d5
-		and.w	#-$10,d5
-		lsl.w	#4,d5
-		and.w	#$F00,d5
-
-		add.w	d5,d6
-		add.w	md_bg_vpos(a6),d6
-		move.w	d6,d5
-		rol.w	#2,d6
-		and.w	#%11,d6
-		swap	d6
-		and.w	#$3FFF,d5
-		move.w	d5,d6			; d6 - VDP 2nd|1st writes
-
-		and.w	#$FF,d2
-		muls.w	d2,d0
-		lsr.w	#8,d0
-		and.w	#$FF,d3
-		muls.w	d3,d1
-		lsr.w	#8,d1
-		muls.w	d4,d1
-		add.l	d1,d0
-		add.l	d0,a4
-		add.l	d0,a3
-		move.w	#$80,d1
-		move.w	d1,d3
-		swap	d1
-		sub.w	#1,d3
-		moveq	#0,d2
-		move.w	md_bg_vram(a6),d2	; d2 - VRAM cell pos
-		swap	d3
-		move.w	#4,d3			; d3 - X wrap | X next block
-		move.w	#$0FFF,d4		; d4 - Y wrap | Y next block + bits
-		swap	d4
-		move.w	#$100,d4
-		move.w	d5,d0
-		moveq	#0,d5			; d5 - temporal | X-add read
-		move.w	#(512/16)-1,d7		; d7 - X cells | Y cells
-		swap	d7
-		move.w	#(256/16)-1,d7
-
-	; a6 - Current BG buffer
-	; a5 - Block-data base
-	; a4 - LOW layout data Y
-	; a3 - HI layout data Y
-	; a2 - a4 current
-	; a1 - a3 current
-	; a0 - Block-data read
-
-	; d7 - X loop        | Y loop
-	; d6 - VDP 2nd Write | X/Y VDP pos + addr bits
-	; d5 - X loop-save   | X VDP current
-	; d4 - Y wrap        | Y next block pos
-	; d3 - X wrap        | X next block pos
-	; d2 - Y block size  | VRAM-cell base
-	; d1 - Y-next line   | VRAM-cell read + prio
-	; d0 -    ---        | ---
-
-.y_loop:
-		swap	d7
-		move.l	a4,a2		; a2 - LOW line
-		move.l	a3,a1		; a1 - HI line
-		move.w	d7,d5
-.x_loop:
-		swap	d5
-		move.w	d2,d1
-		move.b	(a2),d0		; HI block?
-		bne.s	.got_blk
-		add.w	#$8000,d1
-		move.b	(a1),d0
-		beq.s	.blank
-.got_blk:
-		bsr	.mk_block
-.blank:
-		move.l	d3,d0
-		swap	d0
-		add.w	d3,d5		; next VDP X pos
-		and.w	d0,d5
-		adda	#1,a2
-		adda	#1,a1
-		swap	d5
-		dbf	d5,.x_loop
-
-		move.w	d6,d0
-		and.w	#$3000,d0
-		add.w	d4,d6		; <-- next VDP Y block
-		swap	d4
-		and.w	d4,d6
-		or.w	d0,d6
-		swap	d4
-
-		move.w	md_bg_w(a6),d0 ; ***
-		adda	d0,a4
-		adda	d0,a3
-		swap	d7
-		dbf	d7,.y_loop
-.no_bg:
-		rts
-
-; barely got free regs without using stack
-.mk_block:
-		swap	d2
-		move.l	a5,a0
-		and.w	#$FF,d0
-		lsl.w	#3,d0		; * 8 bytes
-		adda	d0,a0		; a0 - cell word data
-		move.w	d6,d0
-		add.w	d5,d0
-		or.w	#$4000,d0
-		swap	d6
-
-	; d0 - topleft VDP write | $4000
-	; d6 - right VDP write
-	; d2 is free
-	;
-	; currently working: 16x16
-		bsr.s	.drwy_16	; 1-
-		add.w	#2,d0		; 2-
-		bsr.s	.drwy_16	; -3
-					; -4
-		swap	d6
-		swap	d2
-		rts
-
-; d0 - left vdp
-; d6 - right vdp
-.drwy_16:
-		move.w	d0,d2
-		swap	d0
-		move.w	(a0)+,d0
-		add.w	d1,d0
-		move.w	d2,(vdp_ctrl).l
-		move.w	d6,(vdp_ctrl).l
-		move.w	d0,(vdp_data).l
-		swap	d1
-		add.w	d1,d2		; Next line
-		swap	d1
-		move.w	(a0)+,d0
-		add.w	d1,d0
-		move.w	d2,(vdp_ctrl).l
-		move.w	d6,(vdp_ctrl).l
-		move.w	d0,(vdp_data).l
-		swap	d0
-		rts
-
-	; Block: 16x16 as 13
-	;                 24
-	; d0 - block ID
-	; d1 - VRAM-add base
-	; d6 - VDP out R | VDP out L
+; 		move.w	md_bg_xinc_l(a6),d4
+; 		bsr.s	.beam_incr
+; 		move.w	d4,md_bg_xinc_l(a6)
+; 		move.w	md_bg_xinc_r(a6),d4
+; 		bsr.s	.beam_incr
+; 		move.w	d4,md_bg_xinc_r(a6)
+; 		move.w	d2,d0
+; 		move.w	md_bg_hf(a6),d5
+; 		move.w	md_bg_yinc_u(a6),d4
+; 		bsr.s	.beam_incr
+; 		move.w	d4,md_bg_yinc_u(a6)
+; 		move.w	md_bg_yinc_d(a6),d4
+; 		bsr.s	.beam_incr
+; 		move.w	d4,md_bg_yinc_d(a6)
+;
+; 	; Update internal counters
+; 		moveq	#0,d3
+; 		move.b	md_bg_bw(a6),d3		; X set
+; 		move.b	md_bg_xset(a6),d0
+; 		add.b	d1,d0
+; 		move.b	d0,d4
+; 		and.w	d3,d4
+; 		beq.s	.x_k
+; 		moveq	#bitDrwR,d4
+; 		tst.w	d1
+; 		bpl.s	.x_r
+; 		moveq	#bitDrwL,d4
+; .x_r:
+; 		bset	d4,md_bg_flags(a6)
+; .x_k:
+; 		sub.w	#1,d3
+; 		and.b	d3,d0
+; 		move.b	d0,md_bg_xset(a6)
+; 		move.b	md_bg_bh(a6),d3		; Y set
+; 		move.b	md_bg_yset(a6),d0
+; 		add.b	d2,d0
+; 		move.b	d0,d4
+; 		and.w	d3,d4
+; 		beq.s	.y_k
+; 		moveq	#bitDrwD,d4
+; 		tst.w	d2
+; 		bpl.s	.y_d
+; 		moveq	#bitDrwU,d4
+; .y_d:
+; 		bset	d4,md_bg_flags(a6)
+; .y_k:
+; 		sub.w	#1,d3
+; 		and.b	d3,d0
+; 		move.b	d0,md_bg_yset(a6)
+; .no_bg:
+; 		rts
+;
+; ; d0 - Increment by
+; ; d4 - X/Y beam
+; ; d5 - Max Width/Height
+; .beam_incr:
+; 		add.w	d0,d4
+; .xd_l:		tst.w	d4
+; 		bpl.s	.xd_g
+; 		add.w	d5,d4
+; 		bra.s	.xd_l
+; .xd_g:		cmp.w	d5,d4
+; 		blt.s	.val_h
+; 		sub.w	d5,d4
+; 		bra.s	.xd_g
+; .val_h:
+; 	endif
+; 		rts
+;
+; ; --------------------------------------------------------
+; ; MdMap_DrawAll
+; ;
+; ; Call this only if DISPLAY is OFF or in VBlank
+; ;
+; ; Notes:
+; ; - Does NOT check for off-bounds blocks
+; ; - Blocks with ID $00 are skipped.
+; ; --------------------------------------------------------
+;
+; MdMap_DrawAll:
+; 		lea	(RAM_BgBuffer),a6
+; 		bsr	.this_bg
+; 		adda	#sizeof_mdbg,a6
+; .this_bg:
+; 		btst	#bitBgOn,md_bg_flags(a6)
+; 		beq	.no_bg
+; 		move.l	md_bg_blk(a6),a5
+; 		move.l	md_bg_low(a6),a4
+; 		move.l	md_bg_hi(a6),a3
+; 		move.w	md_bg_x(a6),d0		; X start
+; 		move.w	md_bg_y(a6),d1		; Y start
+; 		move.b	md_bg_bw(a6),d2
+; 		move.b	md_bg_bh(a6),d3
+; 		move.w	md_bg_w(a6),d4
+; ; 		move.w	md_bg_wf(a6),d5
+; ; 		move.w	md_bg_hf(a6),d6
+;
+; 		moveq	#0,d6
+; 		move.w	d0,d6
+; 		and.w	#-$10,d6
+; 		lsr.w	#2,d6
+; 		and.w	#$7F,d6
+;
+; 		moveq	#0,d5
+; 		move.w	d1,d5
+; 		and.w	#-$10,d5
+; 		lsl.w	#4,d5
+; 		and.w	#$F00,d5
+;
+; 		add.w	d5,d6
+; 		add.w	md_bg_vpos(a6),d6
+; 		move.w	d6,d5
+; 		rol.w	#2,d6
+; 		and.w	#%11,d6
+; 		swap	d6
+; 		and.w	#$3FFF,d5
+; 		move.w	d5,d6			; d6 - VDP 2nd|1st writes
+;
+; 		and.w	#$FF,d2
+; 		muls.w	d2,d0
+; 		lsr.w	#8,d0
+; 		and.w	#$FF,d3
+; 		muls.w	d3,d1
+; 		lsr.w	#8,d1
+; 		muls.w	d4,d1
+; 		add.l	d1,d0
+; 		add.l	d0,a4
+; 		add.l	d0,a3
+; 		move.w	#$80,d1
+; 		move.w	d1,d3
+; 		swap	d1
+; 		sub.w	#1,d3
+; 		moveq	#0,d2
+; 		move.w	md_bg_vram(a6),d2	; d2 - VRAM cell pos
+; 		swap	d3
+; 		move.w	#4,d3			; d3 - X wrap | X next block
+; 		move.w	#$0FFF,d4		; d4 - Y wrap | Y next block + bits
+; 		swap	d4
+; 		move.w	#$100,d4
+; 		move.w	d5,d0
+; 		moveq	#0,d5			; d5 - temporal | X-add read
+; 		move.w	#(512/16)-1,d7		; d7 - X cells | Y cells
+; 		swap	d7
+; 		move.w	#(256/16)-1,d7
+;
+; 	; a6 - Current BG buffer
+; 	; a5 - Block-data base
+; 	; a4 - LOW layout data Y
+; 	; a3 - HI layout data Y
+; 	; a2 - a4 current
+; 	; a1 - a3 current
+; 	; a0 - Block-data read
+;
+; 	; d7 - X loop        | Y loop
+; 	; d6 - VDP 2nd Write | X/Y VDP pos + addr bits
+; 	; d5 - X loop-save   | X VDP current
+; 	; d4 - Y wrap        | Y next block pos
+; 	; d3 - X wrap        | X next block pos
+; 	; d2 - Y block size  | VRAM-cell base
+; 	; d1 - Y-next line   | VRAM-cell read + prio
+; 	; d0 -    ---        | ---
+;
+; .y_loop:
+; 		swap	d7
+; 		move.l	a4,a2		; a2 - LOW line
+; 		move.l	a3,a1		; a1 - HI line
+; 		move.w	d7,d5
+; .x_loop:
+; 		swap	d5
+; 		move.w	d2,d1
+; 		move.b	(a2),d0		; HI block?
+; 		bne.s	.got_blk
+; 		add.w	#$8000,d1
+; 		move.b	(a1),d0
+; 		beq.s	.blank
+; .got_blk:
+; 		bsr	.mk_block
+; .blank:
+; 		move.l	d3,d0
+; 		swap	d0
+; 		add.w	d3,d5		; next VDP X pos
+; 		and.w	d0,d5
+; 		adda	#1,a2
+; 		adda	#1,a1
+; 		swap	d5
+; 		dbf	d5,.x_loop
+;
+; 		move.w	d6,d0
+; 		and.w	#$3000,d0
+; 		add.w	d4,d6		; <-- next VDP Y block
+; 		swap	d4
+; 		and.w	d4,d6
+; 		or.w	d0,d6
+; 		swap	d4
+;
+; 		move.w	md_bg_w(a6),d0 ; ***
+; 		adda	d0,a4
+; 		adda	d0,a3
+; 		swap	d7
+; 		dbf	d7,.y_loop
+; .no_bg:
+; 		rts
+;
+; ; barely got free regs without using stack
+; .mk_block:
+; 		swap	d2
+; 		move.l	a5,a0
 ; 		and.w	#$FF,d0
 ; 		lsl.w	#3,d0		; * 8 bytes
-; 		move.l	(a5,d0.w),d2
-; 		add.l	d1,d2
-; 		swap	d2
-; 		move.l	4(a5,d0.w),d3
-; 		add.l	d1,d3
-; 		swap	d3
+; 		adda	d0,a0		; a0 - cell word data
 ; 		move.w	d6,d0
-; 		swap	d5
 ; 		add.w	d5,d0
 ; 		or.w	#$4000,d0
-; 		swap	d5
-; 		move.l	a0,d1
-; 		and.w	d1,d5
-; 		add.w	d5,d0
 ; 		swap	d6
-; 		move.w	d0,(vdp_ctrl).l
-; 		move.w	d6,(vdp_ctrl).l
-; 		move.w	d2,(vdp_data).l
-; 		move.w	d3,(vdp_data).l
+;
+; 	; d0 - topleft VDP write | $4000
+; 	; d6 - right VDP write
+; 	; d2 is free
+; 	;
+; 	; currently working: 16x16
+; 		bsr.s	.drwy_16	; 1-
+; 		add.w	#2,d0		; 2-
+; 		bsr.s	.drwy_16	; -3
+; 					; -4
+; 		swap	d6
 ; 		swap	d2
-; 		swap	d3
-; 		add.w	#$80,d0		; line add
-; 		move.w	d0,(vdp_ctrl).l
-; 		move.w	d6,(vdp_ctrl).l
-; 		move.w	d2,(vdp_data).l
-; 		move.w	d3,(vdp_data).l
-; 		swap	d6
 ; 		rts
-
-; --------------------------------------------------------
-; MdMap_DrawScrlMd
 ;
-; Draws map off-screen changes, only on Genesis-side.
+; ; d0 - left vdp
+; ; d6 - right vdp
+; .drwy_16:
+; 		move.w	d0,d2
+; 		swap	d0
+; 		move.w	(a0)+,d0
+; 		add.w	d1,d0
+; 		move.w	d2,(vdp_ctrl).l
+; 		move.w	d6,(vdp_ctrl).l
+; 		move.w	d0,(vdp_data).l
+; 		swap	d1
+; 		add.w	d1,d2		; Next line
+; 		swap	d1
+; 		move.w	(a0)+,d0
+; 		add.w	d1,d0
+; 		move.w	d2,(vdp_ctrl).l
+; 		move.w	d6,(vdp_ctrl).l
+; 		move.w	d0,(vdp_data).l
+; 		swap	d0
+; 		rts
 ;
-; CALL THIS ON VBLANK ONLY, MUST BE QUICK.
-; --------------------------------------------------------
-
-MdMap_DrawScrlMd:
-		lea	(RAM_BgBuffer),a6
-		lea	(vdp_data),a5
-		bsr.s	.this_bg
-		adda	#sizeof_mdbg,a6
-	; SH2-side handles the
-	; RAM_BgBufferM's drawing
-
-.this_bg:
-		move.b	md_bg_flags(a6),d7
-		btst	#bitBgOn,d7
-		beq	.no_bg
-		move.w	md_bg_x(a6),d0		; X start
-		move.w	md_bg_y(a6),d1		; Y start
-		move.w	md_bg_xinc_l(a6),d2
-		move.w	md_bg_yinc_u(a6),d3
-		bclr	#bitDrwU,d7
-		beq.s	.no_u
-		bsr	.mk_row
-.no_u:
-		bclr	#bitDrwD,d7
-		beq.s	.no_d
-		move.w	md_bg_yinc_d(a6),d3
-		add.w	#224,d1			; X add
-		bsr	.mk_row
-.no_d:
-		move.w	md_bg_x(a6),d0		; X start
-		move.w	md_bg_y(a6),d1		; Y start
-		move.w	md_bg_xinc_l(a6),d2
-		move.w	md_bg_yinc_u(a6),d3
-		bclr	#bitDrwL,d7
-		beq.s	.no_l
-		bsr.s	.mk_clmn
-.no_l:
-		bclr	#bitDrwR,d7
-		beq.s	.no_r
-		move.w	md_bg_xinc_r(a6),d2
-		add.w	#320,d0			; X add
-		bsr.s	.mk_clmn
-.no_r:
-
-		move.b	d7,md_bg_flags(a6)
-.no_bg:
-		rts
-
-; ------------------------------------------------
-; Make column
-; d0 - X
-; d1 - Y
-; d2 - X increment
-; d3 - Y increment
-; ------------------------------------------------
-
-.mk_clmn:
-; 		btst	#bitMarsBg,d7
-; 		bne	.mars_ret_c
-		swap	d7
-		bsr	.get_coords
-		swap	d0
-		move.w	d4,d0
-		swap	d0
-		move.w	#$FFF,d3
-		swap	d3
-		move.w	#$100,d3
-
-	; d0 -    X curr | Current cell X/Y (1st)
-	; d1 -    Y curr | VDP 1st write
-	; d2 - Cell VRAM | VDP 2nd write
-	; d3 -    Y wrap | Y add
-	; d4 -         *****
-	; d5 -         *****
-	; d6 -         *****
-	; d7 - lastflags | loop blocks
-
-		move.w	#(256/16)-1,d7
-.y_blk:
-		moveq	#0,d4
-		moveq	#0,d5
-		move.b	(a3),d6
-		bne.s	.vld
-		move.b	(a2),d6
-		bne.s	.prio
-.blnk:
-		moveq	#0,d4
-		moveq	#0,d5
-		bra.s	.frce
-.prio:
-		move.l	#$80008000,d4
-		move.l	#$80008000,d5
-.vld:
-		move.l	a4,a0
-		and.w	#$FF,d6
-		lsl.w	#3,d6
-		adda	d6,a0
-		swap	d2
-		add.w	(a0)+,d4
-		add.w	(a0)+,d5
-		add.w	d2,d4
-		add.w	d2,d5
-		swap	d4
-		swap	d5
-		add.w	(a0)+,d4
-		add.w	(a0)+,d5
-		add.w	d2,d4
-		add.w	d2,d5
-		swap	d2
-.frce:
-		move.w	d0,d6
-		add.w	d1,d6
-		or.w	#$4000,d6
-		move.w	d6,4(a5)
-		move.w	d2,4(a5)
-		move.l	d4,(a5)
-		add.w	#$80,d6
-		move.w	d6,4(a5)
-		move.w	d2,4(a5)
-		move.l	d5,(a5)
-		move.l	d3,d4		; Next Y block
-		swap	d4
-		add.w	d3,d0
-		and.w	d4,d0
-		move.w	md_bg_w(a6),d6
-		adda	d6,a3
-		adda	d6,a2
-		swap	d1		; <-- TODO: improve this later.
-		add.w	#$10,d1
-		cmp.w	md_bg_hf(a6),d1
-		blt.s	.y_low
-		swap	d0
-		clr.w	d1
-		move.l	md_bg_low(a6),a3
-		move.l	md_bg_hi(a6),a2
-		adda	d0,a2
-		adda	d0,a3
-		swap	d0
-.y_low:
-		swap	d1
-
-		dbf	d7,.y_blk
-		swap	d7
-.mars_ret_c:
-		rts
-
-; ------------------------------------------------
-; Make row
-; d0 - X
-; d1 - Y
-; d2 - X increment
-; d3 - Y increment
-; ------------------------------------------------
-
-.mk_row:
-; 		btst	#bitMarsBg,d7
-; 		bne.s	.mars_ret_c
-		swap	d7
-		bsr	.get_coords
-		swap	d1
-		move.w	d5,d1
-		swap	d1
-		move.w	#$7F,d3
-		swap	d3
-		move.w	#4,d3
-
-	; d0 -    X curr | Current cell X/Y (1st)
-	; d1 -    Y curr | VDP 1st write
-	; d2 - Cell VRAM | VDP 2nd write
-	; d3 -    X wrap | X add
-	; d4 -         *****
-	; d5 -         *****
-	; d6 - loopflags | *****
-	; d7 - lastflags | loop blocks
-
-		move.w	d0,d6
-		and.w	#-$100,d6	; Merge d1
-		add.w	d6,d1
-		move.l	d3,d5
-		swap	d5
-		and.w	d5,d0
-		move.w	#((320+16)/16)-1,d7
-.x_blk:
-		moveq	#0,d4
-		moveq	#0,d5
-		move.b	(a3),d6
-		bne.s	.xvld
-		move.b	(a2),d6
-		bne.s	.xprio
-.xblnk:
-		moveq	#0,d4
-		moveq	#0,d5
-		bra.s	.xfrce
-.xprio:
-		move.l	#$80008000,d4
-		move.l	#$80008000,d5
-.xvld:
-		move.l	a4,a0
-		and.w	#$FF,d6
-		lsl.w	#3,d6
-		adda	d6,a0
-		swap	d2
-		add.w	(a0)+,d4
-		add.w	(a0)+,d5
-		add.w	d2,d4
-		add.w	d2,d5
-		swap	d4
-		swap	d5
-		add.w	(a0)+,d4
-		add.w	(a0)+,d5
-		add.w	d2,d4
-		add.w	d2,d5
-		swap	d2
-.xfrce:
-		move.w	d0,d6
-		add.w	d1,d6
-		or.w	#$4000,d6
-		move.w	d6,4(a5)
-		move.w	d2,4(a5)
-		move.l	d4,(a5)
-		add.w	#$80,d6
-		move.w	d6,4(a5)
-		move.w	d2,4(a5)
-		move.l	d5,(a5)
-		add.w	d3,d0
-		swap	d3
-		and.w	d3,d0
-		swap	d3
-
-	; X wrap
-		swap	d0
-		add.w	#$10,d0
-		cmp.w	md_bg_wf(a6),d0
-		blt.s	.x_low
-		sub.w	md_bg_wf(a6),d0
-		moveq	#0,d4
-		move.w	md_bg_w(a6),d4
-		sub.l	d4,a2
-		sub.l	d4,a3
-.x_low:
-		adda	#1,a3
-		adda	#1,a2
-.x_new:
-		swap	d0
-
-		dbf	d7,.x_blk
-		swap	d7
-		rts
-
-; ------------------------------------------------
-; Input
-; d0 - X position
-; d1 - Y position
-; d2 - X increment beam
-; d3 - Y increment beam
+; 	; Block: 16x16 as 13
+; 	;                 24
+; 	; d0 - block ID
+; 	; d1 - VRAM-add base
+; 	; d6 - VDP out R | VDP out L
+; ; 		and.w	#$FF,d0
+; ; 		lsl.w	#3,d0		; * 8 bytes
+; ; 		move.l	(a5,d0.w),d2
+; ; 		add.l	d1,d2
+; ; 		swap	d2
+; ; 		move.l	4(a5,d0.w),d3
+; ; 		add.l	d1,d3
+; ; 		swap	d3
+; ; 		move.w	d6,d0
+; ; 		swap	d5
+; ; 		add.w	d5,d0
+; ; 		or.w	#$4000,d0
+; ; 		swap	d5
+; ; 		move.l	a0,d1
+; ; 		and.w	d1,d5
+; ; 		add.w	d5,d0
+; ; 		swap	d6
+; ; 		move.w	d0,(vdp_ctrl).l
+; ; 		move.w	d6,(vdp_ctrl).l
+; ; 		move.w	d2,(vdp_data).l
+; ; 		move.w	d3,(vdp_data).l
+; ; 		swap	d2
+; ; 		swap	d3
+; ; 		add.w	#$80,d0		; line add
+; ; 		move.w	d0,(vdp_ctrl).l
+; ; 		move.w	d6,(vdp_ctrl).l
+; ; 		move.w	d2,(vdp_data).l
+; ; 		move.w	d3,(vdp_data).l
+; ; 		swap	d6
+; ; 		rts
 ;
-; Out:
-; d4 - X LEFT increment
-; d5 - Y TOP increment
-
-.get_coords:
-		move.l	md_bg_blk(a6),a4
-		move.l	md_bg_low(a6),a3
-		move.l	md_bg_hi(a6),a2
-		and.w	#-$10,d0		; block X/Y limit
-		and.w	#-$10,d1
-		and.w	#-$10,d2
-		and.w	#-$10,d3
-		swap	d0
-		swap	d1
-		move.w	d2,d0
-		move.w	d3,d1
-		swap	d0
-		swap	d1
-
-		moveq	#0,d4
-		moveq	#0,d5
-		move.b	md_bg_bw(a6),d6
-		move.b	md_bg_bh(a6),d7
-		and.w	#$FF,d6
-		and.w	#$FF,d7
-
-		move.w	d2,d4
-		muls.w	d6,d4
-		asr.w	#8,d4
-		move.w	d3,d5
-		muls.w	d7,d5
-		asr.w	#8,d5
-		muls.w	md_bg_w(a6),d5
-		moveq	#0,d3
-		move.l	d4,d3
-		add.l	d5,d3
-		add.l	d3,a3
-		add.l	d3,a2
-
-		move.w	md_bg_vram(a6),d2
-		swap	d2
-		lsr.w	#2,d1			; Y >> 2
-		lsl.w	#6,d1			; Y * $40
-		lsr.w	#2,d0			; X >> 2
-		and.w	#$FFF,d1
-		and.w	#$7C,d0
-		add.w	d1,d0
-		move.w	md_bg_vpos(a6),d1
-		move.w	d1,d2
-		and.w	#$3FFF,d1
-		rol.w	#2,d2
-		and.w	#%11,d2
-		rts
-
-; ====================================================================
-; ----------------------------------------------------------------
-; Objects system
+; ; --------------------------------------------------------
+; ; MdMap_DrawScrlMd
+; ;
+; ; Draws map off-screen changes, only on Genesis-side.
+; ;
+; ; CALL THIS ON VBLANK ONLY, MUST BE QUICK.
+; ; --------------------------------------------------------
 ;
-; MD and MARS
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; Init objects
-; --------------------------------------------------------
-
-Objects_Init:
-		lea	(RAM_Objects),a6
-		move.w	#(sizeof_mdobj*MAX_MDOBJ)-1,d7
-.clr:
-		clr.b	(a6)+
-		dbf	d7,.clr
-		lea	(RAM_ObjDispList),a6
-		move.w	#MAX_MDOBJ-1,d7
-.clr_d:
-		clr.w	(a6)+
-		dbf	d7,.clr_d
-		clr.w	(RAM_SprDrwCntr).w
-		rts
-
-; --------------------------------------------------------
-; Process objects
-; --------------------------------------------------------
-
-Objects_Run:
-		lea	(RAM_Objects),a6
-		move.w	#MAX_MDOBJ-1,d7
-.next_one:
-		move.l	obj_code(a6),d6
-		beq.s	.no_code	; Free slot
-		move.l	d7,-(sp)
-		move.l	d6,a5
-		jsr	(a5)
-		move.l	(sp)+,d7
-.no_code:
-		adda	#sizeof_mdobj,a6
-		dbf	d7,.next_one
-		rts
-
-; --------------------------------------------------------
-; Draw ALL Objects from display list
+; MdMap_DrawScrlMd:
+; 		lea	(RAM_BgBuffer),a6
+; 		lea	(vdp_data),a5
+; 		bsr.s	.this_bg
+; 		adda	#sizeof_mdbg,a6
+; 	; SH2-side handles the
+; 	; RAM_BgBufferM's drawing
 ;
-; Call this BEFORE VBlank.
-; --------------------------------------------------------
-
-Objects_Show:
-		moveq	#1,d7				; d7 - MD Link
-		lea	(RAM_Sprites),a6		; a6 - Genesis sprites
-
-		move.w	(RAM_SprDrwCntr),d6
-		beq.s	.no_sprdrw
-		clr.w	(RAM_SprDrwCntr).w
-		lea	(RAM_SprDrwPz),a5
-		sub.w	#1,d6
-.nexts:
-		cmp.w	#70,d7
-		bge.s	.no_sprdrw
-		move.w	(a5)+,d0
-		move.w	(a5)+,d1	; custom
-		and.w	#$FF,d1
-		lsl.w	#8,d1
-		or.w	d7,d1
-		move.w	(a5)+,d2
-		move.w	(a5)+,d3
-		move.w	d0,(a6)+
-		move.w	d1,(a6)+
-		move.w	d2,(a6)+
-		move.w	d3,(a6)+
-		add.w	#1,d7
-		dbf	d6,.nexts
-.no_sprdrw:
-
-	; Draw mappings from sprites
-		lea	(RAM_ObjDispList),a5
-		lea	(RAM_MdDreq+Dreq_SuperSpr),a4	; a4 - 32X SUPER Sprites
-		move.w	#MAX_MDOBJ-1,d6
-.next:
-		move.w	(a5),d0
-		beq	.finish
-		moveq	#-1,d1
-		move.w	d0,d1
-		move.l	d1,a2
-		move.l	obj_map(a2),a0		; Read mapping
-		btst	#bitobj_Mars,obj_set(a2)
-		bne.s	.mars_mode
-		cmp.w	#70,d7
-		bge	.mk_spr
-		move.w	obj_frame(a2),d0
-		add.w	d0,d0
-		move.w	(a0,d0.w),d0
-		adda	d0,a0
-		move.w	(a0)+,d5
-		beq	.mk_spr
-		sub.w	#1,d5
-.mk_pz:
-	; TODO: H/V flip
-		move.b	(a0)+,d0
-		ext.w	d0
-		add.w	obj_y(a2),d0
-		add.w	#$80,d0
-		move.b	(a0)+,d1
-		lsl.w	#8,d1
-		or.w	d7,d1
-		move.w	(a0)+,d2
-		add.w	obj_vram(a2),d2
-		adda	#2,a0
-		move.w	(a0)+,d3
-		add.w	obj_x(a2),d3
-		add.w	#$80,d3
-		move.w	d0,(a6)+
-		move.w	d1,(a6)+
-		move.w	d2,(a6)+
-		move.w	d3,(a6)+
-		add.w	#1,d7
-		dbf	d5,.mk_pz
-		bra.s	.mk_spr
-
-.mars_mode:
-		move.l	(a0)+,marsspr_data(a4)
-		move.w	(a0)+,marsspr_dwidth(a4)
-		move.w	(a0)+,marsspr_indx(a4)
-		move.b	(a0)+,d2
-		move.b	(a0)+,d3
-		move.b	d2,marsspr_xs(a4)
-		move.b	d3,marsspr_ys(a4)
-		move.w	obj_frame(a2),d0	; Read frame
-		move.b	d0,marsspr_xfrm(a4)
-		ror.w	#8,d0
-		move.b	d0,marsspr_yfrm(a4)
-		move.w	obj_x(a2),d4
-		move.w	obj_y(a2),d5
-		and.w	#$FF,d2
-		and.w	#$FF,d3
-		lsr.w	#1,d2
-		lsr.w	#1,d3
-; 		divu.w	#2,d2			; **
-		sub.w	d2,d4
-; 		divu.w	#2,d3			; **
-		sub.w	d3,d5
-; 		move.l	obj_size(a2),d2		; d2 - UDLR sizes
-; 		move.w	d2,d3			; Grab LR
-; 		lsr.w	#5,d3
-; 		and.w	#%11111000,d3
-; 		sub.w	d3,d4			; Subtract X
+; .this_bg:
+; 		move.b	md_bg_flags(a6),d7
+; 		btst	#bitBgOn,d7
+; 		beq	.no_bg
+; 		move.w	md_bg_x(a6),d0		; X start
+; 		move.w	md_bg_y(a6),d1		; Y start
+; 		move.w	md_bg_xinc_l(a6),d2
+; 		move.w	md_bg_yinc_u(a6),d3
+; 		bclr	#bitDrwU,d7
+; 		beq.s	.no_u
+; 		bsr	.mk_row
+; .no_u:
+; 		bclr	#bitDrwD,d7
+; 		beq.s	.no_d
+; 		move.w	md_bg_yinc_d(a6),d3
+; 		add.w	#224,d1			; X add
+; 		bsr	.mk_row
+; .no_d:
+; 		move.w	md_bg_x(a6),d0		; X start
+; 		move.w	md_bg_y(a6),d1		; Y start
+; 		move.w	md_bg_xinc_l(a6),d2
+; 		move.w	md_bg_yinc_u(a6),d3
+; 		bclr	#bitDrwL,d7
+; 		beq.s	.no_l
+; 		bsr.s	.mk_clmn
+; .no_l:
+; 		bclr	#bitDrwR,d7
+; 		beq.s	.no_r
+; 		move.w	md_bg_xinc_r(a6),d2
+; 		add.w	#320,d0			; X add
+; 		bsr.s	.mk_clmn
+; .no_r:
+;
+; 		move.b	d7,md_bg_flags(a6)
+; .no_bg:
+; 		rts
+;
+; ; ------------------------------------------------
+; ; Make column
+; ; d0 - X
+; ; d1 - Y
+; ; d2 - X increment
+; ; d3 - Y increment
+; ; ------------------------------------------------
+;
+; .mk_clmn:
+; ; 		btst	#bitMarsBg,d7
+; ; 		bne	.mars_ret_c
+; 		swap	d7
+; 		bsr	.get_coords
+; 		swap	d0
+; 		move.w	d4,d0
+; 		swap	d0
+; 		move.w	#$FFF,d3
+; 		swap	d3
+; 		move.w	#$100,d3
+;
+; 	; d0 -    X curr | Current cell X/Y (1st)
+; 	; d1 -    Y curr | VDP 1st write
+; 	; d2 - Cell VRAM | VDP 2nd write
+; 	; d3 -    Y wrap | Y add
+; 	; d4 -         *****
+; 	; d5 -         *****
+; 	; d6 -         *****
+; 	; d7 - lastflags | loop blocks
+;
+; 		move.w	#(256/16)-1,d7
+; .y_blk:
+; 		moveq	#0,d4
+; 		moveq	#0,d5
+; 		move.b	(a3),d6
+; 		bne.s	.vld
+; 		move.b	(a2),d6
+; 		bne.s	.prio
+; .blnk:
+; 		moveq	#0,d4
+; 		moveq	#0,d5
+; 		bra.s	.frce
+; .prio:
+; 		move.l	#$80008000,d4
+; 		move.l	#$80008000,d5
+; .vld:
+; 		move.l	a4,a0
+; 		and.w	#$FF,d6
+; 		lsl.w	#3,d6
+; 		adda	d6,a0
 ; 		swap	d2
-; 		move.w	d2,d3			; Grab UD
-; 		lsr.w	#8,d3
-; 		lsl.b	#3,d3
+; 		add.w	(a0)+,d4
+; 		add.w	(a0)+,d5
+; 		add.w	d2,d4
+; 		add.w	d2,d5
+; 		swap	d4
+; 		swap	d5
+; 		add.w	(a0)+,d4
+; 		add.w	(a0)+,d5
+; 		add.w	d2,d4
+; 		add.w	d2,d5
+; 		swap	d2
+; .frce:
+; 		move.w	d0,d6
+; 		add.w	d1,d6
+; 		or.w	#$4000,d6
+; 		move.w	d6,4(a5)
+; 		move.w	d2,4(a5)
+; 		move.l	d4,(a5)
+; 		add.w	#$80,d6
+; 		move.w	d6,4(a5)
+; 		move.w	d2,4(a5)
+; 		move.l	d5,(a5)
+; 		move.l	d3,d4		; Next Y block
+; 		swap	d4
+; 		add.w	d3,d0
+; 		and.w	d4,d0
+; 		move.w	md_bg_w(a6),d6
+; 		adda	d6,a3
+; 		adda	d6,a2
+; 		swap	d1		; <-- TODO: improve this later.
+; 		add.w	#$10,d1
+; 		cmp.w	md_bg_hf(a6),d1
+; 		blt.s	.y_low
+; 		swap	d0
+; 		clr.w	d1
+; 		move.l	md_bg_low(a6),a3
+; 		move.l	md_bg_hi(a6),a2
+; 		adda	d0,a2
+; 		adda	d0,a3
+; 		swap	d0
+; .y_low:
+; 		swap	d1
+;
+; 		dbf	d7,.y_blk
+; 		swap	d7
+; .mars_ret_c:
+; 		rts
+;
+; ; ------------------------------------------------
+; ; Make row
+; ; d0 - X
+; ; d1 - Y
+; ; d2 - X increment
+; ; d3 - Y increment
+; ; ------------------------------------------------
+;
+; .mk_row:
+; ; 		btst	#bitMarsBg,d7
+; ; 		bne.s	.mars_ret_c
+; 		swap	d7
+; 		bsr	.get_coords
+; 		swap	d1
+; 		move.w	d5,d1
+; 		swap	d1
+; 		move.w	#$7F,d3
+; 		swap	d3
+; 		move.w	#4,d3
+;
+; 	; d0 -    X curr | Current cell X/Y (1st)
+; 	; d1 -    Y curr | VDP 1st write
+; 	; d2 - Cell VRAM | VDP 2nd write
+; 	; d3 -    X wrap | X add
+; 	; d4 -         *****
+; 	; d5 -         *****
+; 	; d6 - loopflags | *****
+; 	; d7 - lastflags | loop blocks
+;
+; 		move.w	d0,d6
+; 		and.w	#-$100,d6	; Merge d1
+; 		add.w	d6,d1
+; 		move.l	d3,d5
+; 		swap	d5
+; 		and.w	d5,d0
+; 		move.w	#((320+16)/16)-1,d7
+; .x_blk:
+; 		moveq	#0,d4
+; 		moveq	#0,d5
+; 		move.b	(a3),d6
+; 		bne.s	.xvld
+; 		move.b	(a2),d6
+; 		bne.s	.xprio
+; .xblnk:
+; 		moveq	#0,d4
+; 		moveq	#0,d5
+; 		bra.s	.xfrce
+; .xprio:
+; 		move.l	#$80008000,d4
+; 		move.l	#$80008000,d5
+; .xvld:
+; 		move.l	a4,a0
+; 		and.w	#$FF,d6
+; 		lsl.w	#3,d6
+; 		adda	d6,a0
+; 		swap	d2
+; 		add.w	(a0)+,d4
+; 		add.w	(a0)+,d5
+; 		add.w	d2,d4
+; 		add.w	d2,d5
+; 		swap	d4
+; 		swap	d5
+; 		add.w	(a0)+,d4
+; 		add.w	(a0)+,d5
+; 		add.w	d2,d4
+; 		add.w	d2,d5
+; 		swap	d2
+; .xfrce:
+; 		move.w	d0,d6
+; 		add.w	d1,d6
+; 		or.w	#$4000,d6
+; 		move.w	d6,4(a5)
+; 		move.w	d2,4(a5)
+; 		move.l	d4,(a5)
+; 		add.w	#$80,d6
+; 		move.w	d6,4(a5)
+; 		move.w	d2,4(a5)
+; 		move.l	d5,(a5)
+; 		add.w	d3,d0
+; 		swap	d3
+; 		and.w	d3,d0
+; 		swap	d3
+;
+; 	; X wrap
+; 		swap	d0
+; 		add.w	#$10,d0
+; 		cmp.w	md_bg_wf(a6),d0
+; 		blt.s	.x_low
+; 		sub.w	md_bg_wf(a6),d0
+; 		moveq	#0,d4
+; 		move.w	md_bg_w(a6),d4
+; 		sub.l	d4,a2
+; 		sub.l	d4,a3
+; .x_low:
+; 		adda	#1,a3
+; 		adda	#1,a2
+; .x_new:
+; 		swap	d0
+;
+; 		dbf	d7,.x_blk
+; 		swap	d7
+; 		rts
+;
+; ; ------------------------------------------------
+; ; Input
+; ; d0 - X position
+; ; d1 - Y position
+; ; d2 - X increment beam
+; ; d3 - Y increment beam
+; ;
+; ; Out:
+; ; d4 - X LEFT increment
+; ; d5 - Y TOP increment
+;
+; .get_coords:
+; 		move.l	md_bg_blk(a6),a4
+; 		move.l	md_bg_low(a6),a3
+; 		move.l	md_bg_hi(a6),a2
+; 		and.w	#-$10,d0		; block X/Y limit
+; 		and.w	#-$10,d1
+; 		and.w	#-$10,d2
+; 		and.w	#-$10,d3
+; 		swap	d0
+; 		swap	d1
+; 		move.w	d2,d0
+; 		move.w	d3,d1
+; 		swap	d0
+; 		swap	d1
+;
+; 		moveq	#0,d4
+; 		moveq	#0,d5
+; 		move.b	md_bg_bw(a6),d6
+; 		move.b	md_bg_bh(a6),d7
+; 		and.w	#$FF,d6
+; 		and.w	#$FF,d7
+;
+; 		move.w	d2,d4
+; 		muls.w	d6,d4
+; 		asr.w	#8,d4
+; 		move.w	d3,d5
+; 		muls.w	d7,d5
+; 		asr.w	#8,d5
+; 		muls.w	md_bg_w(a6),d5
+; 		moveq	#0,d3
+; 		move.l	d4,d3
+; 		add.l	d5,d3
+; 		add.l	d3,a3
+; 		add.l	d3,a2
+;
+; 		move.w	md_bg_vram(a6),d2
+; 		swap	d2
+; 		lsr.w	#2,d1			; Y >> 2
+; 		lsl.w	#6,d1			; Y * $40
+; 		lsr.w	#2,d0			; X >> 2
+; 		and.w	#$FFF,d1
+; 		and.w	#$7C,d0
+; 		add.w	d1,d0
+; 		move.w	md_bg_vpos(a6),d1
+; 		move.w	d1,d2
+; 		and.w	#$3FFF,d1
+; 		rol.w	#2,d2
+; 		and.w	#%11,d2
+; 		rts
+;
+; ; ====================================================================
+; ; ----------------------------------------------------------------
+; ; Objects system
+; ;
+; ; MD and MARS
+; ; ----------------------------------------------------------------
+;
+; ; --------------------------------------------------------
+; ; Init objects
+; ; --------------------------------------------------------
+;
+; Objects_Init:
+; 		lea	(RAM_Objects),a6
+; 		move.w	#(sizeof_mdobj*MAX_MDOBJ)-1,d7
+; .clr:
+; 		clr.b	(a6)+
+; 		dbf	d7,.clr
+; 		lea	(RAM_ObjDispList),a6
+; 		move.w	#MAX_MDOBJ-1,d7
+; .clr_d:
+; 		clr.w	(a6)+
+; 		dbf	d7,.clr_d
+; 		clr.w	(RAM_SprDrwCntr).w
+; 		rts
+;
+; ; --------------------------------------------------------
+; ; Process objects
+; ; --------------------------------------------------------
+;
+; Objects_Run:
+; 		lea	(RAM_Objects),a6
+; 		move.w	#MAX_MDOBJ-1,d7
+; .next_one:
+; 		move.l	obj_code(a6),d6
+; 		beq.s	.no_code	; Free slot
+; 		move.l	d7,-(sp)
+; 		move.l	d6,a5
+; 		jsr	(a5)
+; 		move.l	(sp)+,d7
+; .no_code:
+; 		adda	#sizeof_mdobj,a6
+; 		dbf	d7,.next_one
+; 		rts
+;
+; ; --------------------------------------------------------
+; ; Draw ALL Objects from display list
+; ;
+; ; Call this BEFORE VBlank.
+; ; --------------------------------------------------------
+;
+; Objects_Show:
+; 		moveq	#1,d7				; d7 - MD Link
+; 		lea	(RAM_Sprites),a6		; a6 - Genesis sprites
+;
+; 		move.w	(RAM_SprDrwCntr),d6
+; 		beq.s	.no_sprdrw
+; 		clr.w	(RAM_SprDrwCntr).w
+; 		lea	(RAM_SprDrwPz),a5
+; 		sub.w	#1,d6
+; .nexts:
+; 		cmp.w	#70,d7
+; 		bge.s	.no_sprdrw
+; 		move.w	(a5)+,d0
+; 		move.w	(a5)+,d1	; custom
+; 		and.w	#$FF,d1
+; 		lsl.w	#8,d1
+; 		or.w	d7,d1
+; 		move.w	(a5)+,d2
+; 		move.w	(a5)+,d3
+; 		move.w	d0,(a6)+
+; 		move.w	d1,(a6)+
+; 		move.w	d2,(a6)+
+; 		move.w	d3,(a6)+
+; 		add.w	#1,d7
+; 		dbf	d6,.nexts
+; .no_sprdrw:
+;
+; 	if MARS|MARSCD
+; 	; Draw mappings from sprites
+; 		lea	(RAM_ObjDispList),a5
+; 		lea	(RAM_MdDreq+Dreq_SuperSpr),a4	; a4 - 32X SUPER Sprites
+; 		move.w	#MAX_MDOBJ-1,d6
+; .next:
+; 		move.w	(a5),d0
+; 		beq	.finish
+; 		moveq	#-1,d1
+; 		move.w	d0,d1
+; 		move.l	d1,a2
+; 		move.l	obj_map(a2),a0		; Read mapping
+; 		btst	#bitobj_Mars,obj_set(a2)
+; 		bne.s	.mars_mode
+; 		cmp.w	#70,d7
+; 		bge	.mk_spr
+; 		move.w	obj_frame(a2),d0
+; 		add.w	d0,d0
+; 		move.w	(a0,d0.w),d0
+; 		adda	d0,a0
+; 		move.w	(a0)+,d5
+; 		beq	.mk_spr
+; 		sub.w	#1,d5
+; .mk_pz:
+; 	; TODO: H/V flip
+; 		move.b	(a0)+,d0
+; 		ext.w	d0
+; 		add.w	obj_y(a2),d0
+; 		add.w	#$80,d0
+; 		move.b	(a0)+,d1
+; 		lsl.w	#8,d1
+; 		or.w	d7,d1
+; 		move.w	(a0)+,d2
+; 		add.w	obj_vram(a2),d2
+; 		adda	#2,a0
+; 		move.w	(a0)+,d3
+; 		add.w	obj_x(a2),d3
+; 		add.w	#$80,d3
+; 		move.w	d0,(a6)+
+; 		move.w	d1,(a6)+
+; 		move.w	d2,(a6)+
+; 		move.w	d3,(a6)+
+; 		add.w	#1,d7
+; 		dbf	d5,.mk_pz
+; 		bra.s	.mk_spr
+;
+; .mars_mode:
+; 		move.l	(a0)+,marsspr_data(a4)
+; 		move.w	(a0)+,marsspr_dwidth(a4)
+; 		move.w	(a0)+,marsspr_indx(a4)
+; 		move.b	(a0)+,d2
+; 		move.b	(a0)+,d3
+; 		move.b	d2,marsspr_xs(a4)
+; 		move.b	d3,marsspr_ys(a4)
+; 		move.w	obj_frame(a2),d0	; Read frame
+; 		move.b	d0,marsspr_xfrm(a4)
+; 		ror.w	#8,d0
+; 		move.b	d0,marsspr_yfrm(a4)
+; 		move.w	obj_x(a2),d4
+; 		move.w	obj_y(a2),d5
+; 		and.w	#$FF,d2
 ; 		and.w	#$FF,d3
-; 		sub.w	d3,d5			; Subtract Y
-		lea	(RAM_BgBufferM),a1
-		sub.w	md_bg_x(a1),d4
-		sub.w	md_bg_y(a1),d5
-		move.w	d4,marsspr_x(a4)
-		move.w	d5,marsspr_y(a4)
-		moveq	#0,d4
-		btst	#bitobj_flipH,obj_set(a2)
-		beq.s	.flip_h
-		bset	#0,d4
-.flip_h:
-		btst	#bitobj_flipV,obj_set(a2)
-		beq.s	.flip_v
-		bset	#1,d4
-.flip_v:
-		move.w	d4,marsspr_flags(a4)
-		adda	#sizeof_marsspr,a4	; Next SuperSprite
-.mk_spr:
-		clr.w	(a5)+			; Clear request
-		dbf	d6,.next
-.finish:
-		lea	(RAM_Sprites),a6	; a6 - Genesis sprites
-		move.w	d7,d6
-		cmp.w	#70,d7
-		bge.s	.ran_out
-		sub.w	#1,d6
-		lsl.w	#3,d6
-		adda	d6,a6
-		clr.l	(a6)			; TODO: endoflist check
-.ran_out:
-		rts
-
-; ----------------------------------------------------------------
-; Subroutines
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; object_Display
+; 		lsr.w	#1,d2
+; 		lsr.w	#1,d3
+; ; 		divu.w	#2,d2			; **
+; 		sub.w	d2,d4
+; ; 		divu.w	#2,d3			; **
+; 		sub.w	d3,d5
+; ; 		move.l	obj_size(a2),d2		; d2 - UDLR sizes
+; ; 		move.w	d2,d3			; Grab LR
+; ; 		lsr.w	#5,d3
+; ; 		and.w	#%11111000,d3
+; ; 		sub.w	d3,d4			; Subtract X
+; ; 		swap	d2
+; ; 		move.w	d2,d3			; Grab UD
+; ; 		lsr.w	#8,d3
+; ; 		lsl.b	#3,d3
+; ; 		and.w	#$FF,d3
+; ; 		sub.w	d3,d5			; Subtract Y
+; 		lea	(RAM_BgBufferM),a1
+; 		sub.w	md_bg_x(a1),d4
+; 		sub.w	md_bg_y(a1),d5
+; 		move.w	d4,marsspr_x(a4)
+; 		move.w	d5,marsspr_y(a4)
+; 		moveq	#0,d4
+; 		btst	#bitobj_flipH,obj_set(a2)
+; 		beq.s	.flip_h
+; 		bset	#0,d4
+; .flip_h:
+; 		btst	#bitobj_flipV,obj_set(a2)
+; 		beq.s	.flip_v
+; 		bset	#1,d4
+; .flip_v:
+; 		move.w	d4,marsspr_flags(a4)
+; 		adda	#sizeof_marsspr,a4	; Next SuperSprite
+; .mk_spr:
+; 		clr.w	(a5)+			; Clear request
+; 		dbf	d6,.next
+; .finish:
+; 		lea	(RAM_Sprites),a6	; a6 - Genesis sprites
+; 		move.w	d7,d6
+; 		cmp.w	#70,d7
+; 		bge.s	.ran_out
+; 		sub.w	#1,d6
+; 		lsl.w	#3,d6
+; 		adda	d6,a6
+; 		clr.l	(a6)			; TODO: endoflist check
+; .ran_out:
+; 	endif
+; 		rts
 ;
-; Builds a sprite using map data specified in
-; obj_map(a6)
+; ; ----------------------------------------------------------------
+; ; Subroutines
+; ; ----------------------------------------------------------------
 ;
-; *** GENESIS map ***
-; mapdata:
-;       dc.w .frame0-mapdata
-;       dc.w .frame1-mapdata
-;       ...
-; .frame0:
-;       dc.w numofpz
-;       dc.b YY,SS
-;       dc.w vram_normal
-;       dc.w vram_half
-;       dc.w XXXX
-;       align 2
+; ; --------------------------------------------------------
+; ; object_Display
+; ;
+; ; Builds a sprite using map data specified in
+; ; obj_map(a6)
+; ;
+; ; *** GENESIS map ***
+; ; mapdata:
+; ;       dc.w .frame0-mapdata
+; ;       dc.w .frame1-mapdata
+; ;       ...
+; ; .frame0:
+; ;       dc.w numofpz
+; ;       dc.b YY,SS
+; ;       dc.w vram_normal
+; ;       dc.w vram_half
+; ;       dc.w XXXX
+; ;       align 2
+; ;
+; ; *** 32X map ***
+; ; mapdata:
+; ; 	dc.l SH2_ADDR|TH ; Spritesheet location (TH opt.)
+; ; 	dc.w 512	 ; Spritesheet WIDTH
+; ; 	dc.b 64,72	 ; Frame width and height
+; ; 	dc.w $80	 ; Palette index
+; ;
+; ; obj_frame(a6) is in YYXX direction
+; ;
+; ; Input:
+; ; a6 - Object
+; ;
+; ; Uses:
+; ; a5,d7
+; ; --------------------------------------------------------
 ;
-; *** 32X map ***
-; mapdata:
-; 	dc.l SH2_ADDR|TH ; Spritesheet location (TH opt.)
-; 	dc.w 512	 ; Spritesheet WIDTH
-; 	dc.b 64,72	 ; Frame width and height
-; 	dc.w $80	 ; Palette index
+; object_Display:
+; 		lea	(RAM_ObjDispList),a5
+; 		move.w	#MAX_MDOBJ-1,d7
+; .srch:
+; 		tst.w	(a5)
+; 		beq.s	.this_one
+; 		adda	#2,a5
+; 		dbf	d7,.srch
+; .this_one:
+; 		move.w	a6,(a5)
+; 		rts
 ;
-; obj_frame(a6) is in YYXX direction
+; ; --------------------------------------------------------
+; ; object_MkSprPz
+; ;
+; ; Makes separate sprite pieces using
+; ;
+; ; Input:
+; ; d0 - X pos
+; ; d1 - Y pos
+; ; d2 - VRAM
+; ; d3 - Size
+; :
+; ; Uses:
+; ; a5,d7
+; ; --------------------------------------------------------
 ;
-; Input:
-; a6 - Object
+; object_MkSprPz:
+; 		move.w	(RAM_SprDrwCntr).w,d7
+; 		cmp.w	#70,d7
+; 		bge.s	.nope
+; 		lsl.w	#3,d7
+; 		lea	(RAM_SprDrwPz),a5
+; 		adda	d7,a5
+; 		add.w	#$80,d0
+; 		add.w	#$80,d1
+; 		and.w	#$FF,d3
+; ; 		lsl.w	#8,d3
+; 		move.w	d1,(a5)+
+; 		move.w	d3,(a5)+
+; 		move.w	d2,(a5)+
+; 		move.w	d0,(a5)+
+; 		add.w	#1,(RAM_SprDrwCntr).w
+; .nope:
+; 		rts
 ;
-; Uses:
-; a5,d7
-; --------------------------------------------------------
-
-object_Display:
-		lea	(RAM_ObjDispList),a5
-		move.w	#MAX_MDOBJ-1,d7
-.srch:
-		tst.w	(a5)
-		beq.s	.this_one
-		adda	#2,a5
-		dbf	d7,.srch
-.this_one:
-		move.w	a6,(a5)
-		rts
-
-; --------------------------------------------------------
-; object_MkSprPz
+; ; --------------------------------------------------------
+; ; Object_Animate
+; ;
+; ; Animates the sprite
+; ;
+; ; Input
+; ; a0 | LONG - Animation data
+; ;
+; ; Output
+; ; d0 | WORD - Frame
+; ;
+; ; Uses:
+; ; d2
+; ; --------------------------------------------------------
 ;
-; Makes separate sprite pieces using
+; ; NOTE: to restart an animation
+; ; clear obj_anim_indx(a6) manually
 ;
-; Input:
-; d0 - X pos
-; d1 - Y pos
-; d2 - VRAM
-; d3 - Size
-:
-; Uses:
-; a5,d7
-; --------------------------------------------------------
-
-object_MkSprPz:
-		move.w	(RAM_SprDrwCntr).w,d7
-		cmp.w	#70,d7
-		bge.s	.nope
-		lsl.w	#3,d7
-		lea	(RAM_SprDrwPz),a5
-		adda	d7,a5
-		add.w	#$80,d0
-		add.w	#$80,d1
-		and.w	#$FF,d3
-; 		lsl.w	#8,d3
-		move.w	d1,(a5)+
-		move.w	d3,(a5)+
-		move.w	d2,(a5)+
-		move.w	d0,(a5)+
-		add.w	#1,(RAM_SprDrwCntr).w
-.nope:
-		rts
-
-; --------------------------------------------------------
-; Object_Animate
+; Object_Animate:
+; ;  		tst.l	d1
+; ;   		beq.s	.return
+;  		moveq	#0,d2
+;  		move.b	obj_anim_id+1(a6),d2
+;  		cmp.b	obj_anim_id(a6),d2
+;  		beq.s	.sameThing
+;  		move.b	obj_anim_id(a6),obj_anim_id+1(a6)
+;  		clr.w	obj_anim_indx(a6)
+;  		clr.b	obj_anim_spd(a6)
+; .sameThing:
+;  		move.b	obj_anim_id(a6),d2
+;  		cmp.b	#-1,d2
+;  		beq.s	.return
+;  		add.w	d2,d2
+;  		move.w	(a0,d2.w),d2
+;  		lea	(a0,d2.w),a0
 ;
-; Animates the sprite
+;  		move.w	(a0)+,d2
+;  		cmp.w	#-1,d2
+;  		beq.s	.keepspd
+;  		sub.b	#1,obj_anim_spd(a6)
+;  		bpl.s	.return
+; 		move.b	d2,obj_anim_spd(a6)
+; .keepspd:
+;  		moveq	#0,d1
+;  		move.w	obj_anim_indx(a6),d2
+;  		add.w	d2,d2
+;  		move.w	(a0),d1
+;  		adda	d2,a0
+;  		move.w	(a0),d0
+;  		cmp.w	#-1,d0
+;  		beq.s	.noAnim		; loop
+;  		cmp.w	#-2,d0
+;  		beq.s	.lastFrame	; finish
+;  		cmp.w	#-3,d0
+;  		beq.s	.goToFrame
 ;
-; Input
-; a0 | LONG - Animation data
+;  		move.w	d0,obj_frame(a6)
+;  		add.w	#1,obj_anim_indx(a6)
+; .return:
+;  		rts
 ;
-; Output
-; d0 | WORD - Frame
+; .noAnim:
+;  		move.w	#1,obj_anim_indx(a6)
+;  		move.w	d1,d0
+;  		move.w	d0,obj_frame(a6)
+; 		rts
+; .lastFrame:
+;  		clr.b	obj_anim_spd(a6)
+; 		rts
+; .goToFrame:
+; 		clr.w	obj_anim_indx(a6)
+; 		move.w	2(a0),obj_anim_indx(a6)
+; 		rts
 ;
-; Uses:
-; d2
-; --------------------------------------------------------
-
-; NOTE: to restart an animation
-; clear obj_anim_indx(a6) manually
-
-Object_Animate:
-;  		tst.l	d1
-;   		beq.s	.return
- 		moveq	#0,d2
- 		move.b	obj_anim_id+1(a6),d2
- 		cmp.b	obj_anim_id(a6),d2
- 		beq.s	.sameThing
- 		move.b	obj_anim_id(a6),obj_anim_id+1(a6)
- 		clr.w	obj_anim_indx(a6)
- 		clr.b	obj_anim_spd(a6)
-.sameThing:
- 		move.b	obj_anim_id(a6),d2
- 		cmp.b	#-1,d2
- 		beq.s	.return
- 		add.w	d2,d2
- 		move.w	(a0,d2.w),d2
- 		lea	(a0,d2.w),a0
-
- 		move.w	(a0)+,d2
- 		cmp.w	#-1,d2
- 		beq.s	.keepspd
- 		sub.b	#1,obj_anim_spd(a6)
- 		bpl.s	.return
-		move.b	d2,obj_anim_spd(a6)
-.keepspd:
- 		moveq	#0,d1
- 		move.w	obj_anim_indx(a6),d2
- 		add.w	d2,d2
- 		move.w	(a0),d1
- 		adda	d2,a0
- 		move.w	(a0),d0
- 		cmp.w	#-1,d0
- 		beq.s	.noAnim		; loop
- 		cmp.w	#-2,d0
- 		beq.s	.lastFrame	; finish
- 		cmp.w	#-3,d0
- 		beq.s	.goToFrame
-
- 		move.w	d0,obj_frame(a6)
- 		add.w	#1,obj_anim_indx(a6)
-.return:
- 		rts
-
-.noAnim:
- 		move.w	#1,obj_anim_indx(a6)
- 		move.w	d1,d0
- 		move.w	d0,obj_frame(a6)
-		rts
-.lastFrame:
- 		clr.b	obj_anim_spd(a6)
-		rts
-.goToFrame:
-		clr.w	obj_anim_indx(a6)
-		move.w	2(a0),obj_anim_indx(a6)
-		rts
-
-; --------------------------------------------------------
-; object_Speed
+; ; --------------------------------------------------------
+; ; object_Speed
+; ;
+; ; Moves the object using speed settings
+; ;
+; ; Input:
+; ; a6 - Object
+; ;
+; ; Uses:
+; ; d7
+; ; --------------------------------------------------------
 ;
-; Moves the object using speed settings
+; object_UpdX:
+; 		moveq	#0,d7
+; 		move.w	obj_x_spd(a6),d7
+; 		ext.l	d7
+; 		asl.l	#8,d7
+; 		add.l	d7,obj_x(a6)
+; 		rts
+; object_Speed:
+; 		bsr.s	object_UpdX
+; object_UpdY:
+; 		moveq	#0,d7
+; 		move.w	obj_y_spd(a6),d7
+; 		ext.l	d7
+; 		asl.l	#8,d7
+; 		add.l	d7,obj_y(a6)
+; 		rts
 ;
-; Input:
-; a6 - Object
+; ; --------------------------------------------------------
+; ; object_ColM_Floor
+; ;
+; ; Check object collision on 32X map's floor
+; ;
+; ; Input:
+; ; a6 - Object to check
+; ;
+; ; Returns:
+; ; beq  - No collision
+; ; bne  - Found collision
+; ; d4.b - Collision block number
+; ; d5.w - Y-pos center snap
+; ;
+; ; Uses:
+; ; d4-d7,a4-a5
+; ; --------------------------------------------------------
 ;
-; Uses:
-; d7
-; --------------------------------------------------------
-
-object_UpdX:
-		moveq	#0,d7
-		move.w	obj_x_spd(a6),d7
-		ext.l	d7
-		asl.l	#8,d7
-		add.l	d7,obj_x(a6)
-		rts
-object_Speed:
-		bsr.s	object_UpdX
-object_UpdY:
-		moveq	#0,d7
-		move.w	obj_y_spd(a6),d7
-		ext.l	d7
-		asl.l	#8,d7
-		add.l	d7,obj_y(a6)
-		rts
-
-; --------------------------------------------------------
-; object_ColM_Floor
+; ; 32X MAP SIDE
 ;
-; Check object collision on 32X map's floor
+; object_ColM_Floor:
+; 		lea	(RAM_BgBufferM),a5
+; 		moveq	#0,d5
+; 		moveq	#0,d4
+; 		move.l	md_bg_col(a5),a4
+; 		move.w	md_bg_wf(a5),d7
+; 		sub.w	#1,d7
+; 		move.w	obj_x(a6),d4
+; 		bpl.s	.v_x
+; 		clr.w	d4
+; .v_x:
+; 		cmp.w	d7,d4
+; 		blt.s	.v_xr
+; 		move.w	d7,d4
+; .v_xr:
+; 		move.w	md_bg_hf(a5),d7
+; 		sub.w	#1,d7
+; 		move.w	obj_y(a6),d5
+; 		bpl.s	.v_y
+; 		clr.w	d5
+; .v_y:
+; 		cmp.w	d7,d5
+; 		blt.s	.v_yd
+; 		move.w	d7,d5
+; .v_yd:
+; 		move.l	obj_size(a6),d7
+; 		swap	d7		; Add Y
+; 		and.w	#$FF,d7
+; 		move.w	d7,d6
+; 		lsl.w	#3,d6
+; 		add.w	d6,d5
 ;
-; Input:
-; a6 - Object to check
+; 	; d5 - Ypos + size
+; 	; d6 - Xpos
+; 	; d7 - Dsize/2
 ;
-; Returns:
-; beq  - No collision
-; bne  - Found collision
-; d4.b - Collision block number
-; d5.w - Y-pos center snap
+; 	; 16x16 only
+; 		lsr.w	#1,d7		; Dsize/2
+; 		asr.w	#4,d4		; X >> 16
+; 		add.l	d4,a4		; Add X
+; 		move.l	d5,d4		; Copy d5 to d4
+; 		asr.w	#4,d4		; Y >> 16
+; 		moveq	#0,d6
+; 		move.w	md_bg_w(a5),d6	; d6: map width
+; 		mulu.w	d6,d4		; (Y>>16)*(mwidth)
+; 		add.l	d4,a4		; Add Y
+; 		and.w	#-$10,d5	; Filter Y Snap
+; 		move.b	(a4),d4		; d4: Start ID
+; 		sub.l	d6,a4
+; 		sub.w	#1,d7		; Dsize - 1
+; 		bmi.s	.valid
+; .next:
+; 		swap	d7
+; 		move.b	(a4),d7		; New ID != 0?
+; 		beq.s	.blnk
+; 		move.b	d7,d4		; Set new ID
+; 		sub.w	#$10,d5		; Decrement Y Snap
+; .blnk:
+; 		sub.l	d6,a4		; Decrement width
+; 		swap	d7
+; 		dbf	d7,.next
+; .valid:
+; 		and.w	#$FF,d4		; Filter ID
+; 		rts
 ;
-; Uses:
-; d4-d7,a4-a5
-; --------------------------------------------------------
-
-; 32X MAP SIDE
-
-object_ColM_Floor:
-		lea	(RAM_BgBufferM),a5
-		moveq	#0,d5
-		moveq	#0,d4
-		move.l	md_bg_col(a5),a4
-		move.w	md_bg_wf(a5),d7
-		sub.w	#1,d7
-		move.w	obj_x(a6),d4
-		bpl.s	.v_x
-		clr.w	d4
-.v_x:
-		cmp.w	d7,d4
-		blt.s	.v_xr
-		move.w	d7,d4
-.v_xr:
-		move.w	md_bg_hf(a5),d7
-		sub.w	#1,d7
-		move.w	obj_y(a6),d5
-		bpl.s	.v_y
-		clr.w	d5
-.v_y:
-		cmp.w	d7,d5
-		blt.s	.v_yd
-		move.w	d7,d5
-.v_yd:
-		move.l	obj_size(a6),d7
-		swap	d7		; Add Y
-		and.w	#$FF,d7
-		move.w	d7,d6
-		lsl.w	#3,d6
-		add.w	d6,d5
-
-	; d5 - Ypos + size
-	; d6 - Xpos
-	; d7 - Dsize/2
-
-	; 16x16 only
-		lsr.w	#1,d7		; Dsize/2
-		asr.w	#4,d4		; X >> 16
-		add.l	d4,a4		; Add X
-		move.l	d5,d4		; Copy d5 to d4
-		asr.w	#4,d4		; Y >> 16
-		moveq	#0,d6
-		move.w	md_bg_w(a5),d6	; d6: map width
-		mulu.w	d6,d4		; (Y>>16)*(mwidth)
-		add.l	d4,a4		; Add Y
-		and.w	#-$10,d5	; Filter Y Snap
-		move.b	(a4),d4		; d4: Start ID
-		sub.l	d6,a4
-		sub.w	#1,d7		; Dsize - 1
-		bmi.s	.valid
-.next:
-		swap	d7
-		move.b	(a4),d7		; New ID != 0?
-		beq.s	.blnk
-		move.b	d7,d4		; Set new ID
-		sub.w	#$10,d5		; Decrement Y Snap
-.blnk:
-		sub.l	d6,a4		; Decrement width
-		swap	d7
-		dbf	d7,.next
-.valid:
-		and.w	#$FF,d4		; Filter ID
-		rts
-
-; ----------------------------------------
-; object_SetColFloor
+; ; ----------------------------------------
+; ; object_SetColFloor
+; ;
+; ; Snaps the object to the map's floor.
+; ;
+; ; Call object_ColM_Floor first
+; ;
+; ; Input:
+; ; d4.b - Collision block
+; ; d5.w - Y-pos center snap
+; ; ----------------------------------------
 ;
-; Snaps the object to the map's floor.
+; object_SetColFloor:
+; 		and.w	#$FF,d4
+; 		beq.s	.no_col
+; 		lsl.w	#4,d4
+; 		move.w	obj_x(a6),d7		; Grab CENTER X
+; 		and.w	#$0F,d7			; limit to 16
+; 		lea	slope_data_16(pc),a0
+; 		adda	d4,a0
+; 		move.b	(a0,d7.w),d4
+; 		and.w	#$0F,d4
 ;
-; Call object_ColM_Floor first
+; 		moveq	#0,d6
+; 		move.w	obj_y(a6),d7
+; 		move.l	obj_size(a6),d6
+; 		swap	d6
+; 		and.w	#$FF,d6
+; 		lsl.w	#3,d6
+; 		sub.w	d6,d5
+; 		add.w	d4,d5	; target slope
+; 		cmp.w	d5,d7
+; 		ble.s	.no_col
+; 		move.w	#$800,d6
+; 		move.w	d6,obj_y_spd(a6)
+; ; .set_me:
+; ; 		move.w	obj_x_spd(a6),d6
+; ; 		bpl.s	.x_spd
+; ; 		neg.w	d6
+; ; .x_spd:
 ;
-; Input:
-; d4.b - Collision block
-; d5.w - Y-pos center snap
-; ----------------------------------------
-
-object_SetColFloor:
-		and.w	#$FF,d4
-		beq.s	.no_col
-		lsl.w	#4,d4
-		move.w	obj_x(a6),d7		; Grab CENTER X
-		and.w	#$0F,d7			; limit to 16
-		lea	slope_data_16(pc),a0
-		adda	d4,a0
-		move.b	(a0,d7.w),d4
-		and.w	#$0F,d4
-
-		moveq	#0,d6
-		move.w	obj_y(a6),d7
-		move.l	obj_size(a6),d6
-		swap	d6
-		and.w	#$FF,d6
-		lsl.w	#3,d6
-		sub.w	d6,d5
-		add.w	d4,d5	; target slope
-		cmp.w	d5,d7
-		ble.s	.no_col
-		move.w	#$800,d6
-		move.w	d6,obj_y_spd(a6)
-; .set_me:
-; 		move.w	obj_x_spd(a6),d6
-; 		bpl.s	.x_spd
-; 		neg.w	d6
-; .x_spd:
-
-		bclr	#bitobj_air,obj_status(a6)
-		move.w	d5,obj_y(a6)
-.no_col:
-		rts
-
-; ----------------------------------------
-
-; Slope data 16x16
-slope_data_16:
-		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-		dc.b 15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
-		dc.b  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15
-		dc.b 15,15,14,14,13,13,12,12,11,11,10,10, 9, 9, 8, 8
-		dc.b  7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0
-		dc.b  0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7
-		dc.b  8, 8, 9, 9,10,10,11,11,12,12,13,13,14,14,15,15
-		align 2
+; 		bclr	#bitobj_air,obj_status(a6)
+; 		move.w	d5,obj_y(a6)
+; .no_col:
+; 		rts
+;
+; ; ----------------------------------------
+;
+; ; Slope data 16x16
+; slope_data_16:
+; 		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; 		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; 		dc.b  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+; 		dc.b 15,14,13,12,11,10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0
+; 		dc.b  0, 1, 2, 3, 4, 5, 6, 7, 8, 9,10,11,12,13,14,15
+; 		dc.b 15,15,14,14,13,13,12,12,11,11,10,10, 9, 9, 8, 8
+; 		dc.b  7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1, 1, 0, 0
+; 		dc.b  0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7
+; 		dc.b  8, 8, 9, 9,10,10,11,11,12,12,13,13,14,14,15,15
+; 		align 2
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -2721,6 +2730,7 @@ Video_Mars_WaitFrame:
 ; --------------------------------------------------------
 
 Video_FadePal_Mars:
+	if MARS|MARSCD
 		lea	(RAM_MdMarsPalFd),a6
 		clr.w	(RAM_FadeMarsTmr).w
 		bra.s	vidMars_Pal
@@ -2742,6 +2752,7 @@ vidMars_Pal:
 		or.w	d6,d5
 		move.w	d5,(a6)+
 		dbf	d7,.loop
+	endif
 		rts
 
 ; --------------------------------------------------------
@@ -2762,6 +2773,7 @@ vidMars_Pal:
 ; TODO: luego ver que hago con el priority bit
 
 Video_MarsPalFade:
+	if MARS|MARSCD
 		sub.w	#1,(RAM_FadeMarsTmr).w
 		bpl.s	.active
 		move.w	(RAM_FadeMarsDelay).w,(RAM_FadeMarsTmr).w
@@ -2918,4 +2930,5 @@ Video_MarsPalFade:
 		bne.s	.no_move_o
 		clr.w	(RAM_FadeMarsReq).w
 .no_move_o:
+	endif
 		rts

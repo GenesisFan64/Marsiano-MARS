@@ -1386,4 +1386,5 @@ RAM_Mars_GemaWave_1	ds.b $1000
 
 ; ====================================================================
 
-
+.here:
+		report "SH2 SDRAM CODE",.here,(STACK_SLV-$1000)

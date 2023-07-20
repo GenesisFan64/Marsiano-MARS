@@ -33,6 +33,7 @@ sizeof_mdsys	ds.l 0
 System_Init:
 		move.w	sr,-(sp)
 		move.w	#$2700,sr		; Disable interrupts
+	if PICO=0
 		move.w	#$0100,(z80_bus).l	; Stop Z80
 .wait:
 		btst	#0,(z80_bus).l		; Wait for it
@@ -42,6 +43,7 @@ System_Init:
 		move.b	d0,(sys_ctrl_2).l	; Controller 2
 		move.b	d0,(sys_ctrl_3).l	; Modem
 		move.w	#0,(z80_bus).l		; Enable Z80
+	endif
 		move.w	#$4EF9,d0		; Set JMP opcode for the Hblank/VBlank jumps
  		move.w	d0,(RAM_MdMarsVInt).l
 		move.w	d0,(RAM_MdMarsHInt).l
@@ -249,6 +251,7 @@ System_GrabRamCode:
 		move.w	(a0)+,(a1)+			; 2
 		move.w	(a0)+,(a1)+			; 4
 		move.w	(a0)+,(a1)+			; 6
+		move.w	(a0)+,(a1)+			; 8
 		move.w	(a0)+,(a1)+			; 8
 		move.w	#0,(a1)+			; A <-- zero end
 		moveq	#$01,d0				; COMMAND: READ CD AND PASS DATA
@@ -700,12 +703,14 @@ Mode_Init:
 		move.w	d4,(a4)+
 		dbf	d5,.clr
 
+	if MARS|MARSCD
 		lea	(RAM_MdDreq+Dreq_Objects),a4	; Patch
 		move.w	#MAX_MODELS-1,d5
 .clr_mdls:
 		move.l	d4,mdl_data(a4)
 		adda	#sizeof_mdlobj,a4
 		dbf	d5,.clr_mdls
+	endif
 
 		move.w	#0,d0
 		bra	Video_Mars_GfxMode

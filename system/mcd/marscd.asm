@@ -1,8 +1,13 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; 32X BOOT ON SEGA CD
+;
+; include this AFTER the header
 ; ----------------------------------------------------------------
 
+		move.b	(sysmcd_reg+mcd_memory+1).l,d0		; Set WORDRAM to SUB, DMNA=1
+		bset	#1,d0
+		move.b	d0,(sysmcd_reg+mcd_memory+1).l
 		bra.s	.normal
 .retry:
 		lea	($A15100),a5
@@ -43,7 +48,7 @@ CopyrightData:
 FrameClear:
 		movem.l	d0/d1/d7/a1,-(a7)
 
-		lea	$a15180,a1
+		lea	($a15180),a1
 .fm1
 		bclr.b	#7,-$80(a1)		; MD access
 		bne.b	.fm1
@@ -183,8 +188,6 @@ IcdAllEnd:
 ; 		bcs	_error
 
 ; ----------------------------------------------------------------
-;
-; ----------------------------------------------------------------
 ; Sending the SH2 data through the
 ; framebuffer...
 
@@ -193,48 +196,21 @@ loc_2EE:
 		bclr	#7,(a5)
 		bne.s	loc_2EE
 		lea	($840000).l,a0
-		lea	MarsInitHeader(pc),a2	; "MARS	DP GAME	   "
+		lea	MarsInitHeader(pc),a2
 		move.w	#$D,d7
 loc_302:
 		move.l	(a2)+,(a0)+
 		dbf	d7,loc_302
 		clr.l	d0
-		movea.l	#$200800,a2
+		lea	($200000).l,a2
 		move.w	#((CD32_End-CD32_Start)/4)-1,d7
-
-		move.l	(a2),d1
-		move.l	d1,$FFFFF0
-; 		cmp.l	#$06000710,d1
-; 		beq.s	*
 loc_314:
-		move.l	(a2)+,d1
-; 		eor.l	d1,d0
-		move.l	d1,(a0)+
+		move.l	(a2)+,d0
+		move.l	d0,(a0)+
 		dbf	d7,loc_314
-		move.l	($200860).l,($840020).l
-		move.l	($200864).l,($840024).l
 loc_332:
 		bset	#7,(a5)
 		beq.s	loc_332
-
-; 		lea	($840000),a0		; First the header
-; 		lea	MarsInitHeader(pc),a2
-; 		move.w	#$E-1,d7
-; .shprg:
-; 		move.l	(a2)+,(a0)+
-; 		dbf	d7,.shprg
-;         	lea	(sysmcd_wram),a2	; Now the code
-; 		move.w	#(((CD32_End-CD32_Start)/4)/4)-1,d7
-; .shprg2:
-; 		move.l	(a2)+,(a0)+
-; 		move.l	(a2)+,(a0)+
-; 		move.l	(a2)+,(a0)+
-; 		move.l	(a2)+,(a0)+
-; 		dbra	d7,.shprg2
-; loc_332:
-; 		bset	#7,(a5)
-; 		beq.s	loc_332
-
 		lea	($A15100).l,a5
 		move.l	#"_CD_",$20(a5)		; SH2 Application Start
 	; Then proceed like normal...

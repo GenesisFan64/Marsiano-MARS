@@ -78,14 +78,11 @@ SP_Init:
 	;
 	; TODO: I hope SUB has WRAM permission...
 	; I don't have a SCD to test this.
-
-	; TODO IsoRead is broken
 	if MARSCD
 		lea	fname_mars(pc),a0
 		bsr	SP_FindFile
-
-		move.w	#$1D800/$800,d0
 		move.w	#$800,d2
+		subq.w	#1,d1
 		lea	(scpu_wram),a0
 		bsr	SP_IsoReadN
 	endif

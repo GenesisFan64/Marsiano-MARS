@@ -11,5 +11,5 @@
 
 		align 4
 ArtMars_TEST:
-		binclude "game/data/TESTS/test_art.bin"
+		binclude "game/data/TESTS/mars_art.bin"
 		align 2

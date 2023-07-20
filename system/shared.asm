@@ -80,6 +80,7 @@ sizeof_marsspr	ds.l 0
 
 ; *** List MUST be aligned in 8bytes, end with 0 or 8 ***
 
+	if MARS|MARSCD
 		struct 0
 Dreq_Palette	ds.w 256				; 256-color palette
 Dreq_BgExBuff	ds.b $80				; Buffer for current screen mode (NOTE: manual size)
@@ -91,4 +92,6 @@ sizeof_dreq	ds.l 0
 
 	if MOMPASS=5
 		message "DREQ RAM uses: \{sizeof_dreq}"
+	endif
+
 	endif
