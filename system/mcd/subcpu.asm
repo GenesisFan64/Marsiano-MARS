@@ -47,7 +47,7 @@ SP_Init:
 		move.b	(scpu_reg+mcd_memory).l,d0
 		bclr	#bitWRamMode,d0
 		move.b	d0,(scpu_reg+mcd_memory).l
-		bsr	SP_InitISO
+		bsr	spInitFS
 		move.b	#0,(scpu_reg+mcd_comm_s).w	; Reset SUB-status
 
 ; 		lea	(PCM),a0
@@ -80,11 +80,10 @@ SP_Init:
 	; I don't have a SCD to test this.
 	if MARSCD
 		lea	fname_mars(pc),a0
-		bsr	SP_FindFile
+		bsr	spSearchFile
 		move.w	#$800,d2
-		subq.w	#1,d1
 		lea	(scpu_wram),a0
-		bsr	SP_IsoReadN
+		bsr	spReadSectorsN
 	endif
 		rts
 	if MARSCD
@@ -193,12 +192,14 @@ SP_cmnd00:
 
 SP_cmnd01:
 		move.l	a6,a0			; a0 - filename
-		bsr	SP_FindFile
+		bsr	spSearchFile
 		move.w	#$800,d2
-		addq.w	#1,d1			; TODO: check if 0 counts
 		lea	(ISO_Output),a0
-		bsr	SP_IsoReadN
+		bsr	spReadSectorsN
 		lea	(ISO_Output),a0
+.wait_main_i:	move.b	(scpu_reg+mcd_comm_m).w,d7
+		btst	#7,d7
+		beq.s	.wait_main_i
 .next_packet:
 		move.l	a5,a1
 		move.w	(a0)+,(a1)+	; WORD writes to be safe...
@@ -240,11 +241,10 @@ SP_cmnd01:
 
 SP_cmnd02:
 		move.l	a6,a0				; a0 - filename
-		bsr	SP_FindFile
+		bsr	spSearchFile
 		move.w	#$800,d2
-		addq.w	#1,d1				; TODO: check if 0 counts
 		lea	(scpu_wram),a0
-		bsr	SP_IsoReadN
+		bsr	spReadSectorsN
 		move.b	(scpu_reg+mcd_memory).l,d0	; Return WORDRAM to MAIN, RET=1
 		bset	#0,d0
 		move.b	d0,(scpu_reg+mcd_memory).l
@@ -252,6 +252,7 @@ SP_cmnd02:
 
 
 SP_cmnd10:
+; 		BIOS_MSCPAUSEOFF
 ; 		movea.l	a6,a0
 		lea	.this(pc),a0
 		BIOS_MSCPLAYR
@@ -270,7 +271,7 @@ SP_cmnd10:
 ; --------------------------------------------------------
 
 ; ------------------------------------------------
-; SP_IsoReadN
+; spReadSectorsN
 ;
 ; Input:
 ; a0 - Destination
@@ -279,7 +280,7 @@ SP_cmnd10:
 ; d2 - Destination increment ($0 or $800)
 ; ------------------------------------------------
 
-SP_IsoReadN:
+spReadSectorsN:
 		movem.l	d3-d6,-(sp)
 		andi.l	#$FFFF,d0
 		andi.l	#$FFFF,d1
@@ -312,14 +313,14 @@ SP_IsoReadN:
 ; ISO9660 Driver
 ; ------------------------------------------------
 
-SP_InitISO:
+spInitFS:
 		movem.l	d0-d7/a0-a6,-(a7)
 	; Load Volume VolumeDescriptor
 		moveq	#$10,d0			; Start Sector (at $8000)
 		moveq	#$10,d1			; Sector size
 		move.w	#$800,d2
 		lea	(ISO_Files),a0		; Destination
-		bsr	SP_IsoReadN
+		bsr	spReadSectorsN
 	; Load Root Directory
 		lea	(ISO_Files),a0		; Get pointer to sector buffer
 		lea.l	$9C(a0),a1		; Get root directory record
@@ -333,7 +334,7 @@ SP_InitISO:
 	; d0 now contains start sector address
 		moveq	#$20,d1			; Size ($20 Sectors)
 		move.w	#$800,d2
-		bsr	SP_IsoReadN
+		bsr	spReadSectorsN
 		movem.l	(a7)+,d0-d7/a0-a6	; Restore all registers
 		rts
 
@@ -345,43 +346,95 @@ SP_InitISO:
 ;          d2.l - Filesize
 ; ------------------------------------------------
 
-SP_FindFile:
-		movem.l	a1/a2/a6,-(a7)
-		lea	(ISO_Files),a1		; Get sector buffer
+; --------------------------------------------------------
+; spSearchFile
+;
+; Search a file on the disc
+;
+; FILETABLE MUST BE LOADED FIRST WITH spInitFS
+;
+; Input
+; a0   - Filename string zero terminated
+;
+; Output:
+; d0.l - Start sector
+; d1.l - Number of sectors
+; d2.l - Filesize
+;
+; Breaks:
+; d4-d7,a6
+; --------------------------------------------------------
+
+spSearchFile:
+; 		movem.l	a1/a2/a6,-(a7)
+		lea	(ISO_Files),a4		; a4 - TOP
 .next_file:
-		movea.l	a0,a6			; Store filename pointer
-		move.b	(a6)+,d0		; Read character from filename
-.findFirstChar:
-		movea.l	a1,a2			; Store Sector buffer pointer
-		cmp.b	(a1)+,d0		; Compare with first letter of filename and increment
-		bne.b	.findFirstChar		; If not matched, branch
-.checkChars:
-		move.b	(a6)+,d0		; Read next charactor of filename and increment
-		beq.s	.getInfo		; If all characters were matched, branch
-		cmp.b	(a1)+,d0		; Else, check next character
-		bne.b	.next_file		; If not matched, find next file
-		bra.s	.checkChars		; else, check next character
-.getInfo:
-		sub.l	#$21,a2			; Move to beginning of directory entry
-		move.b	6(a2),d0		; Get first part of Sector address
-		lsl.l	#8,d0			; bitshift
-		move.b	7(a2),d0		; Get next part of sector address
-		lsl.l	#8,d0			; bitshift
-		move.b	8(a2),d0		; get next part of sector address
-		lsl.l	#8,d0			; bitshift
-		move.b	9(a2),d0		; get final part of sector address.
-						; d0 now contains start sector address
-		move.b	$E(a2),d1		; Same as above, but for FileSize
-		lsl.l	#8,d1
-		move.b	$F(a2),d1
-		lsl.l	#8,d1
-		move.b	$10(a2),d1
-		lsl.l	#8,d1
-		move.b	$11(a2),d1
-		move.l	d1,d2
-		lsr.l	#8,d1			; Bitshift filesize (to get sector count)
+		move.w	(a4),d7			; d7 - Block size
+		beq.s	.failed_srch
+		ror.w	#8,d7
+		move.l	a4,a3			; a3 - To search for
+		adda	#$19,a3			; Go to flags
+		move.b	(a3),d6
+		bne.s	.non_file		; $00: iso_file, non-Zero: iso_setfs
+		adda	#$08,a3			; Go to filename
+		move.l	a0,a2			; a2 - string to seach
+.next_str:	move.b	(a2)+,d5
+		move.b	(a3)+,d4
+		cmp.b	d5,d4
+		beq.s	.next_str
+		tst.b	d5
+		beq.s	.found_file
+.non_file:
+		adda	d7,a4
+		bra.s	.next_file
+.found_file:
+		move.l	6(a4),d0		; d0 - Sector position
+		move.l	$E(a4),d1		; d1 - Number of sectors
+		move.l	d1,d2			; d2 - ORIGINAL filesize
+		lsr.l	#8,d1			; Bitshift numof_sectors
 		lsr.l	#3,d1
-		movem.l	(a7)+,a1/a2/a6		; Restore used registers
+; 		bra *
+		rts
+.failed_srch:
+		moveq	#-1,d0
+		rts
+
+; 		movem.l	a1/a2/a6,-(a7)
+; 		lea	(ISO_Files),a1		; Get sector buffer
+; .next_file:
+; 		movea.l	a0,a6			; Store filename pointer
+; 		move.b	(a6)+,d0		; Read character from filename
+; .findFirstChar:
+; 		movea.l	a1,a2			; Store Sector buffer pointer
+; 		cmp.b	(a1)+,d0		; Compare with first letter of filename and increment
+; 		bne.b	.findFirstChar		; If not matched, branch
+; .checkChars:
+; 		move.b	(a6)+,d0		; Read next charactor of filename and increment
+; 		beq.s	.getInfo		; If all characters were matched, branch
+; 		cmp.b	(a1)+,d0		; Else, check next character
+; 		bne.b	.next_file		; If not matched, find next file
+; 		bra.s	.checkChars		; else, check next character
+; .getInfo:
+; 		sub.l	#$21,a2			; Move to beginning of directory entry
+; 		move.b	6(a2),d0		; Get first part of Sector address
+; 		lsl.l	#8,d0			; bitshift
+; 		move.b	7(a2),d0		; Get next part of sector address
+; 		lsl.l	#8,d0			; bitshift
+; 		move.b	8(a2),d0		; get next part of sector address
+; 		lsl.l	#8,d0			; bitshift
+; 		move.b	9(a2),d0		; get final part of sector address.
+; 						; d0 now contains start sector address
+; 		move.b	$E(a2),d1		; Same as above, but for FileSize
+; 		lsl.l	#8,d1
+; 		move.b	$F(a2),d1
+; 		lsl.l	#8,d1
+; 		move.b	$10(a2),d1
+; 		lsl.l	#8,d1
+; 		move.b	$11(a2),d1
+; 		move.l	d1,d2
+; 		lsr.l	#8,d1			; Bitshift filesize (to get sector count)
+; 		lsr.l	#3,d1
+; 		movem.l	(a7)+,a1/a2/a6		; Restore used registers
 		rts
 
 ; --------------------------------------------------------
@@ -408,9 +461,10 @@ PCM_Wait:
 		align $100
 SP_RAM:
 		struct SP_RAM
-Sub_BiosArgs:	ds.l $40
-Sub_BiosOut:	ds.l $40
+Sub_BiosArgs:	ds.l $20
+Sub_BiosOut:	ds.l $20
 ISO_Files:	ds.b $800*$10
 ISO_Output:	ds.b $800*$10
+StampData:	ds.b $20*100
 		endstruct
 		dephase

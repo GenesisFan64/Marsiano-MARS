@@ -5,6 +5,73 @@
 
 ; ====================================================================
 ; ----------------------------------------------------------------
+; Variables
+; ----------------------------------------------------------------
+
+; Controller buffer data (after calling System_Input)
+;
+; Type/Revision byte:
+;
+; ID    |
+; $0D   | $00 - Original 3 button
+;       | $01 - 6 button version: XYZM
+
+		struct 0
+pad_id		ds.b 1			; Controller ID
+pad_ver		ds.b 1			; Controller type/revision
+on_hold		ds.w 1			; User HOLD bits
+on_press	ds.w 1			; User PRESSED bits
+mouse_x		ds.w 1			; Mouse X add/sub
+mouse_y		ds.w 1			; Mouse Y add/sub
+extr_3		ds.w 1
+extr_4		ds.w 1
+extr_5		ds.w 1
+sizeof_input	ds.l 0
+		endstruct
+
+; Read as (Controller_1) then add +on_hold or +on_press
+Controller_1	equ RAM_InputData
+Controller_2	equ RAM_InputData+sizeof_input
+
+; Read WORD in +on_hold or +on_press
+JoyUp		equ $0001
+JoyDown		equ $0002
+JoyLeft		equ $0004
+JoyRight	equ $0008
+JoyB		equ $0010
+JoyC		equ $0020
+JoyA		equ $0040
+JoyStart	equ $0080
+JoyZ		equ $0100
+JoyY		equ $0200
+JoyX		equ $0400
+JoyMode		equ $0800
+bitJoyUp	equ 0		; READ THESE AS A WORD
+bitJoyDown	equ 1
+bitJoyLeft	equ 2
+bitJoyRight	equ 3
+bitJoyB		equ 4
+bitJoyC		equ 5
+bitJoyA		equ 6
+bitJoyStart	equ 7
+bitJoyZ		equ 8
+bitJoyY		equ 9
+bitJoyX		equ 10
+bitJoyMode	equ 11
+
+; Mega Mouse
+; Read WORD as +on_hold or +on_press
+ClickR		equ $0001
+ClickL		equ $0002
+ClickM		equ $0004	; US MOUSE ONLY
+ClickS		equ $0008	; (Untested)
+bitClickR	equ 0
+bitClickL	equ 1
+bitClickM	equ 2
+bitClickS	equ 3
+
+; ====================================================================
+; ----------------------------------------------------------------
 ; RAM section
 ; ----------------------------------------------------------------
 
@@ -20,7 +87,7 @@ RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
 RAM_MdVBlkWait	ds.w 1
 sizeof_mdsys	ds.l 0
 		endstruct
-		report "MD SYS-SUBS",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
+		report "MD SYSTEM RAM",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -45,8 +112,8 @@ System_Init:
 		move.w	#0,(z80_bus).l		; Enable Z80
 	endif
 		move.w	#$4EF9,d0		; Set JMP opcode for the Hblank/VBlank jumps
- 		move.w	d0,(RAM_MdMarsVInt).l
-		move.w	d0,(RAM_MdMarsHInt).l
+ 		move.w	d0,(RAM_MdMarsVInt).w
+		move.w	d0,(RAM_MdMarsHInt).w
 		move.l	#VInt_Default,d0	; Set default ints
 		move.l	#Hint_Default,d1
 		bsr	System_SetInts
@@ -127,7 +194,7 @@ System_WaitFrame:
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7
 		move.w	d7,(a6)
-		add.l	#1,(RAM_Framecount).l
+		add.l	#1,(RAM_Framecount).w
 		rts
 
 ; --------------------------------------------------------
@@ -260,6 +327,8 @@ System_GrabRamCode:
 		lea	(RAM_UserCode),a0
 		move.w	#(MAX_UserCode),d0
 
+
+
 	; a0 - Output location
 	; d0 - Number of $10-byte packets
 		lsr.w	#4,d0				; size >> 4
@@ -293,18 +362,14 @@ System_GrabRamCode:
 		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
 		bclr	#7,d7
 		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-
 		jmp	(RAM_UserCode).l
-; 		move.l	#$C0000000,(vdp_ctrl).l
-; 		move.w	#$080,(vdp_data).l
-; 		bra.s	*
 
 	elseif MARS
 		or.l	#$880000,d0
 		move.l	d0,a0
 		lea	(RAM_UserCode),a1
-		move.w	(a0)+,d7
-		subq.w	#1,d7
+; 		move.w	(a0)+,d7
+; 		subq.w	#1,d7
 ; 		bra *
 		move.w	#(MAX_UserCode)-1,d7	; TODO: TEMPORAL SIZE
 .copyme2:
@@ -557,7 +622,7 @@ System_Input:
 
 System_Random:
 		move.l	d4,-(sp)
-		move.l	(RAM_SysRandSeed).l,d4
+		move.l	(RAM_SysRandSeed).w,d4
 		bne.s	.good_s
 		move.l	#$23B51947,d4
 .good_s:
@@ -571,7 +636,7 @@ System_Random:
 		add.w	d4,d0
 		move.w	d0,d4
 		swap	d4
-		move.l	d4,(RAM_SysRandSeed).l
+		move.l	d4,(RAM_SysRandSeed).w
 		move.l	(sp)+,d4
 		rts
 
@@ -653,13 +718,13 @@ System_SetInts:
 		beq.s	.novint
 		bmi.s	.novint
 		or.l	#$880000,d4
- 		move.l	d4,(RAM_MdMarsVInt+2).l
+ 		move.l	d4,(RAM_MdMarsVInt+2).w
 .novint:
 		move.l	d1,d4
 		beq.s	.nohint
 		bmi.s	.nohint
 		or.l	#$880000,d4
-		move.l	d4,(RAM_MdMarsHInt+2).l
+		move.l	d4,(RAM_MdMarsHInt+2).w
 .nohint:
 		rts
 
@@ -703,14 +768,14 @@ Mode_Init:
 		move.w	d4,(a4)+
 		dbf	d5,.clr
 
-	if MARS|MARSCD
-		lea	(RAM_MdDreq+Dreq_Objects),a4	; Patch
-		move.w	#MAX_MODELS-1,d5
-.clr_mdls:
-		move.l	d4,mdl_data(a4)
-		adda	#sizeof_mdlobj,a4
-		dbf	d5,.clr_mdls
-	endif
+; 	if MARS|MARSCD
+; 		lea	(RAM_MdDreq+Dreq_Objects),a4	; Patch
+; 		move.w	#MAX_MODELS-1,d5
+; .clr_mdls:
+; 		move.l	d4,mdl_data(a4)
+; 		adda	#sizeof_mdlobj,a4
+; 		dbf	d5,.clr_mdls
+; 	endif
 
 		move.w	#0,d0
 		bra	Video_Mars_GfxMode
@@ -742,7 +807,7 @@ Mode_FadeOut:
 VInt_Default:
 		movem.l	d0-a6,-(sp)
 		bsr	System_Input
-		addi.l	#1,(RAM_FrameCount).l
+		addi.l	#1,(RAM_FrameCount).w
 		movem.l	(sp)+,d0-a6		
 		rte
 

@@ -8,9 +8,11 @@
 ; Functions
 ; ---------------------------------------------
 
-dword 		function l,r,(l<<16&$FFFF0000|r&$FFFF)			; LLLL RRRR
+; dword 		function l,r,(l<<16&$FFFF0000|r&$FFFF)			; LLLL RRRR
 mapsize		function l,r,(((l-1)/8)<<16&$FFFF0000|((r-1)/8)&$FFFF)	; Full w/h sizes, for cell sizes use doubleword
 locate		function a,b,c,(c&$FF)|(b<<8&$FF00)|(a<<16&$FF0000)	; VDP locate: Layer|X pos|Y pos for some video routines
+
+cell_vram	function a,(a<<5)					; Vram position in 8x8 CELLS
 
 ; ====================================================================
 ; ---------------------------------------------
@@ -52,7 +54,7 @@ report		macro text,dis,dat
 			message text+": \{(dis)&$FFFFFF}"
 		else
 			if dis > dat
-				error "RAN OUT OF:"+text
+				error "RAN OUT OF "+text+" (\{(dis)&$FFFFFF} of \{(dat)&$FFFFFF})"
 			else
 				message text+" uses \{(dis)&$FFFFFF} of \{(dat)&$FFFFFF}"
 			endif
@@ -61,10 +63,29 @@ report		macro text,dis,dat
 		endm
 
 ; -------------------------------------
-; Color debug
+; Same thing but only report
+; error
 ; -------------------------------------
 
-colorme		macro this
+erreport	macro text,dis,dat
+	if MOMPASS == 2
+		if dat == -1
+			message text+": \{(dis)&$FFFFFF}"
+		else
+			if dis > dat
+				error "RAN OUT OF "+text+" (\{(dis)&$FFFFFF} of \{(dat)&$FFFFFF})"
+; 			else
+; 				message text+" uses \{(dis)&$FFFFFF} of \{(dat)&$FFFFFF}"
+			endif
+		endif
+	endif
+		endm
+
+; -------------------------------------
+; VDP color debug
+; -------------------------------------
+
+vdp_showme	macro this
 		move.l	#$C0000000,(vdp_ctrl).l
 		move.w	#this,(vdp_data).l
 		endm
@@ -96,8 +117,6 @@ paddingSoFar	set paddingSoFar + address - *
 
 ; -------------------------------------
 ; ZERO Fill padding
-;
-; if AS align doesn't work
 ; -------------------------------------
 
 rompad		macro address			; Zero fill
@@ -131,7 +150,7 @@ iso_setfs	macro type,start,end
 		dc.b ((end-start)&$FF),((end-start)>>8&$FF)	; Filesize, little
 		dc.b ((end-start)>>16&$FF),((end-start)>>24&$FF)
 		dc.l end-start					; Filesize, big
-		dc.b (2018-1900)+1				; Year
+		dc.b (2023-1900)+1				; Year
 		dc.b 0,0,0,0,0,0				; TODO
 		dc.b 2						; File flags
 		dc.b 0,0

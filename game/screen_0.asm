@@ -39,6 +39,7 @@ RAM_MapY	ds.w 1
 		bclr	#bitDispEnbl,(RAM_VdpRegs+1).l
 		bsr	Video_Update
 		bsr	Video_PrintInit
+		bsr	Video_Clear
 		bsr	Mode_Init
 		bsr	gemaStopAll
 		lea	(RAM_PaletteFd+$60),a0

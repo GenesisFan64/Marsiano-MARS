@@ -203,7 +203,7 @@ loc_302:
 		dbf	d7,loc_302
 		clr.l	d0
 		lea	($200000).l,a2
-		move.w	#((CD32_End-CD32_Start)/4)-1,d7
+		move.w	#((MARS_RAMDATA_E-MARS_RAMDATA)/4)-1,d7
 loc_314:
 		move.l	(a2)+,d0
 		move.l	d0,(a0)+
@@ -232,16 +232,16 @@ MarsError:
 ; --------------------------------------------------------------------------------
 
 MarsInitHeader:
-		dc.b "MARS CDROM      "		; module name
-		dc.l $00000000			; version
-		dc.l $00000000			; Not Used
-		dc.l $06000000			; SH2 (SDRAM)
-		dc.l CD32_End-CD32_Start	; SH2
-		dc.l SH2_M_Entry		; Master SH2 PC (SH2 area)
-		dc.l SH2_S_Entry		; Slave SH2 PC (SH2 area)
-		dc.l SH2_Master			; Master SH2 default VBR
-		dc.l SH2_Slave			; Slave SH2 default VBR
-		dc.l $00000000			; Not Used
-		dc.l $00000000			; Not Used
+		dc.b "MARS CDROM      "			; module name
+		dc.l $00000000				; version
+		dc.l $00000000				; Not Used
+		dc.l $06000000				; SH2 (SDRAM)
+		dc.l MARS_RAMDATA_E-MARS_RAMDATA	; SH2
+		dc.l SH2_M_Entry			; Master SH2 PC (SH2 area)
+		dc.l SH2_S_Entry			; Slave SH2 PC (SH2 area)
+		dc.l SH2_Master				; Master SH2 default VBR
+		dc.l SH2_Slave				; Slave SH2 default VBR
+		dc.l $00000000				; Not Used
+		dc.l $00000000				; Not Used
 		align 2
 MarsJumpHere:

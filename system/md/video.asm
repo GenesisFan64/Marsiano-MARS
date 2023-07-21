@@ -3,13 +3,12 @@
 ; Genesis Video
 ; ----------------------------------------------------------------
 
-; RAM_BgBufferM	equ	RAM_MdDreq+Dreq_BgExBuff	; Relocate MARS layer control
-
 ; ====================================================================
 ; --------------------------------------------------------
 ; Settings
 ; --------------------------------------------------------
 
+MAX_MDDMATSK	equ 16		; MAX DMA BLAST entries
 MAX_MDOBJ	equ 16		; Max objects for Genesis
 varNullVram	equ $7FF	; Default Blank cell for some video routines
 varPrintVram	equ $580	; Default location of the PRINT text graphics
@@ -181,7 +180,7 @@ RAM_VdpRegs		ds.b 24			; VDP Register cache
 sizeof_mdvid		ds.l 0
 			endstruct
 
-			report "MD VIDEO",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
+			report "MD VIDEO RAM",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -279,18 +278,18 @@ Video_Clear:
 Video_ClearScreen:
 		moveq	#0,d0
 		move.w	#$FFF,d2		; FG/BG size
-		move.b	(RAM_VdpRegs+2).l,d1	; FG
+		move.b	(RAM_VdpRegs+2).w,d1	; FG
 		andi.w	#%111000,d1
 		lsl.w	#8,d1
 		lsl.w	#2,d1
 		bsr	Video_Fill
-		move.b	(RAM_VdpRegs+4).l,d1	; BG
+		move.b	(RAM_VdpRegs+4).w,d1	; BG
 		andi.w	#%000111,d1
 		lsl.w	#8,d1
 		lsl.w	#5,d1
 		bsr	Video_Fill
 		move.w	#$FFF,d2		; WD Size
-		move.b	(RAM_VdpRegs+3).l,d1	; Window
+		move.b	(RAM_VdpRegs+3).w,d1	; Window
 		andi.w	#%111110,d1
 		lsl.w	#8,d1
 		lsl.w	#2,d1
@@ -379,7 +378,7 @@ Video_LoadMap:
 
 	; Check for double interlace
 		swap	d7
-		move.b	(RAM_VdpRegs+$C).l,d7
+		move.b	(RAM_VdpRegs+$C).w,d7
 		and.w	#%110,d7
 		cmp.w	#%110,d7
 		bne.s	.nodble
@@ -420,7 +419,7 @@ Video_LoadMap_Vert:
 		swap	d5
 		move.l	d4,-(sp)
 		move.w	d1,d7
-		btst	#2,(RAM_VdpRegs+$C).l
+		btst	#2,(RAM_VdpRegs+$C).w
 		beq.s	.yloop
 		lsr.w	#1,d7
 .yloop:
@@ -435,7 +434,7 @@ Video_LoadMap_Vert:
 .cont:
 		swap	d7
 		adda	#2,a0
-		btst	#2,(RAM_VdpRegs+$C).l
+		btst	#2,(RAM_VdpRegs+$C).w
 		beq.s	.nodble
 		adda	#2,a0
 		move.w	d5,d7
@@ -677,7 +676,7 @@ vid_PickLayer:
 		swap	d6
 		btst	#0,d6
 		beq.s	.plawnd
-		move.b	(RAM_VdpRegs+4).l,d4	; BG
+		move.b	(RAM_VdpRegs+4).w,d4	; BG
 		move.w	d4,d5
 		lsr.w	#1,d5
 		andi.w	#%11,d5
@@ -689,10 +688,10 @@ vid_PickLayer:
 		lsl.w	#5,d4
 		bra.s	.golyr
 .plawnd:
-		move.b	(RAM_VdpRegs+2).l,d4	; FG
+		move.b	(RAM_VdpRegs+2).w,d4	; FG
 		btst	#1,d6
 		beq.s	.nowd
-		move.b	(RAM_VdpRegs+3).l,d4	; WINDOW
+		move.b	(RAM_VdpRegs+3).w,d4	; WINDOW
 .nowd:
 		move.w	d4,d5
 		lsr.w	#4,d5
@@ -1159,9 +1158,6 @@ Video_Copy:
 ; ROM ***
 ; --------------------------------------------------------
 
-; TODO: MCD/MARSCD
-; Falta el word-patch
-
 Video_LoadArt:
 	if MCD|MARSCD
 		move.l	d0,d7
@@ -1170,9 +1166,9 @@ Video_LoadArt:
 		beq.s	.ram_range
 		move.l	d0,a0
 		move.w	(a0),d7
-		movem.w	d1/d7,-(sp)		; Save missing word
+		movem.w	d1/d7,-(sp)		; Save missing word (pos|data)
 		addi.l	#2,d0
-		subi.w	#1,d2
+		addi.w	#1,d2
 .ram_range:
 	endif
 		move.w	sr,-(sp)
@@ -1227,7 +1223,17 @@ Video_LoadArt:
 	if MCD|MARSCD
 		bsr	System_DmaExit_ROM
 		movem.w	(sp)+,d1/d7
-		; TODO
+		move.w	d1,d6
+		rol.w	#2,d6
+		andi.w	#%11,d6
+		swap	d6
+		move.w	d1,d6
+		andi.w	#$3FFF,d6
+		or.w	#$4000,d6
+		move.w	d6,(a4)
+		swap	d6
+		move.w	d6,(a4)
+		move.w	d7,-4(a4)	; vdp_data
 		rts
 	endif
 		bra	System_DmaExit_ROM
