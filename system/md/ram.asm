@@ -16,11 +16,17 @@ RAM_MdDreq		equ	RAM_MdOther
 ; --------------------------------------------------------
 
 ; Quick
-			struct $FFFF0000
+			struct $FF0000
 RAM_SystemCode		ds.b MAX_SysCode	;
 RAM_UserCode		ds.b MAX_UserCode	;
-; RAM_UserData		ds.b MAX_UserData	;
+RAM_ExSoundData		ds.b MAX_RamSndData	; non-Cartridge ONLY
+sizeof_thisram		ds.l 0
 			endstruct
+
+	if MCD|MARS|MARSCD
+			erreport "non-Cart code",sizeof_thisram,$FF8000
+	endif
+
 			struct $FFFF8000
 RAM_MdVideo		ds.b MAX_MdVideo	; $FF8000 DMA visuals
 RAM_MdSystem		ds.b MAX_MdSystem	;
@@ -29,7 +35,7 @@ RAM_MdGlobal		ds.b MAX_MdGlobal
 RAM_ScreenBuff		ds.b MAX_ScrnBuff
 sizeof_MdRam		ds.l 0
 			endstruct
-			report "MD RAM",(sizeof_MdRam-$FFFF0000),$FC00
+			report "MD RAM",(sizeof_MdRam-$FFFF8000),$FC00-$8000
 
 RAM_Stack		equ RAM_MegaCd		; <-- goes backwards
 RAM_MegaCd		equ $FFFFFD00

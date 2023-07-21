@@ -87,7 +87,7 @@ RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
 RAM_MdVBlkWait	ds.w 1
 sizeof_mdsys	ds.l 0
 		endstruct
-		report "MD SYSTEM RAM",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
+		erreport "MD SYSTEM RAM",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
 
 ; ====================================================================
 ; --------------------------------------------------------

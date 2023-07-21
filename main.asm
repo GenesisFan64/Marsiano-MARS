@@ -2,7 +2,7 @@
 ; +-----------------------------------------------------------------+
 ; MARSIANO ENGINE
 ;
-; A game engine for
+; A game engine that can be crossported to:
 ; Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico
 ; +-----------------------------------------------------------------+
 
@@ -19,16 +19,25 @@
 ; USER SETTINGS
 ; ----------------------------------------------------------------
 
-; RAM Sizes for Sega CD and Sega 32X
+; 68000 RAM SIZES
 ;
-; MAKE SURE IT DOESN'T REACH FC00 FOR CROSS-PORTING
-; TO SEGA-CD (And maybe SCD+32X)
+; MAX_SysCode and MAX_UserCode are used
+; in Sega CD, Sega 32X and Sega CD32X
+;
+; MAKE SURE IT DOESN'T REACH FFFC00
+; FOR CROSS-PORTING TO SEGA-CD
 
-MAX_SysCode	equ $1800	; ** CD/32X/CD32X
-MAX_UserCode	equ $3000	; ** CD/32X/CD32X
+; $FF0000-$FF7FFF
+MAX_SysCode	equ $1800	; ** CD/32X/CD32X ONLY
+MAX_UserCode	equ $3000	; ** CD/32X/CD32X ONLY
+MAX_RamSndData	equ $3000	; ** CD/32X/CD32X ONLY
+
+; $FF8000-$FFFC00(aprox.)
+; $FFFD00 is reserved for SegaCD/SegaCD32X, STACK a7 point
+; starts from here also.
 MAX_MdVideo	equ $2000	;
 MAX_MdSystem	equ $0500	;
-MAX_MdOther	equ $2000	; System specific stuff goes here
+MAX_MdOther	equ $2000	; System-specific stuff goes here
 MAX_MdGlobal	equ $0800	; USER Global variables
 MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 
@@ -38,7 +47,7 @@ MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 ; ----------------------------------------------------------------
 
 		include	"macros.asm"			; Assembler macros
-		include	"system/shared.asm"		; Shared Genesis/32X/32XCD variables
+		include	"system/shared.asm"		; Shared Genesis/32X/CD32X variables
 		include	"system/mcd/shared.asm"		; Shared Sega CD variables
 		include	"system/md/map.asm"		; Genesis hardware map
 		include	"system/mars/map.asm"		; 32X hardware map (SH2 area)
@@ -47,11 +56,11 @@ MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; Init
+; Init procedures
 ; ----------------------------------------------------------------
 
 ; ---------------------------------------------
-; 32X INIT
+; SEGA 32X
 ; ---------------------------------------------
 
 	if MARS
@@ -75,7 +84,7 @@ MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 		jmp	(Md_ReadModes).l
 
 ; ---------------------------------------------
-; SEGA CD and CD32X INIT
+; SEGA CD and CD32X
 ; ---------------------------------------------
 
 	elseif MCD|MARSCD
@@ -117,9 +126,9 @@ Gema_MasterList:	; TEMPORAL
 		dephase
 
 ; ---------------------------------------------
-; SEGA PICO INIT
+; SEGA PICO
 ;
-; Recycles the MD's routines.
+; This recycles the MD's routines.
 ; ---------------------------------------------
 	elseif PICO
 		include	"system/head_pico.asm"			; Pico header
@@ -130,7 +139,7 @@ Gema_MasterList:	; TEMPORAL
 		bra.w	Md_ReadModes
 
 ; ---------------------------------------------
-; MD INIT
+; MD
 ; ---------------------------------------------
 	else
 		include	"system/head_md.asm"			; Genesis header
@@ -145,10 +154,10 @@ Gema_MasterList:	; TEMPORAL
 
 ; ====================================================================
 ; --------------------------------------------------------
-; SYSTEM and JUMP codes
+; SYSTEM and SCREEN-JUMP codes
 ;
 ; MD and PICO: Normal ROM locations
-; CD/32X/32XCD: Loaded in RAM
+; CD/32X/CD32X: Loaded in RAM
 ; --------------------------------------------------------
 
 ; ---------------------------------------------
@@ -165,12 +174,12 @@ Md_SysCode:
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
 	if MARSCD
-		include "system/md/sub_dreq.asm"	; Will fail on hardware anyway.
+		include "system/md/sub_dreq.asm"	; TODO: This will fail on hardware anyway.
 	endif
 ; ---------------------------------------------
 	if MCD|MARS|MARSCD
 .end:
-		report "RAM TOP-CODE SUBS",(.end-RAM_SystemCode),MAX_SysCode
+		erreport "RAM TOP-CODE SUBS",(.end-RAM_SystemCode),MAX_SysCode
 		dephase
 	endif
 Md_SysCode_e:
@@ -242,7 +251,7 @@ Md_ReadModes:
 ; ---------------------------------------------
 	if MCD|MARS|MARSCD
 mdjumpcode_e:
-		report "RAM JUMP-CODE SUBS",(mdjumpcode_e-mdjumpcode_s),$180
+		erreport "RAM JUMP-CODE SUBS",(mdjumpcode_e-mdjumpcode_s),$180
 		dephase
 	endif
 Md_JumpCode_e:
@@ -250,21 +259,21 @@ Md_JumpCode_e:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; DREQ routine
+; SEGA 32X: DREQ routine(s)
 ; --------------------------------------------------------
 
 	if MARS
 		phase $880000+*
-		include "system/md/sub_dreq.asm"	; DREQ transfer only works on 880000
+		include "system/md/sub_dreq.asm"	; DREQ transfer only works on 880000/900000 areas
 	endif
 
 ; ===========================================================================
 ; ----------------------------------------------------------------
-; DATA, shared for ALL Cartridge and Disc
+; GAME DATA for ALL Cartridge and Disc
 ; ----------------------------------------------------------------
 
 ; --------------------------------------------------------
-; SEGA CD / SEGA 32XCD ISO header
+; SEGA CD / SEGA CD32X ISO header
 ; --------------------------------------------------------
 
 	if MCD|MARSCD
@@ -273,7 +282,7 @@ Md_JumpCode_e:
 		iso_setfs 0,IsoFileList,IsoFileList_e	; TWO COPIES
 		iso_setfs 1,IsoFileList,IsoFileList_e
 IsoFileList:	iso_file "MARSCODE.BIN",MARS_RAMDATA,MARS_RAMDATA_E
-		iso_file "WORDDATA.BIN",GFXDMA_WRAM,GFXDMA_WRAM_e
+		iso_file "WORDDATA.BIN",MCD_DBANK0,MCD_DBANK0_e
 		iso_file "SCREEN00.BIN",Md_Screen00,Md_Screen00_e
 		align $800
 IsoFileList_e:
@@ -285,7 +294,9 @@ IsoFileList_e:
 ; --------------------------------------------------------
 
 	if MCD|MARSCD
-		align $800	; Sector
+		align $800	; Sector align
+	else
+		align 2
 	endif
 Md_Screen00:
 	if MCD|MARS|MARSCD
@@ -304,7 +315,9 @@ Md_Screen00_e:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; SOUND Section (and DREQ...)
+; SOUND Section
+;
+; TODO: ver como cargo esto en Sega CD y Sega CD32X
 ; --------------------------------------------------------
 
 	if MCD|MARSCD=0
@@ -328,35 +341,45 @@ Z80_CODE_END:
 ; 68K DATA BANKs
 ;
 ; SEGA CD:
-; BANKS are limited to 256KB 2M or 128KB 1M/1M
-; ** CANNOT BE USED IF USING STAMPS **
+; BANKS are stored in WORD-RAM pieces
+; limited to 256KB 2M or 128KB 1M/1M
+; ** THESE CANNOT BE USED IF USING ASIC STAMPS **
 ;
 ; SEGA 32X:
 ; BANKS are limited to 1MB, only 4 banks can be used
 ; ----------------------------------------------------------------
 
 ; ---------------------------------------------
-;
+; BANK 0 DEFAULT
 ; ---------------------------------------------
 
-	if MCD|MARSCD
-		align $800
-	endif
-GFXDMA_WRAM:
+MCD_DBANK0:
 	if MARS
 		phase $900000+*				; ** Currently this one only.
 	elseif MCD|MARSCD
 		phase sysmcd_wram
 	endif
 
-MDBNK0_START:
+mdbank0:
 		include "game/data/md_bank0.asm"	; <-- 68K ONLY bank data
-MDBNK0_END:
+mdbank0_e:
 	if MARS
+; 		org $100000-4				; Fill this bank and
+; 		dc.b "BNK0"				; add a tag at the end
 		dephase
+	elseif MCD|MARSCD
+		include "game/data/md_dma.asm"		; SEGA CD / CD32X ONLY.
+mdbank0_cd_e:
+		dephase
+		align $800
+MCD_DBANK0_e:
 	endif
-; 		org $100000-4			; Fill this bank and
-; 		dc.b "BNK0"			; add a tag at the end
+
+	if MARS
+		report "68K DEFAULT BANK (900000)",mdbank0_e-mdbank0,$100000
+	elseif MCD|MARSCD
+		report "68K DEFAULT BANK (WORDRAM)",mdbank0_cd_e-mdbank0,$40000
+	endif
 
 ; ---------------------------------------------
 ; BANK 1
@@ -390,25 +413,11 @@ MDBNK0_END:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MD DMA data: Requires RV bit set to 1, BANK-free
+; 32X Cartridge DMA data: Requires RV bit set to 1, BANK-free
 ; ----------------------------------------------------------------
 
-; 	if MARS|MCD|MARSCD=0
-; 		dephase
-; 		align $8000
-; 	endif
+	if MCD|MARSCD=0
 		include "game/data/md_dma.asm"
-		align $800
-	if MCD|MARSCD
-		dephase
-	endif
-GFXDMA_WRAM_e:
-
-	if MARS
-		report "68K DEFAULT BANK (900000)",MDBNK0_END-MDBNK0_START,$100000
-	endif
-	if MCD|MARSCD
-		report "68K DEFAULT BANK (WORDRAM)",MDBNK0_END-MDBNK0_START,$40000
 	endif
 
 ; ====================================================================

@@ -77,9 +77,9 @@ RAM_MapY	ds.w 1
 	endif
 
 	; Shared:
-		lea	str_Stats(pc),a0
-		move.l	#locate(0,1,1),d0
-		bsr	Video_Print
+; 		lea	str_Stats(pc),a0
+; 		move.l	#locate(0,1,1),d0
+; 		bsr	Video_Print
 ; 	Set Fade-in settings
 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
 		move.b	#%10000001,(RAM_VdpRegs+$C).w		; H40 + shadow mode
@@ -105,7 +105,7 @@ RAM_MapY	ds.w 1
 		bsr	Video_RunFade
 
 		lea	str_Stats2(pc),a0
-		move.l	#locate(0,1,3),d0
+		move.l	#locate(0,1,1),d0
 		bsr	Video_Print
 
 		addi.l	#1,(RAM_Framecount).w
@@ -150,10 +150,10 @@ RAM_MapY	ds.w 1
 ; Small stuff goes here
 ; ------------------------------------------------------
 
-str_Stats:
-		dc.b "MARSIANO!",$A
-		dc.b 0
-		align 2
+; str_Stats:
+; 		dc.b "MARSIANO!",$A
+; 		dc.b 0
+; 		align 2
 
 str_Stats2:
 ; 	if MARS

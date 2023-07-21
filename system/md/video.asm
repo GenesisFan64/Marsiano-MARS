@@ -180,7 +180,7 @@ RAM_VdpRegs		ds.b 24			; VDP Register cache
 sizeof_mdvid		ds.l 0
 			endstruct
 
-			report "MD VIDEO RAM",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
+			erreport "MD VIDEO RAM",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
 
 ; ====================================================================
 ; --------------------------------------------------------

@@ -1,11 +1,11 @@
- AS V1.42 Beta [Bld 118] - source file main.asm - page 1 - 7/20/2023 19:28:40
+ AS V1.42 Beta [Bld 118] - source file main.asm - page 1 - 7/20/2023 23:16:34
 
 
        1/       0 :                     ; ===========================================================================
        2/       0 :                     ; +-----------------------------------------------------------------+
        3/       0 :                     ; MARSIANO ENGINE
        4/       0 :                     ;
-       5/       0 :                     ; A game engine for
+       5/       0 :                     ; A game engine that can be crossported to:
        6/       0 :                     ; Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico
        7/       0 :                     ; +-----------------------------------------------------------------+
        8/       0 :                     
@@ -22,25 +22,34 @@
       19/       0 :                     ; USER SETTINGS
       20/       0 :                     ; ----------------------------------------------------------------
       21/       0 :                     
-      22/       0 :                     ; RAM Sizes for Sega CD and Sega 32X
+      22/       0 :                     ; 68000 RAM SIZES
       23/       0 :                     ;
-      24/       0 :                     ; MAKE SURE IT DOESN'T REACH FC00 FOR CROSS-PORTING
-      25/       0 :                     ; TO SEGA-CD (And maybe SCD+32X)
-      26/       0 :                     
-      27/       0 : =$1800              MAX_SysCode	equ $1800	; ** CD/32X/CD32X
-      28/       0 : =$3000              MAX_UserCode	equ $3000	; ** CD/32X/CD32X
-      29/       0 : =$2000              MAX_MdVideo	equ $2000	;
-      30/       0 : =$500               MAX_MdSystem	equ $0500	;
-      31/       0 : =$2000              MAX_MdOther	equ $2000	; System specific stuff goes here
-      32/       0 : =$800               MAX_MdGlobal	equ $0800	; USER Global variables
-      33/       0 : =$2800              MAX_ScrnBuff	equ $2800	; RAM section for Current screen
+      24/       0 :                     ; MAX_SysCode and MAX_UserCode are used
+      25/       0 :                     ; in Sega CD, Sega 32X and Sega CD32X
+      26/       0 :                     ;
+      27/       0 :                     ; MAKE SURE IT DOESN'T REACH FFFC00
+      28/       0 :                     ; FOR CROSS-PORTING TO SEGA-CD
+      29/       0 :                     
+      30/       0 :                     ; $FF0000-$FF7FFF
+      31/       0 : =$1800              MAX_SysCode	equ $1800	; ** CD/32X/CD32X ONLY
+      32/       0 : =$3000              MAX_UserCode	equ $3000	; ** CD/32X/CD32X ONLY
+      33/       0 : =$3000              MAX_RamSndData	equ $3000	; ** CD/32X/CD32X ONLY
       34/       0 :                     
-      35/       0 :                     ; ====================================================================
-      36/       0 :                     ; ----------------------------------------------------------------
-      37/       0 :                     ; Includes
-      38/       0 :                     ; ----------------------------------------------------------------
-      39/       0 :                     
-      40/       0 :                     		include	"macros.asm"			; Assembler macros
+      35/       0 :                     ; $FF8000-$FFFC00(aprox.)
+      36/       0 :                     ; $FFFD00 is reserved for SegaCD/SegaCD32X, STACK a7 point
+      37/       0 :                     ; starts from here also.
+      38/       0 : =$2000              MAX_MdVideo	equ $2000	;
+      39/       0 : =$500               MAX_MdSystem	equ $0500	;
+      40/       0 : =$2000              MAX_MdOther	equ $2000	; System-specific stuff goes here
+      41/       0 : =$800               MAX_MdGlobal	equ $0800	; USER Global variables
+      42/       0 : =$2800              MAX_ScrnBuff	equ $2800	; RAM section for Current screen
+      43/       0 :                     
+      44/       0 :                     ; ====================================================================
+      45/       0 :                     ; ----------------------------------------------------------------
+      46/       0 :                     ; Includes
+      47/       0 :                     ; ----------------------------------------------------------------
+      48/       0 :                     
+      49/       0 :                     		include	"macros.asm"			; Assembler macros
 (1)    1/       0 :                     ; ===========================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; MACROS
@@ -225,10 +234,10 @@
 (1)  182/       0 :                     		endm
 (1)  183/       0 :                     
 (1)  184/       0 :                     
-      41/       0 :                     		include	"system/shared.asm"		; Shared Genesis/32X/32XCD variables
+      50/       0 :                     		include	"system/shared.asm"		; Shared Genesis/32X/CD32X variables
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
-(1)    3/       0 :                     ; MD/32X shared structs and values
+(1)    3/       0 :                     ; Shared internal structs
 (1)    4/       0 :                     ; ----------------------------------------------------------------
 (1)    5/       0 :                     
 (1)    6/       0 :                     ; ====================================================================
@@ -242,7 +251,7 @@
 (1)   14/       0 :                     
 (1)   15/       0 :                     ; ====================================================================
 (1)   16/       0 :                     ; ----------------------------------------------------------------
-(1)   17/       0 :                     ; MAIN DREQ-RAM control
+(1)   17/       0 :                     ; 32X MAIN DREQ-RAM control
 (1)   18/       0 :                     ;
 (1)   19/       0 :                     ; To read these labels:
 (1)   20/       0 :                     ;
@@ -251,32 +260,14 @@
 (1)   23/       0 :                     ; On the 32X Side:
 (1)   24/       0 :                     ; 	mov	#RAM_Mars_DreqRead+DREQ_LABEL,r1
 (1)   25/       0 :                     ;
-(1)   26/       0 :                     ; Call System_MarsUpdate DURING DISPLAY to transfer your
-(1)   27/       0 :                     ; changes.
+(1)   26/       0 :                     ; Call System_MarsUpdate DURING DISPLAY to
+(1)   27/       0 :                     ; transfer the changes.
 (1)   28/       0 :                     ; ----------------------------------------------------------------
 (1)   29/       0 :                     
 (1)   30/       0 :                     ; *** List MUST be aligned in 8bytes, end with 0 or 8 ***
 (1)   31/       0 :                     
-(1)   32/       0 :                     ; 	if MARS|MARSCD
-(1)   33/       0 : (MACRO)             		struct 0
-(1)   33/       0 : =$0                 GLBL_LASTPC     set *
-(1)   33/       0 :                                     dephase
-(1)   33/       0 : =$0                 GLBL_LASTORG    set *
-(1)   33/       0 :                                     phase 0
-(1)   34/       0 :                     Dreq_Palette	ds.w 256				; 256-color palette
-(1)   35/     200 :                     ; Dreq_BgExBuff	ds.b $80				; Buffer for current screen mode (NOTE: manual size)
-(1)   36/     200 :                     ; Dreq_ObjCam	ds.b sizeof_camera
-(1)   37/     200 :                     ; Dreq_Objects	ds.b sizeof_mdlobj*MAX_MODELS		; 3D Objects
-(1)   38/     200 :                     ; Dreq_SuperSpr	ds.b sizeof_marsspr*MAX_SUPERSPR	; Super sprites
-(1)   39/     200 :                     sizeof_dreq	ds.l 0
-(1)   40/     200 : (MACRO)             		endstruct
-(1)   40/       0 :                                     !org GLBL_LASTORG
-(1)   40/       0 :                                     phase GLBL_LASTPC
-(1)   41/       0 :                     
-(1)   45/       0 :                     
-(1)   46/       0 :                     ; 	endif
-(1)   47/       0 :                     
-      42/       0 :                     		include	"system/mcd/shared.asm"		; Shared Sega CD variables
+(1)   43/       0 :                     
+      51/       0 :                     		include	"system/mcd/shared.asm"		; Shared Sega CD variables
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; Sega CD shared constants
@@ -335,7 +326,7 @@
 (1)   56/       0 :                     
 (1)   57/       0 :                     ; =================================================================
 (1)   58/       0 :                     
-      43/       0 :                     		include	"system/md/map.asm"		; Genesis hardware map
+      52/       0 :                     		include	"system/md/map.asm"		; Genesis hardware map
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; Genesis / MegaDrive 68k map
@@ -389,7 +380,7 @@
 (1)   51/       0 :                     ; zvdp_ctrl	equ	$7F04		; video control port
 (1)   52/       0 : =$7F11              zpsg_ctrl	equ	$7F11		; PSG control
 (1)   53/       0 :                     
-      44/       0 :                     		include	"system/mars/map.asm"		; 32X hardware map (SH2 area)
+      53/       0 :                     		include	"system/mars/map.asm"		; 32X hardware map (SH2 area)
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; SH2 MAP
@@ -522,7 +513,7 @@
 (1)  130/       0 : =$FFFFFFB4          _DMAREQACK0	equ	$FFFFFFB4	; DMA request/ack select control 0
 (1)  131/       0 : =$FFFFFFB8          _DMAREQACK1	equ	$FFFFFFB8	; DMA request/ack select control 1
 (1)  132/       0 :                     
-      45/       0 :                     		include	"system/md/ram.asm"		; Genesis RAM sections
+      54/       0 :                     		include	"system/md/ram.asm"		; Genesis RAM sections
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; MD RAM
@@ -541,38 +532,41 @@
 (1)   16/       0 :                     ; --------------------------------------------------------
 (1)   17/       0 :                     
 (1)   18/       0 :                     ; Quick
-(1)   19/       0 : (MACRO)             			struct $FFFF0000
+(1)   19/       0 : (MACRO)             			struct $FF0000
 (1)   19/       0 : =$0                 GLBL_LASTPC     set *
 (1)   19/       0 :                                     dephase
 (1)   19/       0 : =$0                 GLBL_LASTORG    set *
-(1)   19/FFFFFFFFFFFF0000 :                                     phase $FFFF0000
-(1)   20/FFFFFFFFFFFF0000 :                     RAM_SystemCode		ds.b MAX_SysCode	;
-(1)   21/FFFFFFFFFFFF1800 :                     RAM_UserCode		ds.b MAX_UserCode	;
-(1)   22/FFFFFFFFFFFF4800 :                     ; RAM_UserData		ds.b MAX_UserData	;
-(1)   23/FFFFFFFFFFFF4800 : (MACRO)             			endstruct
-(1)   23/FFFFFFFFFFFF0000 :                                     !org GLBL_LASTORG
-(1)   23/       0 :                                     phase GLBL_LASTPC
-(1)   24/       0 : (MACRO)             			struct $FFFF8000
-(1)   24/       0 : =$0                 GLBL_LASTPC     set *
-(1)   24/       0 :                                     dephase
-(1)   24/       0 : =$0                 GLBL_LASTORG    set *
-(1)   24/FFFFFFFFFFFF8000 :                                     phase $FFFF8000
-(1)   25/FFFFFFFFFFFF8000 :                     RAM_MdVideo		ds.b MAX_MdVideo	; $FF8000 DMA visuals
-(1)   26/FFFFFFFFFFFFA000 :                     RAM_MdSystem		ds.b MAX_MdSystem	;
-(1)   27/FFFFFFFFFFFFA500 :                     RAM_MdOther		ds.b MAX_MdOther	; 32X's DREQ goes here
-(1)   28/FFFFFFFFFFFFC500 :                     RAM_MdGlobal		ds.b MAX_MdGlobal
-(1)   29/FFFFFFFFFFFFCD00 :                     RAM_ScreenBuff		ds.b MAX_ScrnBuff
-(1)   30/FFFFFFFFFFFFF500 :                     sizeof_MdRam		ds.l 0
-(1)   31/FFFFFFFFFFFFF500 : (MACRO)             			endstruct
-(1)   31/FFFFFFFFFFFF8000 :                                     !org GLBL_LASTORG
-(1)   31/       0 :                                     phase GLBL_LASTPC
-(1)   32/       0 : (MACRO)             			report "MD RAM",(sizeof_MdRam-$FFFF0000),$FC00
-(1)   33/       0 :                     
-(1)   34/       0 : =$FFFFFD00          RAM_Stack		equ RAM_MegaCd		; <-- goes backwards
-(1)   35/       0 : =$FFFFFD00          RAM_MegaCd		equ $FFFFFD00
-(1)   36/       0 : =$FFFFFE00          RAM_ScreenJump		equ $FFFFFE00;$FFFFFE80		; Screen change section
-(1)   37/       0 :                     
-      46/       0 :                     		include "game/global.asm"		; Global user variables on the Genesis side.
+(1)   19/  FF0000 :                                     phase $FF0000
+(1)   20/  FF0000 :                     RAM_SystemCode		ds.b MAX_SysCode	;
+(1)   21/  FF1800 :                     RAM_UserCode		ds.b MAX_UserCode	;
+(1)   22/  FF4800 :                     RAM_ExSoundData		ds.b MAX_RamSndData	; non-Cartridge ONLY
+(1)   23/  FF7800 :                     sizeof_thisram		ds.l 0
+(1)   24/  FF7800 : (MACRO)             			endstruct
+(1)   24/  FF0000 :                                     !org GLBL_LASTORG
+(1)   24/       0 :                                     phase GLBL_LASTPC
+(1)   25/       0 :                     
+(1)   29/       0 :                     
+(1)   30/       0 : (MACRO)             			struct $FFFF8000
+(1)   30/       0 : =$0                 GLBL_LASTPC     set *
+(1)   30/       0 :                                     dephase
+(1)   30/       0 : =$0                 GLBL_LASTORG    set *
+(1)   30/FFFFFFFFFFFF8000 :                                     phase $FFFF8000
+(1)   31/FFFFFFFFFFFF8000 :                     RAM_MdVideo		ds.b MAX_MdVideo	; $FF8000 DMA visuals
+(1)   32/FFFFFFFFFFFFA000 :                     RAM_MdSystem		ds.b MAX_MdSystem	;
+(1)   33/FFFFFFFFFFFFA500 :                     RAM_MdOther		ds.b MAX_MdOther	; 32X's DREQ goes here
+(1)   34/FFFFFFFFFFFFC500 :                     RAM_MdGlobal		ds.b MAX_MdGlobal
+(1)   35/FFFFFFFFFFFFCD00 :                     RAM_ScreenBuff		ds.b MAX_ScrnBuff
+(1)   36/FFFFFFFFFFFFF500 :                     sizeof_MdRam		ds.l 0
+(1)   37/FFFFFFFFFFFFF500 : (MACRO)             			endstruct
+(1)   37/FFFFFFFFFFFF8000 :                                     !org GLBL_LASTORG
+(1)   37/       0 :                                     phase GLBL_LASTPC
+(1)   38/       0 : (MACRO)             			report "MD RAM",(sizeof_MdRam-$FFFF8000),$FC00-$8000
+(1)   39/       0 :                     
+(1)   40/       0 : =$FFFFFD00          RAM_Stack		equ RAM_MegaCd		; <-- goes backwards
+(1)   41/       0 : =$FFFFFD00          RAM_MegaCd		equ $FFFFFD00
+(1)   42/       0 : =$FFFFFE00          RAM_ScreenJump		equ $FFFFFE00;$FFFFFE80		; Screen change section
+(1)   43/       0 :                     
+      55/       0 :                     		include "game/global.asm"		; Global user variables on the Genesis side.
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; Global RAM variables on the Genesis side
@@ -589,20 +583,20 @@
 (1)   10/FFFFFFFFFFFFC504 : (MACRO)             		endstruct
 (1)   10/FFFFFFFFFFFFC500 :                                     !org GLBL_LASTORG
 (1)   10/       0 :                                     phase GLBL_LASTPC
-(1)   11/       0 : (MACRO)             		report "68K GLOBALS",sizeof_mdglbl-RAM_MdGlobal,MAX_MdGlobal
+(1)   11/       0 : (MACRO)             		erreport "68K GLOBALS",sizeof_mdglbl-RAM_MdGlobal,MAX_MdGlobal
 (1)   12/       0 :                     
 (1)   13/       0 :                     
-      47/       0 :                     
-      48/       0 :                     ; ====================================================================
-      49/       0 :                     ; ----------------------------------------------------------------
-      50/       0 :                     ; Init
-      51/       0 :                     ; ----------------------------------------------------------------
-      52/       0 :                     
-      53/       0 :                     ; ---------------------------------------------
-      54/       0 :                     ; 32X INIT
-      55/       0 :                     ; ---------------------------------------------
       56/       0 :                     
-     125/       0 :                     		include	"system/head_pico.asm"			; Pico header
+      57/       0 :                     ; ====================================================================
+      58/       0 :                     ; ----------------------------------------------------------------
+      59/       0 :                     ; Init procedures
+      60/       0 :                     ; ----------------------------------------------------------------
+      61/       0 :                     
+      62/       0 :                     ; ---------------------------------------------
+      63/       0 :                     ; SEGA 32X
+      64/       0 :                     ; ---------------------------------------------
+      65/       0 :                     
+     134/       0 :                     		include	"system/head_pico.asm"			; Pico header
 (1)    1/       0 :                     ; ====================================================================
 (1)    2/       0 :                     ; ----------------------------------------------------------------
 (1)    3/       0 :                     ; PICO header
@@ -697,7 +691,7 @@
 (1)   79/     190 : 4A36 2020 2020 2020 		dc.b "J6              "
                     2020 2020 2020 2020 
 (1)   80/     1A0 : 0000 0000           		dc.l 0
-(1)   81/     1A4 : 0004 A000           		dc.l ROM_END
+(1)   81/     1A4 : 0004 9F00           		dc.l ROM_END
 (1)   82/     1A8 : 00FF 0000           		dc.l $FF0000
 (1)   83/     1AC : 00FF FFFF           		dc.l $FFFFFF
 (1)   84/     1B0 : 2020 2020           		dc.l $20202020		; dc.b "RA",$F8,$20
@@ -765,32 +759,32 @@
 (1)  145/     242 : 0807 0001           		btst	#1,d7
 (1)  146/     246 : 66F8                		bne.s	.wait_dma
 (1)  147/     248 :                     
-     126/     248 : 4EB9 0000 0264      		jsr	(Sound_init).l
-     127/     24E : 4EB9 0000 0360      		jsr	(Video_init).l
-     128/     254 : 4EB9 0000 0B24      		jsr	(System_Init).l
-     129/     25A : 31FC 0000 C500      		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
-     130/     260 : 6000 0D8A           		bra.w	Md_ReadModes
-     131/     264 :                     
-     132/     264 :                     ; ---------------------------------------------
-     133/     264 :                     ; MD INIT
-     134/     264 :                     ; ---------------------------------------------
-     145/     264 :                     
-     146/     264 :                     ; ====================================================================
-     147/     264 :                     ; --------------------------------------------------------
-     148/     264 :                     ; SYSTEM and JUMP codes
-     149/     264 :                     ;
-     150/     264 :                     ; MD and PICO: Normal ROM locations
-     151/     264 :                     ; CD/32X/32XCD: Loaded in RAM
-     152/     264 :                     ; --------------------------------------------------------
-     153/     264 :                     
-     154/     264 :                     ; ---------------------------------------------
-     155/     264 :                     ; TOP-RAM Genesis system routines
-     156/     264 :                     ; ---------------------------------------------
-     157/     264 :                     
-     158/     264 :                     Md_SysCode:
+     135/     248 : 4EB9 0000 0264      		jsr	(Sound_init).l
+     136/     24E : 4EB9 0000 0360      		jsr	(Video_init).l
+     137/     254 : 4EB9 0000 0B24      		jsr	(System_Init).l
+     138/     25A : 31FC 0000 C500      		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
+     139/     260 : 6000 0D8A           		bra.w	Md_ReadModes
+     140/     264 :                     
+     141/     264 :                     ; ---------------------------------------------
+     142/     264 :                     ; MD
+     143/     264 :                     ; ---------------------------------------------
+     154/     264 :                     
+     155/     264 :                     ; ====================================================================
+     156/     264 :                     ; --------------------------------------------------------
+     157/     264 :                     ; SYSTEM and SCREEN-JUMP codes
+     158/     264 :                     ;
+     159/     264 :                     ; MD and PICO: Normal ROM locations
+     160/     264 :                     ; CD/32X/CD32X: Loaded in RAM
+     161/     264 :                     ; --------------------------------------------------------
      162/     264 :                     
      163/     264 :                     ; ---------------------------------------------
-     164/     264 :                     		include	"sound/gema.asm"
+     164/     264 :                     ; TOP-RAM Genesis system routines
+     165/     264 :                     ; ---------------------------------------------
+     166/     264 :                     
+     167/     264 :                     Md_SysCode:
+     171/     264 :                     
+     172/     264 :                     ; ---------------------------------------------
+     173/     264 :                     		include	"sound/gema.asm"
 (1)    1/     264 :                     ; ====================================================================
 (1)    2/     264 :                     ; --------------------------------------------------------
 (1)    3/     264 :                     ; GEMA/Nikona sound driver v0.5
@@ -1107,7 +1101,7 @@
 (1)  407/     35A : 618E                		bsr	sndReq_sword
 (1)  408/     35C : 6000 FF60           		bra 	sndReq_Exit
 (1)  409/     360 :                     
-     165/     360 :                     		include	"system/md/video.asm"
+     174/     360 :                     		include	"system/md/video.asm"
 (1)    1/     360 :                     ; ====================================================================
 (1)    2/     360 :                     ; ----------------------------------------------------------------
 (1)    3/     360 :                     ; Genesis Video
@@ -1308,7 +1302,7 @@
 (1)  181/FFFFFFFFFFFF8000 :                                     !org GLBL_LASTORG
 (1)  181/     360 :                                     phase GLBL_LASTPC
 (1)  182/     360 :                     
-(1)  183/     360 : (MACRO)             			report "MD VIDEO RAM",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
+(1)  183/     360 : (MACRO)             			erreport "MD VIDEO RAM",sizeof_mdvid-RAM_MdVideo,MAX_MdVideo
 (1)  184/     360 :                     
 (1)  185/     360 :                     ; ====================================================================
 (1)  186/     360 :                     ; --------------------------------------------------------
@@ -3844,7 +3838,7 @@
 (1) 2781/     B22 :                     Video_MarsPalFade:
 (1) 2940/     B22 : 4E75                		rts
 (1) 2941/     B24 :                     
-     166/     B24 :                     		include	"system/md/system.asm"
+     175/     B24 :                     		include	"system/md/system.asm"
 (1)    1/     B24 :                     ; ====================================================================
 (1)    2/     B24 :                     ; ----------------------------------------------------------------
 (1)    3/     B24 :                     ; Genesis system routines
@@ -3946,7 +3940,7 @@
 (1)   89/FFFFFFFFFFFFA45C : (MACRO)             		endstruct
 (1)   89/FFFFFFFFFFFFA000 :                                     !org GLBL_LASTORG
 (1)   89/     B24 :                                     phase GLBL_LASTPC
-(1)   90/     B24 : (MACRO)             		report "MD SYSTEM RAM",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
+(1)   90/     B24 : (MACRO)             		erreport "MD SYSTEM RAM",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
 (1)   91/     B24 :                     
 (1)   92/     B24 :                     ; ====================================================================
 (1)   93/     B24 :                     ; --------------------------------------------------------
@@ -4611,75 +4605,76 @@
 (1)  823/     FEC :                     ; System data
 (1)  824/     FEC :                     ; ----------------------------------------------------------------
 (1)  825/     FEC :                     
-     170/     FEC :                     ; ---------------------------------------------
-     176/     FEC :                     Md_SysCode_e:
-     177/     FEC :                     		align 2
-     178/     FEC :                     
      179/     FEC :                     ; ---------------------------------------------
-     180/     FEC :                     ; JUMP code for switching screen modes
-     181/     FEC :                     ; ---------------------------------------------
-     182/     FEC :                     
-     183/     FEC :                     Md_JumpCode:
-     188/     FEC :                     
-     189/     FEC :                     ; ---------------------------------------------
-     190/     FEC :                     ; Read screen modes
-     191/     FEC :                     ;
-     192/     FEC :                     ; MD/PICO:
-     193/     FEC :                     ; Direct ROM jump
-     194/     FEC :                     ;
-     195/     FEC :                     ; SEGA 32X:
-     196/     FEC :                     ; 880000+ jump
-     197/     FEC :                     ;
-     198/     FEC :                     ; SEGACD/CD32X:
-     199/     FEC :                     ; Read file from disc, transfer to RAM or
-     200/     FEC :                     ; WordRAM and jump there.
-     201/     FEC :                     ; ---------------------------------------------
-     202/     FEC :                     
-     203/     FEC :                     Md_ReadModes:
-     204/     FEC : 7000                		moveq	#0,d0
-     205/     FEE : 3038 C500           		move.w	(RAM_Glbl_Scrn).w,d0
-     206/     FF2 : C07C 000F           		and.w	#%1111,d0		; <-- current limit
-     216/     FF6 : E548                		lsl.w	#2,d0			; *4
-     217/     FF8 : 203B 0008           		move.l	.pick_boot(pc,d0.w),d0
-     218/     FFC : 2040                		move.l	d0,a0
-     219/     FFE : 4E90                		jsr	(a0)
-     221/    1000 : 60EA                		bra.s	Md_ReadModes		; Loop on RTS
-     222/    1002 :                     
-     223/    1002 :                     .pick_boot:
-     224/    1002 :                     	; size $10
-     236/    1002 : 0000 1012           		dc.l Md_Screen00
-     237/    1006 : 0000 1012           		dc.l Md_Screen00
-     238/    100A : 0000 1012           		dc.l Md_Screen00
-     239/    100E : 0000 1012           		dc.l Md_Screen00
-     241/    1012 :                     
-     242/    1012 :                     ; ---------------------------------------------
-     248/    1012 :                     Md_JumpCode_e:
-     249/    1012 :                     		align 2
+     185/     FEC :                     Md_SysCode_e:
+     186/     FEC :                     		align 2
+     187/     FEC :                     
+     188/     FEC :                     ; ---------------------------------------------
+     189/     FEC :                     ; JUMP code for switching screen modes
+     190/     FEC :                     ; ---------------------------------------------
+     191/     FEC :                     
+     192/     FEC :                     Md_JumpCode:
+     197/     FEC :                     
+     198/     FEC :                     ; ---------------------------------------------
+     199/     FEC :                     ; Read screen modes
+     200/     FEC :                     ;
+     201/     FEC :                     ; MD/PICO:
+     202/     FEC :                     ; Direct ROM jump
+     203/     FEC :                     ;
+     204/     FEC :                     ; SEGA 32X:
+     205/     FEC :                     ; 880000+ jump
+     206/     FEC :                     ;
+     207/     FEC :                     ; SEGACD/CD32X:
+     208/     FEC :                     ; Read file from disc, transfer to RAM or
+     209/     FEC :                     ; WordRAM and jump there.
+     210/     FEC :                     ; ---------------------------------------------
+     211/     FEC :                     
+     212/     FEC :                     Md_ReadModes:
+     213/     FEC : 7000                		moveq	#0,d0
+     214/     FEE : 3038 C500           		move.w	(RAM_Glbl_Scrn).w,d0
+     215/     FF2 : C07C 000F           		and.w	#%1111,d0		; <-- current limit
+     225/     FF6 : E548                		lsl.w	#2,d0			; *4
+     226/     FF8 : 203B 0008           		move.l	.pick_boot(pc,d0.w),d0
+     227/     FFC : 2040                		move.l	d0,a0
+     228/     FFE : 4E90                		jsr	(a0)
+     230/    1000 : 60EA                		bra.s	Md_ReadModes		; Loop on RTS
+     231/    1002 :                     
+     232/    1002 :                     .pick_boot:
+     233/    1002 :                     	; size $10
+     245/    1002 : 0000 1012           		dc.l Md_Screen00
+     246/    1006 : 0000 1012           		dc.l Md_Screen00
+     247/    100A : 0000 1012           		dc.l Md_Screen00
+     248/    100E : 0000 1012           		dc.l Md_Screen00
      250/    1012 :                     
-     251/    1012 :                     ; ====================================================================
-     252/    1012 :                     ; --------------------------------------------------------
-     253/    1012 :                     ; DREQ routine
-     254/    1012 :                     ; --------------------------------------------------------
-     255/    1012 :                     
-     260/    1012 :                     
-     261/    1012 :                     ; ===========================================================================
-     262/    1012 :                     ; ----------------------------------------------------------------
-     263/    1012 :                     ; DATA, shared for ALL Cartridge and Disc
-     264/    1012 :                     ; ----------------------------------------------------------------
-     265/    1012 :                     
-     266/    1012 :                     ; --------------------------------------------------------
-     267/    1012 :                     ; SEGA CD / SEGA 32XCD ISO header
-     268/    1012 :                     ; --------------------------------------------------------
+     251/    1012 :                     ; ---------------------------------------------
+     257/    1012 :                     Md_JumpCode_e:
+     258/    1012 :                     		align 2
+     259/    1012 :                     
+     260/    1012 :                     ; ====================================================================
+     261/    1012 :                     ; --------------------------------------------------------
+     262/    1012 :                     ; SEGA 32X: DREQ routine(s)
+     263/    1012 :                     ; --------------------------------------------------------
+     264/    1012 :                     
      269/    1012 :                     
-     281/    1012 :                     
-     282/    1012 :                     ; ====================================================================
-     283/    1012 :                     ; --------------------------------------------------------
-     284/    1012 :                     ; Screen modes
-     285/    1012 :                     ; --------------------------------------------------------
-     286/    1012 :                     
-     290/    1012 :                     Md_Screen00:
-     294/    1012 :                     cscrn0_s:
-     295/    1012 :                     		include "game/screen_0.asm"
+     270/    1012 :                     ; ===========================================================================
+     271/    1012 :                     ; ----------------------------------------------------------------
+     272/    1012 :                     ; GAME DATA for ALL Cartridge and Disc
+     273/    1012 :                     ; ----------------------------------------------------------------
+     274/    1012 :                     
+     275/    1012 :                     ; --------------------------------------------------------
+     276/    1012 :                     ; SEGA CD / SEGA CD32X ISO header
+     277/    1012 :                     ; --------------------------------------------------------
+     278/    1012 :                     
+     290/    1012 :                     
+     291/    1012 :                     ; ====================================================================
+     292/    1012 :                     ; --------------------------------------------------------
+     293/    1012 :                     ; Screen modes
+     294/    1012 :                     ; --------------------------------------------------------
+     295/    1012 :                     
+     299/    1012 :                     		align 2
+     301/    1012 :                     Md_Screen00:
+     305/    1012 :                     cscrn0_s:
+     306/    1012 :                     		include "game/screen_0.asm"
 (1)    1/    1012 :                     ; ====================================================================
 (1)    2/    1012 :                     ; ----------------------------------------------------------------
 (1)    3/    1012 :                     ; 2D Part
@@ -4756,163 +4751,164 @@
 (1)   76/    108C : 6100 F6AA           		bsr	Video_FadePal
 (1)   78/    1090 :                     
 (1)   79/    1090 :                     	; Shared:
-(1)   80/    1090 : 41FA 00B8           		lea	str_Stats(pc),a0
-(1)   81/    1094 : 203C 0000 0101      		move.l	#locate(0,1,1),d0
-(1)   82/    109A : 6100 F4BC           		bsr	Video_Print
-(1)   83/    109E :                     ; 	Set Fade-in settings
-(1)   84/    109E : 08F9 0006 FFFF 99AF 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
-(1)   85/    10A6 : 11FC 0081 99BA      		move.b	#%10000001,(RAM_VdpRegs+$C).w		; H40 + shadow mode
-(1)   86/    10AC : 6100 F2E6           		bsr	Video_Update
-(1)   87/    10B0 : 31FC 0001 99A0      		move.w	#1,(RAM_FadeMdIncr).w
-(1)   88/    10B6 : 31FC 0002 99A8      		move.w	#2,(RAM_FadeMarsIncr).w
-(1)   89/    10BC : 31FC 0001 99A2      		move.w	#1,(RAM_FadeMdDelay).w
-(1)   90/    10C2 : 31FC 0000 99AA      		move.w	#0,(RAM_FadeMarsDelay).w
-(1)   91/    10C8 : 31FC 0001 999E      		move.w	#1,(RAM_FadeMdReq).w
-(1)   92/    10CE : 31FC 0001 99A6      		move.w	#1,(RAM_FadeMarsReq).w
-(1)   97/    10D4 :                     
-(1)   98/    10D4 :                     ; ====================================================================
-(1)   99/    10D4 :                     ; ------------------------------------------------------
-(1)  100/    10D4 :                     ; Loop
-(1)  101/    10D4 :                     ; ------------------------------------------------------
-(1)  102/    10D4 :                     
-(1)  103/    10D4 :                     .loop:
-(1)  104/    10D4 : 6100 FA84           		bsr	System_WaitFrame
-(1)  105/    10D8 : 6100 F64C           		bsr	Video_RunFade
-(1)  106/    10DC :                     
-(1)  107/    10DC : 41FA 0078           		lea	str_Stats2(pc),a0
-(1)  108/    10E0 : 203C 0000 0103      		move.l	#locate(0,1,3),d0
-(1)  109/    10E6 : 6100 F470           		bsr	Video_Print
-(1)  110/    10EA :                     
-(1)  111/    10EA : 06B8 0000 0001 8740 		addi.l	#1,(RAM_Framecount).w
-(1)  112/    10F2 : 60E0                		bra.s	.loop
-(1)  113/    10F4 :                     
-(1)  114/    10F4 :                     ; ====================================================================
-(1)  115/    10F4 :                     ; ----------------------------------------------
-(1)  116/    10F4 :                     ; common subs
-(1)  117/    10F4 :                     ; ----------------------------------------------
-(1)  118/    10F4 :                     
-(1)  119/    10F4 :                     .fade_in:
-(1)  120/    10F4 : 31FC 0001 999E      		move.w	#1,(RAM_FadeMdReq).w
-(1)  121/    10FA : 31FC 0001 99A6      		move.w	#1,(RAM_FadeMarsReq).w
-(1)  122/    1100 : 31FC 0001 99A0      		move.w	#1,(RAM_FadeMdIncr).w
-(1)  123/    1106 : 31FC 0001 99A8      		move.w	#1,(RAM_FadeMarsIncr).w
-(1)  124/    110C : 31FC 0004 99A2      		move.w	#4,(RAM_FadeMdDelay).w
-(1)  125/    1112 : 31FC 0000 99AA      		move.w	#0,(RAM_FadeMarsDelay).w
-(1)  126/    1118 : 6024                		bra.s	.loop2
-(1)  127/    111A :                     
-(1)  128/    111A :                     .fade_out:
-(1)  129/    111A : 31FC 0002 999E      		move.w	#2,(RAM_FadeMdReq).w
-(1)  130/    1120 : 31FC 0002 99A6      		move.w	#2,(RAM_FadeMarsReq).w
-(1)  131/    1126 : 31FC 0001 99A0      		move.w	#1,(RAM_FadeMdIncr).w
-(1)  132/    112C : 31FC 0001 99A8      		move.w	#1,(RAM_FadeMarsIncr).w
-(1)  133/    1132 : 31FC 0004 99A2      		move.w	#4,(RAM_FadeMdDelay).w
-(1)  134/    1138 : 31FC 0000 99AA      		move.w	#0,(RAM_FadeMarsDelay).w
-(1)  135/    113E :                     .loop2:
-(1)  136/    113E : 6100 FA1A           		bsr	System_WaitFrame
-(1)  137/    1142 : 6100 F5E2           		bsr	Video_RunFade
-(1)  138/    1146 : 66F6                		bne.s	.loop2
-(1)  139/    1148 : 4E75                		rts
-(1)  140/    114A :                     
-(1)  141/    114A :                     ; ====================================================================
-(1)  142/    114A :                     ; ------------------------------------------------------
-(1)  143/    114A :                     ; Subroutines
-(1)  144/    114A :                     ; ------------------------------------------------------
-(1)  145/    114A :                     
-(1)  146/    114A :                     ; ====================================================================
-(1)  147/    114A :                     ; ------------------------------------------------------
-(1)  148/    114A :                     ; DATA
-(1)  149/    114A :                     ;
-(1)  150/    114A :                     ; Small stuff goes here
-(1)  151/    114A :                     ; ------------------------------------------------------
-(1)  152/    114A :                     
-(1)  153/    114A :                     str_Stats:
-(1)  154/    114A : 4D41 5253 4941 4E4F 		dc.b "MARSIANO!",$A
-                    210A                
-(1)  155/    1154 : 00                  		dc.b 0
-(1)  156/    1155 :                     		align 2
-(1)  157/    1156 :                     
-(1)  158/    1156 :                     str_Stats2:
-(1)  159/    1156 :                     ; 	if MARS
-(1)  160/    1156 : 5C6C 0A0A           		dc.b "\\l",$A,$A
-(1)  161/    115A : 5C62 205C 6220 4344 		dc.b "\\b \\b CD RW/RD",$A,$A
+(1)   80/    1090 :                     ; 		lea	str_Stats(pc),a0
+(1)   81/    1090 :                     ; 		move.l	#locate(0,1,1),d0
+(1)   82/    1090 :                     ; 		bsr	Video_Print
+(1)   83/    1090 :                     ; 	Set Fade-in settings
+(1)   84/    1090 : 08F9 0006 FFFF 99AF 		bset	#bitDispEnbl,(RAM_VdpRegs+1).l
+(1)   85/    1098 : 11FC 0081 99BA      		move.b	#%10000001,(RAM_VdpRegs+$C).w		; H40 + shadow mode
+(1)   86/    109E : 6100 F2F4           		bsr	Video_Update
+(1)   87/    10A2 : 31FC 0001 99A0      		move.w	#1,(RAM_FadeMdIncr).w
+(1)   88/    10A8 : 31FC 0002 99A8      		move.w	#2,(RAM_FadeMarsIncr).w
+(1)   89/    10AE : 31FC 0001 99A2      		move.w	#1,(RAM_FadeMdDelay).w
+(1)   90/    10B4 : 31FC 0000 99AA      		move.w	#0,(RAM_FadeMarsDelay).w
+(1)   91/    10BA : 31FC 0001 999E      		move.w	#1,(RAM_FadeMdReq).w
+(1)   92/    10C0 : 31FC 0001 99A6      		move.w	#1,(RAM_FadeMarsReq).w
+(1)   97/    10C6 :                     
+(1)   98/    10C6 :                     ; ====================================================================
+(1)   99/    10C6 :                     ; ------------------------------------------------------
+(1)  100/    10C6 :                     ; Loop
+(1)  101/    10C6 :                     ; ------------------------------------------------------
+(1)  102/    10C6 :                     
+(1)  103/    10C6 :                     .loop:
+(1)  104/    10C6 : 6100 FA92           		bsr	System_WaitFrame
+(1)  105/    10CA : 6100 F65A           		bsr	Video_RunFade
+(1)  106/    10CE :                     
+(1)  107/    10CE : 41FA 006C           		lea	str_Stats2(pc),a0
+(1)  108/    10D2 : 203C 0000 0101      		move.l	#locate(0,1,1),d0
+(1)  109/    10D8 : 6100 F47E           		bsr	Video_Print
+(1)  110/    10DC :                     
+(1)  111/    10DC : 06B8 0000 0001 8740 		addi.l	#1,(RAM_Framecount).w
+(1)  112/    10E4 : 60E0                		bra.s	.loop
+(1)  113/    10E6 :                     
+(1)  114/    10E6 :                     ; ====================================================================
+(1)  115/    10E6 :                     ; ----------------------------------------------
+(1)  116/    10E6 :                     ; common subs
+(1)  117/    10E6 :                     ; ----------------------------------------------
+(1)  118/    10E6 :                     
+(1)  119/    10E6 :                     .fade_in:
+(1)  120/    10E6 : 31FC 0001 999E      		move.w	#1,(RAM_FadeMdReq).w
+(1)  121/    10EC : 31FC 0001 99A6      		move.w	#1,(RAM_FadeMarsReq).w
+(1)  122/    10F2 : 31FC 0001 99A0      		move.w	#1,(RAM_FadeMdIncr).w
+(1)  123/    10F8 : 31FC 0001 99A8      		move.w	#1,(RAM_FadeMarsIncr).w
+(1)  124/    10FE : 31FC 0004 99A2      		move.w	#4,(RAM_FadeMdDelay).w
+(1)  125/    1104 : 31FC 0000 99AA      		move.w	#0,(RAM_FadeMarsDelay).w
+(1)  126/    110A : 6024                		bra.s	.loop2
+(1)  127/    110C :                     
+(1)  128/    110C :                     .fade_out:
+(1)  129/    110C : 31FC 0002 999E      		move.w	#2,(RAM_FadeMdReq).w
+(1)  130/    1112 : 31FC 0002 99A6      		move.w	#2,(RAM_FadeMarsReq).w
+(1)  131/    1118 : 31FC 0001 99A0      		move.w	#1,(RAM_FadeMdIncr).w
+(1)  132/    111E : 31FC 0001 99A8      		move.w	#1,(RAM_FadeMarsIncr).w
+(1)  133/    1124 : 31FC 0004 99A2      		move.w	#4,(RAM_FadeMdDelay).w
+(1)  134/    112A : 31FC 0000 99AA      		move.w	#0,(RAM_FadeMarsDelay).w
+(1)  135/    1130 :                     .loop2:
+(1)  136/    1130 : 6100 FA28           		bsr	System_WaitFrame
+(1)  137/    1134 : 6100 F5F0           		bsr	Video_RunFade
+(1)  138/    1138 : 66F6                		bne.s	.loop2
+(1)  139/    113A : 4E75                		rts
+(1)  140/    113C :                     
+(1)  141/    113C :                     ; ====================================================================
+(1)  142/    113C :                     ; ------------------------------------------------------
+(1)  143/    113C :                     ; Subroutines
+(1)  144/    113C :                     ; ------------------------------------------------------
+(1)  145/    113C :                     
+(1)  146/    113C :                     ; ====================================================================
+(1)  147/    113C :                     ; ------------------------------------------------------
+(1)  148/    113C :                     ; DATA
+(1)  149/    113C :                     ;
+(1)  150/    113C :                     ; Small stuff goes here
+(1)  151/    113C :                     ; ------------------------------------------------------
+(1)  152/    113C :                     
+(1)  153/    113C :                     ; str_Stats:
+(1)  154/    113C :                     ; 		dc.b "MARSIANO!",$A
+(1)  155/    113C :                     ; 		dc.b 0
+(1)  156/    113C :                     ; 		align 2
+(1)  157/    113C :                     
+(1)  158/    113C :                     str_Stats2:
+(1)  159/    113C :                     ; 	if MARS
+(1)  160/    113C : 5C6C 0A0A           		dc.b "\\l",$A,$A
+(1)  161/    1140 : 5C62 205C 6220 4344 		dc.b "\\b \\b CD RW/RD",$A,$A
                     2052 572F 5244 0A0A 
-(1)  162/    116A : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w CD RW",$A
+(1)  162/    1150 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w CD RW",$A
                     205C 7720 4344 2052 
                     570A                
-(1)  163/    117C : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A,$A
+(1)  163/    1162 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A,$A
                     205C 770A 0A        
-(1)  164/    1189 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w CD RD",$A
+(1)  164/    116F : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w CD RD",$A
                     205C 7720 4344 2052 
                     440A                
-(1)  165/    119B : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A
+(1)  165/    1181 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A
                     205C 770A           
-(1)  166/    11A7 : 0A                  		dc.b $A
-(1)  167/    11A8 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w MARS",$A
+(1)  166/    118D : 0A                  		dc.b $A
+(1)  167/    118E : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w MARS",$A
                     205C 7720 4D41 5253 
                     0A                  
-(1)  168/    11B9 : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A
+(1)  168/    119F : 5C77 205C 7720 5C77 		dc.b "\\w \\w \\w \\w",$A
                     205C 770A           
-(1)  169/    11C5 : 00                  		dc.b 0
-(1)  170/    11C6 :                     ; ; 	else
-(1)  171/    11C6 :                     ; 		dc.b "\\l",0
-(1)  172/    11C6 :                     ; 	endif
-(1)  173/    11C6 : FFFF 8740           		dc.l RAM_Framecount
-(1)  174/    11CA :                     ; 	if MARS
-(1)  175/    11CA : 00A1 200E           		dc.l sysmcd_reg+mcd_comm_m
-(1)  176/    11CE : 00A1 200F           		dc.l sysmcd_reg+mcd_comm_s
-(1)  177/    11D2 :                     
-(1)  178/    11D2 : 00A1 2010           		dc.l sysmcd_reg+mcd_dcomm_m
-(1)  179/    11D6 : 00A1 2012           		dc.l sysmcd_reg+mcd_dcomm_m+2
-(1)  180/    11DA : 00A1 2014           		dc.l sysmcd_reg+mcd_dcomm_m+4
-(1)  181/    11DE : 00A1 2016           		dc.l sysmcd_reg+mcd_dcomm_m+6
-(1)  182/    11E2 : 00A1 2018           		dc.l sysmcd_reg+mcd_dcomm_m+8
-(1)  183/    11E6 : 00A1 201A           		dc.l sysmcd_reg+mcd_dcomm_m+10
-(1)  184/    11EA : 00A1 201C           		dc.l sysmcd_reg+mcd_dcomm_m+12
-(1)  185/    11EE : 00A1 201E           		dc.l sysmcd_reg+mcd_dcomm_m+14
-(1)  186/    11F2 : 00A1 2020           		dc.l sysmcd_reg+mcd_dcomm_s
-(1)  187/    11F6 : 00A1 2022           		dc.l sysmcd_reg+mcd_dcomm_s+2
-(1)  188/    11FA : 00A1 2024           		dc.l sysmcd_reg+mcd_dcomm_s+4
-(1)  189/    11FE : 00A1 2026           		dc.l sysmcd_reg+mcd_dcomm_s+6
-(1)  190/    1202 : 00A1 2028           		dc.l sysmcd_reg+mcd_dcomm_s+8
-(1)  191/    1206 : 00A1 202A           		dc.l sysmcd_reg+mcd_dcomm_s+10
-(1)  192/    120A : 00A1 202C           		dc.l sysmcd_reg+mcd_dcomm_s+12
-(1)  193/    120E : 00A1 202E           		dc.l sysmcd_reg+mcd_dcomm_s+14
-(1)  194/    1212 :                     
-(1)  195/    1212 : 00A1 5120           		dc.l sysmars_reg+comm0
-(1)  196/    1216 : 00A1 5122           		dc.l sysmars_reg+comm2
-(1)  197/    121A : 00A1 5124           		dc.l sysmars_reg+comm4
-(1)  198/    121E : 00A1 5126           		dc.l sysmars_reg+comm6
-(1)  199/    1222 : 00A1 5128           		dc.l sysmars_reg+comm8
-(1)  200/    1226 : 00A1 512A           		dc.l sysmars_reg+comm10
-(1)  201/    122A : 00A1 512C           		dc.l sysmars_reg+comm12
-(1)  202/    122E : 00A1 512E           		dc.l sysmars_reg+comm14
-(1)  203/    1232 :                     		align 2
-(1)  204/    1232 :                     
-(1)  205/    1232 :                     ; ====================================================================
-(1)  206/    1232 :                     
-(1)  207/    1232 :                     
-     296/    1232 :                     cscrn0_e:
-     303/    1232 :                     Md_Screen00_e:
-     304/    1232 :                     
-     305/    1232 :                     ; ====================================================================
-     306/    1232 :                     ; --------------------------------------------------------
-     307/    1232 :                     ; SOUND Section (and DREQ...)
-     308/    1232 :                     ; --------------------------------------------------------
-     309/    1232 :                     
-     311/    1232 :                     		align 4
-     315/    1234 :                     Z80_CODE:	include "sound/gema_zdrv.asm"		; Called once
-(1)    1/    1234 :                     ; ====================================================================
-(1)    2/    1234 :                     ; --------------------------------------------------------
-(1)    3/    1234 :                     ; GEMA/Nikona Z80 code v0.5
-(1)    4/    1234 :                     ; (C)2023 GenesisFan64
-(1)    5/    1234 :                     ;
-(1)    6/    1234 :                     ; TIP:
-(1)    7/    1234 :                     ; For the 32X place this code on the 880000 area
-(1)    8/    1234 :                     ; as this is only loaded once.
-(1)    9/    1234 :                     ; --------------------------------------------------------
-(1)   10/    1234 :                     
-(1)   11/    1234 :                     Z80_TOP:
-(1)   12/    1234 :                     		cpu Z80		; [AS] Enter Z80
+(1)  169/    11AB : 00                  		dc.b 0
+(1)  170/    11AC :                     ; ; 	else
+(1)  171/    11AC :                     ; 		dc.b "\\l",0
+(1)  172/    11AC :                     ; 	endif
+(1)  173/    11AC : FFFF 8740           		dc.l RAM_Framecount
+(1)  174/    11B0 :                     ; 	if MARS
+(1)  175/    11B0 : 00A1 200E           		dc.l sysmcd_reg+mcd_comm_m
+(1)  176/    11B4 : 00A1 200F           		dc.l sysmcd_reg+mcd_comm_s
+(1)  177/    11B8 :                     
+(1)  178/    11B8 : 00A1 2010           		dc.l sysmcd_reg+mcd_dcomm_m
+(1)  179/    11BC : 00A1 2012           		dc.l sysmcd_reg+mcd_dcomm_m+2
+(1)  180/    11C0 : 00A1 2014           		dc.l sysmcd_reg+mcd_dcomm_m+4
+(1)  181/    11C4 : 00A1 2016           		dc.l sysmcd_reg+mcd_dcomm_m+6
+(1)  182/    11C8 : 00A1 2018           		dc.l sysmcd_reg+mcd_dcomm_m+8
+(1)  183/    11CC : 00A1 201A           		dc.l sysmcd_reg+mcd_dcomm_m+10
+(1)  184/    11D0 : 00A1 201C           		dc.l sysmcd_reg+mcd_dcomm_m+12
+(1)  185/    11D4 : 00A1 201E           		dc.l sysmcd_reg+mcd_dcomm_m+14
+(1)  186/    11D8 : 00A1 2020           		dc.l sysmcd_reg+mcd_dcomm_s
+(1)  187/    11DC : 00A1 2022           		dc.l sysmcd_reg+mcd_dcomm_s+2
+(1)  188/    11E0 : 00A1 2024           		dc.l sysmcd_reg+mcd_dcomm_s+4
+(1)  189/    11E4 : 00A1 2026           		dc.l sysmcd_reg+mcd_dcomm_s+6
+(1)  190/    11E8 : 00A1 2028           		dc.l sysmcd_reg+mcd_dcomm_s+8
+(1)  191/    11EC : 00A1 202A           		dc.l sysmcd_reg+mcd_dcomm_s+10
+(1)  192/    11F0 : 00A1 202C           		dc.l sysmcd_reg+mcd_dcomm_s+12
+(1)  193/    11F4 : 00A1 202E           		dc.l sysmcd_reg+mcd_dcomm_s+14
+(1)  194/    11F8 :                     
+(1)  195/    11F8 : 00A1 5120           		dc.l sysmars_reg+comm0
+(1)  196/    11FC : 00A1 5122           		dc.l sysmars_reg+comm2
+(1)  197/    1200 : 00A1 5124           		dc.l sysmars_reg+comm4
+(1)  198/    1204 : 00A1 5126           		dc.l sysmars_reg+comm6
+(1)  199/    1208 : 00A1 5128           		dc.l sysmars_reg+comm8
+(1)  200/    120C : 00A1 512A           		dc.l sysmars_reg+comm10
+(1)  201/    1210 : 00A1 512C           		dc.l sysmars_reg+comm12
+(1)  202/    1214 : 00A1 512E           		dc.l sysmars_reg+comm14
+(1)  203/    1218 :                     		align 2
+(1)  204/    1218 :                     
+(1)  205/    1218 :                     ; ====================================================================
+(1)  206/    1218 :                     
+(1)  207/    1218 :                     
+     307/    1218 :                     cscrn0_e:
+     314/    1218 :                     Md_Screen00_e:
+     315/    1218 :                     
+     316/    1218 :                     ; ====================================================================
+     317/    1218 :                     ; --------------------------------------------------------
+     318/    1218 :                     ; SOUND Section
+     319/    1218 :                     ;
+     320/    1218 :                     ; TODO: ver como cargo esto en Sega CD y Sega CD32X
+     321/    1218 :                     ; --------------------------------------------------------
+     322/    1218 :                     
+     324/    1218 :                     		align 4
+     328/    1218 :                     Z80_CODE:	include "sound/gema_zdrv.asm"		; Called once
+(1)    1/    1218 :                     ; ====================================================================
+(1)    2/    1218 :                     ; --------------------------------------------------------
+(1)    3/    1218 :                     ; GEMA/Nikona Z80 code v0.5
+(1)    4/    1218 :                     ; (C)2023 GenesisFan64
+(1)    5/    1218 :                     ;
+(1)    6/    1218 :                     ; TIP:
+(1)    7/    1218 :                     ; For the 32X place this code on the 880000 area
+(1)    8/    1218 :                     ; as this is only loaded once.
+(1)    9/    1218 :                     ; --------------------------------------------------------
+(1)   10/    1218 :                     
+(1)   11/    1218 :                     Z80_TOP:
+(1)   12/    1218 :                     		cpu Z80		; [AS] Enter Z80
 (1)   13/       0 :                     		phase 0		; [AS]
 (1)   14/       0 : (MACRO)             		org 0
 (1)   15/       0 :                     
@@ -9280,115 +9276,115 @@
 (1) 4110/    1F00 :                     
 (1) 4111/    1F00 :                     		cpu 68000	; [AS] Exit Z80
 (1) 4112/    1F00 :                     		padding off	; [AS] NO padding (again)
-(1) 4113/    3134 :                     		phase Z80_TOP+*	; [AS] Relocate PC
-(1) 4114/    3134 :                     		align 2		; [AS] Align by 2
-(1) 4115/    3134 :                     
-     316/    3134 :                     Z80_CODE_END:
-     317/    3134 :                     		include "sound/tracks.asm"		; GEMA: Track data
-(1)    1/    3134 :                     ; ================================================================
-(1)    2/    3134 :                     ; ------------------------------------------------------------
-(1)    3/    3134 :                     ; DATA SECTION
-(1)    4/    3134 :                     ;
-(1)    5/    3134 :                     ; SOUND
-(1)    6/    3134 :                     ; ------------------------------------------------------------
-(1)    7/    3134 :                     
-(1)    8/    3134 :                     ; ticks - %gttttttt
-(1)    9/    3134 :                     ;   loc - 68k pointer
-(1)   10/    3134 :                     ;
-(1)   11/    3134 :                     ; t-Ticks
-(1)   12/    3134 :                     ; g-Use global tempo
-(1)   13/    3134 :                     gemaTrk macro ticks,loc
-(1)   14/    3134 :                     	dc.l ((ticks&$FF)<<24)|loc
-(1)   15/    3134 :                     	endm
-(1)   16/    3134 :                     
-(1)   17/    3134 :                     ; gemaHead
-(1)   18/    3134 :                     ; block point, patt point, ins point
-(1)   19/    3134 :                     ; numof_blocks,numof_patts,numof_ins
-(1)   20/    3134 :                     gemaHead macro blk,pat,ins
-(1)   21/    3134 :                     	dc.l blk
-(1)   22/    3134 :                     	dc.l pat
-(1)   23/    3134 :                     	dc.l ins
-(1)   24/    3134 :                     	endm
-(1)   25/    3134 :                     
-(1)   26/    3134 :                     ; Instrument macros
-(1)   27/    3134 :                     ; do note that some 24-bit pointers add 90h to the MSB automaticly.
-(1)   28/    3134 :                     gInsNull macro
-(1)   29/    3134 :                     	dc.b $00,$00,$00,$00
-(1)   30/    3134 :                     	dc.b $00,$00,$00,$00
-(1)   31/    3134 :                     	endm
-(1)   32/    3134 :                     
-(1)   33/    3134 :                     ; alv: attack level
-(1)   34/    3134 :                     ; atk: attack rate
-(1)   35/    3134 :                     ; slv: sustain
-(1)   36/    3134 :                     ; dky: decay rate (up)
-(1)   37/    3134 :                     ; rrt: release rate (down)
-(1)   38/    3134 :                     ; vib: (TODO)
-(1)   39/    3134 :                     gInsPsg	macro pitch,alv,atk,slv,dky,rrt,vib
-(1)   40/    3134 :                     	dc.b $80,pitch,alv,atk
-(1)   41/    3134 :                     	dc.b slv,dky,rrt,vib
-(1)   42/    3134 :                     	endm
-(1)   43/    3134 :                     
-(1)   44/    3134 :                     ; same args as gInsPsg
-(1)   45/    3134 :                     ; only one more argument for the noise type:
-(1)   46/    3134 :                     ; mode: noise mode
-(1)   47/    3134 :                     ;       %tmm
-(1)   48/    3134 :                     ;        t  - Bass(0)|Noise(1)
-(1)   49/    3134 :                     ;         mm- Clock(0)|Clock/2(1)|Clock/4(2)|Tone3(3)
-(1)   50/    3134 :                     ;
-(1)   51/    3134 :                     gInsPsgN macro pitch,alv,atk,slv,dky,rrt,vib,mode
-(1)   52/    3134 :                     	dc.b $90|mode,pitch,alv,atk
-(1)   53/    3134 :                     	dc.b slv,dky,rrt,vib
-(1)   54/    3134 :                     	endm
-(1)   55/    3134 :                     
-(1)   56/    3134 :                     ; 24-bit ROM pointer to FM patch data
-(1)   57/    3134 :                     gInsFm macro pitch,fmins
-(1)   58/    3134 :                     	dc.b $A0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
-(1)   59/    3134 :                     	dc.b fmins&$FF,$00,$00,$00
-(1)   60/    3134 :                     	endm
-(1)   61/    3134 :                     
-(1)   62/    3134 :                     ; Same args as gInsFm, but the last 4 words of the data
-(1)   63/    3134 :                     ; are the custom freqs for each operator in this order:
-(1)   64/    3134 :                     ; OP1 OP2 OP3 OP4
-(1)   65/    3134 :                     ;
-(1)   66/    3134 :                     ; NOTE: pitch is useless here...
-(1)   67/    3134 :                     gInsFm3	macro pitch,fmins
-(1)   68/    3134 :                     	dc.b $B0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
-(1)   69/    3134 :                     	dc.b fmins&$FF,$00,$00,$00
-(1)   70/    3134 :                     	endm
-(1)   71/    3134 :                     
-(1)   72/    3134 :                     ; start: Pointer to sample data:
-(1)   73/    3134 :                     ;        dc.b end,end,end	; 24-bit LENGTH of the sample
-(1)   74/    3134 :                     ;        dc.b loop,loop,loop	; 24-bit Loop point
-(1)   75/    3134 :                     ;        dc.b (sound data)	; <-- Then the actual sound data
-(1)   76/    3134 :                     ;
-(1)   77/    3134 :                     ; flags: $00 - No Loop
-(1)   78/    3134 :                     ; 	 $01 - Loop
-(1)   79/    3134 :                     gInsDac	macro pitch,start,flags
-(1)   80/    3134 :                     	dc.b $C0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
-(1)   81/    3134 :                     	dc.b start&$FF,0,0,0
-(1)   82/    3134 :                     	endm
-(1)   83/    3134 :                     
-(1)   84/    3134 :                     ; start: Pointer to sample data:
-(1)   85/    3134 :                     ;        dc.b end,end,end	; 24-bit LENGTH of the sample
-(1)   86/    3134 :                     ;        dc.b loop,loop,loop	; 24-bit Loop point
-(1)   87/    3134 :                     ;        dc.b (data)		; Then the actual sound data
-(1)   88/    3134 :                     ;
-(1)   89/    3134 :                     ; flags: %00SL
-(1)   90/    3134 :                     ;            L - Loop sample No/Yes
-(1)   91/    3134 :                     ;           S  - Sample data is on STEREO
-(1)   92/    3134 :                     gInsPwm	macro pitch,start,flags
-(1)   93/    3134 :                      if MARS
-(1)   94/    3134 :                     	dc.b $D0|flags,pitch,((start>>24)&$FF),((start>>16)&$FF)
-(1)   95/    3134 :                     	dc.b ((start>>8)&$FF),start&$FF,0,0
-(1)   96/    3134 :                      else
-(1)   97/    3134 :                     	dc.b $00,$00,$00,$00
-(1)   98/    3134 :                     	dc.b $00,$00,$00,$00
-(1)   99/    3134 :                      endif
-(1)  100/    3134 :                     	endm
-(1)  101/    3134 :                     
-(1)  102/    3134 :                     ; ------------------------------------------------------------
-(1)  103/    3134 :                     
-(1)  104/    3134 :                     	align $8000
+(1) 4113/    3118 :                     		phase Z80_TOP+*	; [AS] Relocate PC
+(1) 4114/    3118 :                     		align 2		; [AS] Align by 2
+(1) 4115/    3118 :                     
+     329/    3118 :                     Z80_CODE_END:
+     330/    3118 :                     		include "sound/tracks.asm"		; GEMA: Track data
+(1)    1/    3118 :                     ; ================================================================
+(1)    2/    3118 :                     ; ------------------------------------------------------------
+(1)    3/    3118 :                     ; DATA SECTION
+(1)    4/    3118 :                     ;
+(1)    5/    3118 :                     ; SOUND
+(1)    6/    3118 :                     ; ------------------------------------------------------------
+(1)    7/    3118 :                     
+(1)    8/    3118 :                     ; ticks - %gttttttt
+(1)    9/    3118 :                     ;   loc - 68k pointer
+(1)   10/    3118 :                     ;
+(1)   11/    3118 :                     ; t-Ticks
+(1)   12/    3118 :                     ; g-Use global tempo
+(1)   13/    3118 :                     gemaTrk macro ticks,loc
+(1)   14/    3118 :                     	dc.l ((ticks&$FF)<<24)|loc
+(1)   15/    3118 :                     	endm
+(1)   16/    3118 :                     
+(1)   17/    3118 :                     ; gemaHead
+(1)   18/    3118 :                     ; block point, patt point, ins point
+(1)   19/    3118 :                     ; numof_blocks,numof_patts,numof_ins
+(1)   20/    3118 :                     gemaHead macro blk,pat,ins
+(1)   21/    3118 :                     	dc.l blk
+(1)   22/    3118 :                     	dc.l pat
+(1)   23/    3118 :                     	dc.l ins
+(1)   24/    3118 :                     	endm
+(1)   25/    3118 :                     
+(1)   26/    3118 :                     ; Instrument macros
+(1)   27/    3118 :                     ; do note that some 24-bit pointers add 90h to the MSB automaticly.
+(1)   28/    3118 :                     gInsNull macro
+(1)   29/    3118 :                     	dc.b $00,$00,$00,$00
+(1)   30/    3118 :                     	dc.b $00,$00,$00,$00
+(1)   31/    3118 :                     	endm
+(1)   32/    3118 :                     
+(1)   33/    3118 :                     ; alv: attack level
+(1)   34/    3118 :                     ; atk: attack rate
+(1)   35/    3118 :                     ; slv: sustain
+(1)   36/    3118 :                     ; dky: decay rate (up)
+(1)   37/    3118 :                     ; rrt: release rate (down)
+(1)   38/    3118 :                     ; vib: (TODO)
+(1)   39/    3118 :                     gInsPsg	macro pitch,alv,atk,slv,dky,rrt,vib
+(1)   40/    3118 :                     	dc.b $80,pitch,alv,atk
+(1)   41/    3118 :                     	dc.b slv,dky,rrt,vib
+(1)   42/    3118 :                     	endm
+(1)   43/    3118 :                     
+(1)   44/    3118 :                     ; same args as gInsPsg
+(1)   45/    3118 :                     ; only one more argument for the noise type:
+(1)   46/    3118 :                     ; mode: noise mode
+(1)   47/    3118 :                     ;       %tmm
+(1)   48/    3118 :                     ;        t  - Bass(0)|Noise(1)
+(1)   49/    3118 :                     ;         mm- Clock(0)|Clock/2(1)|Clock/4(2)|Tone3(3)
+(1)   50/    3118 :                     ;
+(1)   51/    3118 :                     gInsPsgN macro pitch,alv,atk,slv,dky,rrt,vib,mode
+(1)   52/    3118 :                     	dc.b $90|mode,pitch,alv,atk
+(1)   53/    3118 :                     	dc.b slv,dky,rrt,vib
+(1)   54/    3118 :                     	endm
+(1)   55/    3118 :                     
+(1)   56/    3118 :                     ; 24-bit ROM pointer to FM patch data
+(1)   57/    3118 :                     gInsFm macro pitch,fmins
+(1)   58/    3118 :                     	dc.b $A0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+(1)   59/    3118 :                     	dc.b fmins&$FF,$00,$00,$00
+(1)   60/    3118 :                     	endm
+(1)   61/    3118 :                     
+(1)   62/    3118 :                     ; Same args as gInsFm, but the last 4 words of the data
+(1)   63/    3118 :                     ; are the custom freqs for each operator in this order:
+(1)   64/    3118 :                     ; OP1 OP2 OP3 OP4
+(1)   65/    3118 :                     ;
+(1)   66/    3118 :                     ; NOTE: pitch is useless here...
+(1)   67/    3118 :                     gInsFm3	macro pitch,fmins
+(1)   68/    3118 :                     	dc.b $B0,pitch,((fmins>>16)&$FF),((fmins>>8)&$FF)
+(1)   69/    3118 :                     	dc.b fmins&$FF,$00,$00,$00
+(1)   70/    3118 :                     	endm
+(1)   71/    3118 :                     
+(1)   72/    3118 :                     ; start: Pointer to sample data:
+(1)   73/    3118 :                     ;        dc.b end,end,end	; 24-bit LENGTH of the sample
+(1)   74/    3118 :                     ;        dc.b loop,loop,loop	; 24-bit Loop point
+(1)   75/    3118 :                     ;        dc.b (sound data)	; <-- Then the actual sound data
+(1)   76/    3118 :                     ;
+(1)   77/    3118 :                     ; flags: $00 - No Loop
+(1)   78/    3118 :                     ; 	 $01 - Loop
+(1)   79/    3118 :                     gInsDac	macro pitch,start,flags
+(1)   80/    3118 :                     	dc.b $C0|flags,pitch,((start>>16)&$FF),((start>>8)&$FF)
+(1)   81/    3118 :                     	dc.b start&$FF,0,0,0
+(1)   82/    3118 :                     	endm
+(1)   83/    3118 :                     
+(1)   84/    3118 :                     ; start: Pointer to sample data:
+(1)   85/    3118 :                     ;        dc.b end,end,end	; 24-bit LENGTH of the sample
+(1)   86/    3118 :                     ;        dc.b loop,loop,loop	; 24-bit Loop point
+(1)   87/    3118 :                     ;        dc.b (data)		; Then the actual sound data
+(1)   88/    3118 :                     ;
+(1)   89/    3118 :                     ; flags: %00SL
+(1)   90/    3118 :                     ;            L - Loop sample No/Yes
+(1)   91/    3118 :                     ;           S  - Sample data is on STEREO
+(1)   92/    3118 :                     gInsPwm	macro pitch,start,flags
+(1)   93/    3118 :                      if MARS
+(1)   94/    3118 :                     	dc.b $D0|flags,pitch,((start>>24)&$FF),((start>>16)&$FF)
+(1)   95/    3118 :                     	dc.b ((start>>8)&$FF),start&$FF,0,0
+(1)   96/    3118 :                      else
+(1)   97/    3118 :                     	dc.b $00,$00,$00,$00
+(1)   98/    3118 :                     	dc.b $00,$00,$00,$00
+(1)   99/    3118 :                      endif
+(1)  100/    3118 :                     	endm
+(1)  101/    3118 :                     
+(1)  102/    3118 :                     ; ------------------------------------------------------------
+(1)  103/    3118 :                     
+(1)  104/    3118 :                     	align $8000
 (1)  105/    8000 :                     
 (1)  106/    8000 :                     ; ------------------------------------------------------------
 (1)  107/    8000 :                     ; Nikona MAIN track-list
@@ -9875,7 +9871,7 @@
 (1)  359/   1469F : 0000 0000                   dc.b $00,$00,$00,$00
 (1)  359/   146A3 : 0000 0000                   dc.b $00,$00,$00,$00
 (1)  360/   146A7 :                     
-     318/   146A7 :                     		include "sound/instr.asm"		; GEMA: FM instruments
+     331/   146A7 :                     		include "sound/instr.asm"		; GEMA: FM instruments
 (1)    1/   146A7 :                     ; ====================================================================
 (1)    2/   146A7 :                     ; --------------------------------------------------------
 (1)    3/   146A7 :                     ; GEMA/Nikona FM instruments "patches"
@@ -9997,7 +9993,7 @@
 (1)  119/   14B9F :                     FmIns_HBeat_tom:
 (1)  120/   14B9F :                     		binclude "sound/instr/fm/OLD/nadia_tom.gsx",$2478,$20
 (1)  121/   14BBF :                     
-     319/   14BBF :                     		include "sound/smpl_dac.asm"		; GEMA: DAC samples
+     332/   14BBF :                     		include "sound/smpl_dac.asm"		; GEMA: DAC samples
 (1)    1/   14BBF :                     ; ====================================================================
 (1)    2/   14BBF :                     ; --------------------------------------------------------
 (1)    3/   14BBF :                     ; GEMA/Nikona DAC instruments "digital"
@@ -10047,28 +10043,29 @@
 (1)   39/   39374 :                     TEST_WAVE_E:
 (1)   40/   39374 :                     	align 2
 (1)   41/   39374 :                     
-     323/   39374 :                     		align 2
-     325/   39374 :                     
-     326/   39374 :                     ; ====================================================================
-     327/   39374 :                     ; ----------------------------------------------------------------
-     328/   39374 :                     ; 68K DATA BANKs
-     329/   39374 :                     ;
-     330/   39374 :                     ; SEGA CD:
-     331/   39374 :                     ; BANKS are limited to 256KB 2M or 128KB 1M/1M
-     332/   39374 :                     ; ** CANNOT BE USED IF USING STAMPS **
-     333/   39374 :                     ;
-     334/   39374 :                     ; SEGA 32X:
-     335/   39374 :                     ; BANKS are limited to 1MB, only 4 banks can be used
-     336/   39374 :                     ; ----------------------------------------------------------------
-     337/   39374 :                     
-     338/   39374 :                     ; ---------------------------------------------
-     339/   39374 :                     ;
-     340/   39374 :                     ; ---------------------------------------------
-     341/   39374 :                     
-     345/   39374 :                     GFXDMA_WRAM:
+     336/   39374 :                     		align 2
+     338/   39374 :                     
+     339/   39374 :                     ; ====================================================================
+     340/   39374 :                     ; ----------------------------------------------------------------
+     341/   39374 :                     ; 68K DATA BANKs
+     342/   39374 :                     ;
+     343/   39374 :                     ; SEGA CD:
+     344/   39374 :                     ; BANKS are stored in WORD-RAM pieces
+     345/   39374 :                     ; limited to 256KB 2M or 128KB 1M/1M
+     346/   39374 :                     ; ** THESE CANNOT BE USED IF USING ASIC STAMPS **
+     347/   39374 :                     ;
+     348/   39374 :                     ; SEGA 32X:
+     349/   39374 :                     ; BANKS are limited to 1MB, only 4 banks can be used
+     350/   39374 :                     ; ----------------------------------------------------------------
      351/   39374 :                     
-     352/   39374 :                     MDBNK0_START:
-     353/   39374 :                     		include "game/data/md_bank0.asm"	; <-- 68K ONLY bank data
+     352/   39374 :                     ; ---------------------------------------------
+     353/   39374 :                     ; BANK 0 DEFAULT
+     354/   39374 :                     ; ---------------------------------------------
+     355/   39374 :                     
+     356/   39374 :                     MCD_DBANK0:
+     362/   39374 :                     
+     363/   39374 :                     mdbank0:
+     364/   39374 :                     		include "game/data/md_bank0.asm"	; <-- 68K ONLY bank data
 (1)    1/   39374 :                     ; ====================================================================
 (1)    2/   39374 :                     ; ----------------------------------------------------------------
 (1)    3/   39374 :                     ; BANK 0 of 68k data ($900000-$9FFFFF)
@@ -10152,50 +10149,45 @@
 (1)   57/   39EF4 :                     ; 		binclude "game/data/maps/3D/mcity/anim/mcity_anim.bin"
 (1)   58/   39EF4 :                     ; 		align 4
 (1)   59/   39EF4 :                     
-     354/   39EF4 :                     MDBNK0_END:
-     358/   39EF4 :                     ; 		org $100000-4			; Fill this bank and
-     359/   39EF4 :                     ; 		dc.b "BNK0"			; add a tag at the end
-     360/   39EF4 :                     
-     361/   39EF4 :                     ; ---------------------------------------------
-     362/   39EF4 :                     ; BANK 1
-     363/   39EF4 :                     ; ---------------------------------------------
-     364/   39EF4 :                     
-     365/   39EF4 :                     ; 		phase $900000
-     366/   39EF4 :                     ; 		include "game/data/md_bank1.asm"
-     367/   39EF4 :                     ; 		dephase
-     368/   39EF4 :                     ; 		org $200000-4
-     369/   39EF4 :                     ; 		dc.b "BNK1"
-     370/   39EF4 :                     
-     371/   39EF4 :                     ; ---------------------------------------------
-     372/   39EF4 :                     ; BANK 2
-     373/   39EF4 :                     ; ---------------------------------------------
-     374/   39EF4 :                     
-     375/   39EF4 :                     ; 		phase $900000
-     376/   39EF4 :                     ; 		include "game/data/md_bank2.asm"
-     377/   39EF4 :                     ; 		dephase
-     378/   39EF4 :                     ; 		org $300000-4
-     379/   39EF4 :                     ; 		dc.b "BNK2"
-     380/   39EF4 :                     
-     381/   39EF4 :                     ; ---------------------------------------------
-     382/   39EF4 :                     ; BANK 3
-     383/   39EF4 :                     ; ---------------------------------------------
-     384/   39EF4 :                     
-     385/   39EF4 :                     ; 		phase $900000
-     386/   39EF4 :                     ; 		include "game/data/md_bank3.asm"
-     387/   39EF4 :                     ; 		dephase
-     388/   39EF4 :                     ; 		org $400000-4
-     389/   39EF4 :                     ; 		dc.b "BNK3"
-     390/   39EF4 :                     
-     391/   39EF4 :                     ; ====================================================================
-     392/   39EF4 :                     ; ----------------------------------------------------------------
-     393/   39EF4 :                     ; MD DMA data: Requires RV bit set to 1, BANK-free
-     394/   39EF4 :                     ; ----------------------------------------------------------------
-     395/   39EF4 :                     
-     396/   39EF4 :                     ; 	if MARS|MCD|MARSCD=0
-     397/   39EF4 :                     ; 		dephase
-     398/   39EF4 :                     ; 		align $8000
-     399/   39EF4 :                     ; 	endif
-     400/   39EF4 :                     		include "game/data/md_dma.asm"
+     365/   39EF4 :                     mdbank0_e:
+     377/   39EF4 :                     
+     383/   39EF4 :                     
+     384/   39EF4 :                     ; ---------------------------------------------
+     385/   39EF4 :                     ; BANK 1
+     386/   39EF4 :                     ; ---------------------------------------------
+     387/   39EF4 :                     
+     388/   39EF4 :                     ; 		phase $900000
+     389/   39EF4 :                     ; 		include "game/data/md_bank1.asm"
+     390/   39EF4 :                     ; 		dephase
+     391/   39EF4 :                     ; 		org $200000-4
+     392/   39EF4 :                     ; 		dc.b "BNK1"
+     393/   39EF4 :                     
+     394/   39EF4 :                     ; ---------------------------------------------
+     395/   39EF4 :                     ; BANK 2
+     396/   39EF4 :                     ; ---------------------------------------------
+     397/   39EF4 :                     
+     398/   39EF4 :                     ; 		phase $900000
+     399/   39EF4 :                     ; 		include "game/data/md_bank2.asm"
+     400/   39EF4 :                     ; 		dephase
+     401/   39EF4 :                     ; 		org $300000-4
+     402/   39EF4 :                     ; 		dc.b "BNK2"
+     403/   39EF4 :                     
+     404/   39EF4 :                     ; ---------------------------------------------
+     405/   39EF4 :                     ; BANK 3
+     406/   39EF4 :                     ; ---------------------------------------------
+     407/   39EF4 :                     
+     408/   39EF4 :                     ; 		phase $900000
+     409/   39EF4 :                     ; 		include "game/data/md_bank3.asm"
+     410/   39EF4 :                     ; 		dephase
+     411/   39EF4 :                     ; 		org $400000-4
+     412/   39EF4 :                     ; 		dc.b "BNK3"
+     413/   39EF4 :                     
+     414/   39EF4 :                     ; ====================================================================
+     415/   39EF4 :                     ; ----------------------------------------------------------------
+     416/   39EF4 :                     ; 32X Cartridge DMA data: Requires RV bit set to 1, BANK-free
+     417/   39EF4 :                     ; ----------------------------------------------------------------
+     418/   39EF4 :                     
+     420/   39EF4 :                     		include "game/data/md_dma.asm"
 (1)    1/   39EF4 :                     ; ====================================================================
 (1)    2/   39EF4 :                     ; ----------------------------------------------------------------
 (1)    3/   39EF4 :                     ; DMA ROM-DATA Transfer section
@@ -10215,37 +10207,34 @@
 (1)   17/   49F00 :                     
 (1)   18/   49F00 :                     
 (1)   19/   49F00 :                     
-     401/   49F00 :                     		align $800
-     405/   4A000 :                     GFXDMA_WRAM_e:
-     406/   4A000 :                     
-     413/   4A000 :                     
-     414/   4A000 :                     ; ====================================================================
-     415/   4A000 :                     ; ----------------------------------------------------------------
-     416/   4A000 :                     ; 32X ONLY:
-     417/   4A000 :                     ;
-     418/   4A000 :                     ; SH2 code and ROM data
-     419/   4A000 :                     ; ----------------------------------------------------------------
-     420/   4A000 :                     
-     426/   4A000 :                     MARS_RAMDATA:
-     436/   4A000 :                     MARS_RAMDATA_E:
-     437/   4A000 :                     		align 4
-     438/   4A000 :                     
-     439/   4A000 :                     ; ====================================================================
-     440/   4A000 :                     ; --------------------------------------------------------
-     441/   4A000 :                     ; SH2's ROM-only stuff
-     442/   4A000 :                     ; This section will be gone if RV bit is set to 1
-     443/   4A000 :                     ; --------------------------------------------------------
-     444/   4A000 :                     
-     452/   4A000 :                     
-     453/   4A000 :                     ; ====================================================================
-     454/   4A000 :                     ; ---------------------------------------------
-     455/   4A000 :                     ; End
-     456/   4A000 :                     ; ---------------------------------------------
-     457/   4A000 :                     
-     458/   4A000 :                     ROM_END:
-     462/   4A000 :                     		align $8000		; Pad the Cartridge
-     464/   50000 :                     
- AS V1.42 Beta [Bld 118] - source file main.asm - page 2 - 7/20/2023 19:28:40
+     422/   49F00 :                     
+     423/   49F00 :                     ; ====================================================================
+     424/   49F00 :                     ; ----------------------------------------------------------------
+     425/   49F00 :                     ; 32X ONLY:
+     426/   49F00 :                     ;
+     427/   49F00 :                     ; SH2 code and ROM data
+     428/   49F00 :                     ; ----------------------------------------------------------------
+     429/   49F00 :                     
+     435/   49F00 :                     MARS_RAMDATA:
+     445/   49F00 :                     MARS_RAMDATA_E:
+     446/   49F00 :                     		align 4
+     447/   49F00 :                     
+     448/   49F00 :                     ; ====================================================================
+     449/   49F00 :                     ; --------------------------------------------------------
+     450/   49F00 :                     ; SH2's ROM-only stuff
+     451/   49F00 :                     ; This section will be gone if RV bit is set to 1
+     452/   49F00 :                     ; --------------------------------------------------------
+     453/   49F00 :                     
+     461/   49F00 :                     
+     462/   49F00 :                     ; ====================================================================
+     463/   49F00 :                     ; ---------------------------------------------
+     464/   49F00 :                     ; End
+     465/   49F00 :                     ; ---------------------------------------------
+     466/   49F00 :                     
+     467/   49F00 :                     ROM_END:
+     471/   49F00 :                     		align $8000		; Pad the Cartridge
+     473/   50000 :                     
+ AS V1.42 Beta [Bld 118] - source file main.asm - page 2 - 7/20/2023 23:16:34
 
 
   symbol table (* = unused):
@@ -10316,7 +10305,7 @@
 *CONTROLLER_1 :    FFFFFFFFFFFFA000 - | *CONTROLLER_2 :    FFFFFFFFFFFFA010 - |
 *CS0 :                            0 - | *CS1 :                      2000000 - |
  CS2 :                      4000000 - | *CS3 :                      6000000 - |
-*CSCRN0_E :                    1232 C | *CSCRN0_S :                    1012 C |
+*CSCRN0_E :                    1218 C | *CSCRN0_S :                    1012 C |
  CURRTICKBITS :                  2E C | *CYCLE :                         32 - |
  DACINS_SNARE_1 :             1B444 C |  DACINS_SNARE_1.END :         1C56E C |
  DACINS_SNARE_1.START :       1B44A C | *DACINS_TESTINS :             1C56E C |
@@ -10336,218 +10325,218 @@
 *DOTTEDSTRUCTS :                  0 - | *DREQCTL :                        6 - |
 *DREQDEST :                       C - | *DREQFIFO :                      12 - |
 *DREQLEN :                       10 - | *DREQSOURCE :                     8 - |
-*DREQ_PALETTE :                   0 C |  DRV_LOOP :                      87 C |
- DRV_LOOP.CMND_0 :              12F C |  DRV_LOOP.CMND_1 :              132 C |
- DRV_LOOP.CMND_2 :              14F C |  DRV_LOOP.CMND_8 :              16C C |
- DRV_LOOP.CMND_C :              18E C |  DRV_LOOP.FOUND :               1CC C |
- DRV_LOOP.GETCBYTEL :            F2 C |  DRV_LOOP.GRAB_ARG :             F0 C |
- DRV_LOOP.LIST :                10F C |  DRV_LOOP.NEITHER :              C7 C |
- DRV_LOOP.NEXT :                1A6 C |  DRV_LOOP.NEXT_CMD :             CD C |
- DRV_LOOP.NEXT_SALL :           170 C |  DRV_LOOP.NOBEATS :              AE C |
- DRV_LOOP.NOTICKS :              A1 C |  DRV_LOOP.NOT_FND :             1C7 C |
- DRV_LOOP.NOT_ON :              186 C |  DRV_LOOP.SRCH_FRID :           19F C |
- DTBL_FROMMUL :                 6E7 C |  DTBL_FROMMUL.CHNL_ULNK :       DB7 C |
- DTBL_FROMMUL.CHNL_ULNKCUT :    DC6 C |  DTBL_FROMMUL.CHNL_ULNKOFF :    DB5 C |
- DTBL_FROMMUL.DAC_CUT :         945 C |  DTBL_FROMMUL.DAC_INS :         BC9 C |
- DTBL_FROMMUL.DAC_OFF :         94B C |  DTBL_FROMMUL.DAC_PITCH :       94E C |
- DTBL_FROMMUL.D_CONT :          AB2 C |  DTBL_FROMMUL.EFFC :            A1F C |
- DTBL_FROMMUL.EFFC_D :          A3A C |  DTBL_FROMMUL.EFFC_E :          A7D C |
- DTBL_FROMMUL.EFFC_F :          A92 C |  DTBL_FROMMUL.EFFC_X :          AB3 C |
- DTBL_FROMMUL.FINE_DOWN :       A55 C |  DTBL_FROMMUL.FINE_UP :         A69 C |
- DTBL_FROMMUL.FMSPC_SET :       884 C |  DTBL_FROMMUL.FM_CINDX :        D79 C |
- DTBL_FROMMUL.FM_CUT :          915 C |  DTBL_FROMMUL.FM_HASVOL :       C6D C |
- DTBL_FROMMUL.FM_INS :          B48 C |  DTBL_FROMMUL.FM_KEYOFF :       CD1 C |
- DTBL_FROMMUL.FM_OFF :          90F C |  DTBL_FROMMUL.FM_PANLIST :      ADC C |
- DTBL_FROMMUL.FM_SETFREQ :      CF0 C |  DTBL_FROMMUL.FM_SETRLIST :     BB9 C |
- DTBL_FROMMUL.FM_TLOFF :        CD9 C |  DTBL_FROMMUL.FM_WRTALPAN :     D81 C |
- DTBL_FROMMUL.FM_WRTLVOL :      D07 C |  DTBL_FROMMUL.FND_OCT :         CBE C |
- DTBL_FROMMUL.FROM_PSGN :       7C9 C |  DTBL_FROMMUL.GET_OCT :         CAE C |
- DTBL_FROMMUL.INST :            AED C | *DTBL_FROMMUL.INVL_INS :        B0B C |
- DTBL_FROMMUL.KYCUT_PSG :       81B C |  DTBL_FROMMUL.KYCUT_PSGN :      816 C |
- DTBL_FROMMUL.KYOFF_PSG :       80B C |  DTBL_FROMMUL.KYOFF_PSGN :      806 C |
- DTBL_FROMMUL.LINKED :          744 C |  DTBL_FROMMUL.MK_DAC :          91E C |
- DTBL_FROMMUL.MK_FM :           826 C |  DTBL_FROMMUL.MK_FMSPC :        898 C |
- DTBL_FROMMUL.MK_LIST :         782 C |  DTBL_FROMMUL.MK_PSG :          7B0 C |
- DTBL_FROMMUL.MK_PSGN :         792 C |  DTBL_FROMMUL.MK_PWM :          974 C |
- DTBL_FROMMUL.NEW_ROMDAT :      B7C C |  DTBL_FROMMUL.NOFM_NOTE :       85B C |
- DTBL_FROMMUL.NORM_DOWN :       A53 C |  DTBL_FROMMUL.NORM_UP :         A6B C |
- DTBL_FROMMUL.NOTE :            C63 C |  DTBL_FROMMUL.NOT_DAC :         858 C |
- DTBL_FROMMUL.NOT_DSPC :        84F C |  DTBL_FROMMUL.NO_LFO :          DB4 C |
- DTBL_FROMMUL.N_FM :            CA4 C |  DTBL_FROMMUL.N_INDX :          C90 C |
- DTBL_FROMMUL.N_PSGN :          C9F C |  DTBL_FROMMUL.N_STFREQ :        C91 C |
- DTBL_FROMMUL.PN_INS :          B0C C |  DTBL_FROMMUL.PSG_KEYON :       7F0 C |
- DTBL_FROMMUL.PS_INS :          B12 C |  DTBL_FROMMUL.PWM_CUT :         A10 C |
- DTBL_FROMMUL.PWM_INS :         C20 C |  DTBL_FROMMUL.PWM_OFF :         A01 C |
- DTBL_FROMMUL.PWV_MUCH :        9FD C |  DTBL_FROMMUL.PW_EFFC :         99E C |
- DTBL_FROMMUL.PW_NOTE :         9A5 C |  DTBL_FROMMUL.PW_SEND :         9AA C |
- DTBL_FROMMUL.PW_SETUP :        9CE C |  DTBL_FROMMUL.RCYL_COM :        738 C |
- DTBL_FROMMUL.RES_PAN :         AD2 C |  DTBL_FROMMUL.SAME_PATCH :      BB4 C |
- DTBL_FROMMUL.SAVE_ARG :        AA7 C |  DTBL_FROMMUL.SILN_DAC :        725 C |
- DTBL_FROMMUL.SILN_FM :         728 C |  DTBL_FROMMUL.SILN_PSG :        71E C |
- DTBL_FROMMUL.SILN_PSG_N :      71A C |  DTBL_FROMMUL.SILN_PWM :        72E C |
- DTBL_FROMMUL.TL_DOWN :         CE3 C |  DTBL_FROMMUL.VMUCH :           7FC C |
- DTBL_FROMMUL.VOLU :            AE4 C |  DTBL_FROMMUL.VOL_DVLD :        A79 C |
- DTBL_FROMMUL.WRITE_TL :        D6C C |  DTBL_MULTI :                   6D0 C |
- DTBL_SINGL :                   6E6 C |  DTH :                           20 - |
- DTL :                           1C - |  DWAVEBUFF :                   1D00 C |
-*EXTR_3 :                         A C | *EXTR_4 :                         C C |
-*EXTR_5 :                         E C |  EX_COMM :                      DD9 C |
-*FALSE :                          0 - | *FEN :                            2 - |
-*FILLDATA :                       8 - | *FILLLENGTH :                     4 - |
-*FILLSTART :                      6 - |  FLG :                           28 - |
-*FM :                            80 - |  FMCACH_1 :                    1553 C |
- FMCACH_2 :                    157B C |  FMCACH_3 :                    15A3 C |
- FMCACH_4 :                    15CB C |  FMCACH_5 :                    15F3 C |
- FMCACH_6 :                    161B C |  FMCACH_LIST :                 13E9 C |
- FMFREQ_LIST :                 11EF C | *FMINS_AMBIENT_3 :            14A9F C |
-*FMINS_AMBIENT_DARK :         14A5F C | *FMINS_AMBIENT_SPOOK :        14A7F C |
-*FMINS_BANJO_PUY :            14B1F C | *FMINS_BASS_1 :               148DF C |
-*FMINS_BASS_2 :               148FF C |  FMINS_BASS_4 :               1471F C |
- FMINS_BASS_8 :               1473F C |  FMINS_BASS_CALM :            1479F C |
- FMINS_BASS_CLUB :            1477F C | *FMINS_BASS_DONNA :           1491F C |
- FMINS_BASS_DUCK :            149BF C | *FMINS_BASS_GROOVE :          1493F C |
- FMINS_BASS_GROOVE_2 :        1495F C | *FMINS_BASS_GROOVE_GEM :      1497F C |
-*FMINS_BASS_ITALO :           1499F C | *FMINS_BASS_OIL :             1481F C |
- FMINS_BRASS_EUR :            147FF C | *FMINS_BRASS_PUY :            14ADF C |
- FMINS_CLOSEDHAT :            1489F C | *FMINS_DING_1 :               14B5F C |
- FMINS_DING_BASEBALL :        1485F C | *FMINS_DING_TOY :             14ABF C |
-*FMINS_DRUMKICK_GEM :         1487F C | *FMINS_FLAUTE_CAVE :          14AFF C |
- FMINS_HBEAT_TOM :            14B9F C |  FMINS_MARIMBA :              14A3F C |
-*FMINS_ORGAN_ITO :            1483F C |  FMINS_PIANOM1 :              148BF C |
-*FMINS_PIANO_AQUA :           149DF C | *FMINS_PSYNTH_PLUS :          14B3F C |
- FMINS_SP_CLOSEDHAT :         146CF C | *FMINS_SP_COWBELL :           146F7 C |
- FMINS_SP_OPENHAT :           146A7 C |  FMINS_SYNTH_PLUS :           1475F C |
-*FMINS_TROMBONE_GEM :         14B7F C |  FMINS_TRUMPET_1 :            147BF C |
- FMINS_TRUMPET_2 :            149FF C |  FMINS_TRUMPET_CARNIVAL :     147DF C |
-*FMINS_TRUMPET_PUY :          14A1F C |  FMSPECIAL :                   1707 C |
- FM_AUTOREG :                  10AC C |  FM_SEND_1 :                   10B5 C |
- FM_SEND_2 :                   10C0 C | *FRAMECTL :                       B - |
-*FS :                             1 - | *FULLPMMU :                       1 - |
- GEMADMAPAUSE :                 2FC C |  GEMADMAPAUSEROM :              300 C |
- GEMADMARESUME :                2FE C |  GEMADMARESUMEROM :             302 C |
-*GEMAPLAYFROMBLK :              324 C | *GEMAPLAYTRACK :                310 C |
-*GEMASETBEATS :                 34C C |  GEMASTOPALL :                  34A C |
-*GEMASTOPTRACK :                338 C | *GEMATEST :                     306 C |
- GEMATRK_BODYOVER :           12434 C |  GEMATRK_BODYOVER.BLK :       12440 C |
- GEMATRK_BODYOVER.INS :       12C4E C |  GEMATRK_BODYOVER.PAT :       12456 C |
- GEMATRK_MOVEME :             12C96 C |  GEMATRK_MOVEME.BLK :         12CA2 C |
- GEMATRK_MOVEME.INS :         13B30 C |  GEMATRK_MOVEME.PAT :         12CBA C |
- GEMATRK_TEST_0 :             145AC C |  GEMATRK_TEST_0.BLK :         145B8 C |
- GEMATRK_TEST_0.INS :         1467F C |  GEMATRK_TEST_0.PAT :         145BB C |
- GEMATRK_TEST_1 :              9CFC C |  GEMATRK_TEST_1.BLK :          9D08 C |
- GEMATRK_TEST_1.INS :          D166 C | *GEMATRK_TEST_1.INS_E :        D1D6 C |
- GEMATRK_TEST_1.PAT :          9D17 C |  GEMATRK_TEST_2 :              8080 C |
- GEMATRK_TEST_2.BLK :          808C C |  GEMATRK_TEST_2.INS :          9CC4 C |
- GEMATRK_TEST_2.PAT :          80A2 C |  GEMATRK_TEST_3 :              D1D6 C |
- GEMATRK_TEST_3.BLK :          D1E2 C |  GEMATRK_TEST_3.INS :          EA80 C |
- GEMATRK_TEST_3.PAT :          D1F0 C |  GEMATRK_TEST_4 :              EAA0 C |
- GEMATRK_TEST_4.BLK :          EAAC C |  GEMATRK_TEST_4.INS :          FFA4 C |
- GEMATRK_TEST_4.PAT :          EABE C |  GEMATRK_TEST_5 :              FFBC C |
- GEMATRK_TEST_5.BLK :          FFC8 C |  GEMATRK_TEST_5.INS :         107F8 C |
- GEMATRK_TEST_5.PAT :          FFD0 C |  GEMATRK_TEST_6 :             10808 C |
- GEMATRK_TEST_6.BLK :         10814 C |  GEMATRK_TEST_6.INS :         123B4 C |
- GEMATRK_TEST_6.PAT :         1081C C |  GEMATRK_XTRIM :              13BC8 C |
- GEMATRK_XTRIM.BLK :          13BD4 C |  GEMATRK_XTRIM.INS :          14584 C |
- GEMATRK_XTRIM.PAT :          13BDA C |  GEMA_INIT :                    DDC C |
- GEMA_INIT.END_SETUP :          E82 C |  GEMA_INIT.SETUP_LIST :         E37 C |
- GEMA_INIT.ST_COPY :            E56 C |  GEMA_MASTERLIST :             8000 C |
- GET_ROMTRCKS :                 4D1 C |  GET_TICK :                     E87 C |
- GET_TICK.CTNOTICK :            EA4 C | *GFXDMA_WRAM :                39374 C |
-*GFXDMA_WRAM_E :              4A000 C |  GLBL_LASTORG :                1012 - |
- GLBL_LASTPC :                 1012 - | *HAS64 :                          1 - |
-*HASDSP :                         0 - | *HASFPU :                         0 - |
-*HASPMMU :                        0 - | *HBLK :                          40 - |
-*HCOUNT :                         5 - |  HEADEROUT :                   1708 C |
- HEADEROUT_E :                 1714 C | *HINTCLR :                       18 - |
-*HINTENBL :                      10 - |  HINT_DEFAULT :                 FEA C |
-*HIRQ_ON :                        4 - | *HVSTOP :                         2 - |
-*INEXTMODE :                      0 - |  INIT_ROMTRCKS :                4D9 C |
-*INLWORDMODE :                    0 - | *INMAXMODE :                      0 - |
-*INSRCMODE :                      0 - | *INSUPMODE :                      1 - |
-*INTMASK :                        1 - | *JOYA :                          40 - |
-*JOYB :                          10 - | *JOYC :                          20 - |
-*JOYDOWN :                        2 - | *JOYLEFT :                        4 - |
-*JOYMODE :                      800 - | *JOYRIGHT :                       8 - |
-*JOYSTART :                      80 - | *JOYUP :                          1 - |
-*JOYX :                         400 - | *JOYY :                         200 - |
-*JOYZ :                         100 - | *LCHWIDTH :                      34 - |
- LEV :                            4 - | *LISTON :                         3 - |
- LIST_VDPREGS :                 3B4 C | *MACEXP :                         7 - |
- MAPMD_TEST :                 39594 C |  MARS :                           0 - |
- MARSBLOCK :                     82 C |  MARSCD :                         0 - |
- MARSUPD :                       3F C | *MARS_RAMDATA :               4A000 C |
-*MARS_RAMDATA_E :             4A000 C |  MAX_BLOCKS :                    18 - |
- MAX_HEADS :                      F - |  MAX_INS :                        F - |
- MAX_MDDMATSK :                  10 - |  MAX_MDGLOBAL :                 800 - |
- MAX_MDOBJ :                     10 - |  MAX_MDOTHER :                 2000 - |
- MAX_MDSYSTEM :                 500 - |  MAX_MDVIDEO :                 2000 - |
+ DRV_LOOP :                      87 C |  DRV_LOOP.CMND_0 :              12F C |
+ DRV_LOOP.CMND_1 :              132 C |  DRV_LOOP.CMND_2 :              14F C |
+ DRV_LOOP.CMND_8 :              16C C |  DRV_LOOP.CMND_C :              18E C |
+ DRV_LOOP.FOUND :               1CC C |  DRV_LOOP.GETCBYTEL :            F2 C |
+ DRV_LOOP.GRAB_ARG :             F0 C |  DRV_LOOP.LIST :                10F C |
+ DRV_LOOP.NEITHER :              C7 C |  DRV_LOOP.NEXT :                1A6 C |
+ DRV_LOOP.NEXT_CMD :             CD C |  DRV_LOOP.NEXT_SALL :           170 C |
+ DRV_LOOP.NOBEATS :              AE C |  DRV_LOOP.NOTICKS :              A1 C |
+ DRV_LOOP.NOT_FND :             1C7 C |  DRV_LOOP.NOT_ON :              186 C |
+ DRV_LOOP.SRCH_FRID :           19F C |  DTBL_FROMMUL :                 6E7 C |
+ DTBL_FROMMUL.CHNL_ULNK :       DB7 C |  DTBL_FROMMUL.CHNL_ULNKCUT :    DC6 C |
+ DTBL_FROMMUL.CHNL_ULNKOFF :    DB5 C |  DTBL_FROMMUL.DAC_CUT :         945 C |
+ DTBL_FROMMUL.DAC_INS :         BC9 C |  DTBL_FROMMUL.DAC_OFF :         94B C |
+ DTBL_FROMMUL.DAC_PITCH :       94E C |  DTBL_FROMMUL.D_CONT :          AB2 C |
+ DTBL_FROMMUL.EFFC :            A1F C |  DTBL_FROMMUL.EFFC_D :          A3A C |
+ DTBL_FROMMUL.EFFC_E :          A7D C |  DTBL_FROMMUL.EFFC_F :          A92 C |
+ DTBL_FROMMUL.EFFC_X :          AB3 C |  DTBL_FROMMUL.FINE_DOWN :       A55 C |
+ DTBL_FROMMUL.FINE_UP :         A69 C |  DTBL_FROMMUL.FMSPC_SET :       884 C |
+ DTBL_FROMMUL.FM_CINDX :        D79 C |  DTBL_FROMMUL.FM_CUT :          915 C |
+ DTBL_FROMMUL.FM_HASVOL :       C6D C |  DTBL_FROMMUL.FM_INS :          B48 C |
+ DTBL_FROMMUL.FM_KEYOFF :       CD1 C |  DTBL_FROMMUL.FM_OFF :          90F C |
+ DTBL_FROMMUL.FM_PANLIST :      ADC C |  DTBL_FROMMUL.FM_SETFREQ :      CF0 C |
+ DTBL_FROMMUL.FM_SETRLIST :     BB9 C |  DTBL_FROMMUL.FM_TLOFF :        CD9 C |
+ DTBL_FROMMUL.FM_WRTALPAN :     D81 C |  DTBL_FROMMUL.FM_WRTLVOL :      D07 C |
+ DTBL_FROMMUL.FND_OCT :         CBE C |  DTBL_FROMMUL.FROM_PSGN :       7C9 C |
+ DTBL_FROMMUL.GET_OCT :         CAE C |  DTBL_FROMMUL.INST :            AED C |
+*DTBL_FROMMUL.INVL_INS :        B0B C |  DTBL_FROMMUL.KYCUT_PSG :       81B C |
+ DTBL_FROMMUL.KYCUT_PSGN :      816 C |  DTBL_FROMMUL.KYOFF_PSG :       80B C |
+ DTBL_FROMMUL.KYOFF_PSGN :      806 C |  DTBL_FROMMUL.LINKED :          744 C |
+ DTBL_FROMMUL.MK_DAC :          91E C |  DTBL_FROMMUL.MK_FM :           826 C |
+ DTBL_FROMMUL.MK_FMSPC :        898 C |  DTBL_FROMMUL.MK_LIST :         782 C |
+ DTBL_FROMMUL.MK_PSG :          7B0 C |  DTBL_FROMMUL.MK_PSGN :         792 C |
+ DTBL_FROMMUL.MK_PWM :          974 C |  DTBL_FROMMUL.NEW_ROMDAT :      B7C C |
+ DTBL_FROMMUL.NOFM_NOTE :       85B C |  DTBL_FROMMUL.NORM_DOWN :       A53 C |
+ DTBL_FROMMUL.NORM_UP :         A6B C |  DTBL_FROMMUL.NOTE :            C63 C |
+ DTBL_FROMMUL.NOT_DAC :         858 C |  DTBL_FROMMUL.NOT_DSPC :        84F C |
+ DTBL_FROMMUL.NO_LFO :          DB4 C |  DTBL_FROMMUL.N_FM :            CA4 C |
+ DTBL_FROMMUL.N_INDX :          C90 C |  DTBL_FROMMUL.N_PSGN :          C9F C |
+ DTBL_FROMMUL.N_STFREQ :        C91 C |  DTBL_FROMMUL.PN_INS :          B0C C |
+ DTBL_FROMMUL.PSG_KEYON :       7F0 C |  DTBL_FROMMUL.PS_INS :          B12 C |
+ DTBL_FROMMUL.PWM_CUT :         A10 C |  DTBL_FROMMUL.PWM_INS :         C20 C |
+ DTBL_FROMMUL.PWM_OFF :         A01 C |  DTBL_FROMMUL.PWV_MUCH :        9FD C |
+ DTBL_FROMMUL.PW_EFFC :         99E C |  DTBL_FROMMUL.PW_NOTE :         9A5 C |
+ DTBL_FROMMUL.PW_SEND :         9AA C |  DTBL_FROMMUL.PW_SETUP :        9CE C |
+ DTBL_FROMMUL.RCYL_COM :        738 C |  DTBL_FROMMUL.RES_PAN :         AD2 C |
+ DTBL_FROMMUL.SAME_PATCH :      BB4 C |  DTBL_FROMMUL.SAVE_ARG :        AA7 C |
+ DTBL_FROMMUL.SILN_DAC :        725 C |  DTBL_FROMMUL.SILN_FM :         728 C |
+ DTBL_FROMMUL.SILN_PSG :        71E C |  DTBL_FROMMUL.SILN_PSG_N :      71A C |
+ DTBL_FROMMUL.SILN_PWM :        72E C |  DTBL_FROMMUL.TL_DOWN :         CE3 C |
+ DTBL_FROMMUL.VMUCH :           7FC C |  DTBL_FROMMUL.VOLU :            AE4 C |
+ DTBL_FROMMUL.VOL_DVLD :        A79 C |  DTBL_FROMMUL.WRITE_TL :        D6C C |
+ DTBL_MULTI :                   6D0 C |  DTBL_SINGL :                   6E6 C |
+ DTH :                           20 - |  DTL :                           1C - |
+ DWAVEBUFF :                   1D00 C | *EXTR_3 :                         A C |
+*EXTR_4 :                         C C | *EXTR_5 :                         E C |
+ EX_COMM :                      DD9 C | *FALSE :                          0 - |
+*FEN :                            2 - | *FILLDATA :                       8 - |
+*FILLLENGTH :                     4 - | *FILLSTART :                      6 - |
+ FLG :                           28 - | *FM :                            80 - |
+ FMCACH_1 :                    1553 C |  FMCACH_2 :                    157B C |
+ FMCACH_3 :                    15A3 C |  FMCACH_4 :                    15CB C |
+ FMCACH_5 :                    15F3 C |  FMCACH_6 :                    161B C |
+ FMCACH_LIST :                 13E9 C |  FMFREQ_LIST :                 11EF C |
+*FMINS_AMBIENT_3 :            14A9F C | *FMINS_AMBIENT_DARK :         14A5F C |
+*FMINS_AMBIENT_SPOOK :        14A7F C | *FMINS_BANJO_PUY :            14B1F C |
+*FMINS_BASS_1 :               148DF C | *FMINS_BASS_2 :               148FF C |
+ FMINS_BASS_4 :               1471F C |  FMINS_BASS_8 :               1473F C |
+ FMINS_BASS_CALM :            1479F C |  FMINS_BASS_CLUB :            1477F C |
+*FMINS_BASS_DONNA :           1491F C |  FMINS_BASS_DUCK :            149BF C |
+*FMINS_BASS_GROOVE :          1493F C |  FMINS_BASS_GROOVE_2 :        1495F C |
+*FMINS_BASS_GROOVE_GEM :      1497F C | *FMINS_BASS_ITALO :           1499F C |
+*FMINS_BASS_OIL :             1481F C |  FMINS_BRASS_EUR :            147FF C |
+*FMINS_BRASS_PUY :            14ADF C |  FMINS_CLOSEDHAT :            1489F C |
+*FMINS_DING_1 :               14B5F C |  FMINS_DING_BASEBALL :        1485F C |
+*FMINS_DING_TOY :             14ABF C | *FMINS_DRUMKICK_GEM :         1487F C |
+*FMINS_FLAUTE_CAVE :          14AFF C |  FMINS_HBEAT_TOM :            14B9F C |
+ FMINS_MARIMBA :              14A3F C | *FMINS_ORGAN_ITO :            1483F C |
+ FMINS_PIANOM1 :              148BF C | *FMINS_PIANO_AQUA :           149DF C |
+*FMINS_PSYNTH_PLUS :          14B3F C |  FMINS_SP_CLOSEDHAT :         146CF C |
+*FMINS_SP_COWBELL :           146F7 C |  FMINS_SP_OPENHAT :           146A7 C |
+ FMINS_SYNTH_PLUS :           1475F C | *FMINS_TROMBONE_GEM :         14B7F C |
+ FMINS_TRUMPET_1 :            147BF C |  FMINS_TRUMPET_2 :            149FF C |
+ FMINS_TRUMPET_CARNIVAL :     147DF C | *FMINS_TRUMPET_PUY :          14A1F C |
+ FMSPECIAL :                   1707 C |  FM_AUTOREG :                  10AC C |
+ FM_SEND_1 :                   10B5 C |  FM_SEND_2 :                   10C0 C |
+*FRAMECTL :                       B - | *FS :                             1 - |
+*FULLPMMU :                       1 - |  GEMADMAPAUSE :                 2FC C |
+ GEMADMAPAUSEROM :              300 C |  GEMADMARESUME :                2FE C |
+ GEMADMARESUMEROM :             302 C | *GEMAPLAYFROMBLK :              324 C |
+*GEMAPLAYTRACK :                310 C | *GEMASETBEATS :                 34C C |
+ GEMASTOPALL :                  34A C | *GEMASTOPTRACK :                338 C |
+*GEMATEST :                     306 C |  GEMATRK_BODYOVER :           12434 C |
+ GEMATRK_BODYOVER.BLK :       12440 C |  GEMATRK_BODYOVER.INS :       12C4E C |
+ GEMATRK_BODYOVER.PAT :       12456 C |  GEMATRK_MOVEME :             12C96 C |
+ GEMATRK_MOVEME.BLK :         12CA2 C |  GEMATRK_MOVEME.INS :         13B30 C |
+ GEMATRK_MOVEME.PAT :         12CBA C |  GEMATRK_TEST_0 :             145AC C |
+ GEMATRK_TEST_0.BLK :         145B8 C |  GEMATRK_TEST_0.INS :         1467F C |
+ GEMATRK_TEST_0.PAT :         145BB C |  GEMATRK_TEST_1 :              9CFC C |
+ GEMATRK_TEST_1.BLK :          9D08 C |  GEMATRK_TEST_1.INS :          D166 C |
+*GEMATRK_TEST_1.INS_E :        D1D6 C |  GEMATRK_TEST_1.PAT :          9D17 C |
+ GEMATRK_TEST_2 :              8080 C |  GEMATRK_TEST_2.BLK :          808C C |
+ GEMATRK_TEST_2.INS :          9CC4 C |  GEMATRK_TEST_2.PAT :          80A2 C |
+ GEMATRK_TEST_3 :              D1D6 C |  GEMATRK_TEST_3.BLK :          D1E2 C |
+ GEMATRK_TEST_3.INS :          EA80 C |  GEMATRK_TEST_3.PAT :          D1F0 C |
+ GEMATRK_TEST_4 :              EAA0 C |  GEMATRK_TEST_4.BLK :          EAAC C |
+ GEMATRK_TEST_4.INS :          FFA4 C |  GEMATRK_TEST_4.PAT :          EABE C |
+ GEMATRK_TEST_5 :              FFBC C |  GEMATRK_TEST_5.BLK :          FFC8 C |
+ GEMATRK_TEST_5.INS :         107F8 C |  GEMATRK_TEST_5.PAT :          FFD0 C |
+ GEMATRK_TEST_6 :             10808 C |  GEMATRK_TEST_6.BLK :         10814 C |
+ GEMATRK_TEST_6.INS :         123B4 C |  GEMATRK_TEST_6.PAT :         1081C C |
+ GEMATRK_XTRIM :              13BC8 C |  GEMATRK_XTRIM.BLK :          13BD4 C |
+ GEMATRK_XTRIM.INS :          14584 C |  GEMATRK_XTRIM.PAT :          13BDA C |
+ GEMA_INIT :                    DDC C |  GEMA_INIT.END_SETUP :          E82 C |
+ GEMA_INIT.SETUP_LIST :         E37 C |  GEMA_INIT.ST_COPY :            E56 C |
+ GEMA_MASTERLIST :             8000 C |  GET_ROMTRCKS :                 4D1 C |
+ GET_TICK :                     E87 C |  GET_TICK.CTNOTICK :            EA4 C |
+ GLBL_LASTORG :                1012 - |  GLBL_LASTPC :                 1012 - |
+*HAS64 :                          1 - | *HASDSP :                         0 - |
+*HASFPU :                         0 - | *HASPMMU :                        0 - |
+*HBLK :                          40 - | *HCOUNT :                         5 - |
+ HEADEROUT :                   1708 C |  HEADEROUT_E :                 1714 C |
+*HINTCLR :                       18 - | *HINTENBL :                      10 - |
+ HINT_DEFAULT :                 FEA C | *HIRQ_ON :                        4 - |
+*HVSTOP :                         2 - | *INEXTMODE :                      0 - |
+ INIT_ROMTRCKS :                4D9 C | *INLWORDMODE :                    0 - |
+*INMAXMODE :                      0 - | *INSRCMODE :                      0 - |
+*INSUPMODE :                      1 - | *INTMASK :                        1 - |
+*JOYA :                          40 - | *JOYB :                          10 - |
+*JOYC :                          20 - | *JOYDOWN :                        2 - |
+*JOYLEFT :                        4 - | *JOYMODE :                      800 - |
+*JOYRIGHT :                       8 - | *JOYSTART :                      80 - |
+*JOYUP :                          1 - | *JOYX :                         400 - |
+*JOYY :                         200 - | *JOYZ :                         100 - |
+*LCHWIDTH :                      34 - |  LEV :                            4 - |
+*LISTON :                         3 - |  LIST_VDPREGS :                 3B4 C |
+*MACEXP :                         7 - |  MAPMD_TEST :                 39594 C |
+ MARS :                           0 - |  MARSBLOCK :                     82 C |
+ MARSCD :                         0 - |  MARSUPD :                       3F C |
+*MARS_RAMDATA :               49F00 C | *MARS_RAMDATA_E :             49F00 C |
+ MAX_BLOCKS :                    18 - |  MAX_HEADS :                      F - |
+ MAX_INS :                        F - |  MAX_MDDMATSK :                  10 - |
+ MAX_MDGLOBAL :                 800 - |  MAX_MDOBJ :                     10 - |
+ MAX_MDOTHER :                 2000 - |  MAX_MDSYSTEM :                 500 - |
+ MAX_MDVIDEO :                 2000 - |  MAX_RAMSNDDATA :              3000 - |
  MAX_RCACH :                     40 - |  MAX_SCRNBUFF :                2800 - |
  MAX_SYSCODE :                 1800 - |  MAX_TBLSIZE :                   10 - |
  MAX_TRFRPZ :                     8 - |  MAX_TRKCHN :                    11 - |
  MAX_USERCODE :                3000 - |  MCD :                            0 - |
  MCD_COMM_M :                     E - |  MCD_COMM_S :                     F - |
- MCD_DCOMM_M :                   10 - |  MCD_DCOMM_S :                   20 - |
-*MCD_HINT :                       6 - | *MCD_MEMORY :                     3 - |
-*MDBNK0_END :                 39EF4 C | *MDBNK0_START :               39374 C |
- MDSYS_SINEDATA :               E3A C |  MD_BANK_SRAM :              A130F1 - |
-*MD_BG_BH :                       1 C | *MD_BG_BLK :                     28 C |
-*MD_BG_BLKW :                     2 C | *MD_BG_BW :                       0 C |
-*MD_BG_COL :                     2C C | *MD_BG_FLAGS :                    3 C |
-*MD_BG_H :                        A C | *MD_BG_HF :                       E C |
-*MD_BG_HI :                      24 C | *MD_BG_LOW :                     20 C |
-*MD_BG_MOVEX :                    6 C | *MD_BG_MOVEY :                    7 C |
-*MD_BG_VPOS :                    1C C | *MD_BG_VRAM :                    1E C |
-*MD_BG_W :                        8 C | *MD_BG_WF :                       C C |
-*MD_BG_X :                       30 C | *MD_BG_XINC_L :                  10 C |
-*MD_BG_XINC_R :                  12 C | *MD_BG_XSET :                     4 C |
-*MD_BG_X_OLD :                   18 C | *MD_BG_Y :                       34 C |
-*MD_BG_YINC_D :                  16 C | *MD_BG_YINC_U :                  14 C |
-*MD_BG_YSET :                     5 C | *MD_BG_Y_OLD :                   1A C |
-*MD_JUMPCODE :                  FEC C | *MD_JUMPCODE_E :               1012 C |
- MD_READMODES :                 FEC C |  MD_READMODES.PICK_BOOT :      1002 C |
- MD_SCREEN00 :                 1012 C | *MD_SCREEN00_E :               1232 C |
-*MD_SYSCODE :                   264 C | *MD_SYSCODE_E :                 FEC C |
- MODE :                          18 - | *MODE_FADEOUT :                 FA2 C |
- MODE_FADEOUT.LOOPW :           FC6 C |  MODE_INIT :                    F84 C |
- MODE_INIT.CLR :                F94 C |  MOMCPU :                     68000 - |
-*MOMCPUNAME :                 68000 - | *MONOWIDTH :                     38 - |
- MOUSE_X :                        6 C |  MOUSE_Y :                        8 C |
-*NESTMAX :                      100 - |  NIKONA_BUFFLIST :             13F7 C |
- NIKONA_SETMSTRLIST :          1429 C | *OBJ_ANIM_ID :                   1C C |
-*OBJ_ANIM_INDX :                 1A C | *OBJ_ANIM_SPD :                  20 C |
-*OBJ_CODE :                       0 C | *OBJ_FRAME :                     1E C |
-*OBJ_INDEX :                     21 C | *OBJ_MAP :                       10 C |
-*OBJ_RAM :                       26 C | *OBJ_SET :                       23 C |
-*OBJ_SIZE :                       4 C | *OBJ_SPWNID :                    25 C |
-*OBJ_STATUS :                    24 C | *OBJ_SUBID :                     22 C |
-*OBJ_VRAM :                      14 C | *OBJ_X :                          8 C |
-*OBJ_X_SPD :                     16 C | *OBJ_Y :                          C C |
-*OBJ_Y_SPD :                     18 C |  ON_HOLD :                        2 C |
- ON_PRESS :                       4 C | *PACKING :                        0 - |
-*PADDING :                        0 - | *PADDINGSOFAR :                   0 - |
- PAD_ID :                         0 C |  PAD_VER :                        1 C |
-*PALMARS_TEST :               39374 C |  PALMD_TEST :                 39574 C |
- PARP :                          34 - | *PEN :                           20 - |
- PICO :                           1 - |  PICO_ENTRY :                   204 C |
- PICO_ENTRY.LOOP_RAM :          22C C |  PICO_ENTRY.WAIT_DMA :          240 C |
- PICO_ERRADDR :                 200 C |  PICO_ERRBUS :                  200 C |
- PICO_ERRCHK :                  200 C |  PICO_ERRILL :                  200 C |
- PICO_ERROR :                   200 C |  PICO_ERROREX :                 200 C |
- PICO_ERRPRIVL :                200 C |  PICO_ERRTRAPV :                200 C |
- PICO_ERRZDIV :                 200 C |  PICO_LINE1010 :                200 C |
- PICO_LINE1111 :                200 C |  PICO_PCMINT :                  202 C |
- PICO_TRACE :                   200 C |  PICO_UNKINT :                  202 C |
- PICO_USERINT :                 202 C |  PROC_CHIPS :                   523 C |
- PSGCOM :                      167B C |  PSGFREQ_LIST :                1207 C |
- PSGHATMODE :                  1706 C | *PSG_CTRL :                  C00011 - |
- PTMR :                          38 - |  PVOL :                          30 - |
-*PWCOM :                          0 - | *PWINSH :                        20 - |
-*PWINSL :                        30 - | *PWINSM :                        28 - |
- PWMCOM :                      1643 C | *PWMCTL :                        31 - |
-*PWMINTCLR :                     1C - | *PWMIRQ_ON :                      1 - |
- PWOUTF :                        18 - | *PWPHL :                         10 - |
-*PWPTH_V :                        8 - | *RAM_BGBUFFER :    FFFFFFFFFFFF8660 C |
-*RAM_DMACODE :     FFFFFFFFFFFFA240 C |
+*MCD_DBANK0 :                 39374 C |  MCD_DCOMM_M :                   10 - |
+ MCD_DCOMM_S :                   20 - | *MCD_HINT :                       6 - |
+*MCD_MEMORY :                     3 - | *MDBANK0 :                    39374 C |
+*MDBANK0_E :                  39EF4 C |  MDSYS_SINEDATA :               E3A C |
+ MD_BANK_SRAM :              A130F1 - | *MD_BG_BH :                       1 C |
+*MD_BG_BLK :                     28 C | *MD_BG_BLKW :                     2 C |
+*MD_BG_BW :                       0 C | *MD_BG_COL :                     2C C |
+*MD_BG_FLAGS :                    3 C | *MD_BG_H :                        A C |
+*MD_BG_HF :                       E C | *MD_BG_HI :                      24 C |
+*MD_BG_LOW :                     20 C | *MD_BG_MOVEX :                    6 C |
+*MD_BG_MOVEY :                    7 C | *MD_BG_VPOS :                    1C C |
+*MD_BG_VRAM :                    1E C | *MD_BG_W :                        8 C |
+*MD_BG_WF :                       C C | *MD_BG_X :                       30 C |
+*MD_BG_XINC_L :                  10 C | *MD_BG_XINC_R :                  12 C |
+*MD_BG_XSET :                     4 C | *MD_BG_X_OLD :                   18 C |
+*MD_BG_Y :                       34 C | *MD_BG_YINC_D :                  16 C |
+*MD_BG_YINC_U :                  14 C | *MD_BG_YSET :                     5 C |
+*MD_BG_Y_OLD :                   1A C | *MD_JUMPCODE :                  FEC C |
+*MD_JUMPCODE_E :               1012 C |  MD_READMODES :                 FEC C |
+ MD_READMODES.PICK_BOOT :      1002 C |  MD_SCREEN00 :                 1012 C |
+*MD_SCREEN00_E :               1218 C | *MD_SYSCODE :                   264 C |
+*MD_SYSCODE_E :                 FEC C |  MODE :                          18 - |
+*MODE_FADEOUT :                 FA2 C |  MODE_FADEOUT.LOOPW :           FC6 C |
+ MODE_INIT :                    F84 C |  MODE_INIT.CLR :                F94 C |
+ MOMCPU :                     68000 - | *MOMCPUNAME :                 68000 - |
+*MONOWIDTH :                     38 - |  MOUSE_X :                        6 C |
+ MOUSE_Y :                        8 C | *NESTMAX :                      100 - |
+ NIKONA_BUFFLIST :             13F7 C |  NIKONA_SETMSTRLIST :          1429 C |
+*OBJ_ANIM_ID :                   1C C | *OBJ_ANIM_INDX :                 1A C |
+*OBJ_ANIM_SPD :                  20 C | *OBJ_CODE :                       0 C |
+*OBJ_FRAME :                     1E C | *OBJ_INDEX :                     21 C |
+*OBJ_MAP :                       10 C | *OBJ_RAM :                       26 C |
+*OBJ_SET :                       23 C | *OBJ_SIZE :                       4 C |
+*OBJ_SPWNID :                    25 C | *OBJ_STATUS :                    24 C |
+*OBJ_SUBID :                     22 C | *OBJ_VRAM :                      14 C |
+*OBJ_X :                          8 C | *OBJ_X_SPD :                     16 C |
+*OBJ_Y :                          C C | *OBJ_Y_SPD :                     18 C |
+ ON_HOLD :                        2 C |  ON_PRESS :                       4 C |
+*PACKING :                        0 - | *PADDING :                        0 - |
+*PADDINGSOFAR :                   0 - |  PAD_ID :                         0 C |
+ PAD_VER :                        1 C | *PALMARS_TEST :               39374 C |
+ PALMD_TEST :                 39574 C |  PARP :                          34 - |
+*PEN :                           20 - |  PICO :                           1 - |
+ PICO_ENTRY :                   204 C |  PICO_ENTRY.LOOP_RAM :          22C C |
+ PICO_ENTRY.WAIT_DMA :          240 C |  PICO_ERRADDR :                 200 C |
+ PICO_ERRBUS :                  200 C |  PICO_ERRCHK :                  200 C |
+ PICO_ERRILL :                  200 C |  PICO_ERROR :                   200 C |
+ PICO_ERROREX :                 200 C |  PICO_ERRPRIVL :                200 C |
+ PICO_ERRTRAPV :                200 C |  PICO_ERRZDIV :                 200 C |
+ PICO_LINE1010 :                200 C |  PICO_LINE1111 :                200 C |
+ PICO_PCMINT :                  202 C |  PICO_TRACE :                   200 C |
+ PICO_UNKINT :                  202 C |  PICO_USERINT :                 202 C |
+ PROC_CHIPS :                   523 C |  PSGCOM :                      167B C |
+ PSGFREQ_LIST :                1207 C |  PSGHATMODE :                  1706 C |
+*PSG_CTRL :                  C00011 - |  PTMR :                          38 - |
+ PVOL :                          30 - | *PWCOM :                          0 - |
+*PWINSH :                        20 - | *PWINSL :                        30 - |
+*PWINSM :                        28 - |  PWMCOM :                      1643 C |
+*PWMCTL :                        31 - | *PWMINTCLR :                     1C - |
+*PWMIRQ_ON :                      1 - |  PWOUTF :                        18 - |
+*PWPHL :                         10 - | *PWPTH_V :                        8 - |
+*RAM_BGBUFFER :    FFFFFFFFFFFF8660 C | *RAM_DMACODE :     FFFFFFFFFFFFA240 C |
+*RAM_EXSOUNDDATA :           FF4800 C |
  RAM_FADEMARSDELAY :                                       FFFFFFFFFFFF99AA C |
  RAM_FADEMARSINCR :                                        FFFFFFFFFFFF99A8 C |
  RAM_FADEMARSREQ : FFFFFFFFFFFF99A6 C | *RAM_FADEMARSTMR : FFFFFFFFFFFF99AC C |
@@ -10556,9 +10545,9 @@
  RAM_FRAMECOUNT :  FFFFFFFFFFFF8740 C |  RAM_GLBL_SCRN :   FFFFFFFFFFFFC500 C |
  RAM_HORSCROLL :   FFFFFFFFFFFF8744 C | *RAM_INITFLUG :    FFFFFFFFFFFFA448 C |
  RAM_INPUTDATA :   FFFFFFFFFFFFA000 C | *RAM_MAPX :        FFFFFFFFFFFFCD00 C |
-*RAM_MAPY :        FFFFFFFFFFFFCD02 C | *RAM_MAPY.FADE_IN :            10F4 C |
-*RAM_MAPY.FADE_OUT :           111A C |  RAM_MAPY.LOOP :               10D4 C |
- RAM_MAPY.LOOP2 :              113E C | *RAM_MDDREQ :      FFFFFFFFFFFFA500 - |
+*RAM_MAPY :        FFFFFFFFFFFFCD02 C | *RAM_MAPY.FADE_IN :            10E6 C |
+*RAM_MAPY.FADE_OUT :           110C C |  RAM_MAPY.LOOP :               10C6 C |
+ RAM_MAPY.LOOP2 :              1130 C | *RAM_MDDREQ :      FFFFFFFFFFFFA500 - |
  RAM_MDGLOBAL :    FFFFFFFFFFFFC500 C |  RAM_MDMARSHINT :  FFFFFFFFFFFFA452 C |
  RAM_MDMARSPALFD : FFFFFFFFFFFF9534 C |  RAM_MDMARSVINT :  FFFFFFFFFFFFA44C C |
  RAM_MDOTHER :     FFFFFFFFFFFFA500 C |  RAM_MDSYSTEM :    FFFFFFFFFFFFA000 C |
@@ -10570,21 +10559,21 @@
 *RAM_SPRDRWCNTR :  FFFFFFFFFFFF9994 C | *RAM_SPRDRWPZ :    FFFFFFFFFFFF8B74 C |
  RAM_SPRITES :     FFFFFFFFFFFF8FD4 C | *RAM_SPRSHOWINDX : FFFFFFFFFFFF9996 C |
  RAM_STACK :               FFFFFD00 - |  RAM_SYSRANDSEED : FFFFFFFFFFFFA444 C |
-*RAM_SYSRANDVAL :  FFFFFFFFFFFFA440 C | *RAM_SYSTEMCODE :  FFFFFFFFFFFF0000 C |
-*RAM_USERCODE :    FFFFFFFFFFFF1800 C |  RAM_VDPDMAINDX :  FFFFFFFFFFFF9998 C |
+*RAM_SYSRANDVAL :  FFFFFFFFFFFFA440 C | *RAM_SYSTEMCODE :            FF0000 C |
+*RAM_USERCODE :              FF1800 C |  RAM_VDPDMAINDX :  FFFFFFFFFFFF9998 C |
  RAM_VDPDMALIST :  FFFFFFFFFFFF9734 C |  RAM_VDPDMAMOD :   FFFFFFFFFFFF999A C |
  RAM_VDPREGS :     FFFFFFFFFFFF99AE C |  RAM_VERSCROLL :   FFFFFFFFFFFF8B04 C |
  RAM_VIDPRNTLIST : FFFFFFFFFFFF9814 C |  RAM_VIDPRNTVRAM : FFFFFFFFFFFF999C C |
 *RCHWIDTH :                      36 - | *RELAXED :                        0 - |
- ROM_END :                    4A000 C |  RRT :                           14 - |
+ ROM_END :                    49F00 C |  RRT :                           14 - |
  SAMPLEHEAD :                  1716 C |  SBEATACC :                      1C C |
  SBEATPTCK :                     1E C |  SET_CHIPS :                    4FE C |
  SET_CHIPS.TRK_BUFFRS :         506 C | *SHIFT :                          2 - |
- SHOWROM :                      EA8 C | *SIZEOF_DREQ :                  200 C |
- SIZEOF_INPUT :                  10 C |  SIZEOF_MDBG :                   38 C |
-*SIZEOF_MDGLBL :   FFFFFFFFFFFFC502 C |  SIZEOF_MDOBJ :                  66 C |
- SIZEOF_MDRAM :    FFFFFFFFFFFFF500 C | *SIZEOF_MDSYS :    FFFFFFFFFFFFA45A C |
- SIZEOF_MDVID :    FFFFFFFFFFFF99C6 C |  SLV :                           10 - |
+ SHOWROM :                      EA8 C |  SIZEOF_INPUT :                  10 C |
+ SIZEOF_MDBG :                   38 C | *SIZEOF_MDGLBL :   FFFFFFFFFFFFC502 C |
+ SIZEOF_MDOBJ :                  66 C |  SIZEOF_MDRAM :    FFFFFFFFFFFFF500 C |
+*SIZEOF_MDSYS :    FFFFFFFFFFFFA45A C |  SIZEOF_MDVID :    FFFFFFFFFFFF99C6 C |
+*SIZEOF_THISRAM :            FF7800 C |  SLV :                           10 - |
 *SNDLOCKZ80 :                   26A C |  SNDLOCKZ80.WAIT :              272 C |
 *SNDREQCMD :                    304 C |  SNDREQ_ENTER :                 288 C |
  SNDREQ_ENTER.WAIT :            2AE C |  SNDREQ_EXIT :                  2BE C |
@@ -10592,193 +10581,192 @@
  SNDREQ_SCMD :                  2D4 C | *SNDREQ_SLONG :                 2E2 C |
  SNDREQ_SWORD :                 2EA C | *SNDUNLOCKZ80 :                 27E C |
  SOUND_INIT :                   264 C | *STANDBY :                        3 - |
- STR_STATS :                   114A C |  STR_STATS2 :                  1156 C |
-*SYSMARS_ID :                A130EC - |  SYSMARS_REG :               A15100 - |
- SYSMCD_REG :                A12000 - | *SYSMCD_WRAM :               200000 - |
- SYSTEM_DMAENTER_RAM :          C12 C |  SYSTEM_DMAENTER_ROM :          C1A C |
- SYSTEM_DMAEXIT_RAM :           C16 C |  SYSTEM_DMAEXIT_ROM :           C1E C |
-*SYSTEM_GRABRAMCODE :           C24 C |  SYSTEM_INIT :                  B24 C |
- SYSTEM_INIT.CLRINPUT :         B50 C |  SYSTEM_INPUT :                 C26 C |
- SYSTEM_INPUT.EXIT :            C54 C |  SYSTEM_INPUT.ID_03 :           C7A C |
- SYSTEM_INPUT.ID_0D :           D24 C |  SYSTEM_INPUT.INVALID :         D1E C |
- SYSTEM_INPUT.LIST :            C5A C |  SYSTEM_INPUT.OLDPAD :          D9C C |
- SYSTEM_INPUT.PICK_ID :         DA2 C |  SYSTEM_INPUT.READ :            DB8 C |
- SYSTEM_INPUT.STEP_1 :          DC4 C |  SYSTEM_INPUT.STEP_2 :          DD0 C |
- SYSTEM_INPUT.THIS_ONE :        C3A C | *SYSTEM_INPUT.WAIT :            C26 C |
- SYSTEM_INPUT.X_NEG :           CEC C |  SYSTEM_INPUT.Y_NEG :           D18 C |
- SYSTEM_MARSUPDATE :            C22 C | *SYSTEM_RANDOM :                DD2 C |
- SYSTEM_RANDOM.GOOD_S :         DE0 C |  SYSTEM_SETINTS :               F3A C |
- SYSTEM_SETINTS.NOHINT :        F5A C |  SYSTEM_SETINTS.NOVINT :        F4A C |
-*SYSTEM_SINEWAVE :              E1C C |  SYSTEM_SINEWAVE.DONT_NEG :     E38 C |
-*SYSTEM_SINEWAVE_COS :          DFC C |  SYSTEM_SINEWAVE_COS.DONT_NEG : E16 C |
-*SYSTEM_SRAMINIT :              F5C C |  SYSTEM_SRAMINIT.INITSAVE :     F70 C |
- SYSTEM_WAITFRAME :             B5A C |  SYSTEM_WAITFRAME.WAIT_IN :     B72 C |
- SYSTEM_WAITFRAME.WAIT_LAG :    B60 C | *SYS_CTRL_1 :                A10009 - |
-*SYS_CTRL_2 :                A1000B - | *SYS_CTRL_3 :                A1000D - |
- SYS_DATA_1 :                A10003 - | *SYS_DATA_2 :                A10005 - |
-*SYS_DATA_3 :                A10007 - | *SYS_EXRAM :                 200000 - |
-*SYS_IO :                    A10001 - | *SYS_TMSS :                  A14000 - |
- TBLBUFF_READ :                 543 C |  TBLBUFF_READ.CHK_PSG :         607 C |
- TBLBUFF_READ.CLRFULL :         6C6 C |  TBLBUFF_READ.DO_CHIP :         579 C |
- TBLBUFF_READ.DO_NEWCHIP :      632 C |  TBLBUFF_READ.GRAB_LINK :       5AF C |
- TBLBUFF_READ.INVLDL :          5F0 C |  TBLBUFF_READ.L_HIPRIO :        67B C |
- TBLBUFF_READ.NEW_CHIP :        633 C |  TBLBUFF_READ.NEW_LINK :        678 C |
- TBLBUFF_READ.NEW_LINK_O :      678 C |  TBLBUFF_READ.NEW_LINK_Z :      674 C |
- TBLBUFF_READ.NEXTSRCH_TBL :    66A C |  TBLBUFF_READ.NEXT_CHNL :       566 C |
- TBLBUFF_READ.NEXT_PRIO :       655 C |  TBLBUFF_READ.PASS_2 :          653 C |
- TBLBUFF_READ.PICK_TBL :        69E C |  TBLBUFF_READ.REFILL :          62F C |
- TBLBUFF_READ.REROLL :          5F9 C |  TBLBUFF_READ.RESET_LINK :      6B8 C |
- TBLBUFF_READ.RNOT_PSG :        62D C |  TBLBUFF_READ.SET_ASFULL :      69B C |
- TBLBUFF_READ.SINGL_FREE :      689 C |  TBLBUFF_READ.SINGL_LINK :      61F C |
-*TBLBUFF_READ.SNGL_SPRIO :      69A C |  TBLBUFF_READ.SRCH_FREE :       642 C |
- TBLBUFF_READ.SRCH_LINK :       5D6 C |  TBLBUFF_READ.SRCH_LLOOP :      5E0 C |
- TBLBUFF_READ.TRACK_CONT :      559 C |  TBLFM :                       147F C |
- TBLFM3 :                      14BF C |  TBLFM6 :                      14CF C |
- TBLLIST :                     142D C |  TBLPSG :                      143D C |
- TBLPSGN :                     146F C |  TBLPWM :                      14E1 C |
-*TEST_MAINSPD :                   4 - | *TEST_WAVE :                  2AC74 C |
-*TEST_WAVE_E :                39374 C |  TH :                      20000000 - |
- TICKCNT :                     1705 C |  TICKFLAG :                    1704 C |
- TICKSPSET :                   1703 C | *TIME :                    19:28:40 - |
-*TIMERCTL :                      30 - | *TMR :                           2C - |
- TRACK_OUT :                    493 C |  TRACK_OUT.CLRFE :              4A4 C |
- TRACK_OUT.NOCHIP :             4C7 C |  TRANSFERROM :                  EC8 C |
- TRANSFERROM.DOUBLE :           EE7 C |  TRANSFERROM.TRANSFER :         F0B C |
- TRANSFERROM.X68KLAST :         F29 C |  TRANSFERROM.X68KLOOP :         F15 C |
- TRANSFERROM.X68KLPWT :         F37 C |  TRANSFERROM.X68KNOCARRY :      F05 C |
- TRANSFERROM.X68KPWTLP :        F3C C |  TRKBLKS_0 :                   1B61 C |
- TRKBLKS_1 :                   1B79 C |  TRKBLKS_2 :                   1B91 C |
- TRKBUFF_0 :                   171D C |  TRKBUFF_1 :                   174D C |
- TRKBUFF_2 :                   177D C |  TRKCACH_0 :                   1E00 C |
- TRKCACH_1 :                   1E40 C |  TRKCACH_2 :                   1E80 C |
-*TRKCACH_3 :                   1EC0 C |  TRKCHNL_0 :                   17AD C |
- TRKCHNL_1 :                   1835 C |  TRKCHNL_2 :                   18BD C |
- TRKHDRS_0 :                   1945 C |  TRKHDRS_1 :                   1981 C |
- TRKHDRS_2 :                   19BD C |  TRKINSD_0 :                   19F9 C |
- TRKINSD_1 :                   1A71 C |  TRKINSD_2 :                   1AE9 C |
- TRKLISTCACH :                 16B7 C |  TRKLISTPAGE :                   3E C |
-*TRK_BANKBLK :                   16 - | *TRK_BANKHEAD :                  17 - |
-*TRK_BANKINS :                   15 - |  TRK_BLOCKS :                     4 - |
- TRK_CACHHALF :                   E - | *TRK_CACHINC :                    F - |
- TRK_CHNCACH :                   2E - |  TRK_CHNCBLK :                   28 - |
- TRK_CHNCHEAD :                  2A - |  TRK_CHNCINS :                   2C - |
- TRK_CHNLIST :                   26 - |  TRK_CURRBLK :                   12 - |
- TRK_INSTR :                      8 - |  TRK_MAXBLKS :                   1D - |
- TRK_MAXCHNLS :                  1C - |  TRK_MAXHDRS :                   1E - |
- TRK_MAXINS :                    1F - | *TRK_PANNING :                   13 - |
- TRK_PATT :                       6 - |  TRK_PRIORITY :                  14 - |
- TRK_READ :                       A - |  TRK_ROMCPATT :                  20 - |
- TRK_ROMPATT :                   23 - |  TRK_ROWPAUSE :                  10 - |
- TRK_ROWS :                       C - |  TRK_SEQID :                      1 - |
- TRK_SETBLK :                     2 - |  TRK_STATUS :                     0 - |
- TRK_TICKSET :                    3 - |  TRK_TICKTMR :                   11 - |
-*TRUE :                           1 - | *TVMODE :                         0 - |
- UPD_TRACK :                    1CF C |  UPD_TRACK.DECROW :             265 C |
- UPD_TRACK.DECROW_E :           268 C |  UPD_TRACK.EFFECT_FILL :        3DB C |
- UPD_TRACK.EFF_A :              303 C |  UPD_TRACK.EFF_B :              315 C |
- UPD_TRACK.EFF_C :              32B C |  UPD_TRACK.EXIT :               259 C |
- UPD_TRACK.FIRST_FILL :         3E2 C |  UPD_TRACK.GRAB_RHEAD :         47F C |
- UPD_TRACK.HAS_NOTE :           270 C |  UPD_TRACK.INC_CPATT :          32E C |
- UPD_TRACK.NEXT_NOTE :          249 C |  UPD_TRACK.NO_EFF :             2CF C |
- UPD_TRACK.NO_GLBL :            40D C |  UPD_TRACK.NO_INS :             2B1 C |
- UPD_TRACK.NO_NOTE :            2A6 C |  UPD_TRACK.NO_VOL :             2BC C |
- UPD_TRACK.OLD_TYPE :           29A C |  UPD_TRACK.RAN_OUT :            33C C |
- UPD_TRACK.READ_TRACK :         1F0 C |  UPD_TRACK.ROW_ACTIVE :         242 C |
- UPD_TRACK.SET_TRACK :          366 C |  UPD_TRACK.SFXMD :              209 C |
- UPD_TRACK.TRACK_END :          3CA C |  UPD_TRACK.TRK_BUFFRS :         1D4 C |
- VARNULLVRAM :                  7FF - |  VARPRINTPAL :                    3 - |
- VARPRINTVRAM :                 580 - | *VBLK :                          80 - |
-*VDPSTS :                         A - |  VDP_CTRL :                  C00004 - |
- VDP_DATA :                  C00000 - | *VERSION :                     142F - |
- VIDEO_CLEAR :                  3E8 C | *VIDEO_CLEARSCREEN :            3E8 C |
- VIDEO_CLEARSCREEN.PNEXT :      460 C |  VIDEO_CLEARSCREEN.SNEXT :      44C C |
- VIDEO_CLEARSCREEN.XNEXT :      42C C |  VIDEO_CLEARSCREEN.YNEXT :      43C C |
-*VIDEO_COPY :                   998 C |  VIDEO_COPY.DMAW :              9AC C |
- VIDEO_COPY.DMAWE :             A04 C | *VIDEO_DMABLAST :               ABE C |
- VIDEO_DMABLAST.END :           B0C C |  VIDEO_DMABLAST.EXIT :          B1A C |
- VIDEO_DMABLAST.NEXT :          AE6 C | *VIDEO_DMAMKENTRY :             8B0 C |
- VIDEO_DOPALFADE :              766 C |  VIDEO_DOPALFADE.ACTIVE :       782 C |
- VIDEO_DOPALFADE.FADE_DONE :    78A C |  VIDEO_DOPALFADE.FADE_IN :      78C C |
- VIDEO_DOPALFADE.FADE_LIST :    784 C |  VIDEO_DOPALFADE.FADE_OUT :     830 C |
- VIDEO_DOPALFADE.NO_BLU :       808 C |  VIDEO_DOPALFADE.NO_BLU_O :     88C C |
- VIDEO_DOPALFADE.NO_FNSH :      820 C |  VIDEO_DOPALFADE.NO_FNSH_O :    8A0 C |
- VIDEO_DOPALFADE.NO_GRN :       7E8 C |  VIDEO_DOPALFADE.NO_GRN_O :     874 C |
- VIDEO_DOPALFADE.NO_MOVE :      82E C |  VIDEO_DOPALFADE.NO_MOVE_O :    8AE C |
- VIDEO_DOPALFADE.NO_RED :       7C8 C |  VIDEO_DOPALFADE.NO_RED_O :     85C C |
- VIDEO_DOPALFADE.NXT_PAL :      7A6 C |  VIDEO_DOPALFADE.NXT_PAL_O :    844 C |
- VIDEO_FADEPAL :                738 C | *VIDEO_FADEPAL_MARS :           B20 C |
- VIDEO_FILL :                   922 C |  VIDEO_FILL.DMAW :              936 C |
- VIDEO_FILL.DMAWE :             980 C |  VIDEO_INIT :                   360 C |
- VIDEO_INIT.CLRRAM :            36A C | *VIDEO_INIT.EXIT :              394 C |
- VIDEO_INIT.LOOP :              386 C |  VIDEO_LOADART :                A1C C |
- VIDEO_LOADART.FROM_RAM :       AAA C |  VIDEO_LOADMAP :                46A C |
- VIDEO_LOADMAP.CONT :           490 C |  VIDEO_LOADMAP.NODBLE :         4AE C |
- VIDEO_LOADMAP.NONULL :         48E C |  VIDEO_LOADMAP.XLOOP :          480 C |
- VIDEO_LOADMAP.YLOOP :          476 C | *VIDEO_LOADMAP_VERT :           4C0 C |
- VIDEO_LOADMAP_VERT.CONT :      4F2 C |  VIDEO_LOADMAP_VERT.NODBLE :    512 C |
- VIDEO_LOADMAP_VERT.NONULL :    4F0 C | *VIDEO_LOADMAP_VERT.OUTDBL :    51C C |
- VIDEO_LOADMAP_VERT.XLOOP :     4CE C |  VIDEO_LOADMAP_VERT.YLOOP :     4DE C |
- VIDEO_LOADPAL :                742 C |  VIDEO_MARSPALFADE :            B22 C |
- VIDEO_MARS_GFXMODE :           B1C C | *VIDEO_MARS_WAITFRAME :         B1E C |
- VIDEO_PRINT :                  558 C |  VIDEO_PRINT.DONIBL :           672 C |
- VIDEO_PRINT.EXIT :             5E2 C |  VIDEO_PRINT.ISBYTE :           5AC C |
- VIDEO_PRINT.ISLONG :           5D0 C |  VIDEO_PRINT.ISWORD :           5BE C |
- VIDEO_PRINT.LNGLOOP :          662 C |  VIDEO_PRINT.LOOP :             56C C |
- VIDEO_PRINT.LOWR :             682 C |  VIDEO_PRINT.NEWJUMP :          566 C |
- VIDEO_PRINT.NEXT :             58E C |  VIDEO_PRINT.NEXTV :            5EC C |
- VIDEO_PRINT.NOTHING :          68E C |  VIDEO_PRINT.PUTTEXT :          580 C |
- VIDEO_PRINT.SPECIAL :          592 C |  VIDEO_PRINT.VBYTE :            61E C |
- VIDEO_PRINT.VLONG :            66A C |  VIDEO_PRINT.VWORD :            640 C |
- VIDEO_PRINTINIT :              52C C | *VIDEO_PRINTPAL :               546 C |
- VIDEO_RUNFADE :                726 C |  VIDEO_UPDATE :                 394 C |
-*VIDEO_UPDATE.EXIT :            3B2 C |  VIDEO_UPDATE.LOOP :            3A6 C |
- VIDMD_PAL :                    746 C |  VIDMD_PAL.LOOP :               75E C |
- VID_PICKLAYER :                690 C |  VID_PICKLAYER.GOLYR :          6DA C |
- VID_PICKLAYER.NOWD :           6C4 C |  VID_PICKLAYER.PLAWND :         6B6 C |
- VID_PICKLAYER.THISSZ :         6FA C |  VID_PICKLAYER.THISSZJ :        722 C |
-*VINTCLR :                       16 - | *VINTENBL :                      20 - |
- VINT_DEFAULT :                 FD4 C | *VIRQ_ON :                        8 - |
-*VRESINTCLR :                    14 - |  WAVE_FLAGS :                  1702 C |
- WAVE_LEN :                    16FA C |  WAVE_LOOP :                   16FD C |
- WAVE_PITCH :                  1700 C |  WAVE_START :                  16F7 C |
- WAVFREQ_LIST :                12F9 C |  X68KSRCLSB :                    36 C |
- X68KSRCMID :                    37 C | *YM_CTRL_1 :                 A04000 - |
-*YM_CTRL_2 :                 A04002 - | *YM_DATA_1 :                 A04001 - |
-*YM_DATA_2 :                 A04003 - |  Z80_BUS :                   A11100 - |
-*Z80_CODE :                    1234 C | *Z80_CODE_END :                3134 C |
- Z80_CPU :                   A00000 - |  Z80_INIT :                      83 C |
-*Z80_RESET :                 A11200 - |  Z80_TOP :                     1234 C |
-*ZBANK :                       6000 - |  ZDRVFIFO :                      40 - |
- ZDRVFWRT :                      80 - | *ZDRVMARSBLK :                   82 - |
-*ZDRVROMBLK :                    81 - | *ZOPCEX :                         8 - |
- ZOPCEXX :                       D9 - | *ZOPCNOP :                        0 - |
- ZOPCPUSHAF :                    F5 - |  ZOPCRET :                       C9 - |
- ZPSG_CTRL :                   7F11 - |  ZSET_TESTME :                    0 - |
- ZYM_CTRL_1 :                  4000 - |  ZYM_CTRL_2 :                  4002 - |
- ZYM_DATA_1 :                  4001 - |  ZYM_DATA_2 :                  4003 - |
-*_CCR :                    FFFFFE92 - | *_DMACHANNEL0 :            FFFFFF8C - |
-*_DMACHANNEL1 :            FFFFFF9C - | *_DMACOUNT0 :              FFFFFF88 - |
-*_DMACOUNT1 :              FFFFFF98 - | *_DMADEST0 :               FFFFFF84 - |
-*_DMADEST1 :               FFFFFF94 - | *_DMAOPERATION :           FFFFFFB0 - |
-*_DMAREQACK0 :             FFFFFFB4 - | *_DMAREQACK1 :             FFFFFFB8 - |
-*_DMASOURCE0 :             FFFFFF80 - | *_DMASOURCE1 :             FFFFFF90 - |
-*_DMAVECTORE0 :            FFFFFFA4 - | *_DMAVECTORE1 :            FFFFFFAC - |
-*_DMAVECTORN0 :            FFFFFFA0 - | *_DMAVECTORN1 :            FFFFFFA8 - |
-*_FRAMEBUFFER :            24000000 - | *_FRC_H :                         2 - |
-*_FRC_L :                         3 - | *_FRT :                    FFFFFE10 - |
-*_HRH :                    FFFFFF10 - | *_HRL :                    FFFFFF14 - |
-*_HRL32 :                  FFFFFF04 - | *_JR :                     FFFFFF00 - |
-*_OCR_H :                         4 - | *_OCR_L :                         5 - |
-*_OVERWRITE :              24020000 - | *_PALETTE :                20004200 - |
-*_SERIAL :                 FFFFFE00 - | *_SYSREG :                 20004000 - |
-*_TCR :                           6 - | *_TCSR :                          1 - |
-*_TIER :                          0 - | *_TOCR :                          7 - |
-*_VDPREG :                 20004100 - |
+ STR_STATS2 :                  113C C | *SYSMARS_ID :                A130EC - |
+ SYSMARS_REG :               A15100 - |  SYSMCD_REG :                A12000 - |
+*SYSMCD_WRAM :               200000 - |  SYSTEM_DMAENTER_RAM :          C12 C |
+ SYSTEM_DMAENTER_ROM :          C1A C |  SYSTEM_DMAEXIT_RAM :           C16 C |
+ SYSTEM_DMAEXIT_ROM :           C1E C | *SYSTEM_GRABRAMCODE :           C24 C |
+ SYSTEM_INIT :                  B24 C |  SYSTEM_INIT.CLRINPUT :         B50 C |
+ SYSTEM_INPUT :                 C26 C |  SYSTEM_INPUT.EXIT :            C54 C |
+ SYSTEM_INPUT.ID_03 :           C7A C |  SYSTEM_INPUT.ID_0D :           D24 C |
+ SYSTEM_INPUT.INVALID :         D1E C |  SYSTEM_INPUT.LIST :            C5A C |
+ SYSTEM_INPUT.OLDPAD :          D9C C |  SYSTEM_INPUT.PICK_ID :         DA2 C |
+ SYSTEM_INPUT.READ :            DB8 C |  SYSTEM_INPUT.STEP_1 :          DC4 C |
+ SYSTEM_INPUT.STEP_2 :          DD0 C |  SYSTEM_INPUT.THIS_ONE :        C3A C |
+*SYSTEM_INPUT.WAIT :            C26 C |  SYSTEM_INPUT.X_NEG :           CEC C |
+ SYSTEM_INPUT.Y_NEG :           D18 C |  SYSTEM_MARSUPDATE :            C22 C |
+*SYSTEM_RANDOM :                DD2 C |  SYSTEM_RANDOM.GOOD_S :         DE0 C |
+ SYSTEM_SETINTS :               F3A C |  SYSTEM_SETINTS.NOHINT :        F5A C |
+ SYSTEM_SETINTS.NOVINT :        F4A C | *SYSTEM_SINEWAVE :              E1C C |
+ SYSTEM_SINEWAVE.DONT_NEG :     E38 C | *SYSTEM_SINEWAVE_COS :          DFC C |
+ SYSTEM_SINEWAVE_COS.DONT_NEG : E16 C | *SYSTEM_SRAMINIT :              F5C C |
+ SYSTEM_SRAMINIT.INITSAVE :     F70 C |  SYSTEM_WAITFRAME :             B5A C |
+ SYSTEM_WAITFRAME.WAIT_IN :     B72 C |  SYSTEM_WAITFRAME.WAIT_LAG :    B60 C |
+*SYS_CTRL_1 :                A10009 - | *SYS_CTRL_2 :                A1000B - |
+*SYS_CTRL_3 :                A1000D - |  SYS_DATA_1 :                A10003 - |
+*SYS_DATA_2 :                A10005 - | *SYS_DATA_3 :                A10007 - |
+*SYS_EXRAM :                 200000 - | *SYS_IO :                    A10001 - |
+*SYS_TMSS :                  A14000 - |  TBLBUFF_READ :                 543 C |
+ TBLBUFF_READ.CHK_PSG :         607 C |  TBLBUFF_READ.CLRFULL :         6C6 C |
+ TBLBUFF_READ.DO_CHIP :         579 C |  TBLBUFF_READ.DO_NEWCHIP :      632 C |
+ TBLBUFF_READ.GRAB_LINK :       5AF C |  TBLBUFF_READ.INVLDL :          5F0 C |
+ TBLBUFF_READ.L_HIPRIO :        67B C |  TBLBUFF_READ.NEW_CHIP :        633 C |
+ TBLBUFF_READ.NEW_LINK :        678 C |  TBLBUFF_READ.NEW_LINK_O :      678 C |
+ TBLBUFF_READ.NEW_LINK_Z :      674 C |  TBLBUFF_READ.NEXTSRCH_TBL :    66A C |
+ TBLBUFF_READ.NEXT_CHNL :       566 C |  TBLBUFF_READ.NEXT_PRIO :       655 C |
+ TBLBUFF_READ.PASS_2 :          653 C |  TBLBUFF_READ.PICK_TBL :        69E C |
+ TBLBUFF_READ.REFILL :          62F C |  TBLBUFF_READ.REROLL :          5F9 C |
+ TBLBUFF_READ.RESET_LINK :      6B8 C |  TBLBUFF_READ.RNOT_PSG :        62D C |
+ TBLBUFF_READ.SET_ASFULL :      69B C |  TBLBUFF_READ.SINGL_FREE :      689 C |
+ TBLBUFF_READ.SINGL_LINK :      61F C | *TBLBUFF_READ.SNGL_SPRIO :      69A C |
+ TBLBUFF_READ.SRCH_FREE :       642 C |  TBLBUFF_READ.SRCH_LINK :       5D6 C |
+ TBLBUFF_READ.SRCH_LLOOP :      5E0 C |  TBLBUFF_READ.TRACK_CONT :      559 C |
+ TBLFM :                       147F C |  TBLFM3 :                      14BF C |
+ TBLFM6 :                      14CF C |  TBLLIST :                     142D C |
+ TBLPSG :                      143D C |  TBLPSGN :                     146F C |
+ TBLPWM :                      14E1 C | *TEST_MAINSPD :                   4 - |
+*TEST_WAVE :                  2AC74 C | *TEST_WAVE_E :                39374 C |
+ TH :                      20000000 - |  TICKCNT :                     1705 C |
+ TICKFLAG :                    1704 C |  TICKSPSET :                   1703 C |
+*TIME :                    23:16:34 - | *TIMERCTL :                      30 - |
+*TMR :                           2C - |  TRACK_OUT :                    493 C |
+ TRACK_OUT.CLRFE :              4A4 C |  TRACK_OUT.NOCHIP :             4C7 C |
+ TRANSFERROM :                  EC8 C |  TRANSFERROM.DOUBLE :           EE7 C |
+ TRANSFERROM.TRANSFER :         F0B C |  TRANSFERROM.X68KLAST :         F29 C |
+ TRANSFERROM.X68KLOOP :         F15 C |  TRANSFERROM.X68KLPWT :         F37 C |
+ TRANSFERROM.X68KNOCARRY :      F05 C |  TRANSFERROM.X68KPWTLP :        F3C C |
+ TRKBLKS_0 :                   1B61 C |  TRKBLKS_1 :                   1B79 C |
+ TRKBLKS_2 :                   1B91 C |  TRKBUFF_0 :                   171D C |
+ TRKBUFF_1 :                   174D C |  TRKBUFF_2 :                   177D C |
+ TRKCACH_0 :                   1E00 C |  TRKCACH_1 :                   1E40 C |
+ TRKCACH_2 :                   1E80 C | *TRKCACH_3 :                   1EC0 C |
+ TRKCHNL_0 :                   17AD C |  TRKCHNL_1 :                   1835 C |
+ TRKCHNL_2 :                   18BD C |  TRKHDRS_0 :                   1945 C |
+ TRKHDRS_1 :                   1981 C |  TRKHDRS_2 :                   19BD C |
+ TRKINSD_0 :                   19F9 C |  TRKINSD_1 :                   1A71 C |
+ TRKINSD_2 :                   1AE9 C |  TRKLISTCACH :                 16B7 C |
+ TRKLISTPAGE :                   3E C | *TRK_BANKBLK :                   16 - |
+*TRK_BANKHEAD :                  17 - | *TRK_BANKINS :                   15 - |
+ TRK_BLOCKS :                     4 - |  TRK_CACHHALF :                   E - |
+*TRK_CACHINC :                    F - |  TRK_CHNCACH :                   2E - |
+ TRK_CHNCBLK :                   28 - |  TRK_CHNCHEAD :                  2A - |
+ TRK_CHNCINS :                   2C - |  TRK_CHNLIST :                   26 - |
+ TRK_CURRBLK :                   12 - |  TRK_INSTR :                      8 - |
+ TRK_MAXBLKS :                   1D - |  TRK_MAXCHNLS :                  1C - |
+ TRK_MAXHDRS :                   1E - |  TRK_MAXINS :                    1F - |
+*TRK_PANNING :                   13 - |  TRK_PATT :                       6 - |
+ TRK_PRIORITY :                  14 - |  TRK_READ :                       A - |
+ TRK_ROMCPATT :                  20 - |  TRK_ROMPATT :                   23 - |
+ TRK_ROWPAUSE :                  10 - |  TRK_ROWS :                       C - |
+ TRK_SEQID :                      1 - |  TRK_SETBLK :                     2 - |
+ TRK_STATUS :                     0 - |  TRK_TICKSET :                    3 - |
+ TRK_TICKTMR :                   11 - | *TRUE :                           1 - |
+*TVMODE :                         0 - |  UPD_TRACK :                    1CF C |
+ UPD_TRACK.DECROW :             265 C |  UPD_TRACK.DECROW_E :           268 C |
+ UPD_TRACK.EFFECT_FILL :        3DB C |  UPD_TRACK.EFF_A :              303 C |
+ UPD_TRACK.EFF_B :              315 C |  UPD_TRACK.EFF_C :              32B C |
+ UPD_TRACK.EXIT :               259 C |  UPD_TRACK.FIRST_FILL :         3E2 C |
+ UPD_TRACK.GRAB_RHEAD :         47F C |  UPD_TRACK.HAS_NOTE :           270 C |
+ UPD_TRACK.INC_CPATT :          32E C |  UPD_TRACK.NEXT_NOTE :          249 C |
+ UPD_TRACK.NO_EFF :             2CF C |  UPD_TRACK.NO_GLBL :            40D C |
+ UPD_TRACK.NO_INS :             2B1 C |  UPD_TRACK.NO_NOTE :            2A6 C |
+ UPD_TRACK.NO_VOL :             2BC C |  UPD_TRACK.OLD_TYPE :           29A C |
+ UPD_TRACK.RAN_OUT :            33C C |  UPD_TRACK.READ_TRACK :         1F0 C |
+ UPD_TRACK.ROW_ACTIVE :         242 C |  UPD_TRACK.SET_TRACK :          366 C |
+ UPD_TRACK.SFXMD :              209 C |  UPD_TRACK.TRACK_END :          3CA C |
+ UPD_TRACK.TRK_BUFFRS :         1D4 C |  VARNULLVRAM :                  7FF - |
+ VARPRINTPAL :                    3 - |  VARPRINTVRAM :                 580 - |
+*VBLK :                          80 - | *VDPSTS :                         A - |
+ VDP_CTRL :                  C00004 - |  VDP_DATA :                  C00000 - |
+*VERSION :                     142F - |  VIDEO_CLEAR :                  3E8 C |
+*VIDEO_CLEARSCREEN :            3E8 C |  VIDEO_CLEARSCREEN.PNEXT :      460 C |
+ VIDEO_CLEARSCREEN.SNEXT :      44C C |  VIDEO_CLEARSCREEN.XNEXT :      42C C |
+ VIDEO_CLEARSCREEN.YNEXT :      43C C | *VIDEO_COPY :                   998 C |
+ VIDEO_COPY.DMAW :              9AC C |  VIDEO_COPY.DMAWE :             A04 C |
+*VIDEO_DMABLAST :               ABE C |  VIDEO_DMABLAST.END :           B0C C |
+ VIDEO_DMABLAST.EXIT :          B1A C |  VIDEO_DMABLAST.NEXT :          AE6 C |
+*VIDEO_DMAMKENTRY :             8B0 C |  VIDEO_DOPALFADE :              766 C |
+ VIDEO_DOPALFADE.ACTIVE :       782 C |  VIDEO_DOPALFADE.FADE_DONE :    78A C |
+ VIDEO_DOPALFADE.FADE_IN :      78C C |  VIDEO_DOPALFADE.FADE_LIST :    784 C |
+ VIDEO_DOPALFADE.FADE_OUT :     830 C |  VIDEO_DOPALFADE.NO_BLU :       808 C |
+ VIDEO_DOPALFADE.NO_BLU_O :     88C C |  VIDEO_DOPALFADE.NO_FNSH :      820 C |
+ VIDEO_DOPALFADE.NO_FNSH_O :    8A0 C |  VIDEO_DOPALFADE.NO_GRN :       7E8 C |
+ VIDEO_DOPALFADE.NO_GRN_O :     874 C |  VIDEO_DOPALFADE.NO_MOVE :      82E C |
+ VIDEO_DOPALFADE.NO_MOVE_O :    8AE C |  VIDEO_DOPALFADE.NO_RED :       7C8 C |
+ VIDEO_DOPALFADE.NO_RED_O :     85C C |  VIDEO_DOPALFADE.NXT_PAL :      7A6 C |
+ VIDEO_DOPALFADE.NXT_PAL_O :    844 C |  VIDEO_FADEPAL :                738 C |
+*VIDEO_FADEPAL_MARS :           B20 C |  VIDEO_FILL :                   922 C |
+ VIDEO_FILL.DMAW :              936 C |  VIDEO_FILL.DMAWE :             980 C |
+ VIDEO_INIT :                   360 C |  VIDEO_INIT.CLRRAM :            36A C |
+*VIDEO_INIT.EXIT :              394 C |  VIDEO_INIT.LOOP :              386 C |
+ VIDEO_LOADART :                A1C C |  VIDEO_LOADART.FROM_RAM :       AAA C |
+ VIDEO_LOADMAP :                46A C |  VIDEO_LOADMAP.CONT :           490 C |
+ VIDEO_LOADMAP.NODBLE :         4AE C |  VIDEO_LOADMAP.NONULL :         48E C |
+ VIDEO_LOADMAP.XLOOP :          480 C |  VIDEO_LOADMAP.YLOOP :          476 C |
+*VIDEO_LOADMAP_VERT :           4C0 C |  VIDEO_LOADMAP_VERT.CONT :      4F2 C |
+ VIDEO_LOADMAP_VERT.NODBLE :    512 C |  VIDEO_LOADMAP_VERT.NONULL :    4F0 C |
+*VIDEO_LOADMAP_VERT.OUTDBL :    51C C |  VIDEO_LOADMAP_VERT.XLOOP :     4CE C |
+ VIDEO_LOADMAP_VERT.YLOOP :     4DE C |  VIDEO_LOADPAL :                742 C |
+ VIDEO_MARSPALFADE :            B22 C |  VIDEO_MARS_GFXMODE :           B1C C |
+*VIDEO_MARS_WAITFRAME :         B1E C |  VIDEO_PRINT :                  558 C |
+ VIDEO_PRINT.DONIBL :           672 C |  VIDEO_PRINT.EXIT :             5E2 C |
+ VIDEO_PRINT.ISBYTE :           5AC C |  VIDEO_PRINT.ISLONG :           5D0 C |
+ VIDEO_PRINT.ISWORD :           5BE C |  VIDEO_PRINT.LNGLOOP :          662 C |
+ VIDEO_PRINT.LOOP :             56C C |  VIDEO_PRINT.LOWR :             682 C |
+ VIDEO_PRINT.NEWJUMP :          566 C |  VIDEO_PRINT.NEXT :             58E C |
+ VIDEO_PRINT.NEXTV :            5EC C |  VIDEO_PRINT.NOTHING :          68E C |
+ VIDEO_PRINT.PUTTEXT :          580 C |  VIDEO_PRINT.SPECIAL :          592 C |
+ VIDEO_PRINT.VBYTE :            61E C |  VIDEO_PRINT.VLONG :            66A C |
+ VIDEO_PRINT.VWORD :            640 C |  VIDEO_PRINTINIT :              52C C |
+*VIDEO_PRINTPAL :               546 C |  VIDEO_RUNFADE :                726 C |
+ VIDEO_UPDATE :                 394 C | *VIDEO_UPDATE.EXIT :            3B2 C |
+ VIDEO_UPDATE.LOOP :            3A6 C |  VIDMD_PAL :                    746 C |
+ VIDMD_PAL.LOOP :               75E C |  VID_PICKLAYER :                690 C |
+ VID_PICKLAYER.GOLYR :          6DA C |  VID_PICKLAYER.NOWD :           6C4 C |
+ VID_PICKLAYER.PLAWND :         6B6 C |  VID_PICKLAYER.THISSZ :         6FA C |
+ VID_PICKLAYER.THISSZJ :        722 C | *VINTCLR :                       16 - |
+*VINTENBL :                      20 - |  VINT_DEFAULT :                 FD4 C |
+*VIRQ_ON :                        8 - | *VRESINTCLR :                    14 - |
+ WAVE_FLAGS :                  1702 C |  WAVE_LEN :                    16FA C |
+ WAVE_LOOP :                   16FD C |  WAVE_PITCH :                  1700 C |
+ WAVE_START :                  16F7 C |  WAVFREQ_LIST :                12F9 C |
+ X68KSRCLSB :                    36 C |  X68KSRCMID :                    37 C |
+*YM_CTRL_1 :                 A04000 - | *YM_CTRL_2 :                 A04002 - |
+*YM_DATA_1 :                 A04001 - | *YM_DATA_2 :                 A04003 - |
+ Z80_BUS :                   A11100 - | *Z80_CODE :                    1218 C |
+*Z80_CODE_END :                3118 C |  Z80_CPU :                   A00000 - |
+ Z80_INIT :                      83 C | *Z80_RESET :                 A11200 - |
+ Z80_TOP :                     1218 C | *ZBANK :                       6000 - |
+ ZDRVFIFO :                      40 - |  ZDRVFWRT :                      80 - |
+*ZDRVMARSBLK :                   82 - | *ZDRVROMBLK :                    81 - |
+*ZOPCEX :                         8 - |  ZOPCEXX :                       D9 - |
+*ZOPCNOP :                        0 - |  ZOPCPUSHAF :                    F5 - |
+ ZOPCRET :                       C9 - |  ZPSG_CTRL :                   7F11 - |
+ ZSET_TESTME :                    0 - |  ZYM_CTRL_1 :                  4000 - |
+ ZYM_CTRL_2 :                  4002 - |  ZYM_DATA_1 :                  4001 - |
+ ZYM_DATA_2 :                  4003 - | *_CCR :                    FFFFFE92 - |
+*_DMACHANNEL0 :            FFFFFF8C - | *_DMACHANNEL1 :            FFFFFF9C - |
+*_DMACOUNT0 :              FFFFFF88 - | *_DMACOUNT1 :              FFFFFF98 - |
+*_DMADEST0 :               FFFFFF84 - | *_DMADEST1 :               FFFFFF94 - |
+*_DMAOPERATION :           FFFFFFB0 - | *_DMAREQACK0 :             FFFFFFB4 - |
+*_DMAREQACK1 :             FFFFFFB8 - | *_DMASOURCE0 :             FFFFFF80 - |
+*_DMASOURCE1 :             FFFFFF90 - | *_DMAVECTORE0 :            FFFFFFA4 - |
+*_DMAVECTORE1 :            FFFFFFAC - | *_DMAVECTORN0 :            FFFFFFA0 - |
+*_DMAVECTORN1 :            FFFFFFA8 - | *_FRAMEBUFFER :            24000000 - |
+*_FRC_H :                         2 - | *_FRC_L :                         3 - |
+*_FRT :                    FFFFFE10 - | *_HRH :                    FFFFFF10 - |
+*_HRL :                    FFFFFF14 - | *_HRL32 :                  FFFFFF04 - |
+*_JR :                     FFFFFF00 - | *_OCR_H :                         4 - |
+*_OCR_L :                         5 - | *_OVERWRITE :              24020000 - |
+*_PALETTE :                20004200 - | *_SERIAL :                 FFFFFE00 - |
+*_SYSREG :                 20004000 - | *_TCR :                           6 - |
+*_TCSR :                          1 - | *_TIER :                          0 - |
+*_TOCR :                          7 - | *_VDPREG :                 20004100 - |
 
-   1040 symbols
-    365 unused symbols
+   1039 symbols
+    364 unused symbols
 
- AS V1.42 Beta [Bld 118] - source file main.asm - page 3 - 7/20/2023 19:28:40
+ AS V1.42 Beta [Bld 118] - source file main.asm - page 3 - 7/20/2023 23:16:34
 
 
   defined macros:
@@ -10797,7 +10785,7 @@ VDP_SHOWME                            |
 
      19 macros
 
- AS V1.42 Beta [Bld 118] - source file main.asm - page 4 - 7/20/2023 19:28:40
+ AS V1.42 Beta [Bld 118] - source file main.asm - page 4 - 7/20/2023 23:16:34
 
 
   defined functions:
@@ -10806,7 +10794,7 @@ VDP_SHOWME                            |
 NOTZ80                                | CELL_VRAM                            
 LOCATE                                | MAPSIZE                              
 
- AS V1.42 Beta [Bld 118] - source file main.asm - page 5 - 7/20/2023 19:28:40
+ AS V1.42 Beta [Bld 118] - source file main.asm - page 5 - 7/20/2023 23:16:34
 
 
   codepages:
@@ -10815,10 +10803,10 @@ LOCATE                                | MAPSIZE
 STANDARD (0 changed characters)
 
 
-0.05 seconds assembly time
+0.06 seconds assembly time
 
-  10256 lines source file
-  11113 lines incl. macro expansions
+  10267 lines source file
+  11118 lines incl. macro expansions
       3 passes
       0 errors
       0 warnings
