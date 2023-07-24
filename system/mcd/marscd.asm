@@ -5,10 +5,22 @@
 ; include this AFTER the header
 ; ----------------------------------------------------------------
 
-		move.b	(sysmcd_reg+mcd_memory+1).l,d0		; Set WORDRAM to SUB, DMNA=1
+		move.b	(sysmcd_reg+mcd_memory).l,d0		; Set WORDRAM to SUB, DMNA=1
 		bset	#1,d0
-		move.b	d0,(sysmcd_reg+mcd_memory+1).l
+		move.b	d0,(sysmcd_reg+mcd_memory).l
+		lea	.file_marscode(pc),a0
+		lea	(sysmcd_reg+mcd_dcomm_m),a1		; Load default assets
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.w	#0,(a0)+
+		moveq	#$02,d0
+		jsr	(System_McdSubTask).l			; WRAM load
+		jsr	(System_McdSubWait).l
 		bra.s	.normal
+.file_marscode:
+		dc.b "MARSCODE.BIN",0
+		align 2
 .retry:
 		lea	($A15100),a5
 		move.b	#0,1(a5)
@@ -197,11 +209,10 @@ loc_2EE:
 		bne.s	loc_2EE
 		lea	($840000).l,a0
 		lea	MarsInitHeader(pc),a2
-		move.w	#$D,d7
+		move.w	#$E-1,d7
 loc_302:
 		move.l	(a2)+,(a0)+
 		dbf	d7,loc_302
-		clr.l	d0
 		lea	($200000).l,a2
 		move.w	#((MARS_RAMDATA_E-MARS_RAMDATA)/4)-1,d7
 loc_314:
@@ -213,7 +224,6 @@ loc_332:
 		beq.s	loc_332
 		lea	($A15100).l,a5
 		move.l	#"_CD_",$20(a5)		; SH2 Application Start
-	; Then proceed like normal...
 .master:
 		cmp.l	#"M_OK",$20(a5)
 		bne.b	.master
@@ -225,7 +235,13 @@ loc_332:
 		moveq	#0,d0			; Clear both Master and Slave comm's
 		move.l	d0,comm12(a5)
 MarsError:
+; 		vdp_showme $0E0
+; 		bra.s *
+
 		bra	MarsJumpHere
+; file_marscode:
+; 		dc.b "MARSCODE.BIN",0
+; 		align 2
 
 ; --------------------------------------------------------------------------------
 ;	MARS User Header

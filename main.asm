@@ -26,20 +26,18 @@
 ;
 ; MAKE SURE IT DOESN'T REACH FFFC00
 ; FOR CROSS-PORTING TO SEGA-CD
-
-; $FF0000-$FF7FFF
-MAX_SysCode	equ $1800	; ** CD/32X/CD32X ONLY
-MAX_UserCode	equ $3000	; ** CD/32X/CD32X ONLY
-MAX_RamSndData	equ $3000	; ** CD/32X/CD32X ONLY
-
-; $FF8000-$FFFC00(aprox.)
+;
 ; $FFFD00 is reserved for SegaCD/SegaCD32X, STACK a7 point
 ; starts from here also.
-MAX_MdVideo	equ $2000	;
-MAX_MdSystem	equ $0500	;
-MAX_MdOther	equ $2000	; System-specific stuff goes here
+
+MAX_SysCode	equ $1800	; ** CD/32X/CD32X ONLY
+MAX_UserCode	equ $4000	; ** CD/32X/CD32X ONLY
+MAX_RamSndData	equ $3800	; ** CD/32X/CD32X ONLY
 MAX_MdGlobal	equ $0800	; USER Global variables
 MAX_ScrnBuff	equ $2800	; RAM section for Current screen
+MAX_MdVideo	equ $2000	;
+MAX_MdSystem	equ $0500	;
+MAX_MdOther	equ $1000	; System-specific stuff goes here
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -90,9 +88,6 @@ MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 	elseif MCD|MARSCD
 		include	"system/head_mcd.asm"			; Sega CD header
 mcdin_top:
-	if MARSCD
-		include "system/mcd/marscd.asm"
-	endif
 		lea	Md_SysCode(pc),a0			; Transfer SYSTEM code
 		lea	(RAM_SystemCode),a1
 		move.w	#((Md_SysCode_e-Md_SysCode))-1,d0
@@ -105,24 +100,37 @@ mcdin_top:
 .copyme_2:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copyme_2
-		lea	(sysmcd_reg+mcd_dcomm_m),a0		; Load default assets
-		move.l	#"WORD",(a0)+
-		move.l	#"DATA",(a0)+
-		move.l	#".BIN",(a0)+
+	if MARSCD
+		include "system/mcd/marscd.asm"
+	endif
+		move.b	(sysmcd_reg+mcd_memory).l,d0		; Set WORDRAM to SUB
+		bset	#1,d0
+		move.b	d0,(sysmcd_reg+mcd_memory).l
+		lea	file_worddata(pc),a0
+		lea	(sysmcd_reg+mcd_dcomm_m),a1		; Load default assets
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
+		move.l	(a0)+,(a1)+
 		move.w	#0,(a0)+
 		moveq	#$02,d0
 		jsr	(System_McdSubTask).l			; WRAM load
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
+		lea	file_gematrks(pc),a0			; Transfer GEMA tracks and instr
+		lea	(RAM_ExSoundData),a1
+		move.w	#MAX_RamSndData,d0
+		jsr	(System_McdTrnsfr_RAM).l
 		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
 		jmp	(Md_ReadModes).l
+file_worddata:	dc.b "WORDDATA.BIN",0
+		align 2
+file_gematrks:	dc.b "GEMATRKS.BIN",0
+		align 2
 mcdin_end:
 		phase $FFFF2000+(mcdin_end-mcdin_top)
 Z80_CODE:	include "sound/gema_zdrv.asm"			; Called once
 Z80_CODE_END:
-
-Gema_MasterList:	; TEMPORAL
 		dephase
 
 ; ---------------------------------------------
@@ -173,9 +181,7 @@ Md_SysCode:
 		include	"sound/gema.asm"
 		include	"system/md/video.asm"
 		include	"system/md/system.asm"
-	if MARSCD
-		include "system/md/sub_dreq.asm"	; TODO: This will fail on hardware anyway.
-	endif
+		include "system/mars/md_dreq.asm"	; Tested on HW, works.
 ; ---------------------------------------------
 	if MCD|MARS|MARSCD
 .end:
@@ -214,15 +220,15 @@ Md_ReadModes:
 		move.w	(RAM_Glbl_Scrn).w,d0
 		and.w	#%1111,d0		; <-- current limit
 	if MCD|MARSCD
-		lsl.w	#4,d0			; * 8
-		lea	.pick_boot(pc),a0	; LEA filename
+		lsl.w	#4,d0			; * $10
+		lea	.pick_boot(pc),a0	; LEA the filename
 		jsr	(System_GrabRamCode).l
 	elseif MARS
-		lsl.w	#2,d0			; *4
+		lsl.w	#2,d0			; * 4
 		move.l	.pick_boot(pc,d0.w),d0	; d0 - code location to transfer
 		jsr	(System_GrabRamCode).l
 	else
-		lsl.w	#2,d0			; *4
+		lsl.w	#2,d0			; * 4
 		move.l	.pick_boot(pc,d0.w),d0
 		move.l	d0,a0
 		jsr	(a0)
@@ -259,12 +265,22 @@ Md_JumpCode_e:
 
 ; ====================================================================
 ; --------------------------------------------------------
-; SEGA 32X: DREQ routine(s)
+; Misc. stuff FOR CARTRIDGE ONLY:
+;
+; Genesis, Sega 32X and Pico
 ; --------------------------------------------------------
+
+	if MCD|MARSCD=0
 
 	if MARS
 		phase $880000+*
-		include "system/md/sub_dreq.asm"	; DREQ transfer only works on 880000/900000 areas
+	endif
+Z80_CODE:	include "sound/gema_zdrv.asm"		; Called once
+Z80_CODE_END:
+	endif
+
+	if MCD|MARS|MARSCD
+		dephase
 	endif
 
 ; ===========================================================================
@@ -283,6 +299,7 @@ Md_JumpCode_e:
 		iso_setfs 1,IsoFileList,IsoFileList_e
 IsoFileList:	iso_file "MARSCODE.BIN",MARS_RAMDATA,MARS_RAMDATA_E
 		iso_file "WORDDATA.BIN",MCD_DBANK0,MCD_DBANK0_e
+		iso_file "GEMATRKS.BIN",MCD_GEMATRKS,MCD_GEMATRKS_e
 		iso_file "SCREEN00.BIN",Md_Screen00,Md_Screen00_e
 		align $800
 IsoFileList_e:
@@ -313,27 +330,49 @@ cscrn0_e:
 	endif
 Md_Screen00_e:
 
+	if MCD|MARS|MARSCD
+		report "SCREEN 0 code",cscrn0_e-cscrn0_s,MAX_UserCode
+	endif
+
 ; ====================================================================
 ; --------------------------------------------------------
-; SOUND Section
+; GEMA SOUND DRIVER DATA:
+; Tracks and Instruments
 ;
-; TODO: ver como cargo esto en Sega CD y Sega CD32X
+;    MD: Normal ROM area
+;   MCD: Loaded to RAM from disc (Z80 CAN read from RAM)
+;   32X: At the $880000+ area
+; CD32X: Same as CD
+;  Pico: N/A (TODO)
+;
+; DAC samples are stored externally
+; depending of the system.
+; PWM can be on both ROM and SDRAM
+; but to keep cross-compatible with CD/CD32X use
+; SDRAM only.
+; And keep samples small there to save space.
 ; --------------------------------------------------------
 
-	if MCD|MARSCD=0
-		align 4
+	if MCD|MARSCD
+		align $800
+	endif
+MCD_GEMATRKS:
 	if MARS
 		phase $880000+*
+	elseif MCD|MARSCD
+		phase RAM_ExSoundData
 	endif
-Z80_CODE:	include "sound/gema_zdrv.asm"		; Called once
-Z80_CODE_END:
+gemacd_report:
 		include "sound/tracks.asm"		; GEMA: Track data
 		include "sound/instr.asm"		; GEMA: FM instruments
-		include "sound/smpl_dac.asm"		; GEMA: DAC samples
+gemacd_report_e:
 	if MARS
 		dephase
-	endif
-		align 2
+	elseif MCD|MARSCD
+		align $800
+		dephase
+MCD_GEMATRKS_e:
+		report "MCD GEMA RAM TRACKS/INS",gemacd_report_e-gemacd_report,MAX_RamSndData
 	endif
 
 ; ====================================================================
@@ -351,6 +390,12 @@ Z80_CODE_END:
 
 ; ---------------------------------------------
 ; BANK 0 DEFAULT
+;
+; CD/CD32X:
+; $200000 (WORD-RAM)
+;
+; 32X:
+; $900000
 ; ---------------------------------------------
 
 MCD_DBANK0:
@@ -359,16 +404,19 @@ MCD_DBANK0:
 	elseif MCD|MARSCD
 		phase sysmcd_wram
 	endif
-
 mdbank0:
 		include "game/data/md_bank0.asm"	; <-- 68K ONLY bank data
 mdbank0_e:
-	if MARS
+		include "sound/smpl_dac.asm"		; (MCD/CD32X ONLY) GEMA: DAC samples
+; 	if MARS
 ; 		org $100000-4				; Fill this bank and
 ; 		dc.b "BNK0"				; add a tag at the end
-		dephase
-	elseif MCD|MARSCD
+; 		dephase
+	if MCD|MARSCD
 		include "game/data/md_dma.asm"		; SEGA CD / CD32X ONLY.
+	endif
+
+	if MARS|MCD|MARSCD
 mdbank0_cd_e:
 		dephase
 		align $800
@@ -416,6 +464,7 @@ MCD_DBANK0_e:
 ; 32X Cartridge DMA data: Requires RV bit set to 1, BANK-free
 ; ----------------------------------------------------------------
 
+		align $8000
 	if MCD|MARSCD=0
 		include "game/data/md_dma.asm"
 	endif

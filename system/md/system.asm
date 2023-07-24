@@ -254,22 +254,119 @@ System_DmaExit_ROM:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; SEGA CD / CD+32X ONLY
-;
-; a6 - Communication ports RW/RO
+; SEGA CD / CD32X ONLY
 ; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; System_McdSubTask
+;
+; Request task to Sub-CPU
+; ** Exits without waiting to finish, call
+; System_McdSubWait after this if you need to
+; syncronize **
+;
+; Input:
+; d0 - Task number
+;
+; Uses:
+; a6
+; --------------------------------------------------------
 
 	if MCD|MARSCD
 System_McdSubTask:
 		lea	(sysmcd_reg+mcd_comm_m),a6
-.wait_sub_s:	move.b	1(a6),d7		; Wait if SUB is BUSY
+.wait_sub_s:	move.b	1(a6),d7	; Wait if SUB is BUSY
 		bmi.s	.wait_sub_s
-		move.b	d0,(a6)			; Set this command
-.wait_sub_i:	move.b	1(a6),d7		; Wait until SUB gets busy
+		move.b	d0,(a6)		; Set this command
+.wait_sub_i:	move.b	1(a6),d7	; Wait until SUB gets busy
 		bpl.s	.wait_sub_i
-		move.b	#$00,(a6)		; Clear value, SUB already got the ID
-; .wait_sub_o:	move.b	1(a6),d7		; Wait until SUB finishes
+		move.b	#$00,(a6)	; Clear value, SUB already got the ID
+; .wait_sub_o:	move.b	1(a6),d7
 ; 		bmi.s	.wait_sub_o
+		rts
+
+; --------------------------------------------------------
+; System_McdSubWait
+;
+; Waits until Sub-CPU
+;
+; Input:
+; d0 - Task number
+;
+; Uses:
+; a6
+; --------------------------------------------------------
+
+System_McdSubWait:
+		lea	(sysmcd_reg+mcd_comm_m),a6
+.wait_sub_o:	move.b	1(a6),d7
+		bmi.s	.wait_sub_o
+		rts
+
+; --------------------------------------------------------
+; System_McdTrnsfr_RAM
+;
+; Read file from disc and transfer it's contents
+; to a1
+; Uses communication ports only.
+;
+; Input:
+; a0 - Filename string: "FILENAME.BIN",0
+; a1 - Output location
+; d0 - Size
+;
+; Uses:
+; d7/a5-a6
+;
+; ** This calls Sub-Task $01
+; --------------------------------------------------------
+
+System_McdTrnsfr_RAM:
+		lea	(sysmcd_reg+mcd_dcomm_m),a5
+		move.w	(a0)+,(a5)+			; 0 copy filename
+		move.w	(a0)+,(a5)+			; 2
+		move.w	(a0)+,(a5)+			; 4
+		move.w	(a0)+,(a5)+			; 6
+		move.w	(a0)+,(a5)+			; 8
+		move.w	(a0)+,(a5)+			; 8
+		move.w	#0,(a5)+			; A <-- zero end
+		move.w	d0,d1
+		moveq	#$01,d0				; COMMAND: READ CD AND PASS DATA
+		bsr	System_McdSubTask
+		move.w	d1,d0
+	; a0 - Output location
+	; d0 - Number of $10-byte packets
+		lsr.w	#4,d0				; size >> 4
+		subq.w	#1,d0				; -1
+		lea	(sysmcd_reg+mcd_dcomm_s),a6
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
+		bset	#7,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+.copy_ram:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait if sub PASSed the packet
+		btst	#6,d7
+		beq.s	.copy_ram
+		move.l	a6,a5
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; Tell SUB we got the pack
+		bset	#6,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+.wait_sub:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait clear
+		btst	#6,d7
+		bne.s	.wait_sub
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; and clear our bit too.
+		bclr	#6,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+		dbf	d0,.copy_ram
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
+		bclr	#7,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
 		rts
 	endif
 
@@ -313,55 +410,10 @@ System_MarsUpdate:
 
 System_GrabRamCode:
 	if MCD|MARSCD
-		lea	(sysmcd_reg+mcd_dcomm_m),a1
-		move.w	(a0)+,(a1)+			; 0 copy filename
-		move.w	(a0)+,(a1)+			; 2
-		move.w	(a0)+,(a1)+			; 4
-		move.w	(a0)+,(a1)+			; 6
-		move.w	(a0)+,(a1)+			; 8
-		move.w	(a0)+,(a1)+			; 8
-		move.w	#0,(a1)+			; A <-- zero end
-		moveq	#$01,d0				; COMMAND: READ CD AND PASS DATA
-		bsr	System_McdSubTask
-
-		lea	(RAM_UserCode),a0
+	; a0 - filename string,0
+		lea	(RAM_UserCode),a1
 		move.w	#(MAX_UserCode),d0
-
-
-
-	; a0 - Output location
-	; d0 - Number of $10-byte packets
-		lsr.w	#4,d0				; size >> 4
-		subq.w	#1,d0				; -1
-		lea	(sysmcd_reg+mcd_dcomm_s),a6
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
-		bset	#7,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-.copy_ram:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait if sub PASSed the packet
-		btst	#6,d7
-		beq.s	.copy_ram
-		move.l	a6,a5
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.w	(a5)+,(a0)+
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; Tell SUB we got the pack
-		bset	#6,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-.wait_sub:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait clear
-		btst	#6,d7
-		bne.s	.wait_sub
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; and clear our bit too.
-		bclr	#6,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-		dbf	d0,.copy_ram
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
-		bclr	#7,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+		bsr	System_McdTrnsfr_RAM
 		jmp	(RAM_UserCode).l
 
 	elseif MARS

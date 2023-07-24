@@ -21,7 +21,9 @@
 ; On the Genesis Side:
 ; 	lea	(RAM_MdDreq+DREQ_LABEL),a0
 ; On the 32X Side:
-; 	mov	#RAM_Mars_DreqRead+DREQ_LABEL,r1
+; 	mov	@(marsGbl_DmaRead,gbr),r0
+; 	add	#DREQ_LABEL,r0			; MAX $7F with add
+; 	;Then r0 to any other rX
 ;
 ; Call System_MarsUpdate DURING DISPLAY to
 ; transfer the changes.
@@ -31,7 +33,8 @@
 
 	if MARS|MARSCD
 		struct 0
-Dreq_Palette	ds.w 256				; 256-color palette
+Dreq_Palette	ds.w 256		; 256-color palette (DON'T MOVE THIS)
+; Dreq_DontUse	ds.w 8			; Last WORD gets corrupted, fill last writes with 0
 sizeof_dreq	ds.l 0
 		endstruct
 

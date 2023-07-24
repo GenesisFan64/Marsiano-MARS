@@ -41,12 +41,6 @@ STACK_SLV	equ CS3|$3F000
 ; MARS GLOBAL gbr variables for both SH2
 ; ----------------------------------------------------------------
 
-		struct 0
-marsGbl_XShift	ds.w 1
-marsGbl_Null	ds.w 1
-sizeof_MarsGbl	ds.l 0
-		endstruct
-
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; MASTER CPU VECTOR LIST (vbr)
@@ -426,7 +420,8 @@ m_irq_cmd:
 ; 		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable OFF
 		mov	r0,@($C,r3)
-		mov	#RAM_Mars_DreqDma,r0
+; 		mov	#RAM_Mars_DreqBuff_0,r0
+		mov	@(marsGbl_DmaWrite,gbr),r0
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0	; NOTE: NO size check, be careful.
 		extu.w	r0,r0
@@ -510,6 +505,7 @@ m_irq_vres:
 		mov	#_DMASOURCE1,r1
 		mov	#0,r0
 		mov	r0,@($30,r1)
+		mov	@($C,r1),r0		; Dummy READ
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)
 		mov	#_sysreg,r1		; If RV was active, freeze.
@@ -562,14 +558,14 @@ m_irq_dma:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_DMASOURCE0,r1		; Pick DMA Channel 0
-.wait_dma:	mov	@($C,r1),r0
-		tst	#%10,r0			; DMA finished?
-		bt	.wait_dma
-		mov	#0,r0			; _DMAOPERATION = 0
-		mov	r0,@($30,r1)
-		mov	#%0100010011100000,r0	; Transfer mode + DMA enable OFF
-		mov	r0,@($C,r1)
+		mov	#_DMASOURCE0,r1
+		mov	@($C,r1),r0		; Dummy READ
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r1)		; Transfer mode + DMA enable OFF
+		mov	#_sysreg+comm12,r1	; Send signal
+		mov.b	@r1,r0
+		or	#%01000000,r0
+		mov.b	r0,@r1
 		rts
 		nop
 		align 4
@@ -1107,15 +1103,12 @@ master_loop:
 		mov.b	#$F0,r0				; ** $F0
 		extu.b	r0,r0
 		ldc	r0,sr
-		mov	#RAM_Mars_DreqDma,r1		; Copy DREQ data into a safe
-		mov	#RAM_Mars_DreqRead,r2		; location for reading
-		mov	#sizeof_dreq/4,r3
-.copy_safe:
-		mov	@r1+,r0
-		mov	r0,@r2
-		dt	r3
-		bf/s	.copy_safe
-		add	#4,r2
+		mov	@(marsGbl_DmaWrite,gbr),r0	; Flip DMA Read/Write buffers
+		mov	r0,r1
+		mov	@(marsGbl_DmaRead,gbr),r0
+		mov	r0,@(marsGbl_DmaWrite,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_DmaRead,gbr)
 		ldc	@r15+,sr
 
 	; ---------------------------------------
@@ -1128,12 +1121,17 @@ master_loop:
  		mov.w	@(marsGbl_XShift,gbr),r0	; Set SHIFT bit first (Xpos & 1)
 		and	#1,r0
 		mov.w	r0,@(shift,r1)
-		mov	#RAM_Mars_DreqRead+Dreq_Palette,r1
+		mov	@(marsGbl_DmaRead,gbr),r0
+; 		mov	#Dreq_Palette,r1
+; 		add	r1,r0
+		mov	r0,r1
 		mov	#_palette,r2
  		mov	#(256/8),r3
+	; PALETTE MUST BE AT THE TOP OF DREQ DATA
+	; so I don't need to add Dreq_Palette...
 .copy_pal:
 	rept 4
-		mov	@r1+,r0				; Copy colors as LONGs, tested on hardware.
+		mov	@r1+,r0			; Copy colors as LONGs, works on hardware.
 		mov	r0,@r2
 		add	#4,r2
 	endm
@@ -1301,11 +1299,21 @@ sin_table	binclude "system/mars/data/sinedata.bin"
 ; ----------------------------------------------------------------
 ; GLOBAL GBR Variables
 ;
-; Watch out for the Read/Write conflicts.
+; SHARED FOR BOTH CPUS, watch out for the Read/Write conflicts.
+;
+; use dc's to set their default values
 ; ----------------------------------------------------------------
 
+
 			align $10
-RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here
+RAM_Mars_Global:
+			struct 0
+marsGbl_XShift		dc.w 0
+marsGbl_Null		dc.w 0
+marsGbl_DmaRead		dc.l RAM_Mars_DreqBuff_0
+marsGbl_DmaWrite	dc.l RAM_Mars_DreqBuff_1
+sizeof_MarsGbl		ds.l 0
+			endstruct
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -1315,10 +1323,11 @@ RAM_Mars_Global		ds.l sizeof_MarsGbl	; gbr values go here
 			align $100
 SH2_RAM:
 			struct SH2_RAM|TH	; CACHE-THRU
-RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
-RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy of DREQ for reading.
+RAM_Mars_DreqBuff_0	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
+RAM_Mars_DreqBuff_1	ds.b sizeof_dreq	; Copy of DREQ for reading.
 RAM_Mars_GemaWave_0	ds.b $1000
 RAM_Mars_GemaWave_1	ds.b $1000
+RAM_Mars_GemaSilence	ds.b $1000
 			endstruct
 
 ; ; ====================================================================
@@ -1378,8 +1387,8 @@ RAM_Mars_GemaWave_1	ds.b $1000
 ; ----------------------------------------------------------------
 
 ; 			struct MarsRam_System
-; RAM_Mars_DreqDma	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
-; RAM_Mars_DreqRead	ds.b sizeof_dreq	; Copy of DREQ for reading.
+; RAM_Mars_DreqBuff_0	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
+; RAM_Mars_DreqBuff_1	ds.b sizeof_dreq	; Copy of DREQ for reading.
 
 ; sizeof_marssys		ds.l 0
 ; 			endstruct
@@ -1387,4 +1396,4 @@ RAM_Mars_GemaWave_1	ds.b $1000
 ; ====================================================================
 
 .here:
-		report "SH2 SDRAM CODE",.here,(STACK_SLV-$1000)
+		report "SH2 SDRAM CODE/DATA",.here,(STACK_SLV-$1000)

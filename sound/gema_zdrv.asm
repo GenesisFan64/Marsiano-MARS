@@ -183,7 +183,7 @@ dac_me:		exx			; <-- this changes between EXX(play) and RET(stop)
 ; --------------------------------------------------------
 ; 1Ch
 sbeatAcc	dw 0		; Accumulates on each tick to trigger the sub beats
-sbeatPtck	dw 200+32	; Default global subbeats (-32 for PAL)
+sbeatPtck	dw 200+13	; Default global subbeats (-32 for PAL)
 
 ; --------------------------------------------------------
 ; RST 20h (dac_me)
@@ -3001,7 +3001,9 @@ gema_init:
 		jr	.setup_list
 .end_setup:
 		ld	e,0
-		jp	init_RomTrcks
+		ld	a,-1			; Reset
+		ld	(trkListPage),a
+		ret
 
 ; --------------------------------------------------------
 ; get_tick

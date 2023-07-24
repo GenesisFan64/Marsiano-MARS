@@ -471,9 +471,10 @@ Video_LoadMap_Vert:
 
 Video_PrintInit:
 		move.l	#ASCII_FONT,d0
-		move.w	#varPrintVram*$20,d1
+		move.w	#cell_vram(varPrintVram),d1
 		move.w	#ASCII_FONT_e-ASCII_FONT,d2
 		move.w	#varPrintVram|(varPrintPal<<13),d3
+		subi.w	#$20,d3
 		move.w	d3,(RAM_VidPrntVram).w
 		bsr	Video_LoadArt
 Video_PrintPal:

@@ -75,7 +75,7 @@ MarsSound_Init:
 
 MarsSound_FirstFill:
 		mov	#RAM_Mars_GemaWave_0,r1
-		mov	#($1000*2)/4,r2
+		mov	#($1000*3)/4,r2
 		mov	#$00800080,r0
 .fill_both:
 		mov	r0,@r1
@@ -83,7 +83,7 @@ MarsSound_FirstFill:
 		bf/s	.fill_both
 		add	#4,r1
 
-		mov	#_DMAOPERATION,r1
+; 		mov	#_DMAOPERATION,r1
 
 ; 		mov	#,r1
 ; 		mov	#,r2

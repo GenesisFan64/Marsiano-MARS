@@ -15,19 +15,12 @@ RAM_MdDreq		equ	RAM_MdOther
 ; Settings
 ; --------------------------------------------------------
 
-; Quick
-			struct $FF0000
-RAM_SystemCode		ds.b MAX_SysCode	;
-RAM_UserCode		ds.b MAX_UserCode	;
-RAM_ExSoundData		ds.b MAX_RamSndData	; non-Cartridge ONLY
-sizeof_thisram		ds.l 0
-			endstruct
+			struct $FFFF0000
+RAM_SystemCode		ds.b MAX_SysCode	; CD/32X/CD32X
+RAM_UserCode		ds.b MAX_UserCode	; CD/32X/CD32X Current screen mode
+RAM_ExSoundData		ds.b MAX_RamSndData	; SEGACD/CD32X ONLY: GEMA Tracks and Instruments, Samples are stored on WRAM.
 
-	if MCD|MARS|MARSCD
-			erreport "non-Cart code",sizeof_thisram,$FF8000
-	endif
-
-			struct $FFFF8000
+; *** THESE MUST BE AFTER $FF8000
 RAM_MdVideo		ds.b MAX_MdVideo	; $FF8000 DMA visuals
 RAM_MdSystem		ds.b MAX_MdSystem	;
 RAM_MdOther		ds.b MAX_MdOther	; 32X's DREQ goes here

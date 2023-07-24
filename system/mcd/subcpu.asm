@@ -49,6 +49,7 @@ SP_Init:
 		move.b	d0,(scpu_reg+mcd_memory).l
 		bsr	spInitFS
 		move.b	#0,(scpu_reg+mcd_comm_s).w	; Reset SUB-status
+		rts
 
 ; 		lea	(PCM),a0
 ; 		move.b	#$80,d3
@@ -72,24 +73,24 @@ SP_Init:
 ; 		BSET	#2,$FF8033
 ; 		BCLR	#3,$FF8033
 
-	; SCD32X:
-	;
-	; Load the SH2 code from DISC to WORD-RAM
-	;
-	; TODO: I hope SUB has WRAM permission...
-	; I don't have a SCD to test this.
-	if MARSCD
-		lea	fname_mars(pc),a0
-		bsr	spSearchFile
-		move.w	#$800,d2
-		lea	(scpu_wram),a0
-		bsr	spReadSectorsN
-	endif
-		rts
-	if MARSCD
-fname_mars:	dc.b "MARSCODE.BIN",0
-		align 2
-	endif
+; 	; SCD32X:
+; 	;
+; 	; Load the SH2 code from DISC to WORD-RAM
+; 	;
+; 	; TODO: I hope SUB has WRAM permission...
+; 	; I don't have a SCD to test this.
+; 	if MARSCD
+; 		lea	fname_mars(pc),a0
+; 		bsr	spSearchFile
+; 		move.w	#$800,d2
+; 		lea	(scpu_wram),a0
+; 		bsr	spReadSectorsN
+; 	endif
+; 		rts
+; 	if MARSCD
+; fname_mars:	dc.b "MARSCODE.BIN",0
+; 		align 2
+; 	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -228,6 +229,9 @@ SP_cmnd01:
 .exit_now:	move.b	(scpu_reg+mcd_comm_s).w,d7	; Clear PASS
 		bclr	#6,d7
 		move.b	d7,(scpu_reg+mcd_comm_s).w
+		move.b	(scpu_reg+mcd_memory).l,d0	; Return WORDRAM to MAIN, RET=1
+		bset	#0,d0
+		move.b	d0,(scpu_reg+mcd_memory).l
 		rts
 
 ; --------------------------------------------------------

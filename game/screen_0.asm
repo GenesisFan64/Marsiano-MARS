@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 2D Part
+; SCREEN $00
 ; ----------------------------------------------------------------
 
 ; ====================================================================
@@ -42,6 +42,7 @@ RAM_MapY	ds.w 1
 		bsr	Video_Clear
 		bsr	Mode_Init
 		bsr	gemaStopAll
+
 		lea	(RAM_PaletteFd+$60),a0
 		move.w	#0,(a0)+
 		move.w	#$EEE,(a0)+
@@ -51,7 +52,6 @@ RAM_MapY	ds.w 1
 		move.w	#$222,(a0)+
 		clr.w	(RAM_PaletteFd).w		; <-- quick patch
 		clr.w	(RAM_MdMarsPalFd).w
-
 	; Test image
 	if MARS|MARSCD
 		lea	(PalMars_TEST),a0
@@ -90,10 +90,23 @@ RAM_MapY	ds.w 1
 		move.w	#0,(RAM_FadeMarsDelay).w
 		move.w	#1,(RAM_FadeMdReq).w
 		move.w	#1,(RAM_FadeMarsReq).w
+
 	if MCD|MARSCD
 		moveq	#$10,d0
 		bsr	System_McdSubTask
+; ; 		move.l	#$7FFEC,d7
+; ; .ll:
+; ; 		nop
+; ; 		nop
+; ; 		nop
+; ; 		nop
+; ; 		nop
+; ; 		nop
+; ; 		nop
+; ; 		dbf	d7,.ll
 	endif
+		moveq	#0,d0
+		bsr	gemaPlayTrack
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -157,50 +170,52 @@ RAM_MapY	ds.w 1
 
 str_Stats2:
 ; 	if MARS
-		dc.b "\\l",$A,$A
-		dc.b "\\b \\b CD RW/RD",$A,$A
-		dc.b "\\w \\w \\w \\w CD RW",$A
-		dc.b "\\w \\w \\w \\w",$A,$A
-		dc.b "\\w \\w \\w \\w CD RD",$A
-		dc.b "\\w \\w \\w \\w",$A
-		dc.b $A
-		dc.b "\\w \\w \\w \\w MARS",$A
-		dc.b "\\w \\w \\w \\w",$A
+		dc.b "\\l \\w \\w",$A,$A
 		dc.b 0
+; 		dc.b "\\b \\b CD RW/RD",$A,$A
+; 		dc.b "\\w \\w \\w \\w CD RW",$A
+; 		dc.b "\\w \\w \\w \\w",$A,$A
+; 		dc.b "\\w \\w \\w \\w CD RD",$A
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b $A
+; 		dc.b "\\w \\w \\w \\w MARS",$A
+; 		dc.b "\\w \\w \\w \\w",$A
+; 		dc.b 0
 ; ; 	else
 ; 		dc.b "\\l",0
 ; 	endif
 		dc.l RAM_Framecount
+		dc.l Controller_1+on_hold
+		dc.l Controller_2+on_hold
 ; 	if MARS
-		dc.l sysmcd_reg+mcd_comm_m
-		dc.l sysmcd_reg+mcd_comm_s
-
-		dc.l sysmcd_reg+mcd_dcomm_m
-		dc.l sysmcd_reg+mcd_dcomm_m+2
-		dc.l sysmcd_reg+mcd_dcomm_m+4
-		dc.l sysmcd_reg+mcd_dcomm_m+6
-		dc.l sysmcd_reg+mcd_dcomm_m+8
-		dc.l sysmcd_reg+mcd_dcomm_m+10
-		dc.l sysmcd_reg+mcd_dcomm_m+12
-		dc.l sysmcd_reg+mcd_dcomm_m+14
-		dc.l sysmcd_reg+mcd_dcomm_s
-		dc.l sysmcd_reg+mcd_dcomm_s+2
-		dc.l sysmcd_reg+mcd_dcomm_s+4
-		dc.l sysmcd_reg+mcd_dcomm_s+6
-		dc.l sysmcd_reg+mcd_dcomm_s+8
-		dc.l sysmcd_reg+mcd_dcomm_s+10
-		dc.l sysmcd_reg+mcd_dcomm_s+12
-		dc.l sysmcd_reg+mcd_dcomm_s+14
-
-		dc.l sysmars_reg+comm0
-		dc.l sysmars_reg+comm2
-		dc.l sysmars_reg+comm4
-		dc.l sysmars_reg+comm6
-		dc.l sysmars_reg+comm8
-		dc.l sysmars_reg+comm10
-		dc.l sysmars_reg+comm12
-		dc.l sysmars_reg+comm14
+; 		dc.l sysmcd_reg+mcd_comm_m
+; 		dc.l sysmcd_reg+mcd_comm_s
+;
+; 		dc.l sysmcd_reg+mcd_dcomm_m
+; 		dc.l sysmcd_reg+mcd_dcomm_m+2
+; 		dc.l sysmcd_reg+mcd_dcomm_m+4
+; 		dc.l sysmcd_reg+mcd_dcomm_m+6
+; 		dc.l sysmcd_reg+mcd_dcomm_m+8
+; 		dc.l sysmcd_reg+mcd_dcomm_m+10
+; 		dc.l sysmcd_reg+mcd_dcomm_m+12
+; 		dc.l sysmcd_reg+mcd_dcomm_m+14
+; 		dc.l sysmcd_reg+mcd_dcomm_s
+; 		dc.l sysmcd_reg+mcd_dcomm_s+2
+; 		dc.l sysmcd_reg+mcd_dcomm_s+4
+; 		dc.l sysmcd_reg+mcd_dcomm_s+6
+; 		dc.l sysmcd_reg+mcd_dcomm_s+8
+; 		dc.l sysmcd_reg+mcd_dcomm_s+10
+; 		dc.l sysmcd_reg+mcd_dcomm_s+12
+; 		dc.l sysmcd_reg+mcd_dcomm_s+14
+;
+; 		dc.l sysmars_reg+comm0
+; 		dc.l sysmars_reg+comm2
+; 		dc.l sysmars_reg+comm4
+; 		dc.l sysmars_reg+comm6
+; 		dc.l sysmars_reg+comm8
+; 		dc.l sysmars_reg+comm10
+; 		dc.l sysmars_reg+comm12
+; 		dc.l sysmars_reg+comm14
 		align 2
 
 ; ====================================================================
-
