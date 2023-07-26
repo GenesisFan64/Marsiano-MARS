@@ -58,91 +58,91 @@ bitBgOn		equ 7
 ; Structs
 ; ----------------------------------------------------------------
 
-; IN SH2 ORDER
-; still works fine on this side.
-; md_bg_flags: %EM..UDLR
-; UDLR - off-screen update bits
-;    M - Map belongs to Genesis or 32X
-;    E - Enable this map
-
-		struct 0
-md_bg_bw	ds.b 1		; Block Width
-md_bg_bh	ds.b 1		; Block Height
-md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
-md_bg_flags	ds.b 1		; Drawing flags: %EM00UDLR
-md_bg_xset	ds.b 1		; X-counter
-md_bg_yset	ds.b 1		; Y-counter
-md_bg_movex	ds.b 1		; *** ALIGNMENT, FREE TO USE
-md_bg_movey	ds.b 1		; ***
-md_bg_w		ds.w 1		; Width in blocks
-md_bg_h		ds.w 1		; Height in blocks
-md_bg_wf	ds.w 1		; FULL Width in pixels
-md_bg_hf	ds.w 1		; FULL Height in pixels
-md_bg_xinc_l	ds.w 1		; Layout draw-beams L/R/U/D
-md_bg_xinc_r	ds.w 1
-md_bg_yinc_u	ds.w 1
-md_bg_yinc_d	ds.w 1
-md_bg_x_old	ds.w 1		; OLD X position
-md_bg_y_old	ds.w 1		; OLD Y position
-md_bg_vpos	ds.w 1		; VRAM output for map
-md_bg_vram	ds.w 1		; VRAM start for cells
-md_bg_low	ds.l 1		; MAIN layout data
-md_bg_hi	ds.l 1		; HI layout data
-md_bg_blk	ds.l 1		; Block data
-md_bg_col	ds.l 1		; Collision data (if needed)
-md_bg_x		ds.l 1		; X pos 0000.0000
-md_bg_y		ds.l 1		; Y pos 0000.0000
-sizeof_mdbg	ds.l 0
-		endstruct
-
-; --------------------------------
-; object struct
-; --------------------------------
-
-		struct 0
-obj_code	ds.l 1		; Object code
-obj_size	ds.l 1		; Object size (see below)
-obj_x		ds.l 1		; Object X Position
-obj_y		ds.l 1		; Object Y Position
-obj_map		ds.l 1		; Object image settings
-obj_vram	ds.w 1		; Object VRAM position (MD-side only)
-obj_x_spd	ds.w 1		; Object X Speed
-obj_y_spd	ds.w 1		; Object Y Speed
-obj_anim_indx	ds.w 1		; Object animation increment (obj_anim + obj_anim_indx)
-obj_anim_id	ds.w 1		; Object animation to read (current|saved)
-obj_frame	ds.w 1		; Object display frame (MD: $FFFF, MARS: $YY,$XX)
-obj_anim_spd	ds.b 1		; Object animation delay
-obj_index	ds.b 1		; Object code index
-obj_subid	ds.b 1		; Object SubID
-obj_set		ds.b 1		; Object settings
-obj_status	ds.b 1		; Object custom status
-obj_spwnid	ds.b 1		; Object respawn index (this - 1)
-obj_ram		ds.b $40	; Object RAM
-sizeof_mdobj	ds.l 0
-		endstruct
-
-; --------------------------------
-; obj_settings
-; --------------------------------
-
-bitobj_Mars	equ	7	; This object is for 32X side.
-bitobj_flipV	equ	1	; set to flip Sprite Vertically
-bitobj_flipH	equ	0	; set to flip Sprite Horizontally
-
-; --------------------------------
-; obj_set
-; --------------------------------
-
-bitobj_air	equ	0	; set if floating/jumping
-
-; --------------------------------
-; obj_size
-; --------------------------------
-
-at_u		equ	3
-at_d		equ	2
-at_l		equ	1
-at_r		equ	0
+; ; IN SH2 ORDER
+; ; still works fine on this side.
+; ; md_bg_flags: %EM..UDLR
+; ; UDLR - off-screen update bits
+; ;    M - Map belongs to Genesis or 32X
+; ;    E - Enable this map
+;
+; 		struct 0
+; md_bg_bw	ds.b 1		; Block Width
+; md_bg_bh	ds.b 1		; Block Height
+; md_bg_blkw	ds.b 1		; Bitshift block size (LSL)
+; md_bg_flags	ds.b 1		; Drawing flags: %EM00UDLR
+; md_bg_xset	ds.b 1		; X-counter
+; md_bg_yset	ds.b 1		; Y-counter
+; md_bg_movex	ds.b 1		; *** ALIGNMENT, FREE TO USE
+; md_bg_movey	ds.b 1		; ***
+; md_bg_w		ds.w 1		; Width in blocks
+; md_bg_h		ds.w 1		; Height in blocks
+; md_bg_wf	ds.w 1		; FULL Width in pixels
+; md_bg_hf	ds.w 1		; FULL Height in pixels
+; md_bg_xinc_l	ds.w 1		; Layout draw-beams L/R/U/D
+; md_bg_xinc_r	ds.w 1
+; md_bg_yinc_u	ds.w 1
+; md_bg_yinc_d	ds.w 1
+; md_bg_x_old	ds.w 1		; OLD X position
+; md_bg_y_old	ds.w 1		; OLD Y position
+; md_bg_vpos	ds.w 1		; VRAM output for map
+; md_bg_vram	ds.w 1		; VRAM start for cells
+; md_bg_low	ds.l 1		; MAIN layout data
+; md_bg_hi	ds.l 1		; HI layout data
+; md_bg_blk	ds.l 1		; Block data
+; md_bg_col	ds.l 1		; Collision data (if needed)
+; md_bg_x		ds.l 1		; X pos 0000.0000
+; md_bg_y		ds.l 1		; Y pos 0000.0000
+; sizeof_mdbg	ds.l 0
+; 		endstruct
+;
+; ; --------------------------------
+; ; object struct
+; ; --------------------------------
+;
+; 		struct 0
+; obj_code	ds.l 1		; Object code
+; obj_size	ds.l 1		; Object size (see below)
+; obj_x		ds.l 1		; Object X Position
+; obj_y		ds.l 1		; Object Y Position
+; obj_map		ds.l 1		; Object image settings
+; obj_vram	ds.w 1		; Object VRAM position (MD-side only)
+; obj_x_spd	ds.w 1		; Object X Speed
+; obj_y_spd	ds.w 1		; Object Y Speed
+; obj_anim_indx	ds.w 1		; Object animation increment (obj_anim + obj_anim_indx)
+; obj_anim_id	ds.w 1		; Object animation to read (current|saved)
+; obj_frame	ds.w 1		; Object display frame (MD: $FFFF, MARS: $YY,$XX)
+; obj_anim_spd	ds.b 1		; Object animation delay
+; obj_index	ds.b 1		; Object code index
+; obj_subid	ds.b 1		; Object SubID
+; obj_set		ds.b 1		; Object settings
+; obj_status	ds.b 1		; Object custom status
+; obj_spwnid	ds.b 1		; Object respawn index (this - 1)
+; obj_ram		ds.b $40	; Object RAM
+; sizeof_mdobj	ds.l 0
+; 		endstruct
+;
+; ; --------------------------------
+; ; obj_settings
+; ; --------------------------------
+;
+; bitobj_Mars	equ	7	; This object is for 32X side.
+; bitobj_flipV	equ	1	; set to flip Sprite Vertically
+; bitobj_flipH	equ	0	; set to flip Sprite Horizontally
+;
+; ; --------------------------------
+; ; obj_set
+; ; --------------------------------
+;
+; bitobj_air	equ	0	; set if floating/jumping
+;
+; ; --------------------------------
+; ; obj_size
+; ; --------------------------------
+;
+; at_u		equ	3
+; at_d		equ	2
+; at_l		equ	1
+; at_r		equ	0
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -150,18 +150,16 @@ at_r		equ	0
 ; ----------------------------------------------------------------
 
 			struct RAM_MdVideo
-RAM_Objects		ds.b MAX_MDOBJ*sizeof_mdobj
-RAM_BgBuffer		ds.b sizeof_mdbg*4	; Map backgrounds, back to front.
-RAM_FrameCount		ds.l 1			; Frames counter
 RAM_HorScroll		ds.l 240		; DMA Horizontal scroll data
 RAM_VerScroll		ds.l 320/16		; DMA Vertical scroll data
-RAM_ObjDispList		ds.w MAX_MDOBJ		; Objects half-RAM pointers for display (Obj|Extra)
-RAM_SprDrwPz		ds.w 8*70		; External sprite pieces
 RAM_Sprites		ds.w 8*70		; DMA Sprites
-RAM_Palette		ds.w 64			; DMA palette
-RAM_PaletteFd		ds.w 64			; Target MD palette for FadeIn/Out
-RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out (NOTE: it's slow)
 RAM_VdpDmaList		ds.w 7*MAX_MDDMATSK	; DMA BLAST list for VBlank
+RAM_Palette		ds.w 64			; DMA palette
+RAM_MdMarsPalFd		ds.w 256		; Target 32X palette for FadeIn/Out (NOTE: it's slow)
+RAM_PaletteFd		ds.w 64			; Target MD palette for FadeIn/Out
+RAM_FrameCount		ds.l 1			; Frames counter
+RAM_VdpExWrite		ds.w 1
+RAM_SprDrwPz		ds.w 8*70		; External sprite pieces
 RAM_VidPrntList		ds.w 3*64		; Video_Print list: Address, Type
 RAM_SprDrwCntr		ds.w 1
 RAM_SprShowIndx		ds.w 1

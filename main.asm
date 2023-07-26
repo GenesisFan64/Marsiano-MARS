@@ -2,33 +2,33 @@
 ; +-----------------------------------------------------------------+
 ; MARSIANO ENGINE
 ;
-; A game engine that can be crossported to:
+; A game engine that can be cross-ported to:
 ; Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico
 ; +-----------------------------------------------------------------+
-
-		!org 0				; Start at 0
-		cpu 		68000		; Current CPU is 68k, gets changed later.
-		padding		off		; Dont pad dc.b
-		listing 	purecode	; Want listing file, but only the final code in expanded macros
-		supmode 	on 		; Supervisor mode 68k
-		dottedstructs	off		; If needed
-		page 		0
 
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; USER SETTINGS
 ; ----------------------------------------------------------------
 
+; --------------------------------------------------------
 ; 68000 RAM SIZES
 ;
-; MAX_SysCode and MAX_UserCode are used
-; in Sega CD, Sega 32X and Sega CD32X
+; MAX_SysCode, MAX_UserCode and MAX_RamSndData
+; are used only in Sega CD, Sega 32X and
+; Sega CD32X
+; For the stock Genesis (OR Pico) these sections
+; are free to use ONLY if you want your game
+; to be playable ONLY on stock Genesis or Pico.
 ;
-; MAKE SURE IT DOESN'T REACH FFFC00
-; FOR CROSS-PORTING TO SEGA-CD
+; Starting from MAX_MdGlobal it the RAM should be
+; located after $FF8000
 ;
-; $FFFD00 is reserved for SegaCD/SegaCD32X, STACK a7 point
-; starts from here also.
+; ** MAKE SURE IT DOESN'T REACH $FFFC00 IF YOU WANT TO
+; RUN THIS ON SEGA CD AND CD32X **
+; $FFFD00 is reserved for SegaCD/SegaCD32X, the
+; STACK a7 point starts from here also.
+; --------------------------------------------------------
 
 MAX_SysCode	equ $1800	; ** CD/32X/CD32X ONLY
 MAX_UserCode	equ $4000	; ** CD/32X/CD32X ONLY
@@ -38,6 +38,16 @@ MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 MAX_MdVideo	equ $2000	;
 MAX_MdSystem	equ $0500	;
 MAX_MdOther	equ $1000	; System-specific stuff goes here
+
+; ====================================================================
+
+		!org 0				; Start at 0
+		cpu 		68000		; Current CPU is 68k, gets changed later.
+		padding		off		; Dont pad dc.b
+		listing 	purecode	; Want listing file, but only the final code in expanded macros
+		supmode 	on 		; Supervisor mode 68k
+		dottedstructs	off		; If needed
+		page 		0
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -100,20 +110,11 @@ mcdin_top:
 .copyme_2:
 		move.b	(a0)+,(a1)+
 		dbf	d0,.copyme_2
-	if MARSCD
+	if MARSCD						; Include 32X boot
 		include "system/mcd/marscd.asm"
 	endif
-		move.b	(sysmcd_reg+mcd_memory).l,d0		; Set WORDRAM to SUB
-		bset	#1,d0
-		move.b	d0,(sysmcd_reg+mcd_memory).l
 		lea	file_worddata(pc),a0
-		lea	(sysmcd_reg+mcd_dcomm_m),a1		; Load default assets
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.w	#0,(a0)+
-		moveq	#$02,d0
-		jsr	(System_McdSubTask).l			; WRAM load
+		jsr	(System_McdTrnsfr_WRAM).l
 		jsr	(Sound_init).l
 		jsr	(Video_init).l
 		jsr	(System_Init).l
@@ -234,7 +235,6 @@ Md_ReadModes:
 		jsr	(a0)
 	endif
 		bra.s	Md_ReadModes		; Loop on RTS
-
 .pick_boot:
 	; size $10
 	if MCD|MARSCD
@@ -312,11 +312,14 @@ IsoFileList_e:
 
 	if MCD|MARSCD
 		align $800	; Sector align
-	else
-		align 2
+	elseif MARS
+		phase $880000+*
 	endif
 Md_Screen00:
-	if MCD|MARS|MARSCD
+	if MARS
+		dephase
+	endif
+	if MCD|MARSCD|MARS
 		phase RAM_UserCode
 	endif
 cscrn0_s:
@@ -345,12 +348,11 @@ Md_Screen00_e:
 ; CD32X: Same as CD
 ;  Pico: N/A (TODO)
 ;
-; DAC samples are stored externally
-; depending of the system.
-; PWM can be on both ROM and SDRAM
-; but to keep cross-compatible with CD/CD32X use
-; SDRAM only.
-; And keep samples small there to save space.
+; DAC samples are stored externally depending
+; of the system.
+; 32X: PWM can be on both ROM and SDRAM
+; but to keep cross-compatible with CD32X use
+; SDRAM only, use small samples to save space.
 ; --------------------------------------------------------
 
 	if MCD|MARSCD
@@ -482,7 +484,7 @@ MCD_DBANK0_e:
 		align 4
 	endif
 MARS_RAMDATA:
-	if MARS|MARSCD	; <-- meh.
+	if MARS|MARSCD
 		include "system/mars/code.asm"
 		cpu 68000
 		padding off

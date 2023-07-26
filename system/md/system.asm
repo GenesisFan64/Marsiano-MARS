@@ -1,6 +1,9 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
 ; Genesis system routines
+;
+; * CAN BE RECYCLED FOR SEGA PICO, ONLY SKIP ANY
+; Z80 ACCESS **
 ; ----------------------------------------------------------------
 
 ; ====================================================================
@@ -77,14 +80,12 @@ bitClickS	equ 3
 
 		struct RAM_MdSystem
 RAM_InputData	ds.b sizeof_input*4		; Input data section
-RAM_SaveData	ds.b $200			; SRAM data cache
-RAM_DmaCode	ds.b $200
+RAM_SaveData	ds.b $200			; Safe Cache'd save data section to Read/Write
 RAM_SysRandVal	ds.l 1				; Random value
 RAM_SysRandSeed	ds.l 1				; Randomness seed
 RAM_initflug	ds.l 1				; "INIT" flag
 RAM_MdMarsVInt	ds.w 3				; VBlank jump (JMP xxxx xxxx)
 RAM_MdMarsHint	ds.w 3				; HBlank jump (JMP xxxx xxxx)
-RAM_MdVBlkWait	ds.w 1
 sizeof_mdsys	ds.l 0
 		endstruct
 		erreport "MD SYSTEM RAM",sizeof_mdsys-RAM_MdSystem,MAX_MdSystem
@@ -123,10 +124,10 @@ System_Init:
 .clrinput:
 		move.w	d0,(a0)+
 		dbf	d1,.clrinput
-; 		move.l	#$56255769,d0		; Set these random values
-; 		move.l	#$95116102,d1
-; 		move.l	d0,(RAM_SysRandVal).l
-; 		move.l	d1,(RAM_SysRandSeed).l
+		move.l	#$56255769,d0		; Set these random values
+		move.l	#$95116102,d1
+		move.l	d0,(RAM_SysRandVal).l
+		move.l	d1,(RAM_SysRandSeed).l
 		move.w	(sp)+,sr
 		rts
 
@@ -150,7 +151,9 @@ System_WaitFrame:
 .wait_lag:	move.w	(a6),d4			; then it's a lag frame.
 		btst	#bitVBlk,d4
 		bne.s	.wait_lag
-		bsr	System_MarsUpdate	; Update 32X stuff
+	if MARS|MARSCD
+		bsr	System_MarsUpdate	; Update 32X
+	endif
 		lea	(vdp_ctrl),a6		; Check if we are on DISPLAY
 .wait_in:	move.w	(a6),d4
 		btst	#bitVBlk,d4
@@ -251,186 +254,6 @@ System_DmaEnter_ROM:
 		bra	gemaDmaPauseRom
 System_DmaExit_ROM:
 		bra	gemaDmaResumeRom
-
-; ====================================================================
-; ----------------------------------------------------------------
-; SEGA CD / CD32X ONLY
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; System_McdSubTask
-;
-; Request task to Sub-CPU
-; ** Exits without waiting to finish, call
-; System_McdSubWait after this if you need to
-; syncronize **
-;
-; Input:
-; d0 - Task number
-;
-; Uses:
-; a6
-; --------------------------------------------------------
-
-	if MCD|MARSCD
-System_McdSubTask:
-		lea	(sysmcd_reg+mcd_comm_m),a6
-.wait_sub_s:	move.b	1(a6),d7	; Wait if SUB is BUSY
-		bmi.s	.wait_sub_s
-		move.b	d0,(a6)		; Set this command
-.wait_sub_i:	move.b	1(a6),d7	; Wait until SUB gets busy
-		bpl.s	.wait_sub_i
-		move.b	#$00,(a6)	; Clear value, SUB already got the ID
-; .wait_sub_o:	move.b	1(a6),d7
-; 		bmi.s	.wait_sub_o
-		rts
-
-; --------------------------------------------------------
-; System_McdSubWait
-;
-; Waits until Sub-CPU
-;
-; Input:
-; d0 - Task number
-;
-; Uses:
-; a6
-; --------------------------------------------------------
-
-System_McdSubWait:
-		lea	(sysmcd_reg+mcd_comm_m),a6
-.wait_sub_o:	move.b	1(a6),d7
-		bmi.s	.wait_sub_o
-		rts
-
-; --------------------------------------------------------
-; System_McdTrnsfr_RAM
-;
-; Read file from disc and transfer it's contents
-; to a1
-; Uses communication ports only.
-;
-; Input:
-; a0 - Filename string: "FILENAME.BIN",0
-; a1 - Output location
-; d0 - Size
-;
-; Uses:
-; d7/a5-a6
-;
-; ** This calls Sub-Task $01
-; --------------------------------------------------------
-
-System_McdTrnsfr_RAM:
-		lea	(sysmcd_reg+mcd_dcomm_m),a5
-		move.w	(a0)+,(a5)+			; 0 copy filename
-		move.w	(a0)+,(a5)+			; 2
-		move.w	(a0)+,(a5)+			; 4
-		move.w	(a0)+,(a5)+			; 6
-		move.w	(a0)+,(a5)+			; 8
-		move.w	(a0)+,(a5)+			; 8
-		move.w	#0,(a5)+			; A <-- zero end
-		move.w	d0,d1
-		moveq	#$01,d0				; COMMAND: READ CD AND PASS DATA
-		bsr	System_McdSubTask
-		move.w	d1,d0
-	; a0 - Output location
-	; d0 - Number of $10-byte packets
-		lsr.w	#4,d0				; size >> 4
-		subq.w	#1,d0				; -1
-		lea	(sysmcd_reg+mcd_dcomm_s),a6
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
-		bset	#7,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-.copy_ram:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait if sub PASSed the packet
-		btst	#6,d7
-		beq.s	.copy_ram
-		move.l	a6,a5
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.w	(a5)+,(a1)+
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; Tell SUB we got the pack
-		bset	#6,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-.wait_sub:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait clear
-		btst	#6,d7
-		bne.s	.wait_sub
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; and clear our bit too.
-		bclr	#6,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-		dbf	d0,.copy_ram
-		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
-		bclr	#7,d7
-		move.b	d7,(sysmcd_reg+mcd_comm_m).l
-		rts
-	endif
-
-; ====================================================================
-; ----------------------------------------------------------------
-; 32X ONLY
-; ----------------------------------------------------------------
-
-; --------------------------------------------------------
-; System_MarsUpdate
-; --------------------------------------------------------
-
-System_MarsUpdate:
-	if MARS|MARSCD
-		lea	(RAM_MdDreq),a0		; Send DREQ
-		move.w	#sizeof_dreq,d0
-		jmp	(System_RomSendDreq).l	; <-- EXTERNAL JUMP to $880000 area
-	else
-		rts
-	endif
-
-; --------------------------------------------------------
-; System_GrabRamCode
-;
-; MCD, 32X and CD32X only.
-;
-; Send new code to the USER side of RAM and
-; jump into it.
-;
-; ** FOR SEGA CD/CD+32X
-; Input:
-; a0 -
-;
-; ** FOR SEGA 32X
-; a0 - Filename string 8-bytes
-;
-; Input:
-; d0 - Location of the RAM code to copy
-;      in the $880000/$900000 areas
-; --------------------------------------------------------
-
-System_GrabRamCode:
-	if MCD|MARSCD
-	; a0 - filename string,0
-		lea	(RAM_UserCode),a1
-		move.w	#(MAX_UserCode),d0
-		bsr	System_McdTrnsfr_RAM
-		jmp	(RAM_UserCode).l
-
-	elseif MARS
-		or.l	#$880000,d0
-		move.l	d0,a0
-		lea	(RAM_UserCode),a1
-; 		move.w	(a0)+,d7
-; 		subq.w	#1,d7
-; 		bra *
-		move.w	#(MAX_UserCode)-1,d7	; TODO: TEMPORAL SIZE
-.copyme2:
-		move.b	(a0)+,(a1)+
-		dbf	d7,.copyme2
-		jmp	(RAM_UserCode).l
-	else
-		rts
-	endif
 
 ; ====================================================================
 ; ----------------------------------------------------------------
@@ -659,9 +482,9 @@ System_Input:
 
 ; --------------------------------------------------------
 ; System_Random
-; 
+;
 ; Makes a random number.
-; 
+;
 ; Input:
 ; d0 | Seed
 ;
@@ -782,9 +605,9 @@ System_SetInts:
 
 ; --------------------------------------------------------
 ; System_SramInit
-; 
+;
 ; Init save data
-; 
+;
 ; Uses:
 ; a4,d4-d5
 ; --------------------------------------------------------
@@ -860,7 +683,7 @@ VInt_Default:
 		movem.l	d0-a6,-(sp)
 		bsr	System_Input
 		addi.l	#1,(RAM_FrameCount).w
-		movem.l	(sp)+,d0-a6		
+		movem.l	(sp)+,d0-a6
 		rte
 
 ; --------------------------------------------------------
@@ -872,5 +695,219 @@ HInt_Default:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; System data
+; SEGA CD / CD32X ONLY
 ; ----------------------------------------------------------------
+
+	if MCD|MARSCD
+
+; --------------------------------------------------------
+; System_McdSubTask
+;
+; Request task to Sub-CPU
+; ** Exits without waiting to finish, call
+; System_McdSubWait after this if you need to
+; syncronize **
+;
+; Input:
+; d0 - Task number
+;
+; Uses:
+; a6
+; --------------------------------------------------------
+
+System_McdSubTask:
+		lea	(sysmcd_reg+mcd_comm_m),a6
+.wait_sub_s:	move.b	1(a6),d7	; Wait if SUB is BUSY
+		bmi.s	.wait_sub_s
+		move.b	d0,(a6)		; Set this command
+.wait_sub_i:	move.b	1(a6),d7	; Wait until SUB gets busy
+		bpl.s	.wait_sub_i
+		move.b	#$00,(a6)	; Clear value, SUB already got the ID
+; .wait_sub_o:	move.b	1(a6),d7
+; 		bmi.s	.wait_sub_o
+		rts
+
+; --------------------------------------------------------
+; System_McdSubWait
+;
+; Waits until Sub-CPU
+;
+; Input:
+; d0 - Task number
+;
+; Uses:
+; a6
+; --------------------------------------------------------
+
+System_McdSubWait:
+		lea	(sysmcd_reg+mcd_comm_m),a6
+.wait_sub_o:	move.b	1(a6),d7
+		bmi.s	.wait_sub_o
+		rts
+
+; --------------------------------------------------------
+; System_McdTrnsfr_WRAM
+;
+; Read file from disc and sends it to WORD-RAM,
+; waits unti
+;
+; Input:
+; a0 - Filename string: "FILENAME.BIN",0
+; a1 - Output location
+; d0 - Size
+;
+; Uses:
+; d7/a5-a6
+;
+; ** This calls Sub-Task $01
+; --------------------------------------------------------
+
+System_McdTrnsfr_WRAM:
+		move.b	(sysmcd_reg+mcd_memory).l,d0		; Set WORDRAM to SUB
+		bset	#1,d0
+		move.b	d0,(sysmcd_reg+mcd_memory).l
+		lea	(sysmcd_reg+mcd_dcomm_m),a5
+		move.w	(a0)+,(a5)+			; 0 copy filename
+		move.w	(a0)+,(a5)+			; 2
+		move.w	(a0)+,(a5)+			; 4
+		move.w	(a0)+,(a5)+			; 6
+		move.w	(a0)+,(a5)+			; 8
+		move.w	(a0)+,(a5)+			; 8
+		move.w	#0,(a5)+			; A <-- zero end
+		move.w	d0,d1
+		move.b	(sysmcd_reg+mcd_memory).l,d0	; Set WORDRAM permission to SUB
+		bset	#1,d0
+		move.b	d0,(sysmcd_reg+mcd_memory).l
+		move.w	#$02,d0				; COMMAND $02
+		bsr	System_McdSubTask
+		bra	System_McdSubWait
+
+; --------------------------------------------------------
+; System_McdTrnsfr_RAM
+;
+; Read file from disc and transfer it's contents
+; to a1
+; Uses communication ports only.
+;
+; Input:
+; a0 - Filename string: "FILENAME.BIN",0
+; a1 - Output location
+; d0 - Size
+;
+; Uses:
+; d7/a5-a6
+;
+; ** This calls Sub-Task $01
+; --------------------------------------------------------
+
+System_McdTrnsfr_RAM:
+		lea	(sysmcd_reg+mcd_dcomm_m),a5
+		move.w	(a0)+,(a5)+			; 0 copy filename
+		move.w	(a0)+,(a5)+			; 2
+		move.w	(a0)+,(a5)+			; 4
+		move.w	(a0)+,(a5)+			; 6
+		move.w	(a0)+,(a5)+			; 8
+		move.w	(a0)+,(a5)+			; 8
+		move.w	#0,(a5)+			; A <-- zero end
+		move.w	d0,d1
+		moveq	#$01,d0				; COMMAND: READ CD AND PASS DATA
+		bsr	System_McdSubTask
+		move.w	d1,d0
+	; a0 - Output location
+	; d0 - Number of $10-byte packets
+		lsr.w	#4,d0				; size >> 4
+		subq.w	#1,d0				; -1
+		lea	(sysmcd_reg+mcd_dcomm_s),a6
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
+		bset	#7,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+.copy_ram:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait if sub PASSed the packet
+		btst	#6,d7
+		beq.s	.copy_ram
+		move.l	a6,a5
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.w	(a5)+,(a1)+
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; Tell SUB we got the pack
+		bset	#6,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+.wait_sub:	move.b	(sysmcd_reg+mcd_comm_s).l,d7	; Wait clear
+		btst	#6,d7
+		bne.s	.wait_sub
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; and clear our bit too.
+		bclr	#6,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+		dbf	d0,.copy_ram
+		move.b	(sysmcd_reg+mcd_comm_m).l,d7	; UNLOCK
+		bclr	#7,d7
+		move.b	d7,(sysmcd_reg+mcd_comm_m).l
+		rts
+	endif
+
+; ====================================================================
+; ----------------------------------------------------------------
+; 32X ONLY
+; ----------------------------------------------------------------
+
+	if MARS|MARSCD
+
+; --------------------------------------------------------
+; System_MarsUpdate
+; --------------------------------------------------------
+
+System_MarsUpdate:
+		lea	(RAM_MdDreq),a0		; Send DREQ
+		move.w	#sizeof_dreq,d0
+		jmp	(System_RomSendDreq).l	; <-- EXTERNAL JUMP to $880000 area
+	endif
+
+; ====================================================================
+; ----------------------------------------------------------------
+; Shared subs for the add-ons
+; ----------------------------------------------------------------
+
+; --------------------------------------------------------
+; System_GrabRamCode
+;
+; Shared for MCD, 32X and CD32X.
+;
+; Send new code to the USER side of RAM and
+; jumps into it.
+;
+; ** FOR SEGA CD/CD+32X
+; Input:
+; a0 - Filename string 8-bytes
+;
+; ** FOR SEGA 32X
+; Input:
+; a0 - Location of the RAM-code to copy from
+;      in the $880000/$900000 areas
+; --------------------------------------------------------
+
+System_GrabRamCode:
+	if MCD|MARSCD
+	; a0 - filename string,0
+		lea	(RAM_UserCode),a1
+		move.w	#(MAX_UserCode),d0
+		bsr	System_McdTrnsfr_RAM
+		jmp	(RAM_UserCode).l
+
+	elseif MARS
+; 		or.l	#$880000,d0
+		move.l	d0,a0
+		lea	(RAM_UserCode),a1
+		move.w	#(MAX_UserCode)-1,d7	; TODO: TEMPORAL SIZE
+.copyme2:
+		move.b	(a0)+,(a1)+
+		dbf	d7,.copyme2
+		jmp	(RAM_UserCode).l
+	else
+		rts
+	endif
+
+; ====================================================================

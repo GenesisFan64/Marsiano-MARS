@@ -5,18 +5,8 @@
 ; include this AFTER the header
 ; ----------------------------------------------------------------
 
-		move.b	(sysmcd_reg+mcd_memory).l,d0		; Set WORDRAM to SUB, DMNA=1
-		bset	#1,d0
-		move.b	d0,(sysmcd_reg+mcd_memory).l
-		lea	.file_marscode(pc),a0
-		lea	(sysmcd_reg+mcd_dcomm_m),a1		; Load default assets
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.l	(a0)+,(a1)+
-		move.w	#0,(a0)+
-		moveq	#$02,d0
-		jsr	(System_McdSubTask).l			; WRAM load
-		jsr	(System_McdSubWait).l
+		lea	.file_marscode(pc),a0		; Load SH2 code from disc to WORD-RAM
+		jsr	(System_McdTrnsfr_WRAM).l
 		bra.s	.normal
 .file_marscode:
 		dc.b "MARSCODE.BIN",0
@@ -60,7 +50,7 @@ CopyrightData:
 FrameClear:
 		movem.l	d0/d1/d7/a1,-(a7)
 
-		lea	($a15180),a1
+		lea	($A15180),a1
 .fm1
 		bclr.b	#7,-$80(a1)		; MD access
 		bne.b	.fm1
@@ -113,14 +103,8 @@ RestartPrg:
 		move.w	#19170,d7		; 8
 .res_wait:
 		dbra	d7,.res_wait		; 12*d7+10
-
-; ----	Mars Register Initialize
-
-		lea	($A15100),a1
-
-; ----	Communication Reg. Clear
-
-		moveq	#0,d0
+		lea	($A15100),a1		; ----	Mars Register Initialize
+		moveq	#0,d0			; ----	Communication Reg. Clear
 		move.l	d0,$20(a1)		; 0
 		move.l	d0,$24(a1)		; 4
 		move.b	#3,$5101(a5)		; SH2 start
@@ -139,9 +123,7 @@ RestartPrg:
 		move.w	d0,$38(a1)		; PWM Mono Reg.
 		move.w	d0,$80(a1)		; Bitmap Mode Reg.
 		move.w	d0,$82(a1)		; Shift Reg.
-
-; ----	Mars Frame Buffer Clear
-.fs0:
+.fs0:						; ----	Mars Frame Buffer Clear
 		bclr.b	#0,$8b(a1)		; FS = 0
 		bne.b	.fs0
 		bsr	FrameClear
@@ -150,11 +132,8 @@ RestartPrg:
 		beq.b	.fs1
 		bsr	FrameClear
 		bclr.b	#0,$8b(a1)		; FS = 0
-
-; ----	Palette RAM Clear
-		bsr	PaletteClear
-
-	; *** SLAM CITY CD32X code
+		bsr	PaletteClear		; ----	Palette RAM Clear
+	; *** Taken from SLAM CITY CD32X
 		move.w	#2,d0
 		moveq	#0,d1
 		move.b	1(a5),d1
@@ -171,27 +150,20 @@ loc_1DA:
 		bne.w	loc_21E
 loc_1E2:
 	; ***
-
-; ----	SH2 Check
-		move	#$80,d0
+		move	#$80,d0			; ----	SH2 Check
 		move.l	$20(a1),d1		; SDRAM Self Check
 		cmp.l	#"SDER",d1
 		beq	MarsError
-
-; ----	Communication Reg. Clear
-		moveq	#0,d0
+		moveq	#0,d0			; ----	Communication Reg. Clear
 		move.l	d0,$28(a1)		; 8
 		move.l	d0,$2c(a1)		; 12
-
 		movea.l	#-64,a6
 		movem.l	(a6),d0/d3-d7/a0-a6
 		move	#0,ccr			; Complete
 		bra.b	IcdAllEnd
-
 Hot_Start:
 		lea	($a15100),a1
 		move.w	d0,6(a1)		; DREQ Control Reg.
-
 		move.w	#$8000,d0
 		bra.b	IcdAllEnd
 loc_21E:
@@ -200,53 +172,42 @@ IcdAllEnd:
 ; 		bcs	_error
 
 ; ----------------------------------------------------------------
-; Sending the SH2 data through the
-; framebuffer...
-
+; Sending the SH2 data using the framebuffer...
 		lea	($A15100).l,a5
 loc_2EE:
 		bclr	#7,(a5)
 		bne.s	loc_2EE
-		lea	($840000).l,a0
+		lea	($840000).l,a0		; First a header
 		lea	MarsInitHeader(pc),a2
 		move.w	#$E-1,d7
-loc_302:
+.send_head:
 		move.l	(a2)+,(a0)+
-		dbf	d7,loc_302
-		lea	($200000).l,a2
+		dbf	d7,.send_head
+		lea	($200000).l,a2		; Then the entire SH2 code
 		move.w	#((MARS_RAMDATA_E-MARS_RAMDATA)/4)-1,d7
-loc_314:
+.send_code:
 		move.l	(a2)+,d0
 		move.l	d0,(a0)+
-		dbf	d7,loc_314
-loc_332:
+		dbf	d7,.send_code
+.wait_adapter:
 		bset	#7,(a5)
-		beq.s	loc_332
+		beq.s	.wait_adapter
 		lea	($A15100).l,a5
-		move.l	#"_CD_",$20(a5)		; SH2 Application Start
-.master:
-		cmp.l	#"M_OK",$20(a5)
-		bne.b	.master
-.slave:
-		cmp.l	#"S_OK",$24(a5)
-		bne.b	.slave
+		move.l	#"_CD_",$20(a5)			; SH2 Application Start
+.master:	cmp.l	#"M_OK",$20(a5)
+		bne.s	.master
+.slave:		cmp.l	#"S_OK",$24(a5)
+		bne.s	.slave
 		lea	(vdp_ctrl).l,a6
-		move.l	#$80048104,(a6)		; Default top VDP regs
-		moveq	#0,d0			; Clear both Master and Slave comm's
+		move.l	#$80048104,(a6)			; Default top VDP regs
+		moveq	#0,d0				; Clear both Master and Slave comm's
 		move.l	d0,comm12(a5)
 MarsError:
-; 		vdp_showme $0E0
-; 		bra.s *
-
 		bra	MarsJumpHere
-; file_marscode:
-; 		dc.b "MARSCODE.BIN",0
-; 		align 2
 
-; --------------------------------------------------------------------------------
+; ----------------------------------------------------------------
 ;	MARS User Header
-; --------------------------------------------------------------------------------
-
+; ----------------------------------------------------------------
 MarsInitHeader:
 		dc.b "MARS CDROM      "			; module name
 		dc.l $00000000				; version

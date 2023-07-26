@@ -12,4 +12,12 @@
 		align 4
 ArtMars_TEST:
 		binclude "game/data/TESTS/mars_art.bin"
-		align 2
+		align 4
+
+; TEST_DMA:
+; ; 	if MARS
+; 	binclude "bodytalk_dma.wav",$2C,$4000
+; ; 	endif
+; TEST_DMA_e:
+; 	align 4
+

@@ -11,7 +11,7 @@
 ; t-Ticks
 ; g-Use global tempo
 gemaTrk macro ticks,loc
-	dc.l ((ticks&$FF)<<24)|loc
+	dc.l ((ticks&$FF)<<24)|loc&$FFFFFF
 	endm
 
 ; gemaHead

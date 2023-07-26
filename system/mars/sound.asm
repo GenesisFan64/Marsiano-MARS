@@ -9,28 +9,27 @@
 ; Settings
 ; --------------------------------------------------------
 
-; MAX_PWMCHNL	equ 7		; MAXIMUM usable PWM channels (TODO: keep it like this)
-; MAX_PWMBACKUP	equ $80		; 1-bit sizes only: $40,$80,$100...
-SAMPLE_RATE	equ 22050
+SAMPLE_RATE	equ 32000	; 22050
+SAMPLE_SIZE	equ $8000	; Larger the value, less stress for Slave.
 
 ; --------------------------------------------------------
 ; Structs
 ; --------------------------------------------------------
 
 ; ; 32X sound channel
-; 		struct 0
-; mchnsnd_enbl	ds.l 1
-; mchnsnd_read	ds.l 1		; 0 - off
-; mchnsnd_cchread	ds.l 1
-; mchnsnd_bank	ds.l 1		; CS0-3 OR value
-; mchnsnd_start	ds.l 1
-; mchnsnd_end	ds.l 1
-; mchnsnd_loop	ds.l 1
-; mchnsnd_pitch	ds.l 1
-; mchnsnd_flags	ds.l 1		; %SLR S-wave format mono/stereo | LR-wave output bits
-; mchnsnd_vol	ds.l 1
-; sizeof_sndchn	ds.l 0
-; 		finish
+		struct 0
+mchnsnd_enbl	ds.l 1
+mchnsnd_read	ds.l 1		; 0 - off
+mchnsnd_cchread	ds.l 1
+mchnsnd_bank	ds.l 1		; CS0-3 OR value
+mchnsnd_start	ds.l 1
+mchnsnd_end	ds.l 1
+mchnsnd_loop	ds.l 1
+mchnsnd_pitch	ds.l 1
+mchnsnd_flags	ds.l 1		; %SLR S-wave format mono/stereo | LR-wave output bits
+mchnsnd_vol	ds.l 1
+sizeof_marssnd	ds.l 0
+		endstruct
 
 ; ====================================================================
 ; --------------------------------------------------------
@@ -48,14 +47,14 @@ MarsSound_Init:
 		stc	gbr,@-r15
 		mov	#_sysreg,r0
 		ldc	r0,gbr
-		mov	#$0105,r0					; Timing interval $01, output L/R
-		mov.w	r0,@(timerctl,gbr)
-		mov	#((((23011361<<1)/SAMPLE_RATE+1)>>1)+1),r0	; Samplerate
-		mov.w	r0,@(cycle,gbr)
 		mov	#1,r0
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
 		mov.w	r0,@(monowidth,gbr)
+		mov	#((((23011361<<1)/SAMPLE_RATE+1)>>1)+1),r0	; NTSC samplerate
+		mov.w	r0,@(cycle,gbr)
+		mov	#$0185,r0					; Timing interval $01, output L/R
+		mov.w	r0,@(timerctl,gbr)
 		ldc	@r15+,gbr
 		rts
 		nop
@@ -73,48 +72,90 @@ MarsSound_Init:
 ; r3 - Size / 4
 ; --------------------------------------------------------
 
-MarsSound_FirstFill:
+MarsSound_Refill:
+		mov	#_DMASOURCE1,r1
+		mov	#0,r0
+		mov	r0,@r1			; Source
+		mov	#$20004034,r0
+		mov	r0,@(4,r1)		; Destination
+		mov	#0,r0
+		mov	r0,@(8,r1)		; Size (0 at first)
+		mov	#0,r0
+		mov	r0,@($C,r1)		; _DMACHANNEL1
+		mov.w	#$FE72,r1		; $FFFFFE72 (DRCR1)
+		mov.b	r0,@r1
+		mov	#_DMAOPERATION,r1	; Enable This DMA
+		mov	#1,r0
+		mov	r0,@r1
+		sts	pr,@-r15
 		mov	#RAM_Mars_GemaWave_0,r1
-		mov	#($1000*3)/4,r2
+		mov	#(SAMPLE_SIZE*2)/4,r2
 		mov	#$00800080,r0
 .fill_both:
 		mov	r0,@r1
 		dt	r2
 		bf/s	.fill_both
 		add	#4,r1
-
-; 		mov	#_DMAOPERATION,r1
-
-; 		mov	#,r1
-; 		mov	#,r2
-;
-; 		mov	#_DMAOPERATION,r5
-; 		mov	#_DMASOURCE1,r4
-; 		mov	#0,r0
-; 		mov	r0,@r5
-; 		mov	#%0101101011100000,r0
-; 		mov	r0,@($0C,r4)
-; 		mov	r1,r0
-; 		mov	r0,@r4
-; 		mov	r2,r0			; <-- point fbdata here
-; 		mov	r0,@($04,r4)
-; 		mov	r3,r0
-; 		mov	r0,@($08,r4)
-; 		mov	#%0101101011100001,r0
-; 		mov	r0,@($0C,r4)
-; 		mov	#1,r0
-; 		mov	r0,@r5
-; .wait_dma:	mov	@($C,r4),r0		; Still on DMA?
-; 		tst	#%10,r0
-; 		bt	.wait_dma
-; 		mov	#0,r0
-; 		mov	r0,@r5
-; 		mov	#%0101101011100000,r0
-; 		mov	r0,@($C,r4)
+		mov	#_DMASOURCE1,r1		; First fill
+		mov	@(marsGbl_PwmRead,gbr),r0
+		mov	r0,@r1			; Source
+; 		mov	#$20004034,r0
+; 		mov	r0,@(4,r1)		; Destination
+		mov	#SAMPLE_SIZE/4,r0
+		mov	r0,@(8,r1)		; Size (0 at first)
+		mov	#%0001100011100101,r0
+		mov	r0,@($C,r1)
+		or	#1,r0
+		mov.w	r0,@(marsGbl_PwmRefill,gbr)
 		rts
 		nop
 		align 4
 		ltorg
+
+; --------------------------------------------------------
+; Call this on the main loop
+; --------------------------------------------------------
+
+		align 4
+MarsSound_Loop:
+		mov.w	@(marsGbl_PwmRefill,gbr),r0
+		tst	r0,r0
+		bt	.dont_refill
+		xor	r0,r0
+		mov.w	r0,@(marsGbl_PwmRefill,gbr)
+
+	if MARS
+		mov	@(marsGbl_TEMPORAL,gbr),r0
+		mov	r0,r1
+		mov	@(marsGbl_PwmWrite,gbr),r0
+		mov	r0,r2
+		mov	#SAMPLE_SIZE/4,r3
+		mov	#1,r4
+.copy_test:
+		mov.b	@r1+,r0
+		extu.b	r0,r0
+		add	#1,r0
+		mov.w	r0,@r2
+		mov.b	@r1+,r0
+		extu.b	r0,r0
+		add	#1,r0
+		mov.w	r0,@(2,r2)
+		dt	r3
+		bf/s	.copy_test
+		add	#4,r2
+		mov	r1,r0
+		mov	#TEST_DMA_e|TH,r2
+		cmp/ge	r2,r0
+		bf	.notin
+		mov	#TEST_DMA|TH,r2
+		mov	r2,r0
+.notin:
+		mov	r0,@(marsGbl_TEMPORAL,gbr)
+	endif
+.dont_refill:
+		rts
+		nop
+		align 4
 
 ; ; --------------------------------------------------------
 ; ; MarsSound_SetPwm

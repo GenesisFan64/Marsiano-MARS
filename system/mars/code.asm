@@ -1,6 +1,6 @@
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS SH2 SDRAM section, shared for both CPUs
+; MARS SH2 SDRAM section, shared for both SH2 CPUs
 ; ----------------------------------------------------------------
 
 ; *************************************************
@@ -416,11 +416,8 @@ m_irq_cmd:
 		mov	#_DMASOURCE0,r3		; r3 - DMA base register
 		mov	#_sysreg+comm12,r2	; r2 - comm to write the signal
 		mov	#_sysreg+dreqfifo,r1	; r1 - Source point: DREQ FIFO
-; 		mov	#0,r0			; _DMAOPERATION = 0
-; 		mov	r0,@($30,r3)
 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable OFF
 		mov	r0,@($C,r3)
-; 		mov	#RAM_Mars_DreqBuff_0,r0
 		mov	@(marsGbl_DmaWrite,gbr),r0
 		mov	r0,@(4,r3)		; Destination
 		mov.w	@(dreqlen,r4),r0	; NOTE: NO size check, be careful.
@@ -540,16 +537,6 @@ m_irq_vres:
 ; =================================================================
 ; ------------------------------------------------
 ; Master | DMA Exit
-;
-; This will trigger when one of the DMA channels
-; with the interrupt bit enabled is a FEW writes
-; away from finishing the transfer.
-;
-; Does NOT exactly trigger at the very last
-; packet, I think.
-;
-; Check for the DMA-active bit BEFORE
-; writing _DMAOPERATION = 0
 ; ------------------------------------------------
 
 		align 4
@@ -558,7 +545,7 @@ m_irq_dma:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_DMASOURCE0,r1
+		mov	#_DMASOURCE0,r1		; Check Channel 0
 		mov	@($C,r1),r0		; Dummy READ
 		mov	#%0100010011100000,r0
 		mov	r0,@($C,r1)		; Transfer mode + DMA enable OFF
@@ -569,9 +556,6 @@ m_irq_dma:
 		rts
 		nop
 		align 4
-
-	; Save literals
-		ltorg
 
 ; =================================================================
 ; ------------------------------------------------
@@ -604,6 +588,8 @@ s_irq_pwm:
 		rts
 		nop
 		align 4
+
+		ltorg	; Save literals
 
 ; =================================================================
 ; ------------------------------------------------
@@ -753,17 +739,7 @@ s_irq_vres:
 
 ; =================================================================
 ; ------------------------------------------------
-; Master | DMA Exit
-;
-; This will trigger when one of the DMA channels
-; with the interrupt bit enabled is a FEW writes
-; away from finishing the transfer.
-;
-; Does NOT exactly trigger at the very last
-; packet, I think.
-;
-; Check for the DMA-active bit BEFORE
-; writing _DMAOPERATION = 0
+; Slave | DMA Exit
 ; ------------------------------------------------
 
 		align 4
@@ -772,25 +748,35 @@ s_irq_dma:
 		mov.b	@(7,r1),r0
 		xor	#2,r0
 		mov.b	r0,@(7,r1)
-		mov	#_DMASOURCE1,r1		; Pick DMA Channel 1
-.wait_dma:	mov	@($C,r1),r0
-		tst	#%10,r0			; DMA finished?
-		bt	.wait_dma
 
-; 		mov	r2,@-r15
-; 		mov	r3,@-r15
-; 		mov	r4,@-r15
-;
-; ; 		mov	#_DMA
-; 		mov	@r15+,r4
-; 		mov	@r15+,r3
-; 		mov	@r15+,r2
+		mov	#_DMASOURCE1,r1			; Check Channel 0
+		mov	@($C,r1),r0			; Dummy READ
+		mov	#%0100010011100000,r0
+		mov	r0,@($C,r1)			; Transfer mode + DMA enable OFF
+	; ON/OFF flag goes here
+		mov	@(marsGbl_PwmWrite,gbr),r0	; Flip PWM buffers
+		mov	r0,r1
+		mov	@(marsGbl_PwmRead,gbr),r0
+		mov	r0,@(marsGbl_PwmWrite,gbr)
+		mov	r1,r0
+		mov	r0,@(marsGbl_PwmRead,gbr)
+		or	#1,r0
+		mov.w	r0,@(marsGbl_PwmRefill,gbr)
+		mov	#_DMASOURCE1,r1			; Make new DMA
+		mov	@(marsGbl_PwmRead,gbr),r0
+		mov	r0,@r1				; Source
+; 		mov	#$20004034,r0
+; 		mov	r0,@(4,r1)			; Destination
+		mov	#SAMPLE_SIZE/4,r0
+		mov	r0,@(8,r1)			; Size (0 at first)
+		mov	#%0001100011100101,r0
+		mov	r0,@($C,r1)
 
-; 		mov
-; 		mov	#0,r0			; _DMAOPERATION = 0
-; 		mov	r0,@($30,r1)
-; 		mov	#%0100010011100000,r0	; Transfer mode + DMA enable OFF
-; 		mov	r0,@($C,r1)
+		mov	#_sysreg+comm4,r1
+		mov.w	@r1,r0
+		add	#1,r0
+		mov.w	r0,@r1
+
 		rts
 		nop
 		align 4
@@ -1231,8 +1217,8 @@ SH2_S_HotStart:
 		mov.w	r0,@(cmdintclr,r1)
 		mov.w	r0,@(pwmintclr,r1)
 		mov.w	@r1,r0
-		or	#CMDIRQ_ON|PWMIRQ_ON,r0
-; 		or	#CMDIRQ_ON,r0
+; 		or	#CMDIRQ_ON|PWMIRQ_ON,r0
+		or	#CMDIRQ_ON,r0
 		mov.w	r0,@r1
 		mov	#_sysreg+comm12,r1
 .wait_mst:	mov.w	@r1,r0
@@ -1240,7 +1226,7 @@ SH2_S_HotStart:
 		bf	.wait_mst
 
 ; 	; ****
-		bsr	MarsSound_FirstFill
+		bsr	MarsSound_Refill
 		nop
 ; 	; ****
 
@@ -1267,6 +1253,18 @@ SH2_S_HotStart:
 
 		align 4
 slave_loop:
+	; GemaSoundDriver
+		bsr	MarsSound_Loop
+		nop
+
+
+; 		mov	#_DMASOURCE1,r1		; Check Channel 1
+; 		mov	@($C,r1),r0		; Dummy READ
+; 		tst	#%10,r0
+; 		bf	.dont
+; 		mov	#%0100010011100000,r0
+; 		mov	r0,@($C,r1)		; Transfer mode + DMA enable OFF
+
 		mov	#_sysreg+comm7,r1
 		mov.b	@r1,r0
 		add	#1,r0
@@ -1301,17 +1299,21 @@ sin_table	binclude "system/mars/data/sinedata.bin"
 ;
 ; SHARED FOR BOTH CPUS, watch out for the Read/Write conflicts.
 ;
-; use dc's to set their default values
+; use dc's to set their STARTING values
 ; ----------------------------------------------------------------
-
 
 			align $10
 RAM_Mars_Global:
 			struct 0
 marsGbl_XShift		dc.w 0
-marsGbl_Null		dc.w 0
-marsGbl_DmaRead		dc.l RAM_Mars_DreqBuff_0
-marsGbl_DmaWrite	dc.l RAM_Mars_DreqBuff_1
+marsGbl_PwmRefill	dc.w 0				; Refill flag
+marsGbl_DmaRead		dc.l RAM_Mars_DreqBuff_0|TH
+marsGbl_DmaWrite	dc.l RAM_Mars_DreqBuff_1|TH
+marsGbl_PwmRead		dc.l RAM_Mars_GemaWave_0|TH
+marsGbl_PwmWrite	dc.l RAM_Mars_GemaWave_1|TH
+	if MARS
+marsGbl_TEMPORAL	dc.l TEST_DMA|TH
+	endif
 sizeof_MarsGbl		ds.l 0
 			endstruct
 
@@ -1320,80 +1322,18 @@ sizeof_MarsGbl		ds.l 0
 ; MARS SH2 RAM
 ; ----------------------------------------------------------------
 
-			align $100
+			align $80
 SH2_RAM:
 			struct SH2_RAM|TH	; CACHE-THRU
 RAM_Mars_DreqBuff_0	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
 RAM_Mars_DreqBuff_1	ds.b sizeof_dreq	; Copy of DREQ for reading.
-RAM_Mars_GemaWave_0	ds.b $1000
-RAM_Mars_GemaWave_1	ds.b $1000
-RAM_Mars_GemaSilence	ds.b $1000
+RAM_Mars_GemaWave_0	ds.b SAMPLE_SIZE	; ** DON'T SEPARATE THESE LABELS **
+RAM_Mars_GemaWave_1	ds.b SAMPLE_SIZE	; **                             **
+; RAM_Mars_PwmList	ds.b sizeof_marssnd*8
+sizeof_sh2all		ds.l 0
 			endstruct
-
-; ; ====================================================================
-; ; ----------------------------------------------------------------
-; ; MARS Video RAM
-; ;
-; ; RAM_Mars_ScrnBuff is recycled for all pseudo-screen modes
-; ; ----------------------------------------------------------------
-;
-; 			struct MarsRam_Video
-; RAM_Mars_ScrnBuff	ds.b MAX_SCRNBUFF		; Single buffer for all screen modes
-; sizeof_marsvid		ds.l 0
-; 			endstruct
-;
-; ; --------------------------------------------------------
-; ; per-screen RAM
-; 			struct RAM_Mars_ScrnBuff
-; Cach_DrawTimers		ds.l 4				; Screen draw-request timers, write $02 to these
-; RAM_Mars_ScrlBuff	ds.b sizeof_mscrl*2		; Scrolling buffers
-; RAM_Mars_ScrlData	ds.b ((320+16)*(224+16))+320	; Entire pixeldata for one scroll: (w*h)+320
-; end_scrn02		ds.l 0
-; 			endstruct
-; 			struct RAM_Mars_ScrnBuff
-; RAM_Mars_SVdpDrwList	ds.b sizeof_plypz*MAX_SVDP_PZ	; Sprites / Polygon pieces
-; RAM_Mars_SVdpDrwList_e	ds.l 0				; (END point label)
-; RAM_Mars_Polygons_0	ds.b sizeof_polygn*MAX_FACES	; Read/Write polygon data
-; RAM_Mars_Polygons_1	ds.b sizeof_polygn*MAX_FACES
-; RAM_Mars_PlgnList_0	ds.l MAX_FACES*2		; Polygon order list: Zpos, pointer
-; RAM_Mars_PlgnList_1	ds.l MAX_FACES*2
-; RAM_Mars_PlgnNum_0	ds.l 1				; Number of polygons to process
-; RAM_Mars_PlgnNum_1	ds.l 1
-; RAM_Mars_Objects	ds.b sizeof_mdlobj*MAX_MODELS	; Slave's Objects
-; RAM_Mars_ObjCamera	ds.b sizeof_camera		; Slave's Camera
-; sizeof_scrn04		ds.l 0
-; 			endstruct
-; 	if MOMPASS=6
-; 	if end_scrn02-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
-; 		error "RAN OUT OF RAM FOR 2D STUFF (\{(end_scrn02-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
-; 	elseif sizeof_scrn04-RAM_Mars_ScrnBuff > MAX_SCRNBUFF
-; 		error "RAN OUT OF RAM FOR 3D STUFF (\{(sizeof_scrn04-RAM_Mars_ScrnBuff)} of \{(MAX_SCRNBUFF)})"
-; 	endif
-; 	endif
-
-; ====================================================================
-; ----------------------------------------------------------------
-; MARS Sound RAM
-; ----------------------------------------------------------------
-
-; 			struct MarsRam_Sound
-; MarsSnd_PwmCache	ds.b $80*MAX_PWMCHNL
-; sizeof_marssnd		ds.l 0
-; 			endstruct
-
-; ====================================================================
-; ----------------------------------------------------------------
-; MARS System RAM
-; ----------------------------------------------------------------
-
-; 			struct MarsRam_System
-; RAM_Mars_DreqBuff_0	ds.b sizeof_dreq	; DREQ data from Genesis ***DO NOT READ FROM HERE***
-; RAM_Mars_DreqBuff_1	ds.b sizeof_dreq	; Copy of DREQ for reading.
-
-; sizeof_marssys		ds.l 0
-; 			endstruct
 
 ; ====================================================================
 
 .here:
-		report "SH2 SDRAM CODE/DATA",.here,(STACK_SLV-$1000)
+		report "SH2 SDRAM CODE/DATA",sizeof_sh2all&$3FFFFF,(STACK_SLV-$1000)

@@ -33,6 +33,7 @@ LIST OF UNEMULATED SEGA 32X HARDWARE FEATURES/BUGS/ERRORS, the ones marked with 
 - If the framebuffer swaps during an active SVDP-FILL, freezes.
 
 -- PWM --
+- Writing a full $0000 value causes a loud CLICK, current ares-emu ignores this.
 - It's 3-word FIFO isn't emulated properly, on emulators it behaves like a normal write-register. (I imagine...)
 - Normally the output limit for both LEFT and RIGHT channels is 4095 ($0FFF) but depending of the speed of the PWM interrupt this value decreases: For example if the PWM interrupt is at 22050hz the limit now is 1023 ($03FF)
 

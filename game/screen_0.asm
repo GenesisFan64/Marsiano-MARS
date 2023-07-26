@@ -105,8 +105,8 @@ RAM_MapY	ds.w 1
 ; ; 		nop
 ; ; 		dbf	d7,.ll
 	endif
-		moveq	#0,d0
-		bsr	gemaPlayTrack
+; 		moveq	#0,d0
+; 		bsr	gemaPlayTrack
 
 ; ====================================================================
 ; ------------------------------------------------------
@@ -171,16 +171,16 @@ RAM_MapY	ds.w 1
 str_Stats2:
 ; 	if MARS
 		dc.b "\\l \\w \\w",$A,$A
-		dc.b 0
+; 		dc.b 0
 ; 		dc.b "\\b \\b CD RW/RD",$A,$A
 ; 		dc.b "\\w \\w \\w \\w CD RW",$A
 ; 		dc.b "\\w \\w \\w \\w",$A,$A
 ; 		dc.b "\\w \\w \\w \\w CD RD",$A
 ; 		dc.b "\\w \\w \\w \\w",$A
 ; 		dc.b $A
-; 		dc.b "\\w \\w \\w \\w MARS",$A
-; 		dc.b "\\w \\w \\w \\w",$A
-; 		dc.b 0
+		dc.b "\\w \\w \\w \\w MARS",$A
+		dc.b "\\w \\w \\w \\w",$A
+		dc.b 0
 ; ; 	else
 ; 		dc.b "\\l",0
 ; 	endif
@@ -208,14 +208,14 @@ str_Stats2:
 ; 		dc.l sysmcd_reg+mcd_dcomm_s+12
 ; 		dc.l sysmcd_reg+mcd_dcomm_s+14
 ;
-; 		dc.l sysmars_reg+comm0
-; 		dc.l sysmars_reg+comm2
-; 		dc.l sysmars_reg+comm4
-; 		dc.l sysmars_reg+comm6
-; 		dc.l sysmars_reg+comm8
-; 		dc.l sysmars_reg+comm10
-; 		dc.l sysmars_reg+comm12
-; 		dc.l sysmars_reg+comm14
+		dc.l sysmars_reg+comm0
+		dc.l sysmars_reg+comm2
+		dc.l sysmars_reg+comm4
+		dc.l sysmars_reg+comm6
+		dc.l sysmars_reg+comm8
+		dc.l sysmars_reg+comm10
+		dc.l sysmars_reg+comm12
+		dc.l sysmars_reg+comm14
 		align 2
 
 ; ====================================================================
