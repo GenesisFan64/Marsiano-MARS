@@ -44,9 +44,9 @@ scpu_reg	equ	$FFFF8000
 
 SP_Init:
 ; 		move.w	#$2700,sr
-		move.b	(scpu_reg+mcd_memory).l,d0
-		bclr	#bitWRamMode,d0
-		move.b	d0,(scpu_reg+mcd_memory).l
+; 		move.b	(scpu_reg+mcd_memory).l,d0
+; 		bclr	#bitWRamMode,d0
+		move.b	#0,(scpu_reg+mcd_memory).l
 		bsr	spInitFS
 		move.b	#0,(scpu_reg+mcd_comm_s).w	; Reset SUB-status
 		rts

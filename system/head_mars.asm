@@ -263,3 +263,8 @@ MD_Init:
 		move.l	#$80048104,(a6)		; Default top VDP regs
 		moveq	#0,d0			; Clear both Master and Slave comm's
 		move.l	d0,comm12(a5)
+; 		move.w	#$4FF,d7
+; .wait_sh2:
+; 		move.w	#$1FF,d6
+; 		dbf	d6,*
+; 		dbf	d7,.wait_sh2

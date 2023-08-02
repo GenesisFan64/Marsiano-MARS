@@ -177,14 +177,14 @@ IcdAllEnd:
 loc_2EE:
 		bclr	#7,(a5)
 		bne.s	loc_2EE
-		lea	($840000).l,a0		; First a header
+		lea	($840000).l,a0			; First the Module
 		lea	MarsInitHeader(pc),a2
 		move.w	#$E-1,d7
 .send_head:
 		move.l	(a2)+,(a0)+
 		dbf	d7,.send_head
-		lea	($200000).l,a2		; Then the entire SH2 code
-		move.w	#((MARS_RAMDATA_E-MARS_RAMDATA)/4)-1,d7
+		lea	($200000).l,a2			; Then the entire SH2 code
+		move.l	#((MARS_RAMDATA_E-MARS_RAMDATA)/4)-1,d7
 .send_code:
 		move.l	(a2)+,d0
 		move.l	d0,(a0)+

@@ -54,7 +54,7 @@ report		macro text,dis,dat
 			message text+": \{(dis)&$FFFFFF}"
 		else
 			if dis > dat
-				error "RAN OUT OF "+text+" (\{(dis)&$FFFFFF} of \{(dat)&$FFFFFF})"
+				warning "RAN OUT OF "+text+" SPACE (\{(dis)&$FFFFFF} of \{(dat)&$FFFFFF})"
 			else
 				message text+" uses \{(dis)&$FFFFFF} of \{(dat)&$FFFFFF}"
 			endif
@@ -73,7 +73,7 @@ erreport	macro text,dis,dat
 			message text+": \{(dis)&$FFFFFF}"
 		else
 			if dis > dat
-				error "RAN OUT OF "+text+" (\{(dis)&$FFFFFF} of \{(dat)&$FFFFFF})"
+				error "RAN OUT OF "+text+" SPACE (\{(dis)&$FFFFFF} of \{(dat)&$FFFFFF})"
 ; 			else
 ; 				message text+" uses \{(dis)&$FFFFFF} of \{(dat)&$FFFFFF}"
 			endif

@@ -38,6 +38,8 @@
 
 
 ; FM3 Special
+FmIns_Fm3_Explosion:
+		binclude "sound/instr/fm/fm3_sfx_boomworm.gsx",$2478,$28
 FmIns_Sp_OpenHat:
 		binclude "sound/instr/fm/fm3_openhat.gsx",$2478,$28
 FmIns_Sp_ClosedHat:

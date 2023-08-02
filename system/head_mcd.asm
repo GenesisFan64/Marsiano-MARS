@@ -43,6 +43,16 @@
 ; -------------------------------------------------
 
 IP_Start:
+		lea	(vdp_data).l,a0
+.wait_vint:	move.w	4(a0),d0
+		btst	#3,d0
+		beq.s	.wait_vint
+		move.l	#$C0000000,4(a0)
+		move.w	#64-1,d1
+		moveq	#0,d0
+.color_out:
+		move.w	d0,(a0)
+		dbf	d1,.color_out
 		move.w	#(RAM_MdMarsHInt)&$FFFF,(sysmcd_reg+mcd_hint).l
 		jmp	($FF0600+MCD_Main).l
 IP_End:

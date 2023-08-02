@@ -972,8 +972,8 @@ Video_DoPalFade:
 ;
 ; *** ONLY CALL THIS OUTSIDE OF VBLANK ***
 ;
-; d0 | LONG - Art data
-; d1 | WORD - VRAM location
+; d0 | LONG - Art data Real-ROM location
+; d1 | WORD - VRAM location cell_vram()
 ; d2 | WORD - Size
 ;
 ; Breaks:
@@ -988,6 +988,9 @@ Video_DmaMkEntry:
 		add.w	#7*2,d7
 		move.w	d7,(RAM_VdpDmaIndx).w
 		move.w	d2,d7			; Length
+	if MCD|MARSCD
+		sub.w	#2,d7
+	endif
 		move.l	#$94009300,d6
 		lsr.w	#1,d7
 		move.b	d7,d6
@@ -997,6 +1000,9 @@ Video_DmaMkEntry:
 		swap	d6
 		move.l	d6,(a6)+
 		move.l	d0,d7			; Source
+	if MCD|MARSCD
+		add.l	#2,d7
+	endif
   		lsr.l	#1,d7
  		move.l	#$96009500,d6
  		move.b	d7,d6
@@ -1259,6 +1265,8 @@ Video_LoadArt:
 ; Entry format:
 ; $94xx,$93xx,$96xx,$95xx,$97xx (SIZE,SOURCE)
 ; $40000080 (vdp destination + dma bit)
+
+; TODO: Add the SCD patch.
 
 Video_DmaBlast:
 		tst.w	(RAM_VdpDmaMod).w		; Got mid-write?

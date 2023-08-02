@@ -31,8 +31,8 @@
 ; --------------------------------------------------------
 
 MAX_SysCode	equ $1800	; ** CD/32X/CD32X ONLY
-MAX_UserCode	equ $4000	; ** CD/32X/CD32X ONLY
-MAX_RamSndData	equ $3800	; ** CD/32X/CD32X ONLY
+MAX_UserCode	equ $2000	; ** CD/32X/CD32X ONLY
+MAX_RamSndData	equ $4000	; ** CD/32X/CD32X ONLY
 MAX_MdGlobal	equ $0800	; USER Global variables
 MAX_ScrnBuff	equ $2800	; RAM section for Current screen
 MAX_MdVideo	equ $2000	;
@@ -374,7 +374,7 @@ gemacd_report_e:
 		align $800
 		dephase
 MCD_GEMATRKS_e:
-		report "MCD GEMA RAM TRACKS/INS",gemacd_report_e-gemacd_report,MAX_RamSndData
+		report "MCD GEMA TRACKS/INS",gemacd_report_e-gemacd_report,MAX_RamSndData
 	endif
 
 ; ====================================================================
@@ -416,6 +416,9 @@ mdbank0_e:
 ; 		dephase
 	if MCD|MARSCD
 		include "game/data/md_dma.asm"		; SEGA CD / CD32X ONLY.
+; 		phase CS1+*
+; 		include "sound/smpl_pwm.asm"		; GEMA: PWM samples
+; 		dephase
 	endif
 
 	if MARS|MCD|MARSCD
@@ -473,9 +476,11 @@ MCD_DBANK0_e:
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; 32X ONLY:
+; 32X ONLY
 ;
 ; SH2 code and ROM data
+;
+; ** MARSCD: Loads to WORD-RAM
 ; ----------------------------------------------------------------
 
 	if MCD|MARSCD
@@ -517,7 +522,7 @@ MARS_RAMDATA_E:
 
 ROM_END:
 	if MCD|MARSCD
-		rompad $100000		; Pad the ISO file
+		rompad $200000		; Pad the ISO file
 	else
 		align $8000		; Pad the Cartridge
 	endif

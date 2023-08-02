@@ -1,16 +1,16 @@
 ; ====================================================================
 ; --------------------------------------------------------
-; GEMA/Nikona Z80 code v0.5
+; GEMA/Nikona Z80 code v0.9
 ; (C)2023 GenesisFan64
 ;
 ; TIP:
-; For the 32X place this code on the 880000 area
+; For the 32X, place this code on the 880000 area
 ; as this is only loaded once.
 ; --------------------------------------------------------
 
 Z80_TOP:
-		cpu Z80		; [AS] Enter Z80
-		phase 0		; [AS]
+		cpu Z80		; Enter Z80
+		phase 0		; At 0
 		org 0
 
 ; --------------------------------------------------------
@@ -162,7 +162,7 @@ PWINSL		equ	48	; **
 ; call dac_off to disable and enable FM6.
 ; --------------------------------------------------------
 
-; Samplerate is at 16000hz with minimal quality loss.
+; Samplerate is at 16000hz with minimal-loss.
 		org 8
 dac_me:		exx			; <-- this changes between EXX(play) and RET(stop)
 		ex	af,af'		; Swap af
@@ -221,7 +221,7 @@ x68ksrcmid	db 0			; 37h: transferRom temporal MID
 ; --------------------------------------------------------
 
 		org 38h			; Align 38h
-		ld	(tickSpSet),sp	; Write TICK flag using sp (xx1F, use tickFlag+1)
+		ld	(tickSpSet),sp	; Write TICK flag using sp (xx1F, read as tickFlag+1)
 		di			; Disable interrupt
 		ret
 
@@ -241,7 +241,7 @@ commZRomBlk	db 0			; 81h: 68k ROM block flag
 marsBlock	db 0			; 82h: flag to BLOCK PWM transfers.
 
 ; --------------------------------------------------------
-; Initilize
+; Initialize
 ; --------------------------------------------------------
 
 z80_init:
@@ -368,58 +368,6 @@ drv_loop:
 
 .cmnd_0:
 		jp	.next_cmd
-
-; 	if MARS
-; 		ld	iy,pwmcom
-; 		ld	hl,.tempset
-; 		ld	de,8
-; 		ld	b,e
-; 		dec	b
-; .copyme:
-; 		ld	a,(hl)
-; 		ld	(iy),a
-; 		inc	hl
-; 		add	iy,de
-; 		djnz	.copyme
-; 		ld	a,1
-; 		ld	(marsUpd),a
-; 		jp	.next_cmd
-; .tempset:
-; 		db 0001b
-; 		db 01h
-; 		db 00h
-; 		db 11110000b|02h
-; 		db (SmpIns_TEST>>16)&0FFh
-; 		db (SmpIns_TEST>>8)&0FFh
-; 		db (SmpIns_TEST)&0FFh
-; 	else
-; 		jp	.next_cmd
-; 	endif
-
-; 		call	dac_off
-; 		ld	iy,wave_Start
-; 		ld	hl,.tempset
-; 		ld	b,0Bh
-; .copyme:
-; 		ld	a,(hl)
-; 		ld	(iy),a
-; 		inc	hl
-; 		inc	iy
-; 		djnz	.copyme
-; 		ld	hl,100h
-; 		ld	(wave_Pitch),hl
-; 		ld	a,1
-; 		ld	(wave_Flags),a
-; 		call	dac_play
-; 		jp	.next_cmd
-; .tempset:
-; 		dw TEST_WAVE&0FFFFh
-; 		db TEST_WAVE>>16&0FFh
-; 		dw (TEST_WAVE_E-TEST_WAVE)&0FFFFh
-; 		db (TEST_WAVE_E-TEST_WAVE)>>16&0FFh
-; 		dw 0
-; 		db 0
-; 		dw 0100h;+(ZSET_WTUNE)
 
 ; --------------------------------------------------------
 ; Command 01h:
@@ -928,7 +876,7 @@ upd_track:
 		ld	de,0
 		ld	hl,trkListCach		; Read MASTER Nicona track list
 		ld	a,(iy+trk_seqId)
-		and	00001111b		; Filter sequence bits
+		and	00000111b		; Filter sequence bits
 		add	a,a			; *4
 		add	a,a
 		ld	e,a
@@ -1061,7 +1009,7 @@ track_out:
 ; ----------------------------------------
 
 get_RomTrcks:
-		and	11110000b
+		and	11111000b
 		ld	e,a
 		ld	a,(trkListPage)
 		cp	e
@@ -1071,7 +1019,8 @@ init_RomTrcks:
 		ld	(trkListPage),a
 		rlca
 		rlca			; 10h*4=40h
-		and	11000000b
+		ld	d,a
+		and	11100000b
 		ld	e,a
 		ld	a,d
 		rst	8
@@ -1089,7 +1038,7 @@ init_RomTrcks:
 		add	hl,de
 		adc	a,0
 		ld	de,trkListCach
-		ld	bc,4*10h
+		ld	bc,4*8
 		jp	transferRom	; *** ROM ACCESS ***
 
 ; ============================================================
@@ -1119,7 +1068,7 @@ proc_chips:
 		rst	20h
 		ld	iy,tblPSGN		; PSG Noise (FIRST)
 		call	dtbl_singl
-		nop
+		nop	; sync
 		nop
 		ld	iy,tblPSG		; PSG Squares
 		call	dtbl_multi
@@ -2794,7 +2743,7 @@ dtbl_frommul:
 ex_comm:
 		rst	8
 		nop
-	if MARS
+	if MARS|MARSCD
 		ld	a,(marsBlock)	; Enable MARS requests?
 		or	a
 		jp	nz,.blocked
@@ -4021,7 +3970,7 @@ fmcach_4	ds 28h
 fmcach_5	ds 28h
 fmcach_6	ds 28h
 
-pwmcom:	db 00h,00h,00h,00h,00h,00h,00h,00h	; 0 - Playback bits: KeyOn/KeyOff/KeyCut bits
+pwmcom:	db 00h,00h,00h,00h,00h,00h,00h,00h	; 0 - Playback bits: KeyCut/KeyOff/KeyOn bits
 	db 00h,00h,00h,00h,00h,00h,00h,00h	; 8 - Volume | Pitch MSB
 	db 00h,00h,00h,00h,00h,00h,00h,00h	; 16 - Pitch LSB
 	db 00h,00h,00h,00h,00h,00h,00h,00h	; 24 - Flags: Stereo/Loop/Left/Right | 32-bit**
@@ -4045,8 +3994,7 @@ psgcom:	db 00h,00h,00h,00h	;  0 - command 1 = key on, 2 = key off, 4 = stop snd
 	db 00h,00h,00h,00h	; 52 - Vibrato value
 	db 00h,00h,00h,00h	; 56 - General timer
 
-; mailboxes	ds 40h		; GEMS style mailboxes/events
-trkListCach	ds 4*10h	; 40h bytes
+trkListCach	ds 4*8		; 20h bytes
 wave_Start	dw 0		; START: 68k 24-bit pointer
 		db 0
 wave_Len	dw 0		; LENGTH 24-bit
@@ -4063,9 +4011,9 @@ tickCnt		db 0		; ** Tick counter (PUT THIS AFTER tickFlag)
 psgHatMode	db 0		; Current PSGN mode
 fmSpecial	db 0		; copy of FM3 enable bit
 headerOut	ds 00Ch		; Temporal storage for 68k pointers
-headerOut_e	ds 2
+headerOut_e	ds 2		; reverse readpoint
 sampleHead	ds 006h
-commZRead	db 0			; cmd fifo READ pointer (here)
+commZRead	db 0		; cmd fifo READ pointer (here)
 
 ; --------------------------------------------------------
 ; * USER customizable section *

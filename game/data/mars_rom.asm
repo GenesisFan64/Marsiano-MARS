@@ -22,13 +22,6 @@
 
 	align 4
 
-TEST_DMA:
-; 	if MARS
-	binclude "mars_dma.wav",$2C
-; 	endif
-TEST_DMA_e:
-	align 4
-
 ; --------------------------------------------------------
 ; 32X MAP data: Block graphics and Layout
 ; --------------------------------------------------------

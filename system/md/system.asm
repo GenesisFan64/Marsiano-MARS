@@ -193,6 +193,7 @@ System_WaitFrame:
 		move.w	#$C000,(a6)
 		move.w	#$0000|$80,-(sp)
 		move.w	(sp)+,(a6)
+		bsr	Video_DmaBlast
 		bsr	System_DmaExit_RAM
 		move.w	#$8100,d7
 		move.b	(RAM_VdpRegs+1).w,d7

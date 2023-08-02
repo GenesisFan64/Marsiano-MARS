@@ -16,6 +16,10 @@ PalMd_TEST:	binclude "game/data/TESTS/md_pal.bin"
 MapMd_TEST:	binclude "game/data/TESTS/md_map.bin"
 		align 2
 
+MAP_TESTBOARD:
+		binclude "game/data/md/bg/board_map.bin"
+		align 2
+
 ; 		align 2
 ; Pal_level0:	binclude "game/data/maps/2D/level0/pal.bin"
 ; 		align 2
