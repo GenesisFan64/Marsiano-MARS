@@ -7,7 +7,7 @@
 
 		lea	.file_marscode(pc),a0		; Load SH2 code from disc to WORD-RAM
 		jsr	(System_McdTrnsfr_WRAM).l
-		bra.s	.normal
+		bra.s	.retry
 .file_marscode:
 		dc.b "MARSCODE.BIN",0
 		align 2
@@ -172,32 +172,49 @@ IcdAllEnd:
 ; 		bcs	_error
 
 ; ----------------------------------------------------------------
-; Sending the SH2 data using the framebuffer...
-		lea	($A15100).l,a5
+; Sending the SH2 data in split sections
+; ----------------------------------------------------------------
+
+		lea	(sysmars_reg).l,a6
 loc_2EE:
-		bclr	#7,(a5)
-		bne.s	loc_2EE
-		lea	($840000).l,a0			; First the Module
-		lea	MarsInitHeader(pc),a2
+		bclr	#7,(a6)				; Set FM to us.
+		bne.s	loc_2EE				; Wait until it accepts.
+	; FRAMEBUFFER 1
+.wait_f1:	bset	#0,$8B(a6)			; Set BUFFER 1
+		beq.s	.wait_f1
+		lea	($200000+($20000-$38)).l,a0	; Read SECOND part of SH2
+		lea	($840000).l,a1
+		move.l	#(($20000)/4)-1,d7
+		bmi.s	.wait_f0
+.copy_secnd:
+		move.l	(a0)+,(a1)+
+		dbf	d7,.copy_secnd
+	; FRAMEBUFFER 0
+.wait_f0:	bclr	#0,$8B(a6)			; Set BUFFER 0
+		bne.s	.wait_f0
+		lea	($840000).l,a1
+		lea	MarsInitHeader(pc),a0		; First the Module
 		move.w	#$E-1,d7
 .send_head:
-		move.l	(a2)+,(a0)+
+		move.l	(a0)+,(a1)+
 		dbf	d7,.send_head
-		lea	($200000).l,a2			; Then the entire SH2 code
-		move.l	#((MARS_RAMDATA_E-MARS_RAMDATA)/4)-1,d7
+		lea	($200000).l,a0			; The copy the FIRST PART of the
+		move.l	#(($20000-$38)/4)-1,d7		; SDRAM minus the header.
 .send_code:
-		move.l	(a2)+,d0
-		move.l	d0,(a0)+
+		move.l	(a0)+,(a1)+
 		dbf	d7,.send_code
 .wait_adapter:
-		bset	#7,(a5)
+		bset	#7,(a6)
 		beq.s	.wait_adapter
-		lea	($A15100).l,a5
-		move.l	#"_CD_",$20(a5)			; SH2 Application Start
-.master:	cmp.l	#"M_OK",$20(a5)
+		lea	($A15100).l,a6
+		move.l	#"_CD_",$20(a6)			; SH2 Application Start
+.master:	cmp.l	#"M_OK",$20(a6)
 		bne.s	.master
-.slave:		cmp.l	#"S_OK",$24(a5)
+.slave:		cmp.l	#"S_OK",$24(a6)
 		bne.s	.slave
+; .wait_slv:	move.l	$20(a6),d0
+; 		bne.s	.wait_slv
+
 		lea	(vdp_ctrl).l,a6
 		move.l	#$80048104,(a6)			; Default top VDP regs
 		moveq	#0,d0				; Clear both Master and Slave comm's
@@ -213,7 +230,7 @@ MarsInitHeader:
 		dc.l $00000000				; version
 		dc.l $00000000				; Not Used
 		dc.l $06000000				; SH2 (SDRAM)
-		dc.l MARS_RAMDATA_E-MARS_RAMDATA	; SH2
+		dc.l $20000-$38				; SH2 size, maximum BASE size: $1FFC8
 		dc.l SH2_M_Entry			; Master SH2 PC (SH2 area)
 		dc.l SH2_S_Entry			; Slave SH2 PC (SH2 area)
 		dc.l SH2_Master				; Master SH2 default VBR

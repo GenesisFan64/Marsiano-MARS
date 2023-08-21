@@ -10,9 +10,8 @@
 ; --------------------------------------------------------
 
 SAMPLE_RATE	equ 22050	; 22050
-SAMPLE_SIZE	equ $1000
 MAX_PWMCHNL	equ 7
-MAX_PWMBACKUP	equ $80
+MAX_PWMBACKUP	equ $80		; 1-byte SIZES ONLY
 
 ; --------------------------------------------------------
 ; Structs
@@ -21,14 +20,14 @@ MAX_PWMBACKUP	equ $80
 ; 32X sound channel
 		struct 0
 mchnsnd_enbl	ds.l 1		; %E000 SLlr | Enable-Stereo,Loop,left,right
+mchnsnd_read	ds.l 1		; READ point
+mchnsnd_cread	ds.l 1
 mchnsnd_bank	ds.l 1		; CS1 or CS3
 mchnsnd_start	ds.l 1		; Start point $00xxxxxx << 8
-mchnsnd_read	ds.l 1		; READ point
 mchnsnd_len	ds.l 1		; Lenght << 8
 mchnsnd_loop	ds.l 1		; Loop point << 8
 mchnsnd_pitch	ds.l 1		; Pitch $xx.xx
 mchnsnd_vol	ds.l 1		; Volume ($0000-Max)
-mchnsnd_cread	ds.l 1
 sizeof_marssnd	ds.l 0
 		endstruct
 

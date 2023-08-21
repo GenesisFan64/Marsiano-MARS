@@ -10,14 +10,12 @@
 ; ----------------------------------------------------------------
 
 		align 4
+		include "sound/smpl_pwm.asm"		; GEMA: PWM samples
 ArtMars_TEST:
 		binclude "game/data/TESTS/mars_art.bin"
+		align 4
 
-	align 4
-SmpIns_TEST:
-	gSmpHead .end-.start,0
-.start:	binclude "sound/instr/smpl/test.wav",$2C,$A000
-.end:
+
 
 ; SmpIns_TEST:
 ; 	gSmpHead .end-.start,0

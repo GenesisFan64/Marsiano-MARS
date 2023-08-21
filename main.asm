@@ -1,9 +1,9 @@
 ; ===========================================================================
 ; +-----------------------------------------------------------------+
-; MARSIANO ENGINE
-;
-; A game engine that can be cross-ported to:
-; Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico
+; | MARSIANO ENGINE                                                 |
+; |                                                                 |
+; | A game engine that can be cross-ported to:                      |
+; | Sega Genesis, Sega CD, Sega 32X, Sega CD32X and Sega Pico       |
 ; +-----------------------------------------------------------------+
 
 ; ====================================================================
@@ -73,58 +73,60 @@ MAX_MdOther	equ $1000	; System-specific stuff goes here
 
 	if MARS
 		include	"system/head_mars.asm"			; 32X header
-		lea	($880000+Md_SysCode),a0			; Transfer SYSTEM code
-		lea	(RAM_SystemCode),a1
+		lea	($880000+Md_SysCode),a0			; Transfer SYSTEM subs
+		lea	(RAM_SystemCode),a1			; At the TOP of RAM
 		move.w	#((Md_SysCode_e-Md_SysCode))-1,d0
-.copyme:
+.copy_1:
 		move.b	(a0)+,(a1)+
-		dbf	d0,.copyme
-		lea	($880000+Md_JumpCode),a0		; Transfer JUMP code
-		lea	(RAM_ScreenJump),a1
+		dbf	d0,.copy_1
+		lea	($880000+Md_JumpCode),a0		; Transfer SCREEN-JUMP code
+		lea	(RAM_ScreenJump),a1			; At the BOTTOM of RAM
 		move.w	#((Md_JumpCode_e-Md_JumpCode))-1,d0
-.copyme_2:
+.copy_2:
 		move.b	(a0)+,(a1)+
-		dbf	d0,.copyme_2
-		jsr	(Sound_init).l				; RAM jumps
-		jsr	(Video_init).l
-		jsr	(System_Init).l
-		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
-		jmp	(Md_ReadModes).l
+		dbf	d0,.copy_2
+		jsr	(Sound_init).l			; Init Sound driver FIRST
+		jsr	(Video_init).l			; **** Video
+		jsr	(System_Init).l			; **** Values
+		move.w	#0,(RAM_Glbl_Scrn).w		; Start at screen 0
+		jmp	(Md_ReadModes).l		; Jump to SCREENJUMP section
 
 ; ---------------------------------------------
 ; SEGA CD and CD32X
+;
+; This one is tricky.
 ; ---------------------------------------------
 
 	elseif MCD|MARSCD
 		include	"system/head_mcd.asm"			; Sega CD header
 mcdin_top:
-		lea	Md_SysCode(pc),a0			; Transfer SYSTEM code
-		lea	(RAM_SystemCode),a1
+		lea	Md_SysCode(pc),a0			; Transfer SYSTEM subs
+		lea	(RAM_SystemCode),a1			; At TOP of RAM
 		move.w	#((Md_SysCode_e-Md_SysCode))-1,d0
-.copyme:
+.copy_1:
 		move.b	(a0)+,(a1)+
-		dbf	d0,.copyme
-		lea	Md_JumpCode(pc),a0			; Transfer JUMP code
-		lea	(RAM_ScreenJump),a1
+		dbf	d0,.copy_1
+		lea	Md_JumpCode(pc),a0			; Transfer SCREEN-JUMP code
+		lea	(RAM_ScreenJump),a1			; At BOTTOM of RAM
 		move.w	#((Md_JumpCode_e-Md_JumpCode))-1,d0
-.copyme_2:
+.copy_2:
 		move.b	(a0)+,(a1)+
-		dbf	d0,.copyme_2
-	if MARSCD						; Include 32X boot
+		dbf	d0,.copy_2
+	if MARSCD
 		include "system/mcd/marscd.asm"
 	endif
-		lea	file_worddata(pc),a0
-		jsr	(System_McdTrnsfr_WRAM).l
-		jsr	(Sound_init).l
-		jsr	(Video_init).l
-		jsr	(System_Init).l
-		lea	file_gematrks(pc),a0			; Transfer GEMA tracks and instr
-		lea	(RAM_ExSoundData),a1
-		move.w	#MAX_RamSndData,d0
+		lea	file_worddata(pc),a0		; SCD: Load default databank
+		jsr	(System_McdTrnsfr_WRAM).l	; to WORDRAM
+		jsr	(Sound_init).l			; Init Sound driver FIRST (MUST BE STOPPED)
+		jsr	(Video_init).l			; **** Video
+		jsr	(System_Init).l			; **** Values
+		lea	file_gematrks(pc),a0		; Transfer GEMA tracks and instr
+		lea	(RAM_ExSoundData),a1		; This will overwrite the stuff
+		move.w	#MAX_RamSndData,d0		; after the label mcdin_end
 		jsr	(System_McdTrnsfr_RAM).l
-		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
-		jmp	(Md_ReadModes).l
-file_worddata:	dc.b "WORDDATA.BIN",0
+		move.w	#0,(RAM_Glbl_Scrn).w		; Start at screen 0
+		jmp	(Md_ReadModes).l		; Jump to SCREENJUMP section
+file_worddata:	dc.b "DATABNK0.BIN",0
 		align 2
 file_gematrks:	dc.b "GEMATRKS.BIN",0
 		align 2
@@ -140,23 +142,23 @@ Z80_CODE_END:
 ; This recycles the MD's routines.
 ; ---------------------------------------------
 	elseif PICO
-		include	"system/head_pico.asm"			; Pico header
-		jsr	(Sound_init).l
-		jsr	(Video_init).l
-		jsr	(System_Init).l
-		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
-		bra.w	Md_ReadModes
+		include	"system/head_pico.asm"		; Pico header
+		jsr	(Sound_init).l			; Init Sound driver FIRST
+		jsr	(Video_init).l			; **** Video
+		jsr	(System_Init).l			; **** Values
+		move.w	#0,(RAM_Glbl_Scrn).w		; Start at screen 0
+		bra.w	Md_ReadModes			; Go to SCREENJUMP section
 
 ; ---------------------------------------------
 ; MD
 ; ---------------------------------------------
 	else
-		include	"system/head_md.asm"			; Genesis header
-		jsr	(Sound_init).l
-		jsr	(Video_init).l
-		jsr	(System_Init).l
-		move.w	#0,(RAM_Glbl_Scrn).w			; *** TEMPORAL ***
-		bra.w	Md_ReadModes
+		include	"system/head_md.asm"		; Genesis header
+		jsr	(Sound_init).l			; Init Sound driver FIRST
+		jsr	(Video_init).l			; **** Video
+		jsr	(System_Init).l			; **** Values
+		move.w	#0,(RAM_Glbl_Scrn).w		; Start at screen 0
+		bra.w	Md_ReadModes			; Go to SCREENJUMP section
 
 ; ---------------------------------------------
 	endif
@@ -219,18 +221,18 @@ mdjumpcode_s:
 Md_ReadModes:
 		moveq	#0,d0
 		move.w	(RAM_Glbl_Scrn).w,d0
-		and.w	#%1111,d0		; <-- current limit
+		and.w	#%1111,d0		; <-- [USER] CURRENT LIMIT
 	if MCD|MARSCD
 		lsl.w	#4,d0			; * $10
 		lea	.pick_boot(pc),a0	; LEA the filename
 		jsr	(System_GrabRamCode).l
 	elseif MARS
 		lsl.w	#2,d0			; * 4
-		move.l	.pick_boot(pc,d0.w),d0	; d0 - code location to transfer
+		move.l	.pick_boot(pc,d0.w),d0	; d0 - ROM location $880000+
 		jsr	(System_GrabRamCode).l
 	else
 		lsl.w	#2,d0			; * 4
-		move.l	.pick_boot(pc,d0.w),d0
+		move.l	.pick_boot(pc,d0.w),d0	; Location to JUMP to.
 		move.l	d0,a0
 		jsr	(a0)
 	endif
@@ -271,14 +273,12 @@ Md_JumpCode_e:
 ; --------------------------------------------------------
 
 	if MCD|MARSCD=0
-
 	if MARS
 		phase $880000+*
 	endif
 Z80_CODE:	include "sound/gema_zdrv.asm"		; Called once
 Z80_CODE_END:
 	endif
-
 	if MCD|MARS|MARSCD
 		dephase
 	endif
@@ -293,12 +293,12 @@ Z80_CODE_END:
 ; --------------------------------------------------------
 
 	if MCD|MARSCD
-		align $8000	; Pad to $8000
-		binclude "system/mcd/fshead.bin"
+		align $8000				; Pad to $8000
+		binclude "system/mcd/fshead.bin"	; <-- common ISO head
 		iso_setfs 0,IsoFileList,IsoFileList_e	; TWO COPIES
 		iso_setfs 1,IsoFileList,IsoFileList_e
 IsoFileList:	iso_file "MARSCODE.BIN",MARS_RAMDATA,MARS_RAMDATA_E
-		iso_file "WORDDATA.BIN",MCD_DBANK0,MCD_DBANK0_e
+		iso_file "DATABNK0.BIN",MCD_DBANK0,MCD_DBANK0_e
 		iso_file "GEMATRKS.BIN",MCD_GEMATRKS,MCD_GEMATRKS_e
 		iso_file "SCREEN00.BIN",Md_Screen00,Md_Screen00_e
 		align $800
@@ -311,15 +311,16 @@ IsoFileList_e:
 ; --------------------------------------------------------
 
 	if MCD|MARSCD
-		align $800	; Sector align
+		align $800		; CD Sector align
 	elseif MARS
-		phase $880000+*
+		phase $880000+*		; 32X ROM def-location
 	endif
 Md_Screen00:
-	if MARS
-		dephase
-	endif
+; 	if MARS
+;
+; 	endif
 	if MCD|MARSCD|MARS
+		dephase
 		phase RAM_UserCode
 	endif
 cscrn0_s:
@@ -346,7 +347,7 @@ Md_Screen00_e:
 ;   MCD: Loaded to RAM from disc (Z80 CAN read from RAM)
 ;   32X: At the $880000+ area
 ; CD32X: Same as CD
-;  Pico: N/A (TODO)
+;  Pico: N/A
 ;
 ; DAC samples are stored externally depending
 ; of the system.
@@ -391,13 +392,13 @@ MCD_GEMATRKS_e:
 ; ----------------------------------------------------------------
 
 ; ---------------------------------------------
-; BANK 0 DEFAULT
+; DEFAULT BANK
 ;
 ; CD/CD32X:
-; $200000 (WORD-RAM)
+; $200000 256KB WORD-RAM
 ;
 ; 32X:
-; $900000
+; $900000 1MB (This is BANK 0)
 ; ---------------------------------------------
 
 MCD_DBANK0:
@@ -416,9 +417,6 @@ mdbank0_e:
 ; 		dephase
 	if MCD|MARSCD
 		include "game/data/md_dma.asm"		; SEGA CD / CD32X ONLY.
-; 		phase CS1+*
-; 		include "sound/smpl_pwm.asm"		; GEMA: PWM samples
-; 		dephase
 	endif
 
 	if MARS|MCD|MARSCD
@@ -510,7 +508,7 @@ MARS_RAMDATA_E:
 	if MARS
 		phase CS1+*
 		align 4
-		include "sound/smpl_pwm.asm"		; GEMA: PWM samples
+; 		include "sound/smpl_pwm_rom.asm"	; GEMA: PWM samples
 		include "game/data/mars_rom.asm"
 		dephase
 	endif
@@ -520,9 +518,63 @@ MARS_RAMDATA_E:
 ; End
 ; ---------------------------------------------
 
+		lea	($FFFFC176).w,a0
+		lea	($A10003).l,a1
+		bsr.s	loc_3410
+		lea	($A10005).l,a1
+
+loc_3410:				; CODE XREF: ROM:00003406p
+		move.w	#$100,($A11100).l
+		move.b	#0,(a1)
+		nop
+		nop
+		nop
+		move.b	(a1),d1
+		nop
+		nop
+		nop
+		move.b	#$40,(a1) ; '@'
+		asl.w	#2,d1
+		move.w	d1,d2
+		move.b	(a1),d0
+		andi.w	#$30,d2	; '0'
+		beq.w	loc_3440
+		move.w	#$FF,d1
+
+loc_3440:				; CODE XREF: ROM:00003438j
+		andi.w	#$3F,d0	; '?'
+		andi.w	#$C0,d1	; 'À'
+		or.w	d1,d0
+		not.w	d0
+		movea.l	($FFFFFE38).w,a1
+		move.b	d0,d1
+		andi.b	#$8F,d0
+		bclr	#6,d1
+		beq.s	loc_345E
+		or.b	(a1),d0
+
+loc_345E:				; CODE XREF: ROM:0000345Aj
+		bclr	#5,d1
+		beq.s	loc_3468
+		or.b	1(a1),d0
+
+loc_3468:
+		bclr	#4,d1
+		beq.s	loc_3472
+		or.b	2(a1),d0
+
+loc_3472:
+		eor.b	d0,(a0)
+		move.b	(a0),d1
+		move.b	d0,(a0)+
+		and.w	d1,d0
+		move.b	d0,(a0)+
+		move.w	#0,($A11100).l
+		rts
+
 ROM_END:
 	if MCD|MARSCD
-		rompad $200000		; Pad the ISO file
+		rompad $300000		; Pad the ISO file
 	else
 		align $8000		; Pad the Cartridge
 	endif

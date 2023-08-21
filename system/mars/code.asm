@@ -38,11 +38,6 @@ STACK_SLV	equ CS3|$3F000
 
 ; ====================================================================
 ; ----------------------------------------------------------------
-; MARS GLOBAL gbr variables for both SH2
-; ----------------------------------------------------------------
-
-; ====================================================================
-; ----------------------------------------------------------------
 ; MASTER CPU VECTOR LIST (vbr)
 ; ----------------------------------------------------------------
 
@@ -677,9 +672,10 @@ s_irq_cmd:
 		mov	r6,@-r15
 		mov	r7,@-r15
 		mov	r8,@-r15
+		sts	pr,@-r15
 		mov	#_sysreg+comm14,r1
 		mov.b	@r1,r0
-		and	#%1111,r0
+		and	#%00001111,r0
 		shll2	r0
 		mov	r0,r1
 		mova	.scmd_tasks,r0
@@ -707,19 +703,63 @@ s_irq_cmd:
 
 ; --------------------------------
 ; Task $03
+;
+; PWM Restore
 ; --------------------------------
 
 .scmd_task03:
+		mov	#0,r0
 		bra	.exit_scmd
-		nop
+		mov.w	r0,@(marsGbl_PwmBackup,gbr)
 
 ; --------------------------------
 ; Task $02
+;
+; PWM backup
 ; --------------------------------
 
+		align 4
 .scmd_task02:
-		bra	.exit_scmd
+		mov	#RAM_Mars_PwmList,r8
+		mov	#RAM_Mars_PwmRomRV,r7
+		mov	#MAX_PWMCHNL,r6
+		mov	#sizeof_marssnd,r5
+.next_one:
+		mov	@(mchnsnd_enbl,r8),r0
+		tst	#$80,r0
+		bt	.non_rom
+		mov	@(mchnsnd_read,r8),r4	; r4 - snap last READ
+		mov	#CS3,r0
+		mov	@(mchnsnd_bank,r8),r1
+		cmp/eq	r0,r1
+		bt	.non_rom
+		xor	r0,r0
+		mov	r0,@(mchnsnd_cread,r8)
+		mov	r7,r2
+		mov	#MAX_PWMBACKUP/8,r3
+		mov	r4,r0
+		shlr8	r0
+		or	r0,r1
+
+		mov	#scmd_task02_send,r0
+		jsr	@r0
 		nop
+
+		mov	@(mchnsnd_read,r8),r0
+		sub	r0,r4
+		cmp/pz	r4			; MINUS?
+		bf	.next_one		; Then restart
+		mov	r4,@(mchnsnd_cread,r8)
+.non_rom:
+		mov	#MAX_PWMBACKUP,r0
+		add	r0,r7
+		dt	r6
+		bf/s	.next_one
+		add	r5,r8
+
+		mov	#1,r0
+		bra	.exit_scmd
+		mov.w	r0,@(marsGbl_PwmBackup,gbr)
 
 ; --------------------------------
 ; Task $01
@@ -885,6 +925,7 @@ s_irq_cmd:
 		mov	#_sysreg+comm14,r1	; Clear cmd number
 		xor	r0,r0
 		mov.b	r0,@r1
+		lds	@r15+,pr
 		mov	@r15+,r8
 		mov	@r15+,r7
 		mov	@r15+,r6
@@ -1006,6 +1047,51 @@ s_irq_vres:
 
 		align 4
 SH2_M_Entry:
+	; CD32X ONLY:
+	if MARSCD
+
+	; TODO: Fusion needs any non-zero bitmapmd to flip
+	; the framebuffer
+	if EMU
+		mov	#_sysreg,r1
+		mov 	#FM,r0
+  		mov.b	r0,@(adapter,r1)
+		mov 	#_vdpreg,r1
+		mov	#1,r0
+		mov.b	r0,@(bitmapmd,r1)
+.waitl:		mov.b	@(vdpsts,r1),r0			; on VBlank
+		tst	#VBLK,r0
+		bf	.waitl
+		mov.b	@(framectl,r1),r0
+		xor	#1,r0
+		mov.b	r0,@(framectl,r1)
+	else
+		mov	#_sysreg,r1			; *** safer
+		mov 	#FM,r0
+  		mov.b	r0,@(adapter,r1)
+		mov 	#_vdpreg,r1
+		mov.b	@(framectl,r1),r0		; Frameswap request
+		xor	#1,r0
+		mov	r0,r2
+		mov.b	r0,@(framectl,r1)
+.wait_frm:	mov.b	@(framectl,r1),r0		; And wait until it flips
+		cmp/eq	r0,r2
+		bf	.wait_frm
+	endif
+		mov	#_framebuffer,r1
+		mov	#CS3+($20000-$38),r2
+		mov	#((($3E000)-($20000))/4),r3
+.copy_new:
+		mov	@r1+,r0
+		mov	r0,@r2
+		dt	r3
+		bf/s	.copy_new
+		add	#4,r2
+		mov	#_sysreg+comm0,r1
+		xor	r0,r0
+		mov	r0,@r1
+	endif
+
 		mov	#STACK_MSTR,r15			; Reset stack
 		mov	#SH2_Master,r0			; Reset vbr
 		ldc	r0,vbr
@@ -1033,7 +1119,6 @@ SH2_M_Entry:
 ; 		mov.b	r0,@(5,r1)
 ; 		mov.b	#$E2,r0
 ; 		mov.b	r0,@(7,r1)
-
 	; Extra interrupt settings
 		mov.w   #$FEE2,r0			; Extra interrupt priority levels ($FFFFFEE2)
 		mov     #(3<<4)|(5<<8),r1		; (DMA_LVL<<8)|(WDG_LVL<<4) Current: WDG 3 DMA 5
@@ -1211,6 +1296,13 @@ master_loop:
 
 		align 4
 SH2_S_Entry:
+	; CD32X ONLY:
+	if MARSCD
+		mov	#_sysreg+comm0,r1
+.wait_pass2:	mov	@r1,r0
+		tst	r0,r0
+		bf	.wait_pass2
+	endif
 		mov	#STACK_SLV,r15		; Reset stack
 		mov	#SH2_Slave,r0		; Reset vbr
 		ldc	r0,vbr
@@ -1471,10 +1563,8 @@ sin_table	binclude "system/mars/data/sinedata.bin"
 			align $10
 RAM_Mars_Global:
 			struct 0
-marsGbl_XShift		dc.w 0
-marsGbl_PwmRefill	dc.w 0				; Refill flag
-marsGbl_PwmWIndex	dc.w 0
-marsGbl_PwmFull		dc.w 0
+marsGbl_XShift		dc.w 0				; Xscroll bit for indexed scrolling
+marsGbl_PwmBackup	dc.w 0				; PWM RV Backup flag
 marsGbl_DmaRead		dc.l RAM_Mars_DreqBuff_0|TH
 marsGbl_DmaWrite	dc.l RAM_Mars_DreqBuff_1|TH
 sizeof_MarsGbl		ds.l 0

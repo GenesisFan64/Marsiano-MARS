@@ -21,6 +21,10 @@
 ; ----------------------------------------------------------------
 
 	align 4
+SmpIns_TEST:
+	gSmpHead .end-.start,0
+.start:	binclude "sound/instr/smpl/livin_st.wav",$2C
+.end:
 
 ; --------------------------------------------------------
 ; 32X MAP data: Block graphics and Layout

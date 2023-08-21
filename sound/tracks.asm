@@ -121,8 +121,8 @@ gInsPwm	macro pitch,start,flags
 ; ------------------------------------------------------------
 
 Gema_MasterList:
-	gemaTrk 7,GemaTrk_TEST_0
-	gemaTrk 3,GemaTrk_TEST_0
+	gemaTrk 7,GemaTrk_TEST_1
+	gemaTrk $11,GemaTrk_TEST_0
 	gemaTrk 3,GemaTrk_TEST_0
 	gemaTrk 3,GemaTrk_TEST_0
 	gemaTrk 3,GemaTrk_TEST_0
@@ -189,7 +189,11 @@ GemaTrk_TEST_0:
 .ins:
 ; 	gInsDac 0,DacIns_TESTINS,0
 
-	gInsPwm -5,SmpIns_TEST,%001
+	if MARSCD
+	gInsNull
+	else
+	gInsPwm 0,SmpIns_TEST,%011
+	endif
 
 ; 	gInsPsg 0,$00,$00,$00,$00,$00,0
 ; 	gInsFm -12,FmIns_Trumpet_2
@@ -216,24 +220,24 @@ GemaTrk_TEST_0:
 ; 	gInsPsg 0,$10,$04,$20,$04,$02,$00;gInsFm -12,FmIns_Trumpet_carnival;;
 ; 	gInsDac 0,DacIns_wegot_crash,0
 
-; GemaTrk_TEST_1:
-; 	gemaHead .blk,.pat,.ins
-; .blk:
-; 	binclude "sound/tracks/vectr_blk.bin"
-; .pat:
-; 	binclude "sound/tracks/vectr_patt.bin"
-; .ins:
-; 	gInsPwm -17,SmpIns_Vctr01,%001
-; 	gInsFm -3,FmIns_brass_eur
-; 	gInsPwm -15,SmpIns_VctrCrash,0
-; 	gInsPwm -17,SmpIns_Vctr04,%001
-; 	gInsNull
-; 	gInsPwm -15,SmpIns_VctrTimpani,%101
-; 	gInsFm -22,FmIns_Bass_8
-; 	gInsPsg 0,$40,$08,$10,$01,$01,$00
-; 	gInsNull;gInsPsgN 0,$40,$08,$10,$01,$01,$00,%110
-; 	gInsPwm -17,SmpIns_VctrSnare,%000
-; 	gInsPwm -17,SmpIns_VctrKick,%000
-; 	gInsFm3 0,FmIns_Sp_Closedhat
-; 	gInsFm3 0,FmIns_Sp_Openhat
-; 	gInsPwm -17,SmpIns_VctrBrass,%001
+GemaTrk_TEST_1:
+	gemaHead .blk,.pat,.ins
+.blk:
+	binclude "sound/tracks/vectr_blk.bin"
+.pat:
+	binclude "sound/tracks/vectr_patt.bin"
+.ins:
+	gInsPwm -17,SmpIns_Vctr01,%001
+	gInsFm -3,FmIns_brass_eur
+	gInsPwm -15,SmpIns_VctrCrash,0
+	gInsPwm -17,SmpIns_Vctr04,%001
+	gInsNull
+	gInsPwm -15,SmpIns_VctrTimpani,%101
+	gInsFm -22,FmIns_Bass_8
+	gInsPsg 0,$40,$08,$10,$01,$01,$00
+	gInsNull;gInsPsgN 0,$40,$08,$10,$01,$01,$00,%110
+	gInsPwm -17,SmpIns_VctrSnare,%000
+	gInsPwm -17,SmpIns_VctrKick,%000
+	gInsFm3 0,FmIns_Sp_Closedhat
+	gInsFm3 0,FmIns_Sp_Openhat
+	gInsPwm -17,SmpIns_VctrBrass,%001

@@ -68,6 +68,8 @@ thisCode_Top:
 		move.w	#$2700,sr
 		bsr	Mode_Init
 		bsr	Video_PrintInit
+		bsr	Video_Clear
+
 		move.w	#0,(RAM_CurrType).w
 		move.w	#208,(RAM_CurrTempo).w
 		move.w	#$9200,d0
@@ -102,7 +104,6 @@ thisCode_Top:
 		moveq	#0,d2
 		bsr	Video_FadePal_Mars
 	endif
-
 		move.l	#ART_TESTBOARD,d0
 		move.w	#ART_TESTBOARD_e-ART_TESTBOARD,d2
 		move.w	#cell_vram($0001),d1
@@ -112,6 +113,7 @@ thisCode_Top:
 		move.l	#mapsize(320,224),d1
 		move.w	#$2000|$0001,d2
 		bsr	Video_LoadMap
+		bset	#0,(RAM_BoardUpd).w
 
 		lea	PAL_EMI(pc),a0
 		moveq	#0,d0
@@ -137,7 +139,7 @@ thisCode_Top:
 		move.w	#1,(RAM_FadeMdReq).w
 		move.w	#1,(RAM_FadeMarsReq).w
 
-	if MCD|MARSCD
+; 	if MCD|MARSCD
 ; 		moveq	#$10,d0
 ; 		bsr	System_McdSubTask
 ; ; 		move.l	#$7FFEC,d7
@@ -150,7 +152,7 @@ thisCode_Top:
 ; ; 		nop
 ; ; 		nop
 ; ; 		dbf	d7,.ll
-	endif
+; 	endif
 		moveq	#0,d0
 		bsr	gemaPlayTrack
 
@@ -160,7 +162,7 @@ thisCode_Top:
 ; ------------------------------------------------------
 
 .loop:
-		bsr	System_WaitFrame
+		bsr	System_Render
 		bsr	Video_RunFade
 		lea	str_Title(pc),a0
 		move.l	#locate(0,1,1),d0

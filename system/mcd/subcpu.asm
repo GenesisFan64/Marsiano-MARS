@@ -244,6 +244,15 @@ SP_cmnd01:
 ; --------------------------------------------------------
 
 SP_cmnd02:
+; 		lea	(scpu_wram),a0
+; 		moveq	#0,d0
+; 		move.l	#($40000/$10)-1,d1
+; .clr_manual:
+; 		move.l	d0,(a0)+
+; 		move.l	d0,(a0)+
+; 		move.l	d0,(a0)+
+; 		move.l	d0,(a0)+
+; 		dbf	d1,.clr_manual
 		move.l	a6,a0				; a0 - filename
 		bsr	spSearchFile
 		move.w	#$800,d2
@@ -372,6 +381,9 @@ spInitFS:
 spSearchFile:
 ; 		movem.l	a1/a2/a6,-(a7)
 		lea	(ISO_Files),a4		; a4 - TOP
+		moveq	#0,d0
+		moveq	#0,d1
+		moveq	#0,d2
 .next_file:
 		move.w	(a4),d7			; d7 - Block size
 		beq.s	.failed_srch

@@ -132,7 +132,7 @@ System_Init:
 		rts
 
 ; --------------------------------------------------------
-; System_WaitFrame
+; System_Render
 ;
 ; Call this on the loop your current screen.
 ;
@@ -146,7 +146,7 @@ System_Init:
 ; to the 32X side
 ; --------------------------------------------------------
 
-System_WaitFrame:
+System_Render:
 		lea	(vdp_ctrl),a6		; Inside VBlank?
 .wait_lag:	move.w	(a6),d4			; then it's a lag frame.
 		btst	#bitVBlk,d4
@@ -658,7 +658,27 @@ Mode_Init:
 
 ; --------------------------------------------------------
 
-Mode_FadeOut:
+System_FadeIn:
+		move.w	#1,(RAM_FadeMdIncr).w
+		move.w	#2,(RAM_FadeMarsIncr).w
+		move.w	#1,(RAM_FadeMdDelay).w
+		move.w	#0,(RAM_FadeMarsDelay).w
+		move.w	#1,(RAM_FadeMdReq).w
+		move.w	#1,(RAM_FadeMarsReq).w
+
+; 		move.w	#2,(RAM_FadeMdReq).w
+; 		move.w	#2,(RAM_FadeMarsReq).w
+; 		move.w	#1,(RAM_FadeMdIncr).w
+; 		move.w	#4,(RAM_FadeMarsIncr).w
+; 		move.w	#0,(RAM_FadeMdDelay).w
+; 		move.w	#0,(RAM_FadeMarsDelay).w
+.loopw:
+		bsr	System_Render
+		jsr	(Video_RunFade).l
+		bne.s	.loopw
+		rts
+
+System_FadeOut:
 		move.w	#2,(RAM_FadeMdReq).w
 		move.w	#2,(RAM_FadeMarsReq).w
 		move.w	#1,(RAM_FadeMdIncr).w
@@ -666,7 +686,7 @@ Mode_FadeOut:
 		move.w	#0,(RAM_FadeMdDelay).w
 		move.w	#0,(RAM_FadeMarsDelay).w
 .loopw:
-		bsr	System_WaitFrame
+		bsr	System_Render
 		jsr	(Video_RunFade).l
 		bne.s	.loopw
 		rts
@@ -731,7 +751,7 @@ System_McdSubTask:
 ; --------------------------------------------------------
 ; System_McdSubWait
 ;
-; Waits until Sub-CPU
+; Waits until Sub-CPU finishes.
 ;
 ; Input:
 ; d0 - Task number

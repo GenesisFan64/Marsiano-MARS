@@ -265,6 +265,6 @@ MD_Init:
 		move.l	d0,comm12(a5)
 ; 		move.w	#$4FF,d7
 ; .wait_sh2:
-; 		move.w	#$1FF,d6
-; 		dbf	d6,*
+		move.w	#$1FF,d7
+		dbf	d7,*
 ; 		dbf	d7,.wait_sh2

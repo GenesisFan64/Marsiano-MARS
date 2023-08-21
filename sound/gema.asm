@@ -243,9 +243,11 @@ gemaDmaPauseRom:
 		bsr	sndUnlockZ80
 		move.w	#96,d7				; ...Small delay...
 		dbf	d7,*
-	if MARS
+	if MARS|MARSCD
 		move.w	#2,d6
 		bsr	sndReqCmd
+	endif
+	if MARS
 		bset	#0,(sysmars_reg+dreqctl+1).l	; Set RV=1
 	endif
 		swap	d6
@@ -268,9 +270,11 @@ gemaDmaResumeRom:
 		bsr	sndLockZ80
 		move.b	#0,(z80_cpu+zDrvRomBlk)		; Block flag for Z80
 		bsr	sndUnlockZ80
-	if MARS
+	if MARS|MARSCD
 		move.w	#3,d6
 		bsr	sndReqCmd
+	endif
+	if MARS
 		bclr	#0,(sysmars_reg+dreqctl+1).l	; Set RV=0
 	endif
 		swap	d6
@@ -279,32 +283,31 @@ gemaDmaResumeRom:
 	endif
 
 ; ------------------------------------------------
-; 32X ONLY: Request CMD interrupt with
-; command
+; 32X ONLY
 ;
-; d6 - command
+; d6 - command ($01 is reserved for Z80)
 ; ------------------------------------------------
 
 sndReqCmd:
-; 	if MARS
-; .wait_in:	move.b	(sysmars_reg+comm14),d7
-; 		and.w	#%11110000,d7
-; 		bne.s	.wait_in
-; 		and.w	#%00001111,d6
-; 		or.b	d6,d7
-; 		move.b	d7,(sysmars_reg+comm14).l
-; 		move.b	(sysmars_reg+comm14).l,d7
-; 		and.w	#%00001111,d7
-; 		cmp.b	d6,d7
-; 		bne.s	.wait_in
-; 		bset	#7,(sysmars_reg+comm14).l
-; 		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
-; ; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
-; ; 		bne.s	.wait_cmd
-; .wait_out:	move.b	(sysmars_reg+comm14),d7
-; 		and.w	#%11110000,d7
-; 		bne.s	.wait_out
-; 	endif
+	if MARS|MARSCD
+.wait_in:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_in
+		and.w	#%00001111,d6
+		or.b	d6,d7
+		move.b	d7,(sysmars_reg+comm14).l
+		move.b	(sysmars_reg+comm14).l,d7
+		and.w	#%00001111,d7
+		cmp.b	d6,d7
+		bne.s	.wait_in
+		bset	#7,(sysmars_reg+comm14).l
+		bset	#1,(sysmars_reg+standby).l	; Request Slave CMD
+; .wait_cmd:	btst	#1,(sysmars_reg+standby).l
+; 		bne.s	.wait_cmd
+.wait_out:	move.b	(sysmars_reg+comm14),d7
+		and.w	#%11110000,d7
+		bne.s	.wait_out
+	endif
 		rts
 
 ; ============================================================
